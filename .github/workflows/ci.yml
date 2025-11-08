@@ -147,29 +147,30 @@ jobs:
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-  examples:
-    name: Examples
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Run Ed25519 signatures example
-      run: cargo run --package hpcrypt --example ed25519_signatures --features curves
-
-    - name: Run X25519 key exchange example
-      run: cargo run --package hpcrypt --example x25519_key_exchange --features curves
-
-    - name: Run AES-GCM encryption example
-      run: cargo run --package hpcrypt --example aes_gcm_encryption --features aead
-
-    - name: Run ChaCha20-Poly1305 example
-      run: cargo run --package hpcrypt --example chacha20_poly1305 --features aead
-
-    - name: Run ECDSA signatures example
-      run: cargo run --package hpcrypt --example ecdsa_signatures --features signatures
+  # Examples job disabled - meta package 'hpcrypt' and examples not included in dist release
+  # examples:
+  #   name: Examples
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #
+  #   - name: Install Rust
+  #     uses: dtolnay/rust-toolchain@stable
+  #
+  #   - name: Run Ed25519 signatures example
+  #     run: cargo run --package hpcrypt --example ed25519_signatures --features curves
+  #
+  #   - name: Run X25519 key exchange example
+  #     run: cargo run --package hpcrypt --example x25519_key_exchange --features curves
+  #
+  #   - name: Run AES-GCM encryption example
+  #     run: cargo run --package hpcrypt --example aes_gcm_encryption --features aead
+  #
+  #   - name: Run ChaCha20-Poly1305 example
+  #     run: cargo run --package hpcrypt --example chacha20_poly1305 --features aead
+  #
+  #   - name: Run ECDSA signatures example
+  #     run: cargo run --package hpcrypt --example ecdsa_signatures --features signatures
 
   # Minimum Supported Rust Version (MSRV)
   msrv:
@@ -238,7 +239,7 @@ jobs:
       - fmt
       - clippy
       - security_audit
-      - examples
+      # - examples  # Disabled - package not in dist release
       - msrv
       - docs
     runs-on: ubuntu-latest
