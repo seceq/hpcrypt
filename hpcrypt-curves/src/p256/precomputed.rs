@@ -218,6 +218,9 @@ impl CompressedPrecomputedTable {
             let mut double_count = 0;
 
             // Reduce even values to odd by counting factors of 2
+            // Note: Can't use is_multiple_of() - not available in MSRV 1.70
+            #[allow(unknown_lints)]
+            #[allow(clippy::manual_is_multiple_of)]
             while current_value > 0 && current_value % 2 == 0 {
                 current_value /= 2;
                 double_count += 1;
