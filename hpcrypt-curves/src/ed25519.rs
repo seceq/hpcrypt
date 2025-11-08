@@ -770,7 +770,6 @@ impl EdwardsPoint {
     /// Negate a point (compute -P)
     /// For Edwards curve: -P = (-X, Y, Z, -T)
     pub fn negate(&self) -> EdwardsPoint {
-        use crate::field25519::FieldElement;
         EdwardsPoint {
             x: FieldElement::ZERO.sub(&self.x),
             y: self.y,

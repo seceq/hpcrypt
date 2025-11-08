@@ -848,7 +848,6 @@ impl Point {
     /// let three_g = g.add(&two_g);
     /// ```
     pub fn negate(&self) -> Self {
-        use crate::p256::field::FieldElement;
         Self {
             x: self.x,
             y: FieldElement::zero() - self.y, // Negate y-coordinate
@@ -1239,8 +1238,6 @@ impl Point {
         k2: &[u8; 32],
         q: &Point,
     ) -> Point {
-        use crate::ct_utils::ConditionallySelectable;
-
         // Precompute lookup table
         let table = [
             Point::infinity(), // 00: neither

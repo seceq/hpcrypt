@@ -813,7 +813,6 @@ impl FieldElement {
             panic!("Cannot invert zero");
         }
 
-        use super::constants::P521_MODULUS;
         use crate::safegcd::safegcd_invert_vartime_p521;
 
         let result_limbs = safegcd_invert_vartime_p521(&self.limbs, &P521_MODULUS);

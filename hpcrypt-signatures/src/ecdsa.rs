@@ -289,7 +289,6 @@ impl SigningKey {
     /// ```
     #[cfg(feature = "std")]
     pub fn generate() -> Result<Self, CurveError> {
-        use hpcrypt_curves::p256::Scalar;
         use hpcrypt_rng::generate_random_bytes;
 
         // Try up to 100 times to generate a valid key
@@ -535,8 +534,6 @@ impl VerifyingKey {
     /// `Some(VerifyingKey)` if the coordinates represent a valid point on the curve,
     /// `None` otherwise.
     pub fn from_affine_coords(x: &[u8], y: &[u8]) -> Result<Self, CurveError> {
-        use hpcrypt_curves::p256::{field::FieldElement, AffinePoint, Point};
-
         if x.len() != 32 || y.len() != 32 {
             return Err(CurveError::NotOnCurve);
         }

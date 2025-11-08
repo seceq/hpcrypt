@@ -250,7 +250,6 @@ impl SigningKey {
     /// ```
     #[cfg(feature = "std")]
     pub fn generate() -> Result<Self, CurveError> {
-        use hpcrypt_curves::secp256k1::Scalar;
         use hpcrypt_rng::generate_random_bytes;
 
         // Try up to 100 times to generate a valid key

@@ -155,7 +155,6 @@ impl FieldElement {
 
         // Constant-time: check if result >= p by comparing from high to low
         // We need to determine if we should use diff or result
-        use crate::ct_utils::{Choice, ConditionallySelectable};
 
         let mut is_ge = Choice::from(0u8);
         let mut found_difference = Choice::from(0u8);
