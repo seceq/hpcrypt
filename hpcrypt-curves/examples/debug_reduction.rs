@@ -7,7 +7,7 @@ fn main() {
     println!("=== Manual Computation of (p-3)^2 ===\n");
 
     // P-256 modulus
-    let p = [
+    let _p = [
         0xFFFFFFFFFFFFFFFF_u64,
         0x00000000FFFFFFFF,
         0x0000000000000000,
@@ -17,7 +17,7 @@ fn main() {
     println!("p = 0xFFFFFFFF00000001000000000000000000000000FFFFFFFF FFFFFFFFFFFFFFFF");
 
     // p-3
-    let p_minus_3 = [
+    let _p_minus_3 = [
         0xFFFFFFFFFFFFFFFC_u64,
         0xFFFFFFFFFFFFFFFF,
         0xFFFFFFFFFFFFFFFF,
