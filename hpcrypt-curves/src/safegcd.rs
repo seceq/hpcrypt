@@ -1011,10 +1011,11 @@ mod tests {
 
             let mod_int = SafeGcdInt::from_limbs(&modulus);
 
-            let mut converged = false;
+            let converged = false;
             for i in 0..744 {
                 if g.is_zero() && !converged {
-                    let _converged = true;
+                    #[allow(unused_variables)]
+                    let converged = true;
                     let d_reduced = d.mod_reduce(&modulus);
                     let e_reduced = e.mod_reduce(&modulus);
                     let f_is_neg = f.is_negative();
