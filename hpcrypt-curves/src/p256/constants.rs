@@ -8,10 +8,10 @@
 /// In hex: FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF
 ///
 /// Represented as 4 x 64-bit limbs (little-endian):
-/// - limbs[0] = 0xFFFFFFFFFFFFFFFF (2^64 - 1)
-/// - limbs[1] = 0x00000000FFFFFFFF (2^32 - 1)
-/// - limbs[2] = 0x0000000000000000 (0)
-/// - limbs[3] = 0xFFFFFFFF00000001 (2^64 - 2^32 + 1)
+/// - limbs\[0\] = 0xFFFFFFFFFFFFFFFF (2^64 - 1)
+/// - limbs\[1\] = 0x00000000FFFFFFFF (2^32 - 1)
+/// - limbs\[2\] = 0x0000000000000000 (0)
+/// - limbs\[3\] = 0xFFFFFFFF00000001 (2^64 - 2^32 + 1)
 pub const P256_MODULUS: [u64; 4] = [
     0xFFFFFFFFFFFFFFFF,
     0x00000000FFFFFFFF,

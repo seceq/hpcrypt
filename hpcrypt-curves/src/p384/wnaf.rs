@@ -54,11 +54,11 @@ const MAX_WNAF_VALUE: usize = (1 << WINDOW_WIDTH) - 1;
 /// Precomputed table of odd multiples for wNAF scalar multiplication
 ///
 /// For a point P and window width w=4, stores:
-/// - table[0] = P
-/// - table[1] = 3P
-/// - table[2] = 5P
+/// - table\[0\] = P
+/// - table\[1\] = 3P
+/// - table\[2\] = 5P
 /// - ...
-/// - table[7] = 15P
+/// - table\[7\] = 15P
 ///
 /// Memory: 8 points × 64 bytes = 512 bytes (Affine coordinates, 33% less than Jacobian!)
 ///
@@ -194,9 +194,9 @@ impl WNafTable {
 ///    if k is odd:
 ///        digit = k mod 2^w (signed)
 ///        k = k - digit
-///        wnaf[i] = digit
+///        wnaf\[i\] = digit
 ///    else:
-///        wnaf[i] = 0
+///        wnaf\[i\] = 0
 ///    k = k / 2
 ///    i = i + 1
 /// ```

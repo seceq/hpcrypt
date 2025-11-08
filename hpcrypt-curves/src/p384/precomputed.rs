@@ -36,10 +36,10 @@ const NUM_WINDOWS: usize = 384 / WINDOW_SIZE; // 96 windows
 ///
 /// Memory usage: 96 windows × 16 points × 96 bytes/point = 147,456 bytes (~144 KB)
 pub struct PrecomputedTable {
-    /// tables[i] contains precomputed multiples for window i
-    /// tables[i][j] = j * (2^(4*i)) * G in affine coordinates
+    /// tables\[i\] contains precomputed multiples for window i
+    /// tables\[i\]\[j\] = j * (2^(4*i)) * G in affine coordinates
     ///
-    /// Note: tables[i][0] represents the point at infinity, stored as (0, 0)
+    /// Note: tables\[i\]\[0\] represents the point at infinity, stored as (0, 0)
     /// which is handled specially during addition.
     tables: [[AffinePoint; 16]; NUM_WINDOWS],
 }
@@ -69,11 +69,11 @@ impl PrecomputedTable {
     ///
     /// For window i (i = 0 to 95):
     ///   base = 2^(4i) * G
-    ///   tables[i][0] = infinity (sentinel)
-    ///   tables[i][1] = base
-    ///   tables[i][2] = 2 * base
+    ///   tables\[i\]\[0\] = infinity (sentinel)
+    ///   tables\[i\]\[1\] = base
+    ///   tables\[i\]\[2\] = 2 * base
     ///   ...
-    ///   tables[i][15] = 15 * base
+    ///   tables\[i\]\[15\] = 15 * base
     ///
     /// # Performance
     ///
@@ -129,7 +129,7 @@ impl PrecomputedTable {
     /// ```text
     /// result = infinity
     /// for each 4-bit window in scalar (from MSB to LSB):
-    ///     result = result + tables[window_idx][window_value]
+    ///     result = result + tables\[window_idx\]\[window_value\]
     /// ```
     ///
     /// The key insight: instead of processing bits one at a time, we process

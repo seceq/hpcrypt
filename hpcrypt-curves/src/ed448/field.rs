@@ -507,8 +507,8 @@ impl FieldElement {
     /// Optimized squaring using Karatsuba-like structure with symmetry exploitation
     ///
     /// For squaring, we have a = x, b = x, so many products can be reused:
-    ///   - Products where i != j appear twice: a[i]*a[j] = a[j]*a[i]
-    ///   - Products where i == j (diagonal) appear once: a[i]*a[i]
+    ///   - Products where i != j appear twice: a\[i\]*a\[j\] = a\[j\]*a\[i\]
+    ///   - Products where i == j (diagonal) appear once: a\[i\]*a\[i\]
     ///
     /// This reduces multiplications from 64 to ~36 (saving 44%).
     #[inline]
@@ -588,7 +588,7 @@ impl FieldElement {
     }
 
     /// Square a 4-limb number, returning 8 limbs
-    /// Exploits symmetry: a[i]*a[j] = a[j]*a[i] for i != j
+    /// Exploits symmetry: a\[i\]*a\[j\] = a\[j\]*a\[i\] for i != j
     #[inline]
     fn square_4x4(a: &[u64; 4]) -> [u64; 8] {
         let mut product = [0u128; 8];
@@ -619,7 +619,7 @@ impl FieldElement {
     }
 
     /// Square a 5-limb number, returning 10 limbs
-    /// Exploits symmetry: a[i]*a[j] = a[j]*a[i] for i != j
+    /// Exploits symmetry: a\[i\]*a\[j\] = a\[j\]*a\[i\] for i != j
     #[inline]
     fn square_5x5(a: &[u64; 5]) -> [u64; 10] {
         let mut product = [0u128; 10];

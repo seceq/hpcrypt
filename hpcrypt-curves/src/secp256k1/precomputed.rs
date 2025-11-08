@@ -36,10 +36,10 @@ const NUM_WINDOWS: usize = 256 / WINDOW_SIZE; // 64 windows
 ///
 /// Memory usage: 64 windows × 16 points × 64 bytes/point = 65,536 bytes (~64 KB)
 pub struct PrecomputedTable {
-    /// tables[i] contains precomputed multiples for window i
-    /// tables[i][j] = j * (2^(4*i)) * G in affine coordinates
+    /// tables\[i\] contains precomputed multiples for window i
+    /// tables\[i\]\[j\] = j * (2^(4*i)) * G in affine coordinates
     ///
-    /// Note: tables[i][0] represents the point at infinity, stored as (0, 0)
+    /// Note: tables\[i\]\[0\] represents the point at infinity, stored as (0, 0)
     /// which is handled specially during addition.
     tables: [[AffinePoint; 16]; NUM_WINDOWS],
 }

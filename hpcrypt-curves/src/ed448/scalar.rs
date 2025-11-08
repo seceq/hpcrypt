@@ -538,7 +538,7 @@ impl Scalar {
     /// Returns an array of 448 signed digits, each in {-1, 0, 1}.
     ///
     /// # Example
-    /// ```ignore
+    /// ```text
     /// // Binary:  ...110... (two consecutive 1s)
     /// // NAF:     ...1-10... (no adjacent non-zeros)
     /// // Same value: 2^(i+1) + 2^i = 2^(i+1) - 2^i + 2^(i+1) = 2^(i+2) - 2^i

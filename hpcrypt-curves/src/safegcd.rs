@@ -46,7 +46,7 @@
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct SafeGcdInt {
     /// Limbs in little-endian order (two's complement)
-    /// limbs[0] is least significant, limbs[9] contains sign in MSB
+    /// limbs\[0\] is least significant, limbs\[9\] contains sign in MSB
     limbs: [u64; 10],
 }
 

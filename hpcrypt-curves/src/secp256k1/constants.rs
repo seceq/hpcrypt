@@ -16,10 +16,10 @@
 /// In hex: FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
 ///
 /// Represented as 4 x 64-bit limbs (little-endian):
-/// - limbs[0] = 0xFFFFFFFEFFFFFC2F
-/// - limbs[1] = 0xFFFFFFFFFFFFFFFF
-/// - limbs[2] = 0xFFFFFFFFFFFFFFFF
-/// - limbs[3] = 0xFFFFFFFFFFFFFFFF
+/// - limbs\[0\] = 0xFFFFFFFEFFFFFC2F
+/// - limbs\[1\] = 0xFFFFFFFFFFFFFFFF
+/// - limbs\[2\] = 0xFFFFFFFFFFFFFFFF
+/// - limbs\[3\] = 0xFFFFFFFFFFFFFFFF
 pub const SECP256K1_MODULUS: [u64; 4] = [
     0xFFFFFFFEFFFFFC2F,
     0xFFFFFFFFFFFFFFFF,

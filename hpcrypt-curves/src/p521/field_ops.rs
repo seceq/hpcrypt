@@ -494,7 +494,7 @@ impl FieldElement {
     }
 
     /// Helper: 5x5 limb optimized squaring -> 10 limbs
-    /// Exploits symmetry: a[i]*a[j] = a[j]*a[i] for i != j
+    /// Exploits symmetry: a\[i\]*a\[j\] = a\[j\]*a\[i\] for i != j
     #[inline(always)]
     fn square_5x5(a: &[u64; 5]) -> [u64; 10] {
         let mut result = [0u64; 10];
@@ -550,7 +550,7 @@ impl FieldElement {
     }
 
     /// Helper: 4x4 limb optimized squaring -> 8 limbs
-    /// Exploits symmetry: a[i]*a[j] = a[j]*a[i] for i != j
+    /// Exploits symmetry: a\[i\]*a\[j\] = a\[j\]*a\[i\] for i != j
     #[inline(always)]
     fn square_4x4(a: &[u64; 4]) -> [u64; 8] {
         let mut result = [0u64; 8];
@@ -632,13 +632,13 @@ impl FieldElement {
 
     /// Optimized squaring: computes self * self -> 1042-bit result.
     ///
-    /// This exploits symmetry: since a[i] * a[j] == a[j] * a[i], we only compute
+    /// This exploits symmetry: since a\[i\] * a\[j\] == a\[j\] * a\[i\], we only compute
     /// each unique product once and double the off-diagonal products.
     ///
     /// Algorithm:
-    /// 1. Compute all off-diagonal products a[i]*a[j] where i < j
+    /// 1. Compute all off-diagonal products a\[i\]*a\[j\] where i < j
     /// 2. Double the entire result (shift left by 1)
-    /// 3. Add diagonal products a[i]*a[i]
+    /// 3. Add diagonal products a\[i\]*a\[i\]
     ///
     /// For 9 limbs: 45 multiplications instead of 81 (~44% fewer muls)
     ///

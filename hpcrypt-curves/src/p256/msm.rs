@@ -26,8 +26,8 @@
 //! 2. Create precomputed tables for P₁ and P₂ (odd multiples)
 //! 3. Process both wNAF digits from MSB to LSB:
 //!    - Double the accumulator once
-//!    - Add from P₁'s table if wNAF₁[i] ≠ 0
-//!    - Add from P₂'s table if wNAF₂[i] ≠ 0
+//!    - Add from P₁'s table if wNAF₁\[i\] ≠ 0
+//!    - Add from P₂'s table if wNAF₂\[i\] ≠ 0
 //!
 //! # ECDSA Verification Use Case
 //!

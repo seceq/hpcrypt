@@ -24,9 +24,9 @@ use core::fmt;
 /// A field element in the P-521 prime field.
 ///
 /// Represented as 9 x 64-bit limbs in little-endian order:
-/// value = limbs[0] + limbs[1]*2^64 + ... + limbs[8]*2^512
+/// value = limbs\[0\] + limbs\[1\]*2^64 + ... + limbs\[8\]*2^512
 ///
-/// The top limb (limbs[8]) only uses 9 bits since 521 = 8*64 + 9.
+/// The top limb (limbs\[8\]) only uses 9 bits since 521 = 8*64 + 9.
 #[derive(Clone, Copy)]
 pub struct FieldElement {
     /// Limbs in little-endian order

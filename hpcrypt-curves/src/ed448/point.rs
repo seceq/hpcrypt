@@ -54,7 +54,7 @@ impl Point {
         x_zero & y_eq_z
     }
 
-    /// Point doubling: computes [2]P
+    /// Point doubling: computes \[2\]P
     ///
     /// Uses RFC 8032 formula for doubling on untwisted Edwards curve with a=1
     /// Cost: 4M + 4S
@@ -171,7 +171,7 @@ impl Point {
         }
     }
 
-    /// Scalar multiplication: computes [k]P using 4-bit windowing
+    /// Scalar multiplication: computes \[k\]P using 4-bit windowing
     ///
     /// This method uses a 4-bit windowing technique which is significantly faster
     /// than bit-by-bit double-and-add. It precomputes 16 multiples of P and processes
@@ -320,9 +320,9 @@ impl Point {
         result
     }
 
-    /// Double scalar multiplication: computes [a]P + [b]Q
+    /// Double scalar multiplication: computes \[a\]P + \[b\]Q
     ///
-    /// This is more efficient than computing [a]P and [b]Q separately.
+    /// This is more efficient than computing \[a\]P and \[b\]Q separately.
     /// Used in signature verification (Shamir's trick).
     pub fn double_scalar_mul(
         scalar_a: &Scalar,
@@ -662,18 +662,18 @@ impl Point {
     /// Input: Extended point P1 = (X1:Y1:Z1:T1), Niels point P2 = (y2+x2, y2-x2, 2*d*t2)
     /// Output: Extended point P3 = P1 + P2
     ///
-    /// 1. A = (Y1 - X1) * (y2 - x2)        [M1]
-    /// 2. B = (Y1 + X1) * (y2 + x2)        [M2]
-    /// 3. C = 2*d*T1 * t2                  [M3] (simplified since Niels stores 2d*t2)
-    /// 4. D = 2*Z1                         [A]
-    /// 5. E = B - A                        [A]
-    /// 6. F = D - C                        [A]
-    /// 7. G = D + C                        [A]
-    /// 8. H = B + A                        [A] (independent of curve parameter a)
-    /// 9. X3 = E * F                       [M4]
-    /// 10. Y3 = G * H                      [M5]
-    /// 11. T3 = E * H                      [M6]
-    /// 12. Z3 = F * G                      [M7]
+    /// 1. A = (Y1 - X1) * (y2 - x2)        \[M1\]
+    /// 2. B = (Y1 + X1) * (y2 + x2)        \[M2\]
+    /// 3. C = 2*d*T1 * t2                  \[M3\] (simplified since Niels stores 2d*t2)
+    /// 4. D = 2*Z1                         \[A\]
+    /// 5. E = B - A                        \[A\]
+    /// 6. F = D - C                        \[A\]
+    /// 7. G = D + C                        \[A\]
+    /// 8. H = B + A                        \[A\] (independent of curve parameter a)
+    /// 9. X3 = E * F                       \[M4\]
+    /// 10. Y3 = G * H                      \[M5\]
+    /// 11. T3 = E * H                      \[M6\]
+    /// 12. Z3 = F * G                      \[M7\]
     pub fn add_niels(&self, other: &NielsPoint) -> Point {
         // CRITICAL FIX: Convert Niels to Extended and use the RFC 8032 formula
         // The issue was that we were using OpenSSL's formula (with different intermediate values)
@@ -980,7 +980,7 @@ mod tests {
 impl Point {
     /// Pippenger's multi-scalar multiplication algorithm
     ///
-    /// Computes Σ(scalars[i] * points[i]) efficiently using the bucket method.
+    /// Computes Σ(scalars\[i\] * points\[i\]) efficiently using the bucket method.
     /// This is significantly faster than naive summation for n ≥ 8.
     ///
     /// # Algorithm: Bucket Method (Pippenger)
@@ -1015,7 +1015,7 @@ impl Point {
     ///
     /// # Returns
     ///
-    /// The point Σ(scalars[i] * points[i])
+    /// The point Σ(scalars\[i\] * points\[i\])
     ///
     /// # Panics
     ///
@@ -1167,7 +1167,7 @@ impl Point {
 #[cfg(feature = "std")]
 pub struct CombTable {
     /// Precomputed points using radix-16 representation (libsodium style)
-    /// table[i][j] = (j+1) * 256^i * B
+    /// table\[i\]\[j\] = (j+1) * 256^i * B
     ///
     /// Where:
     /// - i ranges from 0 to 55 (56 positions for 448-bit scalar)
@@ -1188,9 +1188,9 @@ impl CombTable {
     /// Generate the radix-16 table for the base point (libsodium style)
     ///
     /// # Algorithm
-    /// For each position i ∈ [0, 56):
-    ///   For each multiple j ∈ [0, 8):
-    ///     table[i][j] = (j+1) * 256^i * B
+    /// For each position i ∈ \[0, 56\):
+    ///   For each multiple j ∈ \[0, 8\):
+    ///     table\[i\]\[j\] = (j+1) * 256^i * B
     ///                 = (j+1) * 16^(2i) * B
     ///
     /// This gives us multiples of B at exponentially spaced positions,
@@ -1356,8 +1356,8 @@ static COMB_TABLE: Lazy<CombTable> = Lazy::new(|| CombTable::generate());
 ///
 /// # Use Cases
 /// - Key generation (computing public key from private key)
-/// - Signature generation (computing r = [k]B)
-/// - Any operation requiring [scalar]B where B is the base point
+/// - Signature generation (computing r = \[k\]B)
+/// - Any operation requiring \[scalar\]B where B is the base point
 pub fn scalar_mul_base_comb(scalar: &[u8; 57]) -> Point {
     #[cfg(feature = "std")]
     {

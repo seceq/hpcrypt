@@ -24,7 +24,7 @@ use core::fmt;
 /// A field element in the P-384 prime field.
 ///
 /// Represented as 6 x 64-bit limbs in little-endian order:
-/// value = limbs[0] + limbs[1]*2^64 + limbs[2]*2^128 + limbs[3]*2^192 + limbs[4]*2^256 + limbs[5]*2^320
+/// value = limbs\[0\] + limbs\[1\]*2^64 + limbs\[2\]*2^128 + limbs\[3\]*2^192 + limbs\[4\]*2^256 + limbs\[5\]*2^320
 #[derive(Clone, Copy)]
 pub struct FieldElement {
     /// Limbs in little-endian order

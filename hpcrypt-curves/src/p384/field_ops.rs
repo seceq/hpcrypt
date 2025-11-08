@@ -420,13 +420,13 @@ impl FieldElement {
 
     /// Optimized squaring: computes self * self -> 768-bit result.
     ///
-    /// This exploits symmetry: since a[i] * a[j] == a[j] * a[i], we only compute
+    /// This exploits symmetry: since a\[i\] * a\[j\] == a\[j\] * a\[i\], we only compute
     /// each unique product once and double the off-diagonal products.
     ///
     /// Algorithm:
-    /// 1. Compute all off-diagonal products a[i]*a[j] where i < j
+    /// 1. Compute all off-diagonal products a\[i\]*a\[j\] where i < j
     /// 2. Double the entire result (shift left by 1)
-    /// 3. Add diagonal products a[i]*a[i]
+    /// 3. Add diagonal products a\[i\]*a\[i\]
     ///
     /// For 6 limbs: 21 multiplications instead of 36 (~42% fewer muls)
     ///

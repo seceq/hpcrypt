@@ -36,10 +36,10 @@ const NUM_WINDOWS: usize = 256 / WINDOW_SIZE; // 64 windows
 ///
 /// Memory usage: 64 windows × 16 points × 64 bytes/point = 65,536 bytes (~64 KB)
 pub struct PrecomputedTable {
-    /// tables[i] contains precomputed multiples for window i
-    /// tables[i][j] = j * (2^(4*i)) * G in affine coordinates
+    /// tables\[i\] contains precomputed multiples for window i
+    /// tables\[i\]\[j\] = j * (2^(4*i)) * G in affine coordinates
     ///
-    /// Note: tables[i][0] represents the point at infinity, stored as (0, 0)
+    /// Note: tables\[i\]\[0\] represents the point at infinity, stored as (0, 0)
     /// which is handled specially during addition.
     tables: [[AffinePoint; 16]; NUM_WINDOWS],
 }
@@ -148,9 +148,9 @@ impl PrecomputedTable {
 /// Memory usage: 64 windows × 8 points × 64 bytes/point = 32,768 bytes (~32 KB)
 /// This is 50% smaller than the full table!
 pub struct CompressedPrecomputedTable {
-    /// tables[i] contains odd multiples for window i
-    /// tables[i][j] = (2*j + 1) * (2^(4*i)) * G for j in 0..8
-    /// So tables[i][0] = 1*base, tables[i][1] = 3*base, ..., tables[i][7] = 15*base
+    /// tables\[i\] contains odd multiples for window i
+    /// tables\[i\]\[j\] = (2*j + 1) * (2^(4*i)) * G for j in 0..8
+    /// So tables\[i\]\[0\] = 1*base, tables\[i\]\[1\] = 3*base, ..., tables\[i\]\[7\] = 15*base
     tables: [[AffinePoint; 8]; NUM_WINDOWS],
 }
 

@@ -3,7 +3,7 @@
 //! BLAKE2s is a cryptographic hash function optimized for 8- to 32-bit platforms.
 //! It produces digests of any size between 1 and 32 bytes.
 //!
-//! Specified in RFC 7693: https://tools.ietf.org/html/rfc7693
+//! Specified in RFC 7693: <https://tools.ietf.org/html/rfc7693>
 //! Target performance: ~5-7 cycles/byte on 32-bit platforms
 //!
 //! Features:

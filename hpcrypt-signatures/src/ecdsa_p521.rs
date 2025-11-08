@@ -56,7 +56,7 @@ impl Signature {
     /// Returns a variable-length byte array in DER format.
     /// Maximum size is 141 bytes for P-521 (66-byte integers).
     ///
-    /// Format: 0x30 [total-len] 0x02 [r-len] [r] 0x02 [s-len] [s]
+    /// Format: 0x30 \[total-len\] 0x02 \[r-len\] \[r\] 0x02 \[s-len\] \[s\]
     pub fn to_der(&self) -> ([u8; 141], usize) {
         let mut der = [0u8; 141];
         let mut pos = 0;

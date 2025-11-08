@@ -832,7 +832,7 @@ impl Point {
     /// # Algorithm
     ///
     /// Complete addition formula for curves with a = -3 (all NIST curves).
-    /// Reference: https://eprint.iacr.org/2015/1060 (Algorithm 4)
+    /// Reference: <https://eprint.iacr.org/2015/1060> (Algorithm 4)
     ///
     /// # Security
     ///
@@ -1132,11 +1132,11 @@ impl Point {
     /// **When to use this function:**
     /// - ✅ **Two arbitrary points** (neither is the generator): ~30-40% speedup
     /// - ✅ **Curves without fast generator tables** (like Ed448)
-    /// - ✅ **Constant-time operations** (see [`double_scalar_mul_constant_time`])
+    /// - ✅ **Constant-time operations** (see `double_scalar_mul_constant_time`)
     ///
     /// **When NOT to use:**
     /// - ❌ **P-256 ECDSA verification** (one point is generator)
-    /// - ❌ **Any operation involving the generator point** (use [`scalar_mul_generator`] instead)
+    /// - ❌ **Any operation involving the generator point** (use specialized generator multiplication instead)
     ///
     /// See: [`docs/P256_SHAMIR_ANALYSIS_COMPLETE.md`](../../docs/P256_SHAMIR_ANALYSIS_COMPLETE.md)
     /// for detailed performance analysis.
@@ -1175,7 +1175,7 @@ impl Point {
     /// # Example
     ///
     /// ```ignore
-    /// // ECDSA verification: check if [s^-1*hash]G + [s^-1*r]PK = R
+    /// // ECDSA verification: check if \[s^-1*hash\]G + \[s^-1*r\]PK = R
     /// let result = Point::double_scalar_mul(&k1, &g, &k2, &pk);
     /// ```
     pub fn double_scalar_mul(k1: &[u8; 32], p: &Point, k2: &[u8; 32], q: &Point) -> Point {

@@ -530,13 +530,13 @@ impl FieldElement {
 
     /// Optimized squaring: computes self * self -> 512-bit result.
     ///
-    /// This exploits symmetry: since a[i] * a[j] == a[j] * a[i], we only compute
+    /// This exploits symmetry: since a\[i\] * a\[j\] == a\[j\] * a\[i\], we only compute
     /// each unique product once and double the off-diagonal products.
     ///
     /// Algorithm:
-    /// 1. Compute all off-diagonal products a[i]*a[j] where i < j
+    /// 1. Compute all off-diagonal products a\[i\]*a\[j\] where i < j
     /// 2. Double the entire result (shift left by 1)
-    /// 3. Add diagonal products a[i]*a[i]
+    /// 3. Add diagonal products a\[i\]*a\[i\]
     ///
     /// For 4 limbs: 10 multiplications instead of 16 (~37% fewer muls)
     ///
@@ -1351,7 +1351,7 @@ impl FieldElement {
     ///
     /// This implementation uses Separated Operand Scanning (SOS) form:
     /// - Process T in 4 phases (one per 64-bit limb of p')
-    /// - Each phase computes: T := (T + p'[i]·T[i]·p) / 2^64
+    /// - Each phase computes: T := (T + p'[i]·T\[i\]·p) / 2^64
     /// - After 4 phases, we've divided by R = 2^256
     /// - One final conditional reduction ensures result < p
     ///

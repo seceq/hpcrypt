@@ -246,9 +246,9 @@ impl Scalar {
     /// This function uses the optimized Barrett reduction algorithm (HAC 14.42)
     /// which was debugged and fixed in Session 6 after extensive investigation.
     ///
-    /// The bug was in the r[4] handling - we were extracting r[0..3] without
+    /// The bug was in the r\[4\] handling - we were extracting r[0..3] without
     /// first reducing the full 5-limb value. This caused failures for large inputs
-    /// like 7^301 squared (510-bit result with r[4]=1).
+    /// like 7^301 squared (510-bit result with r\[4\]=1).
     ///
     /// Performance: Barrett reduction is ~4x faster than BigUint, enabling:
     /// - 75% faster scalar multiplication
@@ -268,7 +268,7 @@ impl Scalar {
     /// - Sessions 1-3: Improved threshold from ~250 to ~1204 iterations
     /// - Session 4: Proved algorithm correctness, found failure at 7^602
     /// - Session 5: Investigated borrow handling (wrong location)
-    /// - Session 6: FIXED! Bug was in r[4] extraction (lines 386-437)
+    /// - Session 6: FIXED! Bug was in r\[4\] extraction (lines 386-437)
     ///
     /// The fix: Properly reduce full 5-limb value before extracting r[0..3].
     /// Result: All tests pass, 4x performance improvement over BigUint!

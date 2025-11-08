@@ -609,11 +609,11 @@ impl Point {
     /// **When to use this function:**
     /// - ✅ **Two arbitrary points** (neither is the generator): ~30-40% speedup
     /// - ✅ **Curves without fast generator tables** (like Ed448)
-    /// - ✅ **Constant-time operations** (see [`double_scalar_mul_constant_time`])
+    /// - ✅ **Constant-time operations** (see `double_scalar_mul_constant_time`)
     ///
     /// **When NOT to use:**
     /// - ❌ **P-384 ECDSA verification** (one point is generator)
-    /// - ❌ **Any operation involving the generator point** (use [`scalar_mul_generator_fast`] instead)
+    /// - ❌ **Any operation involving the generator point** (use specialized generator multiplication instead)
     ///
     /// Same performance characteristics as P-256. See P-256's documentation for detailed analysis.
     ///

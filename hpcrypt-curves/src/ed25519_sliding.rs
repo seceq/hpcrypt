@@ -49,7 +49,7 @@ use alloc::vec::Vec;
 /// 2. Initialize result = O (identity)
 /// 3. i = 255 (start from MSB)
 /// 4. while i >= 0:
-///    if scalar[i] == 0:
+///    if scalar\[i\] == 0:
 ///        result = double(result)
 ///        i = i - 1
 ///    else:
@@ -65,7 +65,7 @@ use alloc::vec::Vec;
 ///        for _ in 0..(i - j):
 ///            result = double(result)
 ///        // Add the odd multiple
-///        result = result + odd_multiple[window_value]
+///        result = result + odd_multiple\[window_value\]
 ///        i = j - 1
 /// 5. Return result
 /// ```

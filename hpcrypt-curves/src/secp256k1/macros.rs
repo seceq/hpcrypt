@@ -19,7 +19,7 @@
 /// // m01 = a0*a1, m02 = a0*a2, m03 = a0*a3,
 /// // m12 = a1*a2, m13 = a1*a3, m23 = a2*a3  (6 products)
 /// // d0 = a0*a0, d1 = a1*a1, d2 = a2*a2, d3 = a3*a3  (4 products)
-/// // Then combines with doubling: result[i+j] += 2*m_ij (i≠j), result[2i] += d_i
+/// // Then combines with doubling: result[i+j] += 2*m_ij (i≠j), result\[2i\] += d_i
 /// ```
 macro_rules! unrolled_square_symmetric {
     // 4-limb version (for 64-bit FieldElement)

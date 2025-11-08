@@ -421,9 +421,9 @@ impl Scalar {
     /// # Algorithm
     /// For each bit position i from 0 to 255:
     /// - If bit i is 1:
-    ///   - If bit i+1 is also 1, set naf[i] = -1 and add 1 to position i+1 (carry)
-    ///   - Otherwise, set naf[i] = 1
-    /// - If bit i is 0, set naf[i] = 0
+    ///   - If bit i+1 is also 1, set naf\[i\] = -1 and add 1 to position i+1 (carry)
+    ///   - Otherwise, set naf\[i\] = 1
+    /// - If bit i is 0, set naf\[i\] = 0
     ///
     /// # Returns
     /// Array of 256 signed digits, each in {-1, 0, 1}, represented as i8
@@ -1045,7 +1045,7 @@ pub fn base_point() -> EdwardsPoint {
 /// Memory usage: 64 windows × 16 points × ~160 bytes = ~164 KB
 /// Performance gain: ~10x faster than windowed scalar multiplication
 pub struct BasePointTable {
-    /// Precomputed points: [i][j] = [j * 16^i]B
+    /// Precomputed points: [i][j] = \[j * 16^i\]B
     /// where B is the base point and i ∈ [0, 63], j ∈ [0, 15]
     windows: [[EdwardsPoint; 16]; 64],
 }
@@ -1147,7 +1147,7 @@ impl BasePointTable {
 #[cfg(feature = "std")]
 pub struct CombTable {
     /// Precomputed points using radix-16 representation (libsodium style)
-    /// table[i][j] = (j+1) * 256^i * B
+    /// table\[i\]\[j\] = (j+1) * 256^i * B
     ///
     /// Where:
     /// - i ranges from 0 to 31 (32 positions for 256-bit scalar)
@@ -1165,9 +1165,9 @@ impl CombTable {
     /// Generate the radix-16 table for the base point (libsodium style)
     ///
     /// # Algorithm
-    /// For each position i ∈ [0, 32):
-    ///   For each multiple j ∈ [0, 8):
-    ///     table[i][j] = (j+1) * 256^i * B
+    /// For each position i ∈ \[0, 32\):
+    ///   For each multiple j ∈ \[0, 8\):
+    ///     table\[i\]\[j\] = (j+1) * 256^i * B
     ///                 = (j+1) * 16^(2i) * B
     ///
     /// This gives us multiples of B at exponentially spaced positions,
@@ -1333,8 +1333,8 @@ static COMB_TABLE: Lazy<CombTable> = Lazy::new(|| CombTable::generate());
 ///
 /// # Use Cases
 /// - Key generation (computing public key from private key)
-/// - Signature generation (computing r = [k]B)
-/// - Any operation requiring [scalar]B where B is the base point
+/// - Signature generation (computing r = \[k\]B)
+/// - Any operation requiring \[scalar\]B where B is the base point
 pub fn scalar_mul_base_comb(scalar: &[u8; 32]) -> EdwardsPoint {
     #[cfg(feature = "std")]
     {
@@ -1375,10 +1375,10 @@ impl Ed25519 {
     /// 1. Hash the 32-byte private key using SHA-512 to produce 64 bytes
     /// 2. Interpret the first 32 bytes as a scalar in little-endian format
     /// 3. Clamp the scalar by setting/clearing specific bits:
-    ///    - Clear the 3 lowest bits (`scalar[0] &= 0xF8`)
-    ///    - Clear the highest bit (`scalar[31] &= 0x7F`)
-    ///    - Set the second-highest bit (`scalar[31] |= 0x40`)
-    /// 4. Compute `A = [scalar]B` where `B` is the Ed25519 base point
+    ///    - Clear the 3 lowest bits (`scalar\[0\] &= 0xF8`)
+    ///    - Clear the highest bit (`scalar\[31\] &= 0x7F`)
+    ///    - Set the second-highest bit (`scalar\[31\] |= 0x40`)
+    /// 4. Compute `A = \[scalar\]B` where `B` is the Ed25519 base point
     /// 5. Encode the point `A` to 32 bytes (compressed y-coordinate + sign bit)
     ///
     /// # Arguments
@@ -1445,7 +1445,7 @@ impl Ed25519 {
     /// 1. Hash the private key with SHA-512: `H(private_key) = h`
     /// 2. Split `h` into scalar (first 32 bytes, clamped) and prefix (last 32 bytes)
     /// 3. Compute nonce: `r = H(prefix || message) mod L`
-    /// 4. Compute `R = [r]B` (nonce point)
+    /// 4. Compute `R = \[r\]B` (nonce point)
     /// 5. Compute challenge: `k = H(R || A || message) mod L` where `A` is the public key
     /// 6. Compute `S = (r + k * scalar) mod L`
     /// 7. Return signature as `R || S` (64 bytes total)
@@ -1550,12 +1550,12 @@ impl Ed25519 {
     ///
     /// # Algorithm
     ///
-    /// Verification checks the equation: `[S]B = R + [k]A`
+    /// Verification checks the equation: `\[S\]B = R + \[k\]A`
     /// 1. Decode `R` and `S` from the 64-byte signature
     /// 2. Decode the public key `A` (32 bytes)
     /// 3. Compute challenge: `k = H(R || A || message) mod L`
-    /// 4. Compute left side: `[S]B`
-    /// 5. Compute right side: `R + [k]A`
+    /// 4. Compute left side: `\[S\]B`
+    /// 5. Compute right side: `R + \[k\]A`
     /// 6. Return `true` if both sides are equal, `false` otherwise
     ///
     /// # Arguments
@@ -1648,7 +1648,7 @@ impl Ed25519 {
 
     /// Pippenger's multi-scalar multiplication algorithm
     ///
-    /// Computes Σ(scalars[i] * points[i]) efficiently using the bucket method.
+    /// Computes Σ(scalars\[i\] * points\[i\]) efficiently using the bucket method.
     /// This is significantly faster than naive summation for n ≥ 8.
     ///
     /// # Algorithm: Bucket Method (Pippenger)
@@ -1683,7 +1683,7 @@ impl Ed25519 {
     ///
     /// # Returns
     ///
-    /// The point Σ(scalars[i] * points[i])
+    /// The point Σ(scalars\[i\] * points\[i\])
     ///
     /// # Panics
     ///
@@ -1803,10 +1803,10 @@ impl Ed25519 {
     /// # Algorithm
     ///
     /// Instead of verifying each signature (Rᵢ, Sᵢ) for message Mᵢ and public key Aᵢ individually:
-    ///     [Sᵢ]B = Rᵢ + [kᵢ]Aᵢ for each i
+    ///     \[Sᵢ\]B = Rᵢ + \[kᵢ\]Aᵢ for each i
     ///
     /// We verify a random linear combination:
-    ///     Σ(cᵢ·[Sᵢ]B) = Σ(cᵢ·(Rᵢ + [kᵢ]Aᵢ))
+    ///     Σ(cᵢ·\[Sᵢ\]B) = Σ(cᵢ·(Rᵢ + \[kᵢ\]Aᵢ))
     ///
     /// where cᵢ are random 128-bit scalars. This gives the same security guarantees
     /// with approximately 50-70% speedup for batches of signatures.

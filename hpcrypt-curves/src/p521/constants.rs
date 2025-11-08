@@ -12,7 +12,7 @@
 /// Represented as 9 x 64-bit limbs (little-endian):
 /// The prime is 2^521 - 1, which means:
 /// - limbs[0..7] = 0xFFFFFFFFFFFFFFFF (all 1s)
-/// - limbs[8] = 0x1FF (9 bits set, since 521 = 8*64 + 9)
+/// - limbs\[8\] = 0x1FF (9 bits set, since 521 = 8*64 + 9)
 pub const P521_MODULUS: [u64; 9] = [
     0xFFFFFFFFFFFFFFFF,
     0xFFFFFFFFFFFFFFFF,

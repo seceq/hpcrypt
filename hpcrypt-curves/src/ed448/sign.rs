@@ -8,12 +8,12 @@
 //! 1. Hash the private key (57 bytes) with SHAKE256 to produce 114 bytes
 //! 2. Use first 57 bytes for secret scalar (with clamping)
 //! 3. Use last 57 bytes as prefix for nonce generation
-//! 4. Compute public key A = [s]B where s is the secret scalar
+//! 4. Compute public key A = \[s\]B where s is the secret scalar
 //!
 //! # Signing
 //!
 //! 1. Compute nonce r = SHAKE256(prefix || message)
-//! 2. Compute R = [r]B
+//! 2. Compute R = \[r\]B
 //! 3. Compute challenge k = SHAKE256(R || A || message)
 //! 4. Compute s = (r + k·secret) mod L
 //! 5. Signature = (R, s) (114 bytes total)
@@ -23,7 +23,7 @@
 //! 1. Parse R and s from signature
 //! 2. Check that s < L (reject if not)
 //! 3. Compute k = SHAKE256(R || A || message)
-//! 4. Verify [s]B = R + [k]A using double scalar multiplication
+//! 4. Verify \[s\]B = R + \[k\]A using double scalar multiplication
 
 use super::constants::ED448_L;
 use super::point::Point;
