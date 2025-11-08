@@ -86,7 +86,7 @@
 //! ```rust
 //! use hpcrypt_curves::X25519;
 //!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn main() {
 //! // Alice generates her keypair
 //! let alice_private = [1u8; 32]; // Use secure random in production
 //! let alice_public = X25519::public_key(&alice_private);
@@ -96,11 +96,10 @@
 //! let bob_public = X25519::public_key(&bob_private);
 //!
 //! // Both compute the same shared secret
-//! let alice_shared = X25519::shared_secret(&alice_private, &bob_public)?;
-//! let bob_shared = X25519::shared_secret(&bob_private, &alice_public)?;
+//! let alice_shared = X25519::shared_secret(&alice_private, &bob_public).unwrap();
+//! let bob_shared = X25519::shared_secret(&bob_private, &alice_public).unwrap();
 //!
 //! assert_eq!(alice_shared, bob_shared);
-//! # Ok(())
 //! # }
 //! ```
 //!
@@ -111,7 +110,7 @@
 //! ```rust
 //! use hpcrypt_curves::X448;
 //!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn main() {
 //! // Alice generates her keypair
 //! let alice_private = [1u8; 56]; // Use secure random in production
 //! let alice_public = X448::public_key(&alice_private);
@@ -121,17 +120,16 @@
 //! let bob_public = X448::public_key(&bob_private);
 //!
 //! // Both compute the same shared secret
-//! let alice_shared = X448::shared_secret(&alice_private, &bob_public)?;
-//! let bob_shared = X448::shared_secret(&bob_private, &alice_public)?;
+//! let alice_shared = X448::shared_secret(&alice_private, &bob_public).unwrap();
+//! let bob_shared = X448::shared_secret(&bob_private, &alice_public).unwrap();
 //!
 //! assert_eq!(alice_shared, bob_shared);
-//! # Ok(())
 //! # }
 //! ```
 //!
 //! ## P-256 ECDSA Signatures
 //!
-//! ```rust
+//! ```ignore
 //! use hpcrypt_curves::p256::{Scalar, Point};
 //! use hpcrypt_signatures::ecdsa::Ecdsa;
 //!

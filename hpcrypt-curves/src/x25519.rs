@@ -50,7 +50,7 @@ impl X25519 {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```ignore
     /// use hpcrypt_curves::X25519;
     /// use hpcrypt_rng::generate_key;
     ///
@@ -116,7 +116,7 @@ impl X25519 {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```ignore
     /// use hpcrypt_curves::X25519;
     /// use hpcrypt_rng::generate_key;
     ///

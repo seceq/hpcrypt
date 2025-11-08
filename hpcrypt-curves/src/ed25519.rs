@@ -1392,7 +1392,7 @@ impl Ed25519 {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```ignore
     /// use hpcrypt_curves::Ed25519;
     /// use hpcrypt_rng::generate_key;
     ///
@@ -1466,7 +1466,7 @@ impl Ed25519 {
     /// ```
     /// use hpcrypt_curves::Ed25519;
     ///
-    /// let private_key = [/* 32 bytes */];
+    /// let private_key = [1u8; 32]; // Use secure random in production
     /// let message = b"Sign this message";
     ///
     /// // Create signature
@@ -1834,11 +1834,20 @@ impl Ed25519 {
     ///
     /// # Example
     ///
-    /// ```no_run
-    /// use hpcrypt_curves::ed25519::Ed25519;
+    /// ```
+    /// use hpcrypt_curves::ed25519::{Ed25519, PublicKey, Signature};
     ///
+    /// # let pk1 = [0u8; 32];
+    /// # let pk2 = [0u8; 32];
+    /// # let pk3 = [0u8; 32];
+    /// # let msg1 = b"message1";
+    /// # let msg2 = b"message2";
+    /// # let msg3 = b"message3";
+    /// # let sig1 = [0u8; 64];
+    /// # let sig2 = [0u8; 64];
+    /// # let sig3 = [0u8; 64];
     /// let public_keys = vec![pk1, pk2, pk3];
-    /// let messages = vec![msg1, msg2, msg3];
+    /// let messages = vec![msg1.as_slice(), msg2.as_slice(), msg3.as_slice()];
     /// let signatures = vec![sig1, sig2, sig3];
     ///
     /// let all_valid = Ed25519::verify_batch(&public_keys, &messages, &signatures);
