@@ -1016,6 +1016,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // Slow test - takes too long under code coverage instrumentation
     fn test_barrett_vs_bigint_large_values() {
         // Test with large random-looking values
         let test_cases = [

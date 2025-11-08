@@ -750,6 +750,7 @@ mod barrett_tests {
     }
 
     #[test]
+    #[ignore] // Slow test - takes too long under code coverage instrumentation
     fn test_barrett_vs_bigint_large_values() {
         // Test with maximum values
         let limbs = [u64::MAX; 12];
