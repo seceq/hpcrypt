@@ -251,7 +251,7 @@ impl SafeGcdInt {
                 _is_gte = true;
                 for i in (0..4).rev() {
                     if result.limbs[i] < modulus[i] {
-                        is_gte = false;
+                        _is_gte = false;
                         break;
                     } else if result.limbs[i] > modulus[i] {
                         _is_gte = true;
@@ -261,7 +261,7 @@ impl SafeGcdInt {
                 }
             }
 
-            if is_gte {
+            if _is_gte {
                 result = result.sub(&mod_int);
             } else {
                 break;
@@ -289,7 +289,7 @@ impl SafeGcdInt {
 
         // Reduce: subtract modulus while result >= modulus
         while !result.is_zero() {
-            let mut is_gte = false;
+            let mut _is_gte = false;
 
             // First check high limbs are zero (otherwise definitely >= modulus)
             if result.limbs[6..10].iter().any(|&x| x != 0) {
@@ -299,7 +299,7 @@ impl SafeGcdInt {
                 _is_gte = true;
                 for i in (0..6).rev() {
                     if result.limbs[i] < modulus[i] {
-                        is_gte = false;
+                        _is_gte = false;
                         break;
                     } else if result.limbs[i] > modulus[i] {
                         _is_gte = true;
@@ -309,7 +309,7 @@ impl SafeGcdInt {
                 }
             }
 
-            if is_gte {
+            if _is_gte {
                 result = result.sub(&mod_int);
             } else {
                 break;
@@ -337,7 +337,7 @@ impl SafeGcdInt {
 
         // Reduce: subtract modulus while result >= modulus
         while !result.is_zero() {
-            let mut is_gte = false;
+            let mut _is_gte = false;
 
             // First check high limb (limb[9]) is zero (otherwise definitely >= modulus)
             if result.limbs[9] != 0 {
@@ -347,7 +347,7 @@ impl SafeGcdInt {
                 _is_gte = true;
                 for i in (0..9).rev() {
                     if result.limbs[i] < modulus[i] {
-                        is_gte = false;
+                        _is_gte = false;
                         break;
                     } else if result.limbs[i] > modulus[i] {
                         _is_gte = true;
@@ -357,7 +357,7 @@ impl SafeGcdInt {
                 }
             }
 
-            if is_gte {
+            if _is_gte {
                 result = result.sub(&mod_int);
             } else {
                 break;

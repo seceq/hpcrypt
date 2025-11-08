@@ -677,24 +677,24 @@ impl FieldElement {
         c1 += d;
         c2 += c1 >> 64; c1 &= 0xFFFFFFFFFFFFFFFF;
         c3 += c2 >> 64; c2 &= 0xFFFFFFFFFFFFFFFF;
-        c4 += c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
+        _c4 += c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
 
         // wide[6] * 2^384 ≡ wide[6] * R * 2^128 (mod p)
         let d = (wide[6] as u128) * (R as u128);
         c2 += d;
         c3 += c2 >> 64; c2 &= 0xFFFFFFFFFFFFFFFF;
-        c4 += c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
+        _c4 += c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
 
         // wide[7] * 2^448 ≡ wide[7] * R * 2^192 (mod p)
         let d = (wide[7] as u128) * (R as u128);
         c3 += d;
-        c4 += c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
+        _c4 += c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
 
-        // Handle remaining carry in c4
-        // c4 * 2^256 ≡ c4 * R (mod p)
-        // Loop until c4 is 0 (usually 1-2 iterations)
-        while c4 > 0 {
-            let d = c4 * (R as u128);
+        // Handle remaining carry in _c4
+        // _c4 * 2^256 ≡ _c4 * R (mod p)
+        // Loop until _c4 is 0 (usually 1-2 iterations)
+        while _c4 > 0 {
+            let d = _c4 * (R as u128);
             c0 += d;
             c1 += c0 >> 64; c0 &= 0xFFFFFFFFFFFFFFFF;
             c2 += c1 >> 64; c1 &= 0xFFFFFFFFFFFFFFFF;
