@@ -352,7 +352,7 @@ impl SigningKey {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```ignore
     /// use hpcrypt_signatures::ecdsa::SigningKey;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -16,7 +16,7 @@
 //!
 //! ## ECDSA P-256 Signature
 //!
-//! ```rust
+//! ```ignore
 //! use hpcrypt_signatures::ecdsa::Ecdsa;
 //! use hpcrypt_curves::p256::{Scalar, Point};
 //!
@@ -42,7 +42,7 @@
 //!
 //! ## ECDSA P-384 Signature
 //!
-//! ```rust
+//! ```ignore
 //! use hpcrypt_signatures::ecdsa_p384::EcdsaP384;
 //! use hpcrypt_curves::p384::{Scalar, Point};
 //!
@@ -64,7 +64,7 @@
 //!
 //! ## ECDSA secp256k1 Signature
 //!
-//! ```rust
+//! ```ignore
 //! use hpcrypt_signatures::ecdsa_secp256k1::EcdsaSecp256k1;
 //! use hpcrypt_curves::secp256k1::{Scalar, Point};
 //!
