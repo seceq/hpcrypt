@@ -1,4 +1,6 @@
 //! HMAC (Hash-based Message Authentication Code)
+
+#![allow(clippy::needless_range_loop)]
 //!
 //! HMAC provides message authentication using a cryptographic hash function
 //! combined with a secret key. Specified in RFC 2104 and FIPS 198-1.

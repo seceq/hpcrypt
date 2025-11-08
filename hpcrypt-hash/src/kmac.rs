@@ -1,4 +1,6 @@
 //! KMAC - Keccak Message Authentication Code
+
+#![allow(clippy::needless_range_loop)]
 //!
 //! Based on NIST SP 800-185: SHA-3 Derived Functions
 //! KMAC provides variable-length message authentication using the Keccak/SHA-3 sponge construction.

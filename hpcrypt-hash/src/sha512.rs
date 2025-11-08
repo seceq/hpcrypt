@@ -1,4 +1,6 @@
 //! SHA-512 cryptographic hash function
+
+#![allow(clippy::needless_range_loop)]
 //!
 //! SHA-512 is part of the SHA-2 family, producing a 512-bit (64-byte) digest.
 //! Specified in FIPS 180-4.

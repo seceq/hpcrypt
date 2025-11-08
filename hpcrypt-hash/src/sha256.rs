@@ -1,4 +1,6 @@
 //! SHA-256 cryptographic hash function
+
+#![allow(clippy::needless_range_loop)]
 //!
 //! SHA-256 is part of the SHA-2 family, producing a 256-bit (32-byte) digest.
 //! Specified in FIPS 180-4.

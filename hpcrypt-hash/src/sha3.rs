@@ -1,4 +1,6 @@
 //! SHA-3 (Keccak) - Secure Hash Algorithm 3
+
+#![allow(clippy::needless_range_loop)]
 //!
 //! Based on the Keccak sponge construction, standardized in FIPS 202.
 //! Supports SHA3-224, SHA3-256, SHA3-384, and SHA3-512.

@@ -1,4 +1,6 @@
 //! BLAKE3 cryptographic hash function
+
+#![allow(clippy::needless_range_loop)]
 //!
 //! High-performance implementation of BLAKE3, a fast and secure hash function.
 //! BLAKE3 is designed for maximum parallelism and achieves exceptional performance

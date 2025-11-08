@@ -2,6 +2,20 @@
 //!
 //! This crate provides production-ready implementations of modern elliptic curves
 //! with a focus on security, performance, and usability.
+
+// Allow pedantic clippy lints for cryptographic code where performance and clarity matter
+#![allow(clippy::comparison_chain)]
+#![allow(clippy::manual_range_contains)]
+#![allow(clippy::cast_abs_to_unsigned)]
+#![allow(clippy::assign_op_pattern)]
+#![allow(clippy::redundant_closure)]
+#![allow(clippy::useless_conversion)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::vec_init_then_push)]
+#![allow(clippy::manual_memcpy)]
+#![allow(clippy::unnecessary_cast)]
+#![allow(clippy::wrong_self_convention)]
+#![allow(clippy::duplicated_attributes)]
 //!
 //! # Supported Curves
 //!

@@ -2,6 +2,8 @@
 //!
 //! This crate provides production-ready implementations of ECDSA (Elliptic Curve
 //! Digital Signature Algorithm) for multiple curves.
+
+#![allow(clippy::comparison_chain)]
 //!
 //! # Supported Algorithms
 //!

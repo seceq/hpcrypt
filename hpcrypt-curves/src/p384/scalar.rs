@@ -251,6 +251,7 @@ impl Scalar {
     ///   6. r = r1 - r2
     ///   7. if r < 0: r = r + n
     ///   8. while r >= n: r = r - n
+    ///
     ///   Return: r
     ///
     /// Adapted from P-256 Barrett implementation with adjustments for 6 limbs.

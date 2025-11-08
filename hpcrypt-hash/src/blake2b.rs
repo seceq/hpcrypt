@@ -9,6 +9,8 @@
 //! - Personalization and salt support
 //! - Tree hashing mode
 
+#![allow(clippy::needless_range_loop)]
+
 extern crate alloc;
 use alloc::vec::Vec;
 use core::cmp::min;

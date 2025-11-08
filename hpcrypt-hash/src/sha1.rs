@@ -1,4 +1,7 @@
 //! SHA-1 hash function implementation
+
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::clone_on_copy)]
 //!
 //! **WARNING**: SHA-1 is cryptographically broken and should not be used for
 //! security-critical applications. It is provided here for compatibility with

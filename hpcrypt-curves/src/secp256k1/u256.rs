@@ -182,11 +182,6 @@ impl U256 {
                 result[i + j] = sum as u64;
                 carry = (sum >> 64) as u64;
             }
-
-            // Add final carry if within bounds
-            if i + 4 < 4 && carry != 0 {
-                result[i + 4] = carry;
-            }
         }
 
         Self { limbs: result }
@@ -400,15 +395,15 @@ impl U256 {
 }
 
 // Implement Ord and PartialOrd for convenience
-impl PartialOrd for U256 {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
 impl Ord for U256 {
     fn cmp(&self, other: &Self) -> Ordering {
         U256::cmp(self, other)
+    }
+}
+
+impl PartialOrd for U256 {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(core::cmp::Ord::cmp(self, other))
     }
 }
 
