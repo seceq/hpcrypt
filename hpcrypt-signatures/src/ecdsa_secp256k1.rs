@@ -843,7 +843,7 @@ mod tests {
         let secret = [0x42; 32];
         let signing_key = SigningKey::from_bytes(&secret).unwrap();
         let verifying_key = signing_key.verifying_key();
-        let d = Scalar::from_bytes(&secret);
+        let _d = Scalar::from_bytes(&secret);
 
         // Case 1: Known to work
         let msg1 = b"Hello, ECDSA!";

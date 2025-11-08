@@ -15,6 +15,7 @@ mod tests {
     use hex_literal::hex;
 
     // Wycheproof test case structure
+    #[allow(dead_code)]
     struct WycheproofTest {
         tc_id: u32,
         comment: &'static str,
@@ -24,6 +25,7 @@ mod tests {
     }
 
     #[derive(Debug, PartialEq)]
+    #[allow(dead_code)]
     enum TestResult {
         Valid,
         Invalid,
