@@ -174,13 +174,13 @@ jobs:
 
   # Minimum Supported Rust Version (MSRV)
   msrv:
-    name: MSRV (1.65)
+    name: MSRV (1.70)
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install Rust 1.65
-      uses: dtolnay/rust-toolchain@1.65
+    - name: Install Rust 1.70
+      uses: dtolnay/rust-toolchain@1.70
 
     - name: Check MSRV
       run: cargo check --workspace
