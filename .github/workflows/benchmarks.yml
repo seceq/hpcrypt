@@ -1,135 +1,138 @@
-name: Benchmark Tracking
-
-on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
-  workflow_dispatch:
-
-jobs:
-  benchmark:
-    name: Performance Benchmarks
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo registry
-        uses: actions/cache@v3
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache cargo index
-        uses: actions/cache@v3
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache target directory
-        uses: actions/cache@v3
-        with:
-          path: target
-          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Run Ed25519 benchmarks
-        run: cargo bench --package hpcrypt --bench ed25519_benchmarks --features curves -- --output-format bencher | tee ed25519_bench.txt
-
-      - name: Run ECDSA benchmarks
-        run: cargo bench --package hpcrypt --bench ecdsa_benchmarks --features "curves,signatures" -- --output-format bencher | tee ecdsa_bench.txt
-
-      - name: Run X25519 benchmarks
-        run: cargo bench --package hpcrypt --bench x25519_benchmarks --features curves -- --output-format bencher | tee x25519_bench.txt
-
-      - name: Run P-256 benchmarks
-        run: cargo bench --package hpcrypt --bench p256_benchmarks --features "curves,signatures" -- --output-format bencher | tee p256_bench.txt
-
-      - name: Store benchmark results
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: HPCrypt Performance
-          tool: 'cargo'
-          output-file-path: ed25519_bench.txt
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: true
-          alert-threshold: '150%'
-          comment-on-alert: true
-          fail-on-alert: true
-
-      - name: Upload benchmark artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: benchmark-results
-          path: |
-            ed25519_bench.txt
-            ecdsa_bench.txt
-            x25519_bench.txt
-            p256_bench.txt
-            target/criterion/
-
-      - name: Generate benchmark summary
-        run: |
-          echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Ed25519" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          head -20 ed25519_bench.txt >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ECDSA" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          head -20 ecdsa_bench.txt >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### X25519" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          head -20 x25519_bench.txt >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### P-256 (with Barrett Reduction)" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          head -20 p256_bench.txt >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-
-  # Compare with previous benchmarks
-  compare:
-    name: Compare Benchmarks
-    runs-on: ubuntu-latest
-    needs: benchmark
-    if: github.event_name == 'pull_request'
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download current benchmarks
-        uses: actions/download-artifact@v3
-        with:
-          name: benchmark-results
-          path: current/
-
-      - name: Download baseline benchmarks
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          workflow: benchmarks.yml
-          branch: ${{ github.base_ref }}
-          name: benchmark-results
-          path: baseline/
-        continue-on-error: true
-
-      - name: Compare results
-        run: |
-          if [ -d "baseline" ]; then
-            echo "## Benchmark Comparison" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Comparing against baseline from ${{ github.base_ref }}" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-
-            # Add comparison logic here
-            echo "Current vs Baseline analysis would go here" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "No baseline benchmarks found for comparison" >> $GITHUB_STEP_SUMMARY
-          fi
+# # Benchmarks workflow disabled - meta package 'hpcrypt' and benchmark files not included in dist release
+# # To re-enable, update benchmark paths to use actual packages in workspace and update artifact actions to v4
+# 
+# # name: Benchmark Tracking
+# #
+# # on:
+# #   push:
+# #     branches: [main, master]
+# #   pull_request:
+# #     branches: [main, master]
+# #   workflow_dispatch:
+# #
+# # jobs:
+#   benchmark:
+#     name: Performance Benchmarks
+#     runs-on: ubuntu-latest
+# 
+#     steps:
+#       - uses: actions/checkout@v4
+# 
+#       - name: Install Rust
+#         uses: dtolnay/rust-toolchain@stable
+# 
+#       - name: Cache cargo registry
+#         uses: actions/cache@v3
+#         with:
+#           path: ~/.cargo/registry
+#           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+# 
+#       - name: Cache cargo index
+#         uses: actions/cache@v3
+#         with:
+#           path: ~/.cargo/git
+#           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+# 
+#       - name: Cache target directory
+#         uses: actions/cache@v3
+#         with:
+#           path: target
+#           key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
+# 
+#       - name: Run Ed25519 benchmarks
+#         run: cargo bench --package hpcrypt --bench ed25519_benchmarks --features curves -- --output-format bencher | tee ed25519_bench.txt
+# 
+#       - name: Run ECDSA benchmarks
+#         run: cargo bench --package hpcrypt --bench ecdsa_benchmarks --features "curves,signatures" -- --output-format bencher | tee ecdsa_bench.txt
+# 
+#       - name: Run X25519 benchmarks
+#         run: cargo bench --package hpcrypt --bench x25519_benchmarks --features curves -- --output-format bencher | tee x25519_bench.txt
+# 
+#       - name: Run P-256 benchmarks
+#         run: cargo bench --package hpcrypt --bench p256_benchmarks --features "curves,signatures" -- --output-format bencher | tee p256_bench.txt
+# 
+#       - name: Store benchmark results
+#         uses: benchmark-action/github-action-benchmark@v1
+#         with:
+#           name: HPCrypt Performance
+#           tool: 'cargo'
+#           output-file-path: ed25519_bench.txt
+#           github-token: ${{ secrets.GITHUB_TOKEN }}
+#           auto-push: true
+#           alert-threshold: '150%'
+#           comment-on-alert: true
+#           fail-on-alert: true
+# 
+#       - name: Upload benchmark artifacts
+#         uses: actions/upload-artifact@v3
+#         with:
+#           name: benchmark-results
+#           path: |
+#             ed25519_bench.txt
+#             ecdsa_bench.txt
+#             x25519_bench.txt
+#             p256_bench.txt
+#             target/criterion/
+# 
+#       - name: Generate benchmark summary
+#         run: |
+#           echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
+#           echo "" >> $GITHUB_STEP_SUMMARY
+#           echo "### Ed25519" >> $GITHUB_STEP_SUMMARY
+#           echo '```' >> $GITHUB_STEP_SUMMARY
+#           head -20 ed25519_bench.txt >> $GITHUB_STEP_SUMMARY
+#           echo '```' >> $GITHUB_STEP_SUMMARY
+#           echo "" >> $GITHUB_STEP_SUMMARY
+#           echo "### ECDSA" >> $GITHUB_STEP_SUMMARY
+#           echo '```' >> $GITHUB_STEP_SUMMARY
+#           head -20 ecdsa_bench.txt >> $GITHUB_STEP_SUMMARY
+#           echo '```' >> $GITHUB_STEP_SUMMARY
+#           echo "" >> $GITHUB_STEP_SUMMARY
+#           echo "### X25519" >> $GITHUB_STEP_SUMMARY
+#           echo '```' >> $GITHUB_STEP_SUMMARY
+#           head -20 x25519_bench.txt >> $GITHUB_STEP_SUMMARY
+#           echo '```' >> $GITHUB_STEP_SUMMARY
+#           echo "" >> $GITHUB_STEP_SUMMARY
+#           echo "### P-256 (with Barrett Reduction)" >> $GITHUB_STEP_SUMMARY
+#           echo '```' >> $GITHUB_STEP_SUMMARY
+#           head -20 p256_bench.txt >> $GITHUB_STEP_SUMMARY
+#           echo '```' >> $GITHUB_STEP_SUMMARY
+# 
+#   # Compare with previous benchmarks
+#   compare:
+#     name: Compare Benchmarks
+#     runs-on: ubuntu-latest
+#     needs: benchmark
+#     if: github.event_name == 'pull_request'
+# 
+#     steps:
+#       - uses: actions/checkout@v4
+# 
+#       - name: Download current benchmarks
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: benchmark-results
+#           path: current/
+# 
+#       - name: Download baseline benchmarks
+#         uses: dawidd6/action-download-artifact@v2
+#         with:
+#           workflow: benchmarks.yml
+#           branch: ${{ github.base_ref }}
+#           name: benchmark-results
+#           path: baseline/
+#         continue-on-error: true
+# 
+#       - name: Compare results
+#         run: |
+#           if [ -d "baseline" ]; then
+#             echo "## Benchmark Comparison" >> $GITHUB_STEP_SUMMARY
+#             echo "" >> $GITHUB_STEP_SUMMARY
+#             echo "Comparing against baseline from ${{ github.base_ref }}" >> $GITHUB_STEP_SUMMARY
+#             echo "" >> $GITHUB_STEP_SUMMARY
+# 
+#             # Add comparison logic here
+#             echo "Current vs Baseline analysis would go here" >> $GITHUB_STEP_SUMMARY
+#           else
+#             echo "No baseline benchmarks found for comparison" >> $GITHUB_STEP_SUMMARY
+#           fi
