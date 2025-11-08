@@ -83,18 +83,19 @@ name = "x448_benchmarks"
 harness = false
 path = "../benches/x448_benchmarks.rs"
 
-[[example]]
-name = "test_montgomery_constants"
-path = "../examples/test_montgomery_constants.rs"
-
-[[example]]
-name = "test_2g_known_vector"
-path = "../examples/test_2g_known_vector.rs"
-
-[[example]]
-name = "test_doubling_step_by_step"
-path = "../examples/test_doubling_step_by_step.rs"
-
-[[example]]
-name = "compute_beta_montgomery"
-path = "../examples/compute_beta_montgomery.rs"
+# Examples commented out - files not included in dist release
+# [[example]]
+# name = "test_montgomery_constants"
+# path = "../examples/test_montgomery_constants.rs"
+#
+# [[example]]
+# name = "test_2g_known_vector"
+# path = "../examples/test_2g_known_vector.rs"
+#
+# [[example]]
+# name = "test_doubling_step_by_step"
+# path = "../examples/test_doubling_step_by_step.rs"
+#
+# [[example]]
+# name = "compute_beta_montgomery"
+# path = "../examples/compute_beta_montgomery.rs"

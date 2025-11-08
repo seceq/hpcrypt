@@ -129,20 +129,23 @@ fn benchmark_p256_inversion() {
 
     println!("Standard:  {:?} ({} μs/op)", duration_standard, us_per_op_standard);
 
-    // Montgomery implementation
-    let a_mont = MontgomeryFieldElement::one();
+    // Montgomery implementation - invert method not available
+    // TODO: Implement invert for MontgomeryFieldElement
+    // let a_mont = MontgomeryFieldElement::one();
+    //
+    // let start = Instant::now();
+    // for _ in 0..INV_ITERATIONS {
+    //     let _ = a_mont.invert();
+    // }
+    // let duration_montgomery = start.elapsed();
+    // let us_per_op_montgomery = duration_montgomery.as_micros() / INV_ITERATIONS as u128;
+    //
+    // println!("Montgomery: {:?} ({} μs/op)", duration_montgomery, us_per_op_montgomery);
+    //
+    // let improvement = ((us_per_op_standard as f64 - us_per_op_montgomery as f64) / us_per_op_standard as f64) * 100.0;
+    // println!("Improvement: {:.1}%", improvement);
 
-    let start = Instant::now();
-    for _ in 0..INV_ITERATIONS {
-        let _ = a_mont.invert();
-    }
-    let duration_montgomery = start.elapsed();
-    let us_per_op_montgomery = duration_montgomery.as_micros() / INV_ITERATIONS as u128;
-
-    println!("Montgomery: {:?} ({} μs/op)", duration_montgomery, us_per_op_montgomery);
-
-    let improvement = ((us_per_op_standard as f64 - us_per_op_montgomery as f64) / us_per_op_standard as f64) * 100.0;
-    println!("Improvement: {:.1}%", improvement);
+    println!("Montgomery: invert() method not yet implemented");
 }
 
 fn benchmark_p384_multiplication() {
