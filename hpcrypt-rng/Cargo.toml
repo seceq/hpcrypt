@@ -1,0 +1,37 @@
+[package]
+name = "hpcrypt-rng"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.65"
+authors = ["HPCrypt Contributors"]
+license = "MIT OR Apache-2.0"
+description = "Cryptographically secure random number generation for HPCrypt"
+repository = "https://github.com/[username]/hpcrypt"
+keywords = ["crypto", "rng", "random", "csprng", "no-std"]
+categories = ["cryptography", "no-std"]
+
+[dependencies]
+# Core dependency for OS random number generation
+getrandom = { version = "0.2", default-features = false }
+
+# For zeroization of sensitive material
+zeroize = { version = "1.7", default-features = false, features = ["alloc"] }
+
+# For constant-time operations
+subtle = { version = "2.5", default-features = false }
+
+[dev-dependencies]
+# For testing randomness quality
+rand = "0.8"
+
+[features]
+default = ["std", "os-rng"]
+std = ["getrandom/std", "zeroize/std"]
+alloc = ["zeroize/alloc"]
+
+# OS-based RNG (default, recommended)
+os-rng = ["getrandom/std"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

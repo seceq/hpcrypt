@@ -1,0 +1,100 @@
+[package]
+name = "hpcrypt-curves"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+hpcrypt-core = { workspace = true }
+hpcrypt-hash = { workspace = true }
+zeroize = { workspace = true }
+once_cell = { version = "1.19", default-features = false, features = ["std"] }
+
+[dev-dependencies]
+hex-literal = { workspace = true }
+x25519-dalek = "2"
+curve25519-dalek = "4"
+criterion = { workspace = true }
+hpcrypt-signatures = { path = "../hpcrypt-signatures" }
+proptest = "1.4"
+num-bigint = { version = "0.4", default-features = false }  # Test-only: validation/comparison
+
+[features]
+default = ["std"]
+std = ["hpcrypt-core/std", "hpcrypt-hash/std"]
+alloc = ["hpcrypt-core/alloc", "hpcrypt-hash/alloc"]
+
+# Scalar multiplication window size optimizations
+# Use larger windows for faster scalar multiplication at the cost of more memory
+scalar-mul-fast = []        # Window size 5: ~45% speedup, uses ~1 KB per point
+scalar-mul-very-fast = []   # Window size 6: ~50% speedup, uses ~2 KB per point
+
+[[bench]]
+name = "p256_benchmarks"
+harness = false
+path = "../benches/p256_benchmarks.rs"
+
+[[bench]]
+name = "p384_benchmarks"
+harness = false
+path = "../benches/p384_benchmarks.rs"
+
+[[bench]]
+name = "p521_benchmarks"
+harness = false
+path = "../benches/p521_benchmarks.rs"
+
+[[bench]]
+name = "squaring_optimization_bench"
+harness = false
+path = "benches/squaring_optimization_bench.rs"
+
+[[bench]]
+name = "montgomery_comparison"
+harness = false
+path = "../benches/montgomery_comparison.rs"
+
+[[bench]]
+name = "benchmark_secp256k1_comparison"
+harness = false
+path = "benches/benchmark_secp256k1_comparison.rs"
+
+[[bench]]
+name = "benchmark_p256_lazy"
+harness = false
+path = "benches/benchmark_p256_lazy.rs"
+
+[[bench]]
+name = "p521_montgomery_comparison"
+harness = false
+path = "../benches/p521_montgomery_comparison.rs"
+
+[[bench]]
+name = "secp256k1_field_comparison"
+harness = false
+path = "../benches/secp256k1_field_comparison.rs"
+
+[[bench]]
+name = "secp256k1_point_montgomery_comparison"
+harness = false
+path = "../benches/secp256k1_point_montgomery_comparison.rs"
+
+[[bench]]
+name = "x448_benchmarks"
+harness = false
+path = "../benches/x448_benchmarks.rs"
+
+[[example]]
+name = "test_montgomery_constants"
+path = "../examples/test_montgomery_constants.rs"
+
+[[example]]
+name = "test_2g_known_vector"
+path = "../examples/test_2g_known_vector.rs"
+
+[[example]]
+name = "test_doubling_step_by_step"
+path = "../examples/test_doubling_step_by_step.rs"
+
+[[example]]
+name = "compute_beta_montgomery"
+path = "../examples/compute_beta_montgomery.rs"

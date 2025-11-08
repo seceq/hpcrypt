@@ -1,0 +1,252 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main, develop ]
+  schedule:
+    # Run daily to catch issues with dependencies
+    - cron: '0 0 * * *'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [stable, beta, nightly]
+        exclude:
+          # Reduce matrix size - only test beta/nightly on Linux
+          - os: macos-latest
+            rust: beta
+          - os: macos-latest
+            rust: nightly
+          - os: windows-latest
+            rust: beta
+          - os: windows-latest
+            rust: nightly
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust (${{ matrix.rust }})
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+
+    - name: Cache cargo registry
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache cargo index
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache cargo build
+      uses: actions/cache@v4
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Run tests (all features)
+      run: cargo test --workspace --all-features
+
+    - name: Run tests (no default features)
+      run: cargo test --workspace --no-default-features
+
+    - name: Run doc tests
+      run: cargo test --workspace --doc
+
+  no_std:
+    name: no_std Build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: thumbv7em-none-eabihf
+
+    - name: Build for no_std target (no alloc)
+      run: cargo build --target thumbv7em-none-eabihf --no-default-features -p hpcrypt-core
+
+    - name: Build for no_std target (with alloc)
+      run: cargo build --target thumbv7em-none-eabihf --no-default-features --features alloc -p hpcrypt-hash
+
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt
+
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+
+    - name: Run Clippy
+      run: cargo clippy --workspace --all-features -- -D warnings
+
+  security_audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run cargo-audit
+      uses: rustsec/audit-check@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-tarpaulin
+      run: cargo install cargo-tarpaulin
+
+    - name: Generate coverage
+      run: cargo tarpaulin --workspace --all-features --timeout 300 --out Xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./cobertura.xml
+        fail_ci_if_error: false
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  examples:
+    name: Examples
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Run Ed25519 signatures example
+      run: cargo run --package hpcrypt --example ed25519_signatures --features curves
+
+    - name: Run X25519 key exchange example
+      run: cargo run --package hpcrypt --example x25519_key_exchange --features curves
+
+    - name: Run AES-GCM encryption example
+      run: cargo run --package hpcrypt --example aes_gcm_encryption --features aead
+
+    - name: Run ChaCha20-Poly1305 example
+      run: cargo run --package hpcrypt --example chacha20_poly1305 --features aead
+
+    - name: Run ECDSA signatures example
+      run: cargo run --package hpcrypt --example ecdsa_signatures --features signatures
+
+  # Minimum Supported Rust Version (MSRV)
+  msrv:
+    name: MSRV (1.65)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust 1.65
+      uses: dtolnay/rust-toolchain@1.65
+
+    - name: Check MSRV
+      run: cargo check --workspace
+
+  # Check that docs build successfully
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Build documentation
+      run: cargo doc --workspace --all-features --no-deps
+      env:
+        RUSTDOCFLAGS: -D warnings
+
+  # Ensure dependencies are up to date
+  dependencies:
+    name: Dependency Check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Check for outdated dependencies
+      run: |
+        cargo install cargo-outdated || true
+        cargo outdated --workspace --exit-code 1 || echo "::warning::Outdated dependencies found"
+
+  # Check for common mistakes
+  deny:
+    name: Cargo Deny
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run cargo-deny
+      uses: EmbarkStudios/cargo-deny-action@v1
+      with:
+        log-level: warn
+        command: check
+        arguments: --all-features
+
+  # All jobs succeeded
+  ci-success:
+    name: CI Success
+    if: always()
+    needs:
+      - test
+      - no_std
+      - fmt
+      - clippy
+      - security_audit
+      - examples
+      - msrv
+      - docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all jobs
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "One or more jobs failed"
+            exit 1
+          fi
+          echo "All jobs passed successfully!"

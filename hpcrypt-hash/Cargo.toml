@@ -1,0 +1,23 @@
+[package]
+name = "hpcrypt-hash"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Cryptographic primitives for HPCrypt"
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+hpcrypt-core = { workspace = true }
+
+[dev-dependencies]
+blake3 = "1.8.2"
+hex-literal = { workspace = true }
+
+[features]
+default = ["std", "alloc"]
+std = ["hpcrypt-core/std"]
+alloc = ["hpcrypt-core/alloc"]

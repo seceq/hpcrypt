@@ -1,0 +1,27 @@
+[package]
+name = "hpcrypt-signatures"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Cryptographic primitives for HPCrypt"
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+hpcrypt-core = { workspace = true }
+hpcrypt-curves = { workspace = true }
+hpcrypt-hash = { workspace = true }
+hpcrypt-rng = { workspace = true, features = ["os-rng"] }
+subtle = { workspace = true }
+
+[dev-dependencies]
+rand = "0.8"
+hex-literal = { workspace = true }
+
+[features]
+default = ["std"]
+std = ["hpcrypt-core/std", "hpcrypt-curves/std", "hpcrypt-hash/std"]
+alloc = ["hpcrypt-core/alloc", "hpcrypt-curves/alloc", "hpcrypt-hash/alloc"]

@@ -1,0 +1,48 @@
+[workspace]
+resolver = "2"
+members = [
+    "hpcrypt-core",
+    "hpcrypt-hash",
+    "hpcrypt-curves",
+    "hpcrypt-signatures",
+    "hpcrypt-rng",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+authors = ["HPCrypt Contributors"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/hpcrypt"
+keywords = ["crypto", "cryptography", "security"]
+categories = ["cryptography", "no-std"]
+
+[workspace.dependencies]
+# Core dependencies
+subtle = { version = "2.6", default-features = false }
+zeroize = { version = "1.8", default-features = false, features = ["derive"] }
+
+# Internal workspace dependencies
+hpcrypt-core = { path = "hpcrypt-core", version = "0.1.0", default-features = false }
+hpcrypt-hash = { path = "hpcrypt-hash", version = "0.1.0", default-features = false }
+hpcrypt-curves = { path = "hpcrypt-curves", version = "0.1.0", default-features = false }
+hpcrypt-signatures = { path = "hpcrypt-signatures", version = "0.1.0", default-features = false }
+hpcrypt-rng = { path = "hpcrypt-rng", version = "0.1.0", default-features = false }
+
+# Development dependencies
+criterion = { version = "0.5", features = ["html_reports"] }
+dudect-bencher = "0.6"
+hex = "0.4"
+hex-literal = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = false
+
+[profile.bench]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
