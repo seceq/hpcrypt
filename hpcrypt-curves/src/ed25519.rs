@@ -14,7 +14,7 @@
 
 use crate::field25519::FieldElement;
 use hpcrypt_core::error::CurveError;
-use hpcrypt_core::{Choice, ConditionallySelectable, ct_table_lookup};
+use hpcrypt_core::{ct_table_lookup, Choice, ConditionallySelectable};
 use hpcrypt_hash::Sha512;
 
 #[cfg(feature = "std")]
@@ -47,10 +47,8 @@ const L: [u64; 4] = [
 /// L as constant bytes for reduction (little-endian)
 #[allow(dead_code)]
 const L_BYTES: [u8; 32] = [
-    0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
-    0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
+    0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
 ];
 
 /// Barrett reduction parameter μ = floor(2^512 / L)
@@ -534,7 +532,12 @@ impl EdwardsPoint {
     }
 
     /// Create a point from (X:Y:Z:T) extended coordinates
-    pub fn from_extended(x: FieldElement, y: FieldElement, z: FieldElement, t: FieldElement) -> Self {
+    pub fn from_extended(
+        x: FieldElement,
+        y: FieldElement,
+        z: FieldElement,
+        t: FieldElement,
+    ) -> Self {
         EdwardsPoint { x, y, z, t }
     }
 
@@ -621,7 +624,12 @@ impl EdwardsPoint {
         let c = compute_d().mul(&self.t).mul(&other.t);
         let d = self.z.mul(&other.z);
 
-        let e = self.x.add(&self.y).mul(&other.x.add(&other.y)).sub(&a).sub(&b);
+        let e = self
+            .x
+            .add(&self.y)
+            .mul(&other.x.add(&other.y))
+            .sub(&a)
+            .sub(&b);
         let f = d.sub(&c);
         let g = d.add(&c);
         let h = b.add(&a); // For a = -1, this is b - a
@@ -931,11 +939,11 @@ impl EdwardsPoint {
         let y_minus_x = self.y.sub(&self.x);
         let y_plus_x = self.y.add(&self.x);
 
-        let a = y_minus_x.mul(&other.y_minus_x);  // M1
-        let b = y_plus_x.mul(&other.y_plus_x);    // M2
+        let a = y_minus_x.mul(&other.y_minus_x); // M1
+        let b = y_plus_x.mul(&other.y_plus_x); // M2
 
         // Step 3-4: Compute C and D
-        let c = other.t2d.mul(&self.t);            // M3
+        let c = other.t2d.mul(&self.t); // M3
         let two = FieldElement::from_limbs([2, 0, 0, 0, 0]);
         let d = self.z.mul(&two);
 
@@ -947,10 +955,10 @@ impl EdwardsPoint {
 
         // Step 9-12: Compute result
         EdwardsPoint {
-            x: e.mul(&f),  // M4
-            y: g.mul(&h),  // M5
-            z: f.mul(&g),  // M6
-            t: e.mul(&h),  // Could reuse M4 result, but keeping separate for clarity
+            x: e.mul(&f), // M4
+            y: g.mul(&h), // M5
+            z: f.mul(&g), // M6
+            t: e.mul(&h), // Could reuse M4 result, but keeping separate for clarity
         }
     }
 
@@ -970,7 +978,6 @@ impl EdwardsPoint {
         };
         self.add_niels(&negated)
     }
-
 }
 
 impl ConditionallySelectable for NielsPoint {
@@ -1226,7 +1233,8 @@ impl CombTable {
         // Convert to signed representation (values in range [-8, 7])
         // This reduces the number of non-zero digits (fewer additions)
         let mut carry = 0i8;
-        for i in 0..63 {  // Process digits 0-62
+        for i in 0..63 {
+            // Process digits 0-62
             digits[i] += carry;
             carry = (digits[i] + 8) >> 4;
             digits[i] -= carry << 4;
@@ -1682,7 +1690,11 @@ impl Ed25519 {
     /// Panics if scalars.len() != points.len()
     #[cfg(feature = "std")]
     pub fn pippenger_msm(scalars: &[[u8; 32]], points: &[EdwardsPoint]) -> EdwardsPoint {
-        assert_eq!(scalars.len(), points.len(), "Scalars and points must have same length");
+        assert_eq!(
+            scalars.len(),
+            points.len(),
+            "Scalars and points must have same length"
+        );
 
         let n = scalars.len();
 
@@ -1747,10 +1759,10 @@ impl Ed25519 {
     /// Select optimal window size for Pippenger's algorithm based on batch size
     fn optimal_window_size(n: usize) -> usize {
         match n {
-            0..=4 => 2,      // 4 buckets
-            5..=32 => 3,     // 8 buckets
-            33..=128 => 4,   // 16 buckets
-            _ => 5,          // 32 buckets
+            0..=4 => 2,    // 4 buckets
+            5..=32 => 3,   // 8 buckets
+            33..=128 => 4, // 16 buckets
+            _ => 5,        // 32 buckets
         }
     }
 
@@ -2033,15 +2045,21 @@ mod tests {
         let b = base_point();
 
         // Multiply by 2
-        let scalar_2 = [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let scalar_2 = [
+            2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
         let result = b.scalar_mul(&scalar_2);
 
         // This should equal B + B
         let expected = b.add(&b);
 
         // Compare encoded points
-        assert_eq!(result.encode(), expected.encode(), "scalar_mul(2) should equal point doubling");
+        assert_eq!(
+            result.encode(),
+            expected.encode(),
+            "scalar_mul(2) should equal point doubling"
+        );
     }
 
     #[test]
@@ -2086,10 +2104,14 @@ mod tests {
     #[test]
     fn test_scalar_arithmetic() {
         // Test that scalar arithmetic is working correctly
-        let a = Scalar::from_bytes([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-        let b = Scalar::from_bytes([2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let a = Scalar::from_bytes([
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ]);
+        let b = Scalar::from_bytes([
+            2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ]);
 
         // 1 + 2 = 3
         let c = a.add(&b);
@@ -2106,15 +2128,21 @@ mod tests {
         // L = 2^252 + 27742317777372353535851937790883648493
 
         // A value less than L should stay the same
-        let small = Scalar::from_bytes([100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let small = Scalar::from_bytes([
+            100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ]);
         assert_eq!(small.to_bytes()[0], 100);
 
         // Test multiplication doesn't produce garbage
-        let two = Scalar::from_bytes([2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-        let three = Scalar::from_bytes([3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let two = Scalar::from_bytes([
+            2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ]);
+        let three = Scalar::from_bytes([
+            3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ]);
 
         // 2 * 3 = 6
         let six = two.mul(&three);
@@ -2134,30 +2162,34 @@ mod tests {
         // L-1 * 2 should equal 2L - 2, which mod L should be L - 2
 
         let l_minus_1_bytes = [
-            0xec, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
-            0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
+            0xec, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9,
+            0xde, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x10,
         ];
-        
-        let two_bytes = [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+        let two_bytes = [
+            2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
 
         let l_minus_1 = Scalar::from_bytes(l_minus_1_bytes);
         let two = Scalar::from_bytes(two_bytes);
 
         let result = l_minus_1.mul(&two);
-        
+
         // (L-1) * 2 = 2L - 2 ≡ -2 ≡ L-2 (mod L)
         let l_minus_2_bytes = [
-            0xeb, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
-            0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
+            0xeb, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9,
+            0xde, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x10,
         ];
 
         // Check if result matches L-2
-        assert_eq!(result.to_bytes(), l_minus_2_bytes, "Scalar multiplication reduction is incorrect");
+        assert_eq!(
+            result.to_bytes(),
+            l_minus_2_bytes,
+            "Scalar multiplication reduction is incorrect"
+        );
     }
 
     // Test if we can encode/decode our own generated public keys
@@ -2172,7 +2204,9 @@ mod tests {
         // If vector 2 also fails to decode, the problem is more fundamental
         if decoded2.is_err() {
             // Both vectors fail - encode is broken for all keys
-            panic!("Vector 2 also fails to decode! This suggests encode() is fundamentally broken.");
+            panic!(
+                "Vector 2 also fails to decode! This suggests encode() is fundamentally broken."
+            );
         }
 
         // Vector 2 works - test roundtrip
@@ -2190,7 +2224,10 @@ mod tests {
 
         // This is expected to fail based on our debugging
         // Vector 2 decodes but vector 1 doesn't - sqrt() only fails for certain values
-        assert!(decoded1.is_ok(), "Vector 1: Cannot decode (sqrt() fails for this y-coordinate)");
+        assert!(
+            decoded1.is_ok(),
+            "Vector 1: Cannot decode (sqrt() fails for this y-coordinate)"
+        );
     }
 
     // RFC 8032 Test Vector 1 - Full verification with deep debugging
@@ -2204,16 +2241,25 @@ mod tests {
 
         // Test public key generation
         let public_key = Ed25519::public_key(&sk);
-        assert_eq!(public_key, expected_pk, "RFC 8032 Test 1: Public key mismatch");
+        assert_eq!(
+            public_key, expected_pk,
+            "RFC 8032 Test 1: Public key mismatch"
+        );
 
         // Check if R from expected signature can be decoded
         let r_bytes: [u8; 32] = expected_sig[0..32].try_into().unwrap();
         let r_point = EdwardsPoint::decode(&r_bytes);
-        assert!(r_point.is_ok(), "RFC 8032 Test 1: R from expected signature cannot be decoded");
+        assert!(
+            r_point.is_ok(),
+            "RFC 8032 Test 1: R from expected signature cannot be decoded"
+        );
 
         // Check if public key can be decoded
         let a_point = EdwardsPoint::decode(&expected_pk);
-        assert!(a_point.is_ok(), "RFC 8032 Test 1: Public key cannot be decoded");
+        assert!(
+            a_point.is_ok(),
+            "RFC 8032 Test 1: Public key cannot be decoded"
+        );
 
         // Check if S is valid (< L)
         let s_bytes: [u8; 32] = expected_sig[32..64].try_into().unwrap();
@@ -2253,10 +2299,16 @@ mod tests {
             let rhs_enc = rhs.encode();
 
             // They should match
-            assert!(lhs_enc == rhs_enc, "RFC 8032 Test 1: Verification equation fails: [S]B != R + [k]A");
+            assert!(
+                lhs_enc == rhs_enc,
+                "RFC 8032 Test 1: Verification equation fails: [S]B != R + [k]A"
+            );
         }
 
-        assert!(expected_sig_verifies, "RFC 8032 Test 1: Expected signature should verify");
+        assert!(
+            expected_sig_verifies,
+            "RFC 8032 Test 1: Expected signature should verify"
+        );
     }
 
     #[test]
@@ -2269,14 +2321,23 @@ mod tests {
 
         // Test public key generation
         let public_key = Ed25519::public_key(&sk);
-        assert_eq!(public_key, expected_pk, "RFC 8032 Test 2: Public key mismatch");
+        assert_eq!(
+            public_key, expected_pk,
+            "RFC 8032 Test 2: Public key mismatch"
+        );
 
         // Test signing
         let signature = Ed25519::sign(&sk, &message);
-        assert_eq!(signature, expected_sig, "RFC 8032 Test 2: Signature mismatch");
+        assert_eq!(
+            signature, expected_sig,
+            "RFC 8032 Test 2: Signature mismatch"
+        );
 
         // Test verification
-        assert!(Ed25519::verify(&public_key, &message, &signature), "RFC 8032 Test 2: Verification failed");
+        assert!(
+            Ed25519::verify(&public_key, &message, &signature),
+            "RFC 8032 Test 2: Verification failed"
+        );
     }
 
     // RFC 8032 Test Vector 3
@@ -2290,14 +2351,23 @@ mod tests {
 
         // Test public key generation
         let public_key = Ed25519::public_key(&sk);
-        assert_eq!(public_key, expected_pk, "RFC 8032 Test 3: Public key mismatch");
+        assert_eq!(
+            public_key, expected_pk,
+            "RFC 8032 Test 3: Public key mismatch"
+        );
 
         // Test signing
         let signature = Ed25519::sign(&sk, &message);
-        assert_eq!(signature, expected_sig, "RFC 8032 Test 3: Signature mismatch");
+        assert_eq!(
+            signature, expected_sig,
+            "RFC 8032 Test 3: Signature mismatch"
+        );
 
         // Test verification
-        assert!(Ed25519::verify(&public_key, &message, &signature), "RFC 8032 Test 3: Verification failed");
+        assert!(
+            Ed25519::verify(&public_key, &message, &signature),
+            "RFC 8032 Test 3: Verification failed"
+        );
     }
 
     #[test]
@@ -2312,14 +2382,23 @@ mod tests {
 
         // Test public key generation
         let public_key = Ed25519::public_key(&sk);
-        assert_eq!(public_key, expected_pk, "RFC 8032 Test 1024: Public key mismatch");
+        assert_eq!(
+            public_key, expected_pk,
+            "RFC 8032 Test 1024: Public key mismatch"
+        );
 
         // Test signing
         let signature = Ed25519::sign(&sk, &message);
-        assert_eq!(signature, expected_sig, "RFC 8032 Test 1024: Signature mismatch");
+        assert_eq!(
+            signature, expected_sig,
+            "RFC 8032 Test 1024: Signature mismatch"
+        );
 
         // Test verification
-        assert!(Ed25519::verify(&public_key, &message, &signature), "RFC 8032 Test 1024: Verification failed");
+        assert!(
+            Ed25519::verify(&public_key, &message, &signature),
+            "RFC 8032 Test 1024: Verification failed"
+        );
     }
 
     #[test]
@@ -2334,14 +2413,23 @@ mod tests {
 
         // Test public key generation
         let public_key = Ed25519::public_key(&sk);
-        assert_eq!(public_key, expected_pk, "RFC 8032 Test SHA(abc): Public key mismatch");
+        assert_eq!(
+            public_key, expected_pk,
+            "RFC 8032 Test SHA(abc): Public key mismatch"
+        );
 
         // Test signing
         let signature = Ed25519::sign(&sk, &message);
-        assert_eq!(signature, expected_sig, "RFC 8032 Test SHA(abc): Signature mismatch");
+        assert_eq!(
+            signature, expected_sig,
+            "RFC 8032 Test SHA(abc): Signature mismatch"
+        );
 
         // Test verification
-        assert!(Ed25519::verify(&public_key, &message, &signature), "RFC 8032 Test SHA(abc): Verification failed");
+        assert!(
+            Ed25519::verify(&public_key, &message, &signature),
+            "RFC 8032 Test SHA(abc): Verification failed"
+        );
     }
 
     #[test]
@@ -2360,7 +2448,11 @@ mod tests {
         let l_wide = [L[0], L[1], L[2], L[3], 0, 0, 0, 0];
         let reduced = Scalar::reduce_wide(&l_wide);
         for i in 0..32 {
-            assert_eq!(reduced[i], 0, "L mod L should be 0, but byte {} is {}", i, reduced[i]);
+            assert_eq!(
+                reduced[i], 0,
+                "L mod L should be 0, but byte {} is {}",
+                i, reduced[i]
+            );
         }
 
         // Test 3: Reduce L+1 (should give 1)
@@ -2375,12 +2467,7 @@ mod tests {
     #[test]
     fn test_base_point_table_correctness() {
         // Test that the precomputed table produces the same results as regular scalar mul
-        let test_scalars = [
-            [1u8; 32],
-            [2u8; 32],
-            [0xFF; 32],
-            [0x42; 32],
-        ];
+        let test_scalars = [[1u8; 32], [2u8; 32], [0xFF; 32], [0x42; 32]];
 
         for scalar in &test_scalars {
             let result_fast = scalar_mul_base_fast(scalar);
@@ -2421,13 +2508,30 @@ mod tests {
         }
         let fast_time = start.elapsed();
 
-        std::println!("\nScalar Multiplication Benchmark ({} iterations):", iterations);
-        std::println!("  Regular: {:?} ({:.2} µs per op)", regular_time, regular_time.as_micros() as f64 / iterations as f64);
-        std::println!("  Fast:    {:?} ({:.2} µs per op)", fast_time, fast_time.as_micros() as f64 / iterations as f64);
-        std::println!("  Speedup: {:.2}x", regular_time.as_micros() as f64 / fast_time.as_micros() as f64);
+        std::println!(
+            "\nScalar Multiplication Benchmark ({} iterations):",
+            iterations
+        );
+        std::println!(
+            "  Regular: {:?} ({:.2} µs per op)",
+            regular_time,
+            regular_time.as_micros() as f64 / iterations as f64
+        );
+        std::println!(
+            "  Fast:    {:?} ({:.2} µs per op)",
+            fast_time,
+            fast_time.as_micros() as f64 / iterations as f64
+        );
+        std::println!(
+            "  Speedup: {:.2}x",
+            regular_time.as_micros() as f64 / fast_time.as_micros() as f64
+        );
 
         // Assert that fast is indeed faster
-        assert!(fast_time < regular_time, "Fast scalar mul should be faster than regular");
+        assert!(
+            fast_time < regular_time,
+            "Fast scalar mul should be faster than regular"
+        );
     }
 
     #[test]
@@ -2602,15 +2706,25 @@ mod tests {
         // Check NAF property: no two adjacent non-zero digits
         for i in 0..255 {
             if naf[i] != 0 && naf[i + 1] != 0 {
-                panic!("NAF property violated at position {}: naf[{}]={}, naf[{}]={}",
-                       i, i, naf[i], i+1, naf[i+1]);
+                panic!(
+                    "NAF property violated at position {}: naf[{}]={}, naf[{}]={}",
+                    i,
+                    i,
+                    naf[i],
+                    i + 1,
+                    naf[i + 1]
+                );
             }
         }
 
         // Check all digits are in {-1, 0, 1}
         for i in 0..256 {
-            assert!(naf[i] >= -1 && naf[i] <= 1,
-                   "NAF digit {} out of range: {}", i, naf[i]);
+            assert!(
+                naf[i] >= -1 && naf[i] <= 1,
+                "NAF digit {} out of range: {}",
+                i,
+                naf[i]
+            );
         }
     }
 
@@ -2640,8 +2754,16 @@ mod tests {
         let (x1, y1) = result_regular.to_affine();
         let (x2, y2) = result_naf.to_affine();
 
-        assert_eq!(x1.to_bytes(), x2.to_bytes(), "NAF and regular scalar_mul differ in x coordinate");
-        assert_eq!(y1.to_bytes(), y2.to_bytes(), "NAF and regular scalar_mul differ in y coordinate");
+        assert_eq!(
+            x1.to_bytes(),
+            x2.to_bytes(),
+            "NAF and regular scalar_mul differ in x coordinate"
+        );
+        assert_eq!(
+            y1.to_bytes(),
+            y2.to_bytes(),
+            "NAF and regular scalar_mul differ in y coordinate"
+        );
     }
 
     #[test]
@@ -2664,10 +2786,18 @@ mod tests {
             let (x1, y1) = result_regular.to_affine();
             let (x2, y2) = result_naf.to_affine();
 
-            assert_eq!(x1.to_bytes(), x2.to_bytes(),
-                      "NAF and regular differ for scalar {:?}", scalar);
-            assert_eq!(y1.to_bytes(), y2.to_bytes(),
-                      "NAF and regular differ for scalar {:?}", scalar);
+            assert_eq!(
+                x1.to_bytes(),
+                x2.to_bytes(),
+                "NAF and regular differ for scalar {:?}",
+                scalar
+            );
+            assert_eq!(
+                y1.to_bytes(),
+                y2.to_bytes(),
+                "NAF and regular differ for scalar {:?}",
+                scalar
+            );
         }
     }
 
@@ -2682,8 +2812,16 @@ mod tests {
         let (x1, y1) = p.to_affine();
         let (x2, y2) = result.to_affine();
 
-        assert_eq!(x1.to_bytes(), x2.to_bytes(), "Niels identity addition failed (x coordinate)");
-        assert_eq!(y1.to_bytes(), y2.to_bytes(), "Niels identity addition failed (y coordinate)");
+        assert_eq!(
+            x1.to_bytes(),
+            x2.to_bytes(),
+            "Niels identity addition failed (x coordinate)"
+        );
+        assert_eq!(
+            y1.to_bytes(),
+            y2.to_bytes(),
+            "Niels identity addition failed (y coordinate)"
+        );
     }
 
     #[test]
@@ -2705,8 +2843,16 @@ mod tests {
         let (x1, y1) = result_regular.to_affine();
         let (x2, y2) = result_niels.to_affine();
 
-        assert_eq!(x1.to_bytes(), x2.to_bytes(), "Niels addition differs from regular (x coordinate)");
-        assert_eq!(y1.to_bytes(), y2.to_bytes(), "Niels addition differs from regular (y coordinate)");
+        assert_eq!(
+            x1.to_bytes(),
+            x2.to_bytes(),
+            "Niels addition differs from regular (x coordinate)"
+        );
+        assert_eq!(
+            y1.to_bytes(),
+            y2.to_bytes(),
+            "Niels addition differs from regular (y coordinate)"
+        );
     }
 
     #[test]
@@ -2729,10 +2875,18 @@ mod tests {
             let (x1, y1) = result_regular.to_affine();
             let (x2, y2) = result_niels.to_affine();
 
-            assert_eq!(x1.to_bytes(), x2.to_bytes(),
-                      "Niels addition failed for scalar {}", i);
-            assert_eq!(y1.to_bytes(), y2.to_bytes(),
-                      "Niels addition failed for scalar {}", i);
+            assert_eq!(
+                x1.to_bytes(),
+                x2.to_bytes(),
+                "Niels addition failed for scalar {}",
+                i
+            );
+            assert_eq!(
+                y1.to_bytes(),
+                y2.to_bytes(),
+                "Niels addition failed for scalar {}",
+                i
+            );
         }
     }
 
@@ -2780,12 +2934,7 @@ mod tests {
     #[cfg(feature = "std")]
     fn test_comb_correctness() {
         // Verify Comb method produces same results as regular scalar multiplication
-        let test_scalars = [
-            [1u8; 32],
-            [7u8; 32],
-            [42u8; 32],
-            [255u8; 32],
-        ];
+        let test_scalars = [[1u8; 32], [7u8; 32], [42u8; 32], [255u8; 32]];
 
         for scalar in &test_scalars {
             let result_comb = scalar_mul_base_comb(scalar);
@@ -2794,10 +2943,16 @@ mod tests {
             let (x1, y1) = result_comb.to_affine();
             let (x2, y2) = result_regular.to_affine();
 
-            assert_eq!(x1.to_bytes(), x2.to_bytes(),
-                      "Comb x-coordinate mismatch for scalar");
-            assert_eq!(y1.to_bytes(), y2.to_bytes(),
-                      "Comb y-coordinate mismatch for scalar");
+            assert_eq!(
+                x1.to_bytes(),
+                x2.to_bytes(),
+                "Comb x-coordinate mismatch for scalar"
+            );
+            assert_eq!(
+                y1.to_bytes(),
+                y2.to_bytes(),
+                "Comb y-coordinate mismatch for scalar"
+            );
         }
     }
 
@@ -2828,10 +2983,16 @@ mod tests {
         let identity = EdwardsPoint::IDENTITY;
         let (x1, y1) = result.to_affine();
         let (x2, y2) = identity.to_affine();
-        assert_eq!(x1.to_bytes(), x2.to_bytes(),
-                  "Comb with zero should give identity (x coord)");
-        assert_eq!(y1.to_bytes(), y2.to_bytes(),
-                  "Comb with zero should give identity (y coord)");
+        assert_eq!(
+            x1.to_bytes(),
+            x2.to_bytes(),
+            "Comb with zero should give identity (x coord)"
+        );
+        assert_eq!(
+            y1.to_bytes(),
+            y2.to_bytes(),
+            "Comb with zero should give identity (y coord)"
+        );
 
         // Test with scalar = 1
         let one_scalar = {
@@ -2872,10 +3033,18 @@ mod tests {
             let (x1, y1) = result_comb.to_affine();
             let (x2, y2) = result_regular.to_affine();
 
-            assert_eq!(x1.to_bytes(), x2.to_bytes(),
-                      "Comb failed for test scalar {}", i);
-            assert_eq!(y1.to_bytes(), y2.to_bytes(),
-                      "Comb failed for test scalar {}", i);
+            assert_eq!(
+                x1.to_bytes(),
+                x2.to_bytes(),
+                "Comb failed for test scalar {}",
+                i
+            );
+            assert_eq!(
+                y1.to_bytes(),
+                y2.to_bytes(),
+                "Comb failed for test scalar {}",
+                i
+            );
         }
     }
 
@@ -2891,20 +3060,32 @@ mod tests {
         let reconstructed = identity.add_niels(&table.table[0][0]);
         let (x1, y1) = reconstructed.to_affine();
         let (x2, y2) = base.to_affine();
-        assert_eq!(x1.to_bytes(), x2.to_bytes(),
-                  "table[0][0] should be base point (x)");
-        assert_eq!(y1.to_bytes(), y2.to_bytes(),
-                  "table[0][0] should be base point (y)");
+        assert_eq!(
+            x1.to_bytes(),
+            x2.to_bytes(),
+            "table[0][0] should be base point (x)"
+        );
+        assert_eq!(
+            y1.to_bytes(),
+            y2.to_bytes(),
+            "table[0][0] should be base point (y)"
+        );
 
         // Test table[0][1] = 2*256^0*B = 2B
         let two_b = base.double();
         let from_table = identity.add_niels(&table.table[0][1]);
         let (x1, y1) = from_table.to_affine();
         let (x2, y2) = two_b.to_affine();
-        assert_eq!(x1.to_bytes(), x2.to_bytes(),
-                  "table[0][1] should be 2*B (x)");
-        assert_eq!(y1.to_bytes(), y2.to_bytes(),
-                  "table[0][1] should be 2*B (y)");
+        assert_eq!(
+            x1.to_bytes(),
+            x2.to_bytes(),
+            "table[0][1] should be 2*B (x)"
+        );
+        assert_eq!(
+            y1.to_bytes(),
+            y2.to_bytes(),
+            "table[0][1] should be 2*B (y)"
+        );
 
         // Test table[1][0] = 1*256^1*B = 256B
         let mut b_256 = base;
@@ -2914,10 +3095,16 @@ mod tests {
         let from_table = identity.add_niels(&table.table[1][0]);
         let (x1, y1) = from_table.to_affine();
         let (x2, y2) = b_256.to_affine();
-        assert_eq!(x1.to_bytes(), x2.to_bytes(),
-                  "table[1][0] should be 256*B (x)");
-        assert_eq!(y1.to_bytes(), y2.to_bytes(),
-                  "table[1][0] should be 256*B (y)");
+        assert_eq!(
+            x1.to_bytes(),
+            x2.to_bytes(),
+            "table[1][0] should be 256*B (x)"
+        );
+        assert_eq!(
+            y1.to_bytes(),
+            y2.to_bytes(),
+            "table[1][0] should be 256*B (y)"
+        );
     }
 
     #[test]
@@ -2946,56 +3133,72 @@ mod tests {
 #[cfg(feature = "std")]
 fn test_repeated_identity_addition() {
     let mut result = EdwardsPoint::IDENTITY;
-    
+
     // Add identity 256 times using add_niels
     for _ in 0..256 {
         result = result.add_niels(&NielsPoint::IDENTITY);
     }
-    
+
     // Should still be identity
     let (x, y) = result.to_affine();
     let (x0, y0) = EdwardsPoint::IDENTITY.to_affine();
-    
-    assert_eq!(x.to_bytes(), x0.to_bytes(), "x coordinate changed after repeated identity adds");
-    assert_eq!(y.to_bytes(), y0.to_bytes(), "y coordinate changed after repeated identity adds");
+
+    assert_eq!(
+        x.to_bytes(),
+        x0.to_bytes(),
+        "x coordinate changed after repeated identity adds"
+    );
+    assert_eq!(
+        y.to_bytes(),
+        y0.to_bytes(),
+        "y coordinate changed after repeated identity adds"
+    );
 }
 
 #[test]
 #[cfg(feature = "std")]
 fn test_identity_doubling() {
     let mut result = EdwardsPoint::IDENTITY;
-    
+
     // Double 31 times
     for _ in 0..31 {
         result = result.double();
     }
-    
+
     // Should still be identity
     let (x, y) = result.to_affine();
     let (x0, y0) = EdwardsPoint::IDENTITY.to_affine();
-    
-    assert_eq!(x.to_bytes(), x0.to_bytes(), "x coordinate changed after doublings");
-    assert_eq!(y.to_bytes(), y0.to_bytes(), "y coordinate changed after doublings");
+
+    assert_eq!(
+        x.to_bytes(),
+        x0.to_bytes(),
+        "x coordinate changed after doublings"
+    );
+    assert_eq!(
+        y.to_bytes(),
+        y0.to_bytes(),
+        "y coordinate changed after doublings"
+    );
 }
 
 #[test]
 #[cfg(feature = "std")]
 fn test_comb_sequence_with_zero() {
     let mut result = EdwardsPoint::IDENTITY;
-    
+
     // Simulate what happens in comb with zero scalar
     // 32 teeth, each with 8 windows
     for tooth in (0..32).rev() {
         if tooth < 31 {
             result = result.double();
         }
-        
+
         for _window_idx in 0..8 {
             // With zero scalar, chunk is always 0, so we add identity
             result = result.add_niels(&NielsPoint::IDENTITY);
         }
     }
-    
+
     // Should still be identity
     let (x, y) = result.to_affine();
     let (x0, y0) = EdwardsPoint::IDENTITY.to_affine();
@@ -3010,19 +3213,18 @@ fn test_comb_sequence_with_zero() {
 // #[cfg(feature = "std")]
 // fn test_comb_with_actual_table_zero_scalar() { ... }
 
-
 #[test]
 #[cfg(feature = "std")]
 fn test_comb_static_directly() {
     let zero_scalar = [0u8; 32];
-    
+
     // Use the static directly
     let result = COMB_TABLE.scalar_mul(&zero_scalar);
     let identity = EdwardsPoint::IDENTITY;
-    
+
     let (x1, y1) = result.to_affine();
     let (x2, y2) = identity.to_affine();
-    
+
     assert_eq!(x1.to_bytes(), x2.to_bytes(), "Static table: x mismatch");
     assert_eq!(y1.to_bytes(), y2.to_bytes(), "Static table: y mismatch");
 }
@@ -3032,13 +3234,13 @@ fn test_comb_static_directly() {
 fn test_comb_scalar_2() {
     let mut scalar = [0u8; 32];
     scalar[0] = 2;
-    
+
     let result_comb = scalar_mul_base_comb(&scalar);
     let result_regular = base_point().scalar_mul(&scalar);
-    
+
     let (x1, y1) = result_comb.to_affine();
     let (x2, y2) = result_regular.to_affine();
-    
+
     assert_eq!(x1.to_bytes(), x2.to_bytes(), "Scalar=2: x mismatch");
     assert_eq!(y1.to_bytes(), y2.to_bytes(), "Scalar=2: y mismatch");
 }
@@ -3048,20 +3250,35 @@ fn test_comb_scalar_2() {
 fn test_comb_various_scalars() {
     // Test scalars with different bit patterns
     let test_cases = [
-        [0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 1
-        [0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 2
-        [0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 255
-        [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 256
-        [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 65536
+        [
+            0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ], // 1
+        [
+            0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ], // 2
+        [
+            0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ], // 255
+        [
+            0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ], // 256
+        [
+            0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ], // 65536
     ];
-    
+
     for (i, scalar) in test_cases.iter().enumerate() {
         let result_comb = scalar_mul_base_comb(scalar);
         let result_regular = base_point().scalar_mul(scalar);
-        
+
         let (x1, y1) = result_comb.to_affine();
         let (x2, y2) = result_regular.to_affine();
-        
+
         assert_eq!(x1.to_bytes(), x2.to_bytes(), "Test case {}: x mismatch", i);
         assert_eq!(y1.to_bytes(), y2.to_bytes(), "Test case {}: y mismatch", i);
     }
@@ -3071,13 +3288,13 @@ fn test_comb_various_scalars() {
 #[cfg(feature = "std")]
 fn test_comb_all_ones() {
     let scalar = [0xFFu8; 32];
-    
+
     let result_comb = scalar_mul_base_comb(&scalar);
     let result_regular = base_point().scalar_mul(&scalar);
-    
+
     let (x1, y1) = result_comb.to_affine();
     let (x2, y2) = result_regular.to_affine();
-    
+
     assert_eq!(x1.to_bytes(), x2.to_bytes(), "All ones: x mismatch");
     assert_eq!(y1.to_bytes(), y2.to_bytes(), "All ones: y mismatch");
 }
@@ -3087,13 +3304,13 @@ fn test_comb_all_ones() {
 fn test_comb_high_bits() {
     let mut scalar = [0u8; 32];
     scalar[31] = 0xFF; // Set highest byte
-    
+
     let result_comb = scalar_mul_base_comb(&scalar);
     let result_regular = base_point().scalar_mul(&scalar);
-    
+
     let (x1, y1) = result_comb.to_affine();
     let (x2, y2) = result_regular.to_affine();
-    
+
     assert_eq!(x1.to_bytes(), x2.to_bytes(), "High bits: x mismatch");
     assert_eq!(y1.to_bytes(), y2.to_bytes(), "High bits: y mismatch");
 }
@@ -3102,14 +3319,14 @@ fn test_comb_high_bits() {
 #[cfg(feature = "std")]
 fn test_comb_single_high_bit() {
     let mut scalar = [0u8; 32];
-    scalar[31] = 1;  // Set bit 248
-    
+    scalar[31] = 1; // Set bit 248
+
     let result_comb = scalar_mul_base_comb(&scalar);
     let result_regular = base_point().scalar_mul(&scalar);
-    
+
     let (x1, y1) = result_comb.to_affine();
     let (x2, y2) = result_regular.to_affine();
-    
+
     assert_eq!(x1.to_bytes(), x2.to_bytes(), "Bit 248: x mismatch");
     assert_eq!(y1.to_bytes(), y2.to_bytes(), "Bit 248: y mismatch");
 }
@@ -3119,14 +3336,14 @@ fn test_comb_single_high_bit() {
 fn test_comb_debug_bit_extraction() {
     // Test that bit extraction works for high bits
     let mut scalar = [0u8; 32];
-    scalar[30] = 1;  // Set bit 240
-    
+    scalar[30] = 1; // Set bit 240
+
     let result_comb = scalar_mul_base_comb(&scalar);
     let result_regular = base_point().scalar_mul(&scalar);
-    
+
     let (x1, y1) = result_comb.to_affine();
     let (x2, y2) = result_regular.to_affine();
-    
+
     assert_eq!(x1.to_bytes(), x2.to_bytes(), "Bit 240: x mismatch");
     assert_eq!(y1.to_bytes(), y2.to_bytes(), "Bit 240: y mismatch");
 }
@@ -3135,14 +3352,14 @@ fn test_comb_debug_bit_extraction() {
 #[cfg(feature = "std")]
 fn test_comb_bit_24() {
     let mut scalar = [0u8; 32];
-    scalar[3] = 1;  // Bit 24
-    
+    scalar[3] = 1; // Bit 24
+
     let result_comb = scalar_mul_base_comb(&scalar);
     let result_regular = base_point().scalar_mul(&scalar);
-    
+
     let (x1, y1) = result_comb.to_affine();
     let (x2, y2) = result_regular.to_affine();
-    
+
     assert_eq!(x1.to_bytes(), x2.to_bytes(), "Bit 24: x mismatch");
     assert_eq!(y1.to_bytes(), y2.to_bytes(), "Bit 24: y mismatch");
 }
@@ -3151,14 +3368,14 @@ fn test_comb_bit_24() {
 #[cfg(feature = "std")]
 fn test_comb_bit_32() {
     let mut scalar = [0u8; 32];
-    scalar[4] = 1;  // Bit 32
-    
+    scalar[4] = 1; // Bit 32
+
     let result_comb = scalar_mul_base_comb(&scalar);
     let result_regular = base_point().scalar_mul(&scalar);
-    
+
     let (x1, y1) = result_comb.to_affine();
     let (x2, y2) = result_regular.to_affine();
-    
+
     assert_eq!(x1.to_bytes(), x2.to_bytes(), "Bit 32: x mismatch");
     assert_eq!(y1.to_bytes(), y2.to_bytes(), "Bit 32: y mismatch");
 }
@@ -3187,8 +3404,16 @@ fn test_radix16_simple_scalar() {
     let (x1, y1) = result_comb.to_affine();
     let (x2, y2) = expected.to_affine();
 
-    assert_eq!(x1.to_bytes(), x2.to_bytes(), "x-coordinate mismatch for scalar=[1,0,...], expected base point");
-    assert_eq!(y1.to_bytes(), y2.to_bytes(), "y-coordinate mismatch for scalar=[1,0,...], expected base point");
+    assert_eq!(
+        x1.to_bytes(),
+        x2.to_bytes(),
+        "x-coordinate mismatch for scalar=[1,0,...], expected base point"
+    );
+    assert_eq!(
+        y1.to_bytes(),
+        y2.to_bytes(),
+        "y-coordinate mismatch for scalar=[1,0,...], expected base point"
+    );
 }
 
 #[test]
@@ -3205,8 +3430,16 @@ fn test_lazy_doubling_correctness() {
     let (x1, y1) = result_normal.to_affine();
     let (x2, y2) = result_lazy.to_affine();
 
-    assert_eq!(x1.to_bytes(), x2.to_bytes(), "Lazy doubling x-coordinate mismatch");
-    assert_eq!(y1.to_bytes(), y2.to_bytes(), "Lazy doubling y-coordinate mismatch");
+    assert_eq!(
+        x1.to_bytes(),
+        x2.to_bytes(),
+        "Lazy doubling x-coordinate mismatch"
+    );
+    assert_eq!(
+        y1.to_bytes(),
+        y2.to_bytes(),
+        "Lazy doubling y-coordinate mismatch"
+    );
 }
 
 #[test]
@@ -3230,6 +3463,14 @@ fn test_lazy_doubling_multiple() {
     let (x1, y1) = result_normal.to_affine();
     let (x2, y2) = result_lazy.to_affine();
 
-    assert_eq!(x1.to_bytes(), x2.to_bytes(), "Multiple lazy doublings x-coordinate mismatch");
-    assert_eq!(y1.to_bytes(), y2.to_bytes(), "Multiple lazy doublings y-coordinate mismatch");
+    assert_eq!(
+        x1.to_bytes(),
+        x2.to_bytes(),
+        "Multiple lazy doublings x-coordinate mismatch"
+    );
+    assert_eq!(
+        y1.to_bytes(),
+        y2.to_bytes(),
+        "Multiple lazy doublings y-coordinate mismatch"
+    );
 }

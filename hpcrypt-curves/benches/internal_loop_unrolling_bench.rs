@@ -88,22 +88,10 @@ fn bench_p521_sub_manual(c: &mut Criterion) {
     });
 }
 
-criterion_group!(
-    p256_benches,
-    bench_p256_add_manual,
-    bench_p256_sub_manual
-);
+criterion_group!(p256_benches, bench_p256_add_manual, bench_p256_sub_manual);
 
-criterion_group!(
-    p384_benches,
-    bench_p384_add_manual,
-    bench_p384_sub_manual
-);
+criterion_group!(p384_benches, bench_p384_add_manual, bench_p384_sub_manual);
 
-criterion_group!(
-    p521_benches,
-    bench_p521_add_manual,
-    bench_p521_sub_manual
-);
+criterion_group!(p521_benches, bench_p521_add_manual, bench_p521_sub_manual);
 
 criterion_main!(p256_benches, p384_benches, p521_benches);

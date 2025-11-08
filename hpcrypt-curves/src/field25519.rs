@@ -23,15 +23,23 @@ impl FieldElement {
     pub const ONE: FieldElement = FieldElement([1, 0, 0, 0, 0]);
 
     /// Create zero
-    pub fn zero() -> Self { Self::ZERO }
+    pub fn zero() -> Self {
+        Self::ZERO
+    }
     /// Create one
-    pub fn one() -> Self { Self::ONE }
+    pub fn one() -> Self {
+        Self::ONE
+    }
     /// Create from raw limbs (radix 2^51)
-    pub const fn from_limbs(limbs: [i64; 5]) -> Self { FieldElement(limbs) }
+    pub const fn from_limbs(limbs: [i64; 5]) -> Self {
+        FieldElement(limbs)
+    }
 
     /// Get the raw limbs (for debugging)
-    pub fn limbs(&self) -> [i64; 5] { self.0 }
-    
+    pub fn limbs(&self) -> [i64; 5] {
+        self.0
+    }
+
     // TODO: Implement full field arithmetic
     // - from_bytes / to_bytes
     // - add / sub / mul / square
@@ -90,11 +98,11 @@ impl FieldElement {
         let h4 = load_u64_le(&bytes[24..32]);
 
         FieldElement([
-            (h0 & 0x0007_ffff_ffff_ffff) as i64,  // bits 0-50
+            (h0 & 0x0007_ffff_ffff_ffff) as i64,         // bits 0-50
             ((h1 >> 3) & 0x0007_ffff_ffff_ffff) as i64,  // bits 51-101
             ((h2 >> 6) & 0x0007_ffff_ffff_ffff) as i64,  // bits 102-152
             ((h3 >> 1) & 0x0007_ffff_ffff_ffff) as i64,  // bits 153-203
-            ((h4 >> 12) & 0x0007_ffff_ffff_ffff) as i64,  // bits 204-254 (FIX: was >>4, should be >>12!)
+            ((h4 >> 12) & 0x0007_ffff_ffff_ffff) as i64, // bits 204-254 (FIX: was >>4, should be >>12!)
         ])
     }
 
@@ -131,7 +139,7 @@ impl FieldElement {
         h[2] &= mask;
         h[4] += (h[3] as u64 >> 51) as i64;
         h[3] &= mask;
-        h[4] &= mask;  // Discard the 2^255 term
+        h[4] &= mask; // Discard the 2^255 term
 
         // Pack 51-bit limbs into 32 bytes (little-endian)
         let mut bytes = [0u8; 32];
@@ -143,48 +151,48 @@ impl FieldElement {
         bytes[3] = ((h[0] >> 24) & 0xff) as u8;
         bytes[4] = ((h[0] >> 32) & 0xff) as u8;
         bytes[5] = ((h[0] >> 40) & 0xff) as u8;
-        bytes[6] = ((h[0] >> 48) & 0x07) as u8;  // 3 bits from limb 0
+        bytes[6] = ((h[0] >> 48) & 0x07) as u8; // 3 bits from limb 0
 
         // Limb 1: bits 51-101 -> bytes 6-12
-        bytes[6] |= ((h[1] << 3) & 0xff) as u8;  // 5 bits from limb 1
+        bytes[6] |= ((h[1] << 3) & 0xff) as u8; // 5 bits from limb 1
         bytes[7] = ((h[1] >> 5) & 0xff) as u8;
         bytes[8] = ((h[1] >> 13) & 0xff) as u8;
         bytes[9] = ((h[1] >> 21) & 0xff) as u8;
         bytes[10] = ((h[1] >> 29) & 0xff) as u8;
         bytes[11] = ((h[1] >> 37) & 0xff) as u8;
-        bytes[12] = ((h[1] >> 45) & 0x3f) as u8;  // 6 bits from limb 1
+        bytes[12] = ((h[1] >> 45) & 0x3f) as u8; // 6 bits from limb 1
 
         // Limb 2: bits 102-152 -> bytes 12-19
-        bytes[12] |= ((h[2] << 6) & 0xff) as u8;  // 2 bits from limb 2
+        bytes[12] |= ((h[2] << 6) & 0xff) as u8; // 2 bits from limb 2
         bytes[13] = ((h[2] >> 2) & 0xff) as u8;
         bytes[14] = ((h[2] >> 10) & 0xff) as u8;
         bytes[15] = ((h[2] >> 18) & 0xff) as u8;
         bytes[16] = ((h[2] >> 26) & 0xff) as u8;
         bytes[17] = ((h[2] >> 34) & 0xff) as u8;
         bytes[18] = ((h[2] >> 42) & 0xff) as u8;
-        bytes[19] = ((h[2] >> 50) & 0x01) as u8;  // 1 bit from limb 2
+        bytes[19] = ((h[2] >> 50) & 0x01) as u8; // 1 bit from limb 2
 
         // Limb 3: bits 153-203 -> bytes 19-25
-        bytes[19] |= ((h[3] << 1) & 0xff) as u8;  // 7 bits from limb 3
+        bytes[19] |= ((h[3] << 1) & 0xff) as u8; // 7 bits from limb 3
         bytes[20] = ((h[3] >> 7) & 0xff) as u8;
         bytes[21] = ((h[3] >> 15) & 0xff) as u8;
         bytes[22] = ((h[3] >> 23) & 0xff) as u8;
         bytes[23] = ((h[3] >> 31) & 0xff) as u8;
         bytes[24] = ((h[3] >> 39) & 0xff) as u8;
-        bytes[25] = ((h[3] >> 47) & 0x0f) as u8;  // 4 bits from limb 3
+        bytes[25] = ((h[3] >> 47) & 0x0f) as u8; // 4 bits from limb 3
 
         // Limb 4: bits 204-254 -> bytes 25-31
         // Since we load bytes[24..32] and shift by 12 in from_bytes,
         // we need to reverse that: shift left by 12 relative to byte 24
         // But byte 25 is 8 bits into the sequence, so limb 4 bit 0 -> byte 25 bit 4
         // This means we shift LEFT by 4 to place in byte 25
-        bytes[25] |= ((h[4] << 4) & 0xff) as u8;  // Low 4 bits of limb 4 -> high 4 bits of byte 25
-        bytes[26] = ((h[4] >> 4) & 0xff) as u8;   // Bits 4-11 of limb 4 -> byte 26
-        bytes[27] = ((h[4] >> 12) & 0xff) as u8;  // Bits 12-19 of limb 4 -> byte 27
-        bytes[28] = ((h[4] >> 20) & 0xff) as u8;  // Bits 20-27 of limb 4 -> byte 28
-        bytes[29] = ((h[4] >> 28) & 0xff) as u8;  // Bits 28-35 of limb 4 -> byte 29
-        bytes[30] = ((h[4] >> 36) & 0xff) as u8;  // Bits 36-43 of limb 4 -> byte 30
-        bytes[31] = ((h[4] >> 44) & 0xff) as u8;  // Bits 44-50 of limb 4 -> byte 31 (7 bits)
+        bytes[25] |= ((h[4] << 4) & 0xff) as u8; // Low 4 bits of limb 4 -> high 4 bits of byte 25
+        bytes[26] = ((h[4] >> 4) & 0xff) as u8; // Bits 4-11 of limb 4 -> byte 26
+        bytes[27] = ((h[4] >> 12) & 0xff) as u8; // Bits 12-19 of limb 4 -> byte 27
+        bytes[28] = ((h[4] >> 20) & 0xff) as u8; // Bits 20-27 of limb 4 -> byte 28
+        bytes[29] = ((h[4] >> 28) & 0xff) as u8; // Bits 28-35 of limb 4 -> byte 29
+        bytes[30] = ((h[4] >> 36) & 0xff) as u8; // Bits 36-43 of limb 4 -> byte 30
+        bytes[31] = ((h[4] >> 44) & 0xff) as u8; // Bits 44-50 of limb 4 -> byte 31 (7 bits)
 
         // Final step: conditional subtraction of p to ensure canonical form
         // p = 2^255 - 19 in little-endian bytes is:
@@ -199,15 +207,27 @@ impl FieldElement {
 
         // p in bytes: [0xED, 0xFF, 0xFF, ..., 0xFF, 0x7F]
         result[0] = bytes[0].wrapping_sub(0xED).wrapping_sub(borrow as u8);
-        borrow = if (bytes[0] as i32) < (0xED + borrow) { 1 } else { 0 };
+        borrow = if (bytes[0] as i32) < (0xED + borrow) {
+            1
+        } else {
+            0
+        };
 
         for i in 1..31 {
             result[i] = bytes[i].wrapping_sub(0xFF).wrapping_sub(borrow as u8);
-            borrow = if (bytes[i] as i32) < (0xFF + borrow) { 1 } else { 0 };
+            borrow = if (bytes[i] as i32) < (0xFF + borrow) {
+                1
+            } else {
+                0
+            };
         }
 
         result[31] = bytes[31].wrapping_sub(0x7F).wrapping_sub(borrow as u8);
-        borrow = if (bytes[31] as i32) < (0x7F + borrow) { 1 } else { 0 };
+        borrow = if (bytes[31] as i32) < (0x7F + borrow) {
+            1
+        } else {
+            0
+        };
 
         // If there was underflow (borrow != 0), use original bytes; otherwise use result
         // Use constant-time selection
@@ -247,7 +267,7 @@ impl FieldElement {
             self.0[3] + other.0[3],
             self.0[4] + other.0[4],
         ]);
-        result.reduce_weak();  // Single-pass reduction only
+        result.reduce_weak(); // Single-pass reduction only
         result
     }
 
@@ -341,11 +361,11 @@ impl FieldElement {
         // Add 2p to ensure non-negative result
         // Using 2p instead of 4p to avoid overflow issues
         const TWO_P: [i64; 5] = [
-            0x000f_ffff_ffff_ffda,  // 2p0 = 2*(2^51 - 19) = 2^52 - 38
-            0x000f_ffff_ffff_fffe,  // 2p1 = 2*(2^51 - 1) = 2^52 - 2
-            0x000f_ffff_ffff_fffe,  // 2p2 = 2*(2^51 - 1)
-            0x000f_ffff_ffff_fffe,  // 2p3 = 2*(2^51 - 1)
-            0x000f_ffff_ffff_fffe,  // 2p4 = 2*(2^51 - 1)
+            0x000f_ffff_ffff_ffda, // 2p0 = 2*(2^51 - 19) = 2^52 - 38
+            0x000f_ffff_ffff_fffe, // 2p1 = 2*(2^51 - 1) = 2^52 - 2
+            0x000f_ffff_ffff_fffe, // 2p2 = 2*(2^51 - 1)
+            0x000f_ffff_ffff_fffe, // 2p3 = 2*(2^51 - 1)
+            0x000f_ffff_ffff_fffe, // 2p4 = 2*(2^51 - 1)
         ];
 
         let mut result = FieldElement([
@@ -369,11 +389,11 @@ impl FieldElement {
     pub fn sub_unreduced(&self, other: &Self) -> Self {
         // Add 2p to ensure non-negative result
         const TWO_P: [i64; 5] = [
-            0x000f_ffff_ffff_ffda,  // 2p0 = 2*(2^51 - 19) = 2^52 - 38
-            0x000f_ffff_ffff_fffe,  // 2p1 = 2*(2^51 - 1) = 2^52 - 2
-            0x000f_ffff_ffff_fffe,  // 2p2 = 2*(2^51 - 1)
-            0x000f_ffff_ffff_fffe,  // 2p3 = 2*(2^51 - 1)
-            0x000f_ffff_ffff_fffe,  // 2p4 = 2*(2^51 - 1)
+            0x000f_ffff_ffff_ffda, // 2p0 = 2*(2^51 - 19) = 2^52 - 38
+            0x000f_ffff_ffff_fffe, // 2p1 = 2*(2^51 - 1) = 2^52 - 2
+            0x000f_ffff_ffff_fffe, // 2p2 = 2*(2^51 - 1)
+            0x000f_ffff_ffff_fffe, // 2p3 = 2*(2^51 - 1)
+            0x000f_ffff_ffff_fffe, // 2p4 = 2*(2^51 - 1)
         ];
 
         let mut result = FieldElement([
@@ -383,7 +403,7 @@ impl FieldElement {
             TWO_P[3] + self.0[3] - other.0[3],
             TWO_P[4] + self.0[4] - other.0[4],
         ]);
-        result.reduce_weak();  // Single-pass reduction only
+        result.reduce_weak(); // Single-pass reduction only
         result
     }
 
@@ -391,11 +411,11 @@ impl FieldElement {
     pub fn neg(&self) -> Self {
         // Compute 0 - self = 2p - self
         const TWO_P: [i64; 5] = [
-            0x000f_ffff_ffff_ffda,  // 2p0 = 2*(2^51 - 19) = 2^52 - 38
-            0x000f_ffff_ffff_fffe,  // 2p1 = 2*(2^51 - 1) = 2^52 - 2
-            0x000f_ffff_ffff_fffe,  // 2p2 = 2*(2^51 - 1)
-            0x000f_ffff_ffff_fffe,  // 2p3 = 2*(2^51 - 1)
-            0x000f_ffff_ffff_fffe,  // 2p4 = 2*(2^51 - 1)
+            0x000f_ffff_ffff_ffda, // 2p0 = 2*(2^51 - 19) = 2^52 - 38
+            0x000f_ffff_ffff_fffe, // 2p1 = 2*(2^51 - 1) = 2^52 - 2
+            0x000f_ffff_ffff_fffe, // 2p2 = 2*(2^51 - 1)
+            0x000f_ffff_ffff_fffe, // 2p3 = 2*(2^51 - 1)
+            0x000f_ffff_ffff_fffe, // 2p4 = 2*(2^51 - 1)
         ];
 
         let mut result = FieldElement([
@@ -434,7 +454,7 @@ impl FieldElement {
         let b3_19 = 19 * b3;
         let b4_19 = 19 * b4;
 
-        let     r0 = (a0 * b0) + (a1 * b4_19) + (a2 * b3_19) + (a3 * b2_19) + (a4 * b1_19);
+        let r0 = (a0 * b0) + (a1 * b4_19) + (a2 * b3_19) + (a3 * b2_19) + (a4 * b1_19);
         let mut r1 = (a0 * b1) + (a1 * b0) + (a2 * b4_19) + (a3 * b3_19) + (a4 * b2_19);
         let mut r2 = (a0 * b2) + (a1 * b1) + (a2 * b0) + (a3 * b4_19) + (a4 * b3_19);
         let mut r3 = (a0 * b3) + (a1 * b2) + (a2 * b1) + (a3 * b0) + (a4 * b4_19);
@@ -488,7 +508,7 @@ impl FieldElement {
         let a3_38 = 38 * a3;
         let a4_19 = 19 * a4;
 
-        let     r0 = (a0 * a0) + (a1_38 * a4) + (a2_38 * a3);
+        let r0 = (a0 * a0) + (a1_38 * a4) + (a2_38 * a3);
         let mut r1 = (a0_2 * a1) + (a2_38 * a4) + (a3_19 * a3);
         let mut r2 = (a0_2 * a2) + (a1 * a1) + (a3_38 * a4);
         let mut r3 = (a0_2 * a3) + (a1_2 * a2) + (a4_19 * a4);
@@ -540,26 +560,26 @@ impl FieldElement {
     /// - t19 = (self)^(2^250 - 1) with nonzero bits 249..0
     /// - t3 = (self)^(2^4 - 1) with nonzero bits 3,1,0
     pub fn pow22501(&self) -> (Self, Self) {
-        let t0  = self.square();           // 2^1
-        let t1  = t0.square().square();    // 2^3
-        let t2  = self.mul(&t1);           // 2^3 + 2^0
-        let t3  = t0.mul(&t2);             // 2^3 + 2^1 + 2^0
-        let t4  = t3.square();             // 2^4 + 2^2 + 2^1
-        let t5  = t2.mul(&t4);             // 2^4 + 2^3 + 2^2 + 2^1 + 2^0
-        let t6  = t5.pow2k(5);             // 2^9 + 2^8 + 2^7 + 2^6 + 2^5
-        let t7  = t6.mul(&t5);             // 2^9 + ... + 2^0 (10 bits)
-        let t8  = t7.pow2k(10);            // 2^19 + ... + 2^10
-        let t9  = t8.mul(&t7);             // 2^19 + ... + 2^0 (20 bits)
-        let t10 = t9.pow2k(20);            // 2^39 + ... + 2^20
-        let t11 = t10.mul(&t9);            // 2^39 + ... + 2^0 (40 bits)
-        let t12 = t11.pow2k(10);           // 2^49 + ... + 2^10
-        let t13 = t12.mul(&t7);            // 2^49 + ... + 2^0 (50 bits)
-        let t14 = t13.pow2k(50);           // 2^99 + ... + 2^50
-        let t15 = t14.mul(&t13);           // 2^99 + ... + 2^0 (100 bits)
-        let t16 = t15.pow2k(100);          // 2^199 + ... + 2^100
-        let t17 = t16.mul(&t15);           // 2^199 + ... + 2^0 (200 bits)
-        let t18 = t17.pow2k(50);           // 2^249 + ... + 2^50
-        let t19 = t18.mul(&t13);           // 2^249 + ... + 2^0 (250 bits)
+        let t0 = self.square(); // 2^1
+        let t1 = t0.square().square(); // 2^3
+        let t2 = self.mul(&t1); // 2^3 + 2^0
+        let t3 = t0.mul(&t2); // 2^3 + 2^1 + 2^0
+        let t4 = t3.square(); // 2^4 + 2^2 + 2^1
+        let t5 = t2.mul(&t4); // 2^4 + 2^3 + 2^2 + 2^1 + 2^0
+        let t6 = t5.pow2k(5); // 2^9 + 2^8 + 2^7 + 2^6 + 2^5
+        let t7 = t6.mul(&t5); // 2^9 + ... + 2^0 (10 bits)
+        let t8 = t7.pow2k(10); // 2^19 + ... + 2^10
+        let t9 = t8.mul(&t7); // 2^19 + ... + 2^0 (20 bits)
+        let t10 = t9.pow2k(20); // 2^39 + ... + 2^20
+        let t11 = t10.mul(&t9); // 2^39 + ... + 2^0 (40 bits)
+        let t12 = t11.pow2k(10); // 2^49 + ... + 2^10
+        let t13 = t12.mul(&t7); // 2^49 + ... + 2^0 (50 bits)
+        let t14 = t13.pow2k(50); // 2^99 + ... + 2^50
+        let t15 = t14.mul(&t13); // 2^99 + ... + 2^0 (100 bits)
+        let t16 = t15.pow2k(100); // 2^199 + ... + 2^100
+        let t17 = t16.mul(&t15); // 2^199 + ... + 2^0 (200 bits)
+        let t18 = t17.pow2k(50); // 2^249 + ... + 2^50
+        let t19 = t18.mul(&t13); // 2^249 + ... + 2^0 (250 bits)
 
         (t19, t3)
     }
@@ -674,10 +694,10 @@ impl FieldElement {
         // x^(2^252 - 2) = x^(4 * (2^250 - 1) + 2)
         //                = (x^(2^250 - 1))^4 * x^2
 
-        let (x_2_250_m1, _) = self.pow22501();  // x^(2^250 - 1)
-        let x_4 = x_2_250_m1.square().square();  // x^(4 * (2^250 - 1)) = x^(2^252 - 4)
-        let x_sq = self.square();                // x^2
-        let candidate = x_4.mul(&x_sq);          // x^(2^252 - 4 + 2) = x^(2^252 - 2)
+        let (x_2_250_m1, _) = self.pow22501(); // x^(2^250 - 1)
+        let x_4 = x_2_250_m1.square().square(); // x^(4 * (2^250 - 1)) = x^(2^252 - 4)
+        let x_sq = self.square(); // x^2
+        let candidate = x_4.mul(&x_sq); // x^(2^252 - 4 + 2) = x^(2^252 - 2)
 
         // WAIT! The formula should be x^((p+3)/8), not x^(2^252 - 2)
         // Let me recalculate: (p+3)/8 where p = 2^255 - 19
@@ -741,7 +761,7 @@ fn compute_sqrt_minus_1() -> FieldElement {
         234908883556509,
         2233514472574048,
         2117202627021982,
-        765476049583133,  // FIXED: was 1817900954539645 (incorrect)
+        765476049583133, // FIXED: was 1817900954539645 (incorrect)
     ])
 }
 
@@ -759,7 +779,11 @@ mod tests {
 
         // First verify that 2^2 = 4
         let two_squared = two.square();
-        assert_eq!(two_squared.to_bytes(), four.to_bytes(), "2^2 should equal 4");
+        assert_eq!(
+            two_squared.to_bytes(),
+            four.to_bytes(),
+            "2^2 should equal 4"
+        );
 
         // Now try sqrt(4)
         let sqrt_result = four.sqrt();
@@ -767,7 +791,11 @@ mod tests {
         // Should get 2 or -2
         if let Some(result) = sqrt_result {
             let squared = result.square();
-            assert_eq!(squared.to_bytes(), four.to_bytes(), "sqrt(4)^2 should equal 4");
+            assert_eq!(
+                squared.to_bytes(),
+                four.to_bytes(),
+                "sqrt(4)^2 should equal 4"
+            );
 
             // The result should be 2 or p-2 (which is -2 mod p)
             let neg_two = FieldElement::ZERO.sub(&two);
@@ -775,8 +803,10 @@ mod tests {
             let two_bytes = two.to_bytes();
             let neg_two_bytes = neg_two.to_bytes();
 
-            assert!(result_bytes == two_bytes || result_bytes == neg_two_bytes,
-                   "sqrt(4) should be 2 or -2");
+            assert!(
+                result_bytes == two_bytes || result_bytes == neg_two_bytes,
+                "sqrt(4) should be 2 or -2"
+            );
         } else {
             // Debug: Let's check if our computation is correct
             // We should have candidate = 4^((p+3)/8) = 4^(2^252 - 2)
@@ -788,9 +818,9 @@ mod tests {
             // Actually, let's just check if we're getting something reasonable
 
             // Now compute candidate the way sqrt() does it
-            let x_4 = pow_result.square().square();  // (4^(2^250-1))^4 = 4^(2^252-4)
-            let x_sq = four.square();                 // 4^2 = 16
-            let candidate = x_4.mul(&x_sq);          // 4^(2^252-4) * 16 = 4^(2^252-4+2) ?
+            let x_4 = pow_result.square().square(); // (4^(2^250-1))^4 = 4^(2^252-4)
+            let x_sq = four.square(); // 4^2 = 16
+            let candidate = x_4.mul(&x_sq); // 4^(2^252-4) * 16 = 4^(2^252-4+2) ?
 
             // WAIT! 4^2 = 16, but we want 4^2 means squaring the EXPONENT
             // x^2 means x*x, not (base)^2!
@@ -814,8 +844,10 @@ mod tests {
             let neg_squared = neg_cand.square();
             let neg_matches = neg_squared.to_bytes() == four.to_bytes();
 
-            panic!("sqrt(4) failed! candidate^2==4: {}, (-candidate)^2==4: {}",
-                   matches, neg_matches);
+            panic!(
+                "sqrt(4) failed! candidate^2==4: {}, (-candidate)^2==4: {}",
+                matches, neg_matches
+            );
         }
     }
 
@@ -852,15 +884,15 @@ mod tests {
         let two = FieldElement::from_limbs([2, 0, 0, 0, 0]);
 
         // Compute 2^2
-        let two_sq = two.square();  // Should be 4
+        let two_sq = two.square(); // Should be 4
         assert_eq!(two_sq.to_bytes()[0], 4, "2^2 should be 4");
 
         // Compute 2^4 = (2^2)^2
-        let two_4th = two_sq.square();  // Should be 16
+        let two_4th = two_sq.square(); // Should be 16
         assert_eq!(two_4th.to_bytes()[0], 16, "2^4 should be 16");
 
         // Compute 2^6 = 2^4 * 2^2
-        let two_6th = two_4th.mul(&two_sq);  // Should be 64
+        let two_6th = two_4th.mul(&two_sq); // Should be 64
         assert_eq!(two_6th.to_bytes()[0], 64, "2^4 * 2^2 should be 64");
     }
 
@@ -881,7 +913,11 @@ mod tests {
         assert!(sqrt_result.is_some(), "sqrt(1) should return Some(1 or -1)");
         if let Some(result) = sqrt_result {
             let squared = result.square();
-            assert_eq!(squared.to_bytes(), one.to_bytes(), "sqrt(1)^2 should equal 1");
+            assert_eq!(
+                squared.to_bytes(),
+                one.to_bytes(),
+                "sqrt(1)^2 should equal 1"
+            );
         }
     }
 
@@ -889,11 +925,15 @@ mod tests {
     fn test_byte_conversion_roundtrip() {
         // Test that from_bytes(to_bytes(x)) == x for various inputs
         let test_cases = [
-            [0u8; 32],  // Zero
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  // One
-            [9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  // Nine (X25519 basepoint)
+            [0u8; 32], // Zero
+            [
+                1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0,
+            ], // One
+            [
+                9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0,
+            ], // Nine (X25519 basepoint)
         ];
 
         for bytes in &test_cases {
@@ -907,8 +947,10 @@ mod tests {
     fn test_field_element_one() {
         let one = FieldElement::ONE;
         let bytes = one.to_bytes();
-        let expected = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected = [
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
         assert_eq!(bytes, expected);
     }
 
@@ -925,8 +967,10 @@ mod tests {
         let one = FieldElement::ONE;
         let two = one.add(&one);
         let bytes = two.to_bytes();
-        let expected = [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected = [
+            2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
         assert_eq!(bytes, expected, "1 + 1 should equal 2");
     }
 
@@ -934,14 +978,16 @@ mod tests {
     fn test_field_multiplication_by_one() {
         // Test x * 1 = x
         let x = FieldElement::from_bytes(&[
-            9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
         ]);
         let one = FieldElement::ONE;
         let result = x.mul(&one);
         let bytes = result.to_bytes();
-        let expected = [9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected = [
+            9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
         assert_eq!(bytes, expected, "x * 1 should equal x");
     }
 
@@ -949,8 +995,8 @@ mod tests {
     fn test_field_multiplication_by_zero() {
         // Test x * 0 = 0
         let x = FieldElement::from_bytes(&[
-            9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
         ]);
         let zero = FieldElement::ZERO;
         let result = x.mul(&zero);
@@ -964,16 +1010,20 @@ mod tests {
         let one = FieldElement::ONE;
         let result = one.square();
         let bytes = result.to_bytes();
-        let expected = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected = [
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
         assert_eq!(bytes, expected, "1^2 should equal 1");
 
         // Test 2^2 = 4
         let two = one.add(&one);
         let four = two.square();
         let bytes_four = four.to_bytes();
-        let expected_four = [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected_four = [
+            4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
         assert_eq!(bytes_four, expected_four, "2^2 should equal 4");
     }
 
@@ -989,8 +1039,10 @@ mod tests {
         // Expected result should have limbs close to [1, 0, 0, 0, 0] or [4p + 1]
 
         let bytes = result.to_bytes();
-        let expected = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected = [
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
         assert_eq!(bytes, expected, "2 - 1 should equal 1");
     }
 
@@ -1001,8 +1053,10 @@ mod tests {
         let inv = one.invert();
         let result = one.mul(&inv);
         let bytes = result.to_bytes();
-        let expected = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected = [
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
         assert_eq!(bytes, expected, "1 * 1^(-1) should equal 1");
     }
 
@@ -1010,18 +1064,22 @@ mod tests {
     fn test_field_multiplication_commutativity() {
         // Test a * b = b * a
         let a = FieldElement::from_bytes(&[
-            5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
         ]);
         let b = FieldElement::from_bytes(&[
-            7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
         ]);
 
         let ab = a.mul(&b);
         let ba = b.mul(&a);
 
-        assert_eq!(ab.to_bytes(), ba.to_bytes(), "Multiplication should be commutative");
+        assert_eq!(
+            ab.to_bytes(),
+            ba.to_bytes(),
+            "Multiplication should be commutative"
+        );
     }
 
     #[test]
@@ -1029,9 +1087,14 @@ mod tests {
         // Test packing limbs [1, 0, 0, 0, 0] directly
         let fe = FieldElement::from_limbs([1, 0, 0, 0, 0]);
         let bytes = fe.to_bytes();
-        let expected = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        assert_eq!(bytes, expected, "Limbs [1, 0, 0, 0, 0] should pack to [1, 0, ...]");
+        let expected = [
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
+        assert_eq!(
+            bytes, expected,
+            "Limbs [1, 0, 0, 0, 0] should pack to [1, 0, ...]"
+        );
     }
 
     #[test]
@@ -1098,7 +1161,11 @@ mod tests {
 
         for i in 0..5 {
             assert!(limbs[i] >= 0, "limb[{}] should be non-negative", i);
-            assert!(limbs[i] < 0x0008_0000_0000_0000, "limb[{}] should be < 2^51", i);
+            assert!(
+                limbs[i] < 0x0008_0000_0000_0000,
+                "limb[{}] should be < 2^51",
+                i
+            );
         }
 
         // So the limbs ARE in the valid range [0, 2^51)
@@ -1109,8 +1176,10 @@ mod tests {
     #[test]
     fn test_sqrt_simple() {
         // Test that 2^2 = 4, so sqrt should work
-        let two = FieldElement::from_bytes(&[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let two = FieldElement::from_bytes(&[
+            2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ]);
         let four = two.square();
 
         // Now try to compute sqrt(4)
@@ -1119,7 +1188,11 @@ mod tests {
         if let Some(result) = sqrt_four {
             // Verify sqrt^2 = 4
             let squared = result.square();
-            assert_eq!(squared.to_bytes(), four.to_bytes(), "sqrt(4)^2 should equal 4");
+            assert_eq!(
+                squared.to_bytes(),
+                four.to_bytes(),
+                "sqrt(4)^2 should equal 4"
+            );
         } else {
             // sqrt returned None - let's not fail the test yet, just verify it compiles and runs
             // This indicates the sqrt algorithm needs more work
@@ -1137,12 +1210,22 @@ mod tests {
             let i_squared = i_fe.square();
 
             let sqrt_result = i_squared.sqrt();
-            assert!(sqrt_result.is_some(), "sqrt({}^2) should exist for i={}", i, i);
+            assert!(
+                sqrt_result.is_some(),
+                "sqrt({}^2) should exist for i={}",
+                i,
+                i
+            );
 
             if let Some(sqrt) = sqrt_result {
                 let check = sqrt.square();
-                assert_eq!(check.to_bytes(), i_squared.to_bytes(),
-                          "sqrt({}^2)^2 should equal {}^2", i, i);
+                assert_eq!(
+                    check.to_bytes(),
+                    i_squared.to_bytes(),
+                    "sqrt({}^2)^2 should equal {}^2",
+                    i,
+                    i
+                );
             }
         }
     }
@@ -1164,12 +1247,22 @@ mod tests {
             let i_squared = i_fe.square();
 
             let sqrt_result = i_squared.sqrt();
-            assert!(sqrt_result.is_some(), "sqrt({}^2) should exist for i={}", i, i);
+            assert!(
+                sqrt_result.is_some(),
+                "sqrt({}^2) should exist for i={}",
+                i,
+                i
+            );
 
             if let Some(sqrt) = sqrt_result {
                 let check = sqrt.square();
-                assert_eq!(check.to_bytes(), i_squared.to_bytes(),
-                          "sqrt({}^2)^2 should equal {}^2", i, i);
+                assert_eq!(
+                    check.to_bytes(),
+                    i_squared.to_bytes(),
+                    "sqrt({}^2)^2 should equal {}^2",
+                    i,
+                    i
+                );
             }
         }
     }
@@ -1178,24 +1271,38 @@ mod tests {
     fn test_sqrt_field_properties() {
         // Test that sqrt(x*x) works for various field elements
         let test_cases = [
-            FieldElement::from_bytes(&[7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-            FieldElement::from_bytes(&[42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-            FieldElement::from_bytes(&[123, 45, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            FieldElement::from_bytes(&[
+                7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0,
+            ]),
+            FieldElement::from_bytes(&[
+                42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0,
+            ]),
+            FieldElement::from_bytes(&[
+                123, 45, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0,
+            ]),
         ];
 
         for (idx, x) in test_cases.iter().enumerate() {
             let x_squared = x.square();
             let sqrt_result = x_squared.sqrt();
 
-            assert!(sqrt_result.is_some(), "sqrt should exist for perfect square (test case {})", idx);
+            assert!(
+                sqrt_result.is_some(),
+                "sqrt should exist for perfect square (test case {})",
+                idx
+            );
 
             if let Some(sqrt) = sqrt_result {
                 let check = sqrt.square();
-                assert_eq!(check.to_bytes(), x_squared.to_bytes(),
-                          "sqrt(x^2)^2 should equal x^2 (test case {})", idx);
+                assert_eq!(
+                    check.to_bytes(),
+                    x_squared.to_bytes(),
+                    "sqrt(x^2)^2 should equal x^2 (test case {})",
+                    idx
+                );
             }
         }
     }
@@ -1237,8 +1344,13 @@ mod tests {
         // Verify each element: inputs[i] * outputs[i] = 1
         for i in 0..inputs.len() {
             let product = inputs[i].mul(&outputs[i]);
-            assert_eq!(product.to_bytes(), FieldElement::ONE.to_bytes(),
-                      "inputs[{}] * outputs[{}] should equal 1", i, i);
+            assert_eq!(
+                product.to_bytes(),
+                FieldElement::ONE.to_bytes(),
+                "inputs[{}] * outputs[{}] should equal 1",
+                i,
+                i
+            );
         }
     }
 
@@ -1255,15 +1367,17 @@ mod tests {
         let batch_outputs = FieldElement::batch_invert(&inputs);
 
         // Individual inversions
-        let individual_outputs: Vec<FieldElement> = inputs.iter()
-            .map(|x| x.invert())
-            .collect();
+        let individual_outputs: Vec<FieldElement> = inputs.iter().map(|x| x.invert()).collect();
 
         // Compare results
         assert_eq!(batch_outputs.len(), individual_outputs.len());
         for i in 0..inputs.len() {
-            assert_eq!(batch_outputs[i].to_bytes(), individual_outputs[i].to_bytes(),
-                      "batch_outputs[{}] should match individual inversion", i);
+            assert_eq!(
+                batch_outputs[i].to_bytes(),
+                individual_outputs[i].to_bytes(),
+                "batch_outputs[{}] should match individual inversion",
+                i
+            );
         }
     }
 
@@ -1281,8 +1395,13 @@ mod tests {
         // Verify all results
         for i in 0..inputs.len() {
             let product = inputs[i].mul(&outputs[i]);
-            assert_eq!(product.to_bytes(), FieldElement::ONE.to_bytes(),
-                      "Large batch: inputs[{}] * outputs[{}] should equal 1", i, i);
+            assert_eq!(
+                product.to_bytes(),
+                FieldElement::ONE.to_bytes(),
+                "Large batch: inputs[{}] * outputs[{}] should equal 1",
+                i,
+                i
+            );
         }
     }
 }
@@ -1294,8 +1413,7 @@ mod proptests {
 
     #[allow(dead_code)]
     fn arbitrary_field_element() -> impl Strategy<Value = FieldElement> {
-        any::<[u8; 32]>()
-            .prop_map(|bytes| FieldElement::from_bytes(&bytes))
+        any::<[u8; 32]>().prop_map(|bytes| FieldElement::from_bytes(&bytes))
     }
 
     proptest! {

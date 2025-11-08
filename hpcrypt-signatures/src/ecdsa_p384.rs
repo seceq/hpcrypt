@@ -256,11 +256,10 @@ impl SigningKey {
         // Try up to 100 times to generate a valid key
         for _ in 0..100 {
             let mut bytes = [0u8; 48];
-            generate_random_bytes(&mut bytes)
-                .map_err(|_| CurveError::InvalidScalar {
-                    expected: 48,
-                    actual: 48,
-                })?;
+            generate_random_bytes(&mut bytes).map_err(|_| CurveError::InvalidScalar {
+                expected: 48,
+                actual: 48,
+            })?;
 
             // Check if the scalar is in valid range [1, n-1]
             let scalar = Scalar::from_bytes(&bytes);
@@ -732,7 +731,7 @@ mod tests {
                     extern crate std;
                     use std::println;
                     println!("\n=== VERIFICATION FAILURE DEBUG INFO ===");
-                    println!("Key {} failed verification", i+1);
+                    println!("Key {} failed verification", i + 1);
                     println!("This is a failing test case that can be used for debugging:");
                     println!("  Private key: {:02x?}", &key.secret[..]);
                     println!("  Message: {:?}", message);
@@ -749,9 +748,12 @@ mod tests {
                     let sig2 = key.sign(message);
                     let verify2 = verifying_key.verify(message, &sig2);
                     println!("  Re-sign verifies: {}", verify2);
-                    println!("  Same signature: {}", signature.r == sig2.r && signature.s == sig2.s);
+                    println!(
+                        "  Same signature: {}",
+                        signature.r == sig2.r && signature.s == sig2.s
+                    );
                 }
-                panic!("Key {} failed verification", i+1);
+                panic!("Key {} failed verification", i + 1);
             }
         }
     }
@@ -947,12 +949,21 @@ mod tests {
             "A329C145786E679E7B82C71A38628AC8"
         );
 
-        assert_eq!(signature.r, expected_r, "RFC 6979 P-384 r component mismatch");
-        assert_eq!(signature.s, expected_s, "RFC 6979 P-384 s component mismatch");
+        assert_eq!(
+            signature.r, expected_r,
+            "RFC 6979 P-384 r component mismatch"
+        );
+        assert_eq!(
+            signature.s, expected_s,
+            "RFC 6979 P-384 s component mismatch"
+        );
 
         // Verify the signature
         let verifying_key = signing_key.verifying_key();
-        assert!(verifying_key.verify(message, &signature), "RFC 6979 P-384 signature should verify");
+        assert!(
+            verifying_key.verify(message, &signature),
+            "RFC 6979 P-384 signature should verify"
+        );
     }
 
     #[test]
@@ -982,8 +993,14 @@ mod tests {
             "51AB373F9845C0514EEFB14024787265"
         );
 
-        assert_eq!(signature.r, expected_r, "RFC 6979 P-384 r component mismatch for 'test'");
-        assert_eq!(signature.s, expected_s, "RFC 6979 P-384 s component mismatch for 'test'");
+        assert_eq!(
+            signature.r, expected_r,
+            "RFC 6979 P-384 r component mismatch for 'test'"
+        );
+        assert_eq!(
+            signature.s, expected_s,
+            "RFC 6979 P-384 s component mismatch for 'test'"
+        );
 
         let verifying_key = signing_key.verifying_key();
         assert!(verifying_key.verify(message, &signature));
@@ -1002,10 +1019,22 @@ mod tests {
         let sig3 = signing_key.sign(message);
 
         // All signatures should be identical (deterministic)
-        assert_eq!(sig1.r, sig2.r, "RFC 6979 P-384 should be deterministic: r mismatch");
-        assert_eq!(sig1.s, sig2.s, "RFC 6979 P-384 should be deterministic: s mismatch");
-        assert_eq!(sig2.r, sig3.r, "RFC 6979 P-384 should be deterministic: r mismatch");
-        assert_eq!(sig2.s, sig3.s, "RFC 6979 P-384 should be deterministic: s mismatch");
+        assert_eq!(
+            sig1.r, sig2.r,
+            "RFC 6979 P-384 should be deterministic: r mismatch"
+        );
+        assert_eq!(
+            sig1.s, sig2.s,
+            "RFC 6979 P-384 should be deterministic: s mismatch"
+        );
+        assert_eq!(
+            sig2.r, sig3.r,
+            "RFC 6979 P-384 should be deterministic: r mismatch"
+        );
+        assert_eq!(
+            sig2.s, sig3.s,
+            "RFC 6979 P-384 should be deterministic: s mismatch"
+        );
     }
 
     #[test]

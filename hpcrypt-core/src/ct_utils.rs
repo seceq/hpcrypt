@@ -281,7 +281,11 @@ impl ConstantTimeGreater for u64 {
         // self > other  <==>  self - other - 1 doesn't underflow
         // Compute (self - other - 1) and check if borrow occurred
         let (_, borrow) = self.overflowing_sub(*other);
-        let (_, borrow2) = if borrow { (0u64, true) } else { self.wrapping_sub(*other).overflowing_sub(1) };
+        let (_, borrow2) = if borrow {
+            (0u64, true)
+        } else {
+            self.wrapping_sub(*other).overflowing_sub(1)
+        };
 
         // If no borrow in final computation, self > other
         Choice((!borrow2) as u8)
@@ -420,7 +424,7 @@ impl<const N: usize> ConditionallyNegatable for [i64; N] {
 #[inline]
 pub fn ct_table_lookup<T: ConditionallySelectable + Default + Copy>(
     table: &[T],
-    index: usize
+    index: usize,
 ) -> T {
     let mut result = T::default();
 

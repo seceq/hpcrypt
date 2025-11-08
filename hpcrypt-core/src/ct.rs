@@ -173,7 +173,9 @@ pub mod arithmetic {
     /// Returns (result, borrow)
     #[inline(always)]
     pub const fn sbb(a: u64, b: u64, borrow: u8) -> (u64, u8) {
-        let diff = (a as u128).wrapping_sub(b as u128).wrapping_sub(borrow as u128);
+        let diff = (a as u128)
+            .wrapping_sub(b as u128)
+            .wrapping_sub(borrow as u128);
         (diff as u64, ((diff >> 64) & 1) as u8)
     }
 

@@ -27,8 +27,8 @@
 //! - Koç, Acar, Kaliski: "Analyzing and Comparing Montgomery Multiplication Algorithms"
 //! - "High-Speed Algorithms & Architectures For Number-Theoretic Cryptosystems"
 
-use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 use super::constants::P521_MODULUS;
+use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 /// Montgomery constant R = 2^576 mod p (precomputed)
 /// For P-521, we use R = 2^(9*64) = 2^576
@@ -79,13 +79,17 @@ impl MontgomeryFieldElement {
     /// Creates a field element representing zero in Montgomery form.
     #[inline(always)]
     pub const fn zero() -> Self {
-        Self { limbs: [0, 0, 0, 0, 0, 0, 0, 0, 0] }
+        Self {
+            limbs: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        }
     }
 
     /// Creates a field element representing one in Montgomery form (R mod p).
     #[inline(always)]
     pub const fn one() -> Self {
-        Self { limbs: MONTGOMERY_R }
+        Self {
+            limbs: MONTGOMERY_R,
+        }
     }
 
     /// Returns true if this field element is zero (constant-time).
@@ -147,7 +151,7 @@ impl MontgomeryFieldElement {
                 let prod = (a[i] as u128) * (b[j] as u128);
                 t[j] = t[j] + prod + c;
                 c = t[j] >> 64;
-                t[j] &= MASK_64;  // Keep only low 64 bits
+                t[j] &= MASK_64; // Keep only low 64 bits
             }
             t[9] = c;
 
@@ -162,7 +166,7 @@ impl MontgomeryFieldElement {
                 let prod = m * (P521_MODULUS[j] as u128);
                 t[j] = t[j] + prod + c;
                 c = t[j] >> 64;
-                t[j] &= MASK_64;  // Keep only low 64 bits
+                t[j] &= MASK_64; // Keep only low 64 bits
             }
             t[9] = t[9] + c;
 

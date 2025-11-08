@@ -157,21 +157,36 @@ fn main() {
     let ns_per_op_macro = duration_macro.as_nanos() as f64 / ITERATIONS as f64;
 
     // Verify all produce same results
-    assert_eq!(result_loop.0, result_unrolled.0, "Loop and unrolled should match");
+    assert_eq!(
+        result_loop.0, result_unrolled.0,
+        "Loop and unrolled should match"
+    );
     assert_eq!(result_loop.0, result_macro.0, "Loop and macro should match");
-    assert_eq!(result_loop.1, result_unrolled.1, "Overflow flags should match");
+    assert_eq!(
+        result_loop.1, result_unrolled.1,
+        "Overflow flags should match"
+    );
     assert_eq!(result_loop.1, result_macro.1, "Overflow flags should match");
 
     // Display results
     println!("Results (P-384 style 6-limb addition):");
     println!("{}", "-".repeat(70));
     println!();
-    println!("  Looped version:          {:.2} ns/op  ({:.2} M ops/sec)",
-             ns_per_op_loop, 1000.0 / ns_per_op_loop);
-    println!("  Manually unrolled:       {:.2} ns/op  ({:.2} M ops/sec)",
-             ns_per_op_unrolled, 1000.0 / ns_per_op_unrolled);
-    println!("  Macro unrolled:          {:.2} ns/op  ({:.2} M ops/sec)",
-             ns_per_op_macro, 1000.0 / ns_per_op_macro);
+    println!(
+        "  Looped version:          {:.2} ns/op  ({:.2} M ops/sec)",
+        ns_per_op_loop,
+        1000.0 / ns_per_op_loop
+    );
+    println!(
+        "  Manually unrolled:       {:.2} ns/op  ({:.2} M ops/sec)",
+        ns_per_op_unrolled,
+        1000.0 / ns_per_op_unrolled
+    );
+    println!(
+        "  Macro unrolled:          {:.2} ns/op  ({:.2} M ops/sec)",
+        ns_per_op_macro,
+        1000.0 / ns_per_op_macro
+    );
     println!();
     println!("{}", "-".repeat(70));
 
@@ -182,15 +197,30 @@ fn main() {
 
     println!("Performance Analysis:");
     println!();
-    println!("  Manual unrolling vs Loop:     {:+.1}% faster", speedup_manual);
-    println!("  Macro unrolling vs Loop:      {:+.1}% faster", speedup_macro);
-    println!("  Macro vs Manual unrolling:    {:+.1}% difference", macro_vs_manual);
+    println!(
+        "  Manual unrolling vs Loop:     {:+.1}% faster",
+        speedup_manual
+    );
+    println!(
+        "  Macro unrolling vs Loop:      {:+.1}% faster",
+        speedup_macro
+    );
+    println!(
+        "  Macro vs Manual unrolling:    {:+.1}% difference",
+        macro_vs_manual
+    );
     println!();
 
     if speedup_manual > 5.0 {
-        println!("✅ Loop unrolling provides significant benefit ({:.1}% speedup)", speedup_manual);
+        println!(
+            "✅ Loop unrolling provides significant benefit ({:.1}% speedup)",
+            speedup_manual
+        );
     } else if speedup_manual > 0.0 {
-        println!("⚠️  Loop unrolling provides modest benefit ({:.1}% speedup)", speedup_manual);
+        println!(
+            "⚠️  Loop unrolling provides modest benefit ({:.1}% speedup)",
+            speedup_manual
+        );
     } else {
         println!("❌ Loop unrolling provides no benefit (compiler optimized loop)");
     }

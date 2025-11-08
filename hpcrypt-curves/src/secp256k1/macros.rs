@@ -39,10 +39,7 @@ macro_rules! unrolled_square_symmetric {
         let d3 = $a3 * $a3;
 
         // Return tuple: (diagonals, off-diagonals, combined 512-bit result)
-        (
-            [d0, d1, d2, d3],
-            [m01, m02, m03, m12, m13, m23],
-        )
+        ([d0, d1, d2, d3], [m01, m02, m03, m12, m13, m23])
     }};
 
     // 5-limb version (for 52-bit FieldElement52)
@@ -158,16 +155,16 @@ macro_rules! combine_square_52bit {
         // wide[9] = 0                                       = 0
 
         [
-            d0,                                             // w0
-            (m01 << 1),                                     // w1
-            (m02 << 1) + d1 + (m12 << 1),                  // w2
-            (m03 << 1) + (m13 << 1),                       // w3
-            (m04 << 1) + d2 + (m14 << 1) + (m23 << 1),    // w4
-            (m24 << 1) + (m34 << 1),                       // w5
-            d3,                                             // w6
-            0u128,                                          // w7
-            d4,                                             // w8
-            0u128,                                          // w9
+            d0,                                        // w0
+            (m01 << 1),                                // w1
+            (m02 << 1) + d1 + (m12 << 1),              // w2
+            (m03 << 1) + (m13 << 1),                   // w3
+            (m04 << 1) + d2 + (m14 << 1) + (m23 << 1), // w4
+            (m24 << 1) + (m34 << 1),                   // w5
+            d3,                                        // w6
+            0u128,                                     // w7
+            d4,                                        // w8
+            0u128,                                     // w9
         ]
     }};
 }
@@ -219,9 +216,6 @@ macro_rules! impl_unrolled_square_52bit {
 
 // Export macros for use in other modules
 pub(crate) use {
-    unrolled_square_symmetric,
-    combine_square_64bit_inline,
-    combine_square_52bit,
-    impl_unrolled_square_64bit,
-    impl_unrolled_square_52bit,
+    combine_square_52bit, combine_square_64bit_inline, impl_unrolled_square_52bit,
+    impl_unrolled_square_64bit, unrolled_square_symmetric,
 };

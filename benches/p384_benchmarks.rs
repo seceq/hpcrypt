@@ -1,6 +1,6 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use hpcrypt_curves::p384::{Point, Scalar, FieldElement};
-use hpcrypt_signatures::ecdsa_p384::{SigningKey, Signature};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use hpcrypt_curves::p384::{FieldElement, Point, Scalar};
+use hpcrypt_signatures::ecdsa_p384::{Signature, SigningKey};
 
 fn field_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("p384_field");
@@ -8,29 +8,13 @@ fn field_operations(c: &mut Criterion) {
     let a = FieldElement::from_bytes(&[0x42u8; 48]).unwrap();
     let b = FieldElement::from_bytes(&[0x43u8; 48]).unwrap();
 
-    group.bench_function("add", |bench| {
-        bench.iter(|| {
-            black_box(a.add(&b))
-        })
-    });
+    group.bench_function("add", |bench| bench.iter(|| black_box(a.add(&b))));
 
-    group.bench_function("mul", |bench| {
-        bench.iter(|| {
-            black_box(a.mul(&b))
-        })
-    });
+    group.bench_function("mul", |bench| bench.iter(|| black_box(a.mul(&b))));
 
-    group.bench_function("square", |bench| {
-        bench.iter(|| {
-            black_box(a.square())
-        })
-    });
+    group.bench_function("square", |bench| bench.iter(|| black_box(a.square())));
 
-    group.bench_function("invert", |bench| {
-        bench.iter(|| {
-            black_box(a.invert())
-        })
-    });
+    group.bench_function("invert", |bench| bench.iter(|| black_box(a.invert())));
 
     group.finish();
 }
@@ -41,23 +25,11 @@ fn scalar_operations(c: &mut Criterion) {
     let a = Scalar::from_bytes(&[0x42u8; 48]);
     let b = Scalar::from_bytes(&[0x43u8; 48]);
 
-    group.bench_function("add", |bench| {
-        bench.iter(|| {
-            black_box(a.add(&b))
-        })
-    });
+    group.bench_function("add", |bench| bench.iter(|| black_box(a.add(&b))));
 
-    group.bench_function("mul", |bench| {
-        bench.iter(|| {
-            black_box(a.mul(&b))
-        })
-    });
+    group.bench_function("mul", |bench| bench.iter(|| black_box(a.mul(&b))));
 
-    group.bench_function("invert", |bench| {
-        bench.iter(|| {
-            black_box(a.invert())
-        })
-    });
+    group.bench_function("invert", |bench| bench.iter(|| black_box(a.invert())));
 
     group.finish();
 }
@@ -69,22 +41,12 @@ fn point_operations(c: &mut Criterion) {
     let p1 = g.scalar_mul(&[0x42u8; 48]);
     let p2 = g.scalar_mul(&[0x43u8; 48]);
 
-    group.bench_function("add", |bench| {
-        bench.iter(|| {
-            black_box(p1.add(&p2))
-        })
-    });
+    group.bench_function("add", |bench| bench.iter(|| black_box(p1.add(&p2))));
 
-    group.bench_function("double", |bench| {
-        bench.iter(|| {
-            black_box(p1.double())
-        })
-    });
+    group.bench_function("double", |bench| bench.iter(|| black_box(p1.double())));
 
     group.bench_function("to_affine", |bench| {
-        bench.iter(|| {
-            black_box(p1.to_affine())
-        })
+        bench.iter(|| black_box(p1.to_affine()))
     });
 
     group.finish();
@@ -97,30 +59,22 @@ fn scalar_multiplication(c: &mut Criterion) {
     let scalar = [0x42u8; 48];
 
     group.bench_function("generator_variable_time", |bench| {
-        bench.iter(|| {
-            black_box(g.scalar_mul(&scalar))
-        })
+        bench.iter(|| black_box(g.scalar_mul(&scalar)))
     });
 
     group.bench_function("generator_constant_time", |bench| {
-        bench.iter(|| {
-            black_box(g.scalar_mul_constant_time(&scalar))
-        })
+        bench.iter(|| black_box(g.scalar_mul_constant_time(&scalar)))
     });
 
     // Arbitrary point multiplication
     let p = g.scalar_mul(&[0x43u8; 48]);
 
     group.bench_function("arbitrary_point_variable_time", |bench| {
-        bench.iter(|| {
-            black_box(p.scalar_mul(&scalar))
-        })
+        bench.iter(|| black_box(p.scalar_mul(&scalar)))
     });
 
     group.bench_function("arbitrary_point_constant_time", |bench| {
-        bench.iter(|| {
-            black_box(p.scalar_mul_constant_time(&scalar))
-        })
+        bench.iter(|| black_box(p.scalar_mul_constant_time(&scalar)))
     });
 
     group.finish();
@@ -135,15 +89,11 @@ fn ecdsa_operations(c: &mut Criterion) {
     let signature = signing_key.sign(message);
 
     group.bench_function("sign", |bench| {
-        bench.iter(|| {
-            black_box(signing_key.sign(message))
-        })
+        bench.iter(|| black_box(signing_key.sign(message)))
     });
 
     group.bench_function("verify", |bench| {
-        bench.iter(|| {
-            black_box(verifying_key.verify(message, &signature))
-        })
+        bench.iter(|| black_box(verifying_key.verify(message, &signature)))
     });
 
     group.bench_function("keygen", |bench| {
@@ -162,19 +112,23 @@ fn batch_verification(c: &mut Criterion) {
     let mut group = c.benchmark_group("p384_batch_verify");
 
     // Create test data
-    let keys: Vec<_> = (0..100).map(|i| {
-        let mut secret = [0x42u8; 48];
-        secret[0] = i as u8;
-        SigningKey::from_bytes(&secret).unwrap()
-    }).collect();
+    let keys: Vec<_> = (0..100)
+        .map(|i| {
+            let mut secret = [0x42u8; 48];
+            secret[0] = i as u8;
+            SigningKey::from_bytes(&secret).unwrap()
+        })
+        .collect();
 
-    let messages: Vec<Vec<u8>> = (0..100).map(|i| {
-        format!("Test message {}", i).into_bytes()
-    }).collect();
+    let messages: Vec<Vec<u8>> = (0..100)
+        .map(|i| format!("Test message {}", i).into_bytes())
+        .collect();
 
-    let signatures: Vec<_> = keys.iter().zip(&messages).map(|(key, msg)| {
-        key.sign(msg)
-    }).collect();
+    let signatures: Vec<_> = keys
+        .iter()
+        .zip(&messages)
+        .map(|(key, msg)| key.sign(msg))
+        .collect();
 
     let verifying_keys: Vec<_> = keys.iter().map(|k| k.verifying_key()).collect();
 
@@ -188,9 +142,7 @@ fn batch_verification(c: &mut Criterion) {
             .collect();
 
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |bench, _| {
-            bench.iter(|| {
-                black_box(VerifyingKey::batch_verify(&items))
-            })
+            bench.iter(|| black_box(VerifyingKey::batch_verify(&items)))
         });
     }
 

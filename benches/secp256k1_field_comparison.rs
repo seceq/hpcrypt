@@ -7,10 +7,9 @@
 //!
 //! Run with: cargo bench --bench secp256k1_field_comparison
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use hpcrypt_curves::secp256k1::{
-    field52::FieldElement52,
-    field_montgomery_native::MontgomeryFieldElement,
+    field52::FieldElement52, field_montgomery_native::MontgomeryFieldElement,
     field_ops::FieldElement,
 };
 
@@ -35,9 +34,7 @@ fn bench_single_multiplication(c: &mut Criterion) {
     ]);
 
     group.bench_function("52-bit Lazy Reduction", |b| {
-        b.iter(|| {
-            black_box(a_52.mul(&b_52))
-        });
+        b.iter(|| black_box(a_52.mul(&b_52)));
     });
 
     // Montgomery CIOS
@@ -57,9 +54,7 @@ fn bench_single_multiplication(c: &mut Criterion) {
     let b_montgomery = MontgomeryFieldElement::to_montgomery(&b_mont_limbs);
 
     group.bench_function("Montgomery CIOS", |b| {
-        b.iter(|| {
-            black_box(a_montgomery.mul(&b_montgomery))
-        });
+        b.iter(|| black_box(a_montgomery.mul(&b_montgomery)));
     });
 
     // Standard 64-bit field arithmetic
@@ -77,9 +72,7 @@ fn bench_single_multiplication(c: &mut Criterion) {
     ]);
 
     group.bench_function("Standard 64-bit", |b| {
-        b.iter(|| {
-            black_box(a_std.mul(&b_std))
-        });
+        b.iter(|| black_box(a_std.mul(&b_std)));
     });
 
     group.finish();
@@ -133,35 +126,47 @@ fn bench_batch_multiplication(c: &mut Criterion) {
     ]);
 
     for count in [10, 20, 50].iter() {
-        group.bench_with_input(BenchmarkId::new("52-bit Lazy", count), count, |bench, &count| {
-            bench.iter(|| {
-                let mut result = a_52;
-                for _ in 0..count {
-                    result = result.mul(&b_52);
-                }
-                black_box(result)
-            });
-        });
+        group.bench_with_input(
+            BenchmarkId::new("52-bit Lazy", count),
+            count,
+            |bench, &count| {
+                bench.iter(|| {
+                    let mut result = a_52;
+                    for _ in 0..count {
+                        result = result.mul(&b_52);
+                    }
+                    black_box(result)
+                });
+            },
+        );
 
-        group.bench_with_input(BenchmarkId::new("Montgomery CIOS", count), count, |bench, &count| {
-            bench.iter(|| {
-                let mut result = a_montgomery;
-                for _ in 0..count {
-                    result = result.mul(&b_montgomery);
-                }
-                black_box(result)
-            });
-        });
+        group.bench_with_input(
+            BenchmarkId::new("Montgomery CIOS", count),
+            count,
+            |bench, &count| {
+                bench.iter(|| {
+                    let mut result = a_montgomery;
+                    for _ in 0..count {
+                        result = result.mul(&b_montgomery);
+                    }
+                    black_box(result)
+                });
+            },
+        );
 
-        group.bench_with_input(BenchmarkId::new("Standard 64-bit", count), count, |bench, &count| {
-            bench.iter(|| {
-                let mut result = a_std;
-                for _ in 0..count {
-                    result = result.mul(&b_std);
-                }
-                black_box(result)
-            });
-        });
+        group.bench_with_input(
+            BenchmarkId::new("Standard 64-bit", count),
+            count,
+            |bench, &count| {
+                bench.iter(|| {
+                    let mut result = a_std;
+                    for _ in 0..count {
+                        result = result.mul(&b_std);
+                    }
+                    black_box(result)
+                });
+            },
+        );
     }
 
     group.finish();
@@ -180,9 +185,7 @@ fn bench_squaring(c: &mut Criterion) {
     ]);
 
     group.bench_function("52-bit Lazy Reduction", |b| {
-        b.iter(|| {
-            black_box(a_52.square())
-        });
+        b.iter(|| black_box(a_52.square()));
     });
 
     let a_mont_limbs = [
@@ -194,9 +197,7 @@ fn bench_squaring(c: &mut Criterion) {
     let a_montgomery = MontgomeryFieldElement::to_montgomery(&a_mont_limbs);
 
     group.bench_function("Montgomery CIOS", |b| {
-        b.iter(|| {
-            black_box(a_montgomery.square())
-        });
+        b.iter(|| black_box(a_montgomery.square()));
     });
 
     let a_std = FieldElement::from_limbs([
@@ -207,9 +208,7 @@ fn bench_squaring(c: &mut Criterion) {
     ]);
 
     group.bench_function("Standard 64-bit", |b| {
-        b.iter(|| {
-            black_box(a_std.square())
-        });
+        b.iter(|| black_box(a_std.square()));
     });
 
     group.finish();
@@ -235,9 +234,7 @@ fn bench_addition(c: &mut Criterion) {
     ]);
 
     group.bench_function("52-bit Lazy Reduction", |b| {
-        b.iter(|| {
-            black_box(a_52.add(&b_52))
-        });
+        b.iter(|| black_box(a_52.add(&b_52)));
     });
 
     let a_mont_limbs = [
@@ -256,9 +253,7 @@ fn bench_addition(c: &mut Criterion) {
     let b_montgomery = MontgomeryFieldElement::to_montgomery(&b_mont_limbs);
 
     group.bench_function("Montgomery CIOS", |b| {
-        b.iter(|| {
-            black_box(a_montgomery.add(&b_montgomery))
-        });
+        b.iter(|| black_box(a_montgomery.add(&b_montgomery)));
     });
 
     let a_std = FieldElement::from_limbs([
@@ -275,9 +270,7 @@ fn bench_addition(c: &mut Criterion) {
     ]);
 
     group.bench_function("Standard 64-bit", |b| {
-        b.iter(|| {
-            black_box(a_std.add(&b_std))
-        });
+        b.iter(|| black_box(a_std.add(&b_std)));
     });
 
     group.finish();
@@ -362,8 +355,8 @@ fn bench_scalar_mul_simulation(c: &mut Criterion) {
             let mut t = x_52;
             // Simulate 20 iterations of double-and-add
             for _ in 0..20 {
-                t = t.square();       // Point doubling
-                t = t.mul(&x_52);     // Point addition
+                t = t.square(); // Point doubling
+                t = t.mul(&x_52); // Point addition
             }
             black_box(t)
         });

@@ -24,10 +24,14 @@ pub const BLOCK_LEN: usize = 128;
 
 /// BLAKE2b initialization vectors
 const IV: [u64; 8] = [
-    0x6a09e667f3bcc908, 0xbb67ae8584caa73b,
-    0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
-    0x510e527fade682d1, 0x9b05688c2b3e6c1f,
-    0x1f83d9abfb41bd6b, 0x5be0cd19137e2179,
+    0x6a09e667f3bcc908,
+    0xbb67ae8584caa73b,
+    0x3c6ef372fe94f82b,
+    0xa54ff53a5f1d36f1,
+    0x510e527fade682d1,
+    0x9b05688c2b3e6c1f,
+    0x1f83d9abfb41bd6b,
+    0x5be0cd19137e2179,
 ];
 
 /// BLAKE2b sigma permutation table
@@ -64,31 +68,31 @@ fn compress(h: &mut [u64; 8], m: &[u64; 16], t: u64, f: bool) {
     let mut v = [0u64; 16];
     v[..8].copy_from_slice(h);
     v[8..].copy_from_slice(&IV);
-    
+
     v[12] ^= t;
     v[13] ^= 0; // High word of counter (for >2^64 bytes)
-    
+
     if f {
         v[14] = !v[14]; // Last block flag
     }
-    
+
     // 12 rounds
     for i in 0..12 {
         let s = &SIGMA[i];
-        
+
         // Column step
         g(&mut v, 0, 4, 8, 12, m[s[0]], m[s[1]]);
         g(&mut v, 1, 5, 9, 13, m[s[2]], m[s[3]]);
         g(&mut v, 2, 6, 10, 14, m[s[4]], m[s[5]]);
         g(&mut v, 3, 7, 11, 15, m[s[6]], m[s[7]]);
-        
+
         // Diagonal step
         g(&mut v, 0, 5, 10, 15, m[s[8]], m[s[9]]);
         g(&mut v, 1, 6, 11, 12, m[s[10]], m[s[11]]);
         g(&mut v, 2, 7, 8, 13, m[s[12]], m[s[13]]);
         g(&mut v, 3, 4, 9, 14, m[s[14]], m[s[15]]);
     }
-    
+
     for i in 0..8 {
         h[i] ^= v[i] ^ v[i + 8];
     }
@@ -116,14 +120,14 @@ impl Blake2b {
     pub fn new() -> Self {
         Self::new_with_output_len(OUT_LEN)
     }
-    
+
     /// Create a new BLAKE2b hasher with specified output length (1-64 bytes)
     pub fn new_with_output_len(out_len: usize) -> Self {
         assert!(out_len > 0 && out_len <= OUT_LEN, "Invalid output length");
-        
+
         let mut h = IV;
         h[0] ^= 0x01010000 ^ (out_len as u64);
-        
+
         Self {
             h,
             t: 0,
@@ -132,15 +136,15 @@ impl Blake2b {
             out_len,
         }
     }
-    
+
     /// Create a new BLAKE2b hasher with a key (MAC mode)
     pub fn new_keyed(key: &[u8], out_len: usize) -> Self {
         assert!(key.len() <= KEY_LEN, "Key too long");
         assert!(out_len > 0 && out_len <= OUT_LEN, "Invalid output length");
-        
+
         let mut h = IV;
         h[0] ^= 0x01010000 ^ ((key.len() as u64) << 8) ^ (out_len as u64);
-        
+
         let mut hasher = Self {
             h,
             t: 0,
@@ -148,16 +152,16 @@ impl Blake2b {
             buf_len: 0,
             out_len,
         };
-        
+
         // Process key as first block
         if !key.is_empty() {
             hasher.buf[..key.len()].copy_from_slice(key);
             hasher.buf_len = BLOCK_LEN; // Pad to full block
         }
-        
+
         hasher
     }
-    
+
     /// Update the hasher with input data
     pub fn update(&mut self, mut input: &[u8]) {
         while !input.is_empty() {
@@ -170,28 +174,28 @@ impl Blake2b {
                 compress(&mut self.h, &m, self.t, false);
                 self.buf_len = 0;
             }
-            
+
             let take = min(BLOCK_LEN - self.buf_len, input.len());
             self.buf[self.buf_len..self.buf_len + take].copy_from_slice(&input[..take]);
             self.buf_len += take;
             input = &input[take..];
         }
     }
-    
+
     /// Finalize and return the hash
     pub fn finalize(mut self) -> Vec<u8> {
         self.t += self.buf_len as u64;
-        
+
         // Pad remaining buffer with zeros
         self.buf[self.buf_len..].fill(0);
-        
+
         let mut m = [0u64; 16];
         for i in 0..16 {
             m[i] = bytes_to_u64(&self.buf[i * 8..min((i + 1) * 8, BLOCK_LEN)]);
         }
-        
+
         compress(&mut self.h, &m, self.t, true);
-        
+
         let mut out = Vec::with_capacity(self.out_len);
         for &word in &self.h {
             out.extend_from_slice(&word.to_le_bytes());
@@ -202,21 +206,21 @@ impl Blake2b {
         out.truncate(self.out_len);
         out
     }
-    
+
     /// Finalize and return exactly 64 bytes
     pub fn finalize_fixed(mut self) -> [u8; OUT_LEN] {
         self.t += self.buf_len as u64;
-        
+
         // Pad remaining buffer with zeros
         self.buf[self.buf_len..].fill(0);
-        
+
         let mut m = [0u64; 16];
         for i in 0..16 {
             m[i] = bytes_to_u64(&self.buf[i * 8..min((i + 1) * 8, BLOCK_LEN)]);
         }
-        
+
         compress(&mut self.h, &m, self.t, true);
-        
+
         let mut out = [0u8; OUT_LEN];
         for (i, &word) in self.h.iter().enumerate() {
             out[i * 8..(i + 1) * 8].copy_from_slice(&word.to_le_bytes());
@@ -258,7 +262,7 @@ pub fn blake2b_mac(key: &[u8], data: &[u8]) -> [u8; OUT_LEN] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_blake2b_empty() {
         let hash = blake2b(b"");
@@ -268,7 +272,7 @@ mod tests {
         );
         assert_eq!(hash, expected);
     }
-    
+
     #[test]
     fn test_blake2b_abc() {
         let hash = blake2b(b"abc");
@@ -278,39 +282,39 @@ mod tests {
         );
         assert_eq!(hash, expected);
     }
-    
+
     #[test]
     fn test_blake2b_variable_length() {
         let hash32 = blake2b_variable(b"test", 32);
         assert_eq!(hash32.len(), 32);
-        
+
         let hash16 = blake2b_variable(b"test", 16);
         assert_eq!(hash16.len(), 16);
     }
-    
+
     #[test]
     fn test_blake2b_incremental() {
         let data = b"The quick brown fox jumps over the lazy dog";
-        
+
         // One-shot
         let hash1 = blake2b(data);
-        
+
         // Incremental
         let mut hasher = Blake2b::new();
         hasher.update(&data[..20]);
         hasher.update(&data[20..]);
         let hash2 = hasher.finalize_fixed();
-        
+
         assert_eq!(hash1, hash2);
     }
-    
+
     #[test]
     fn test_blake2b_keyed() {
         let key = b"secret key";
         let data = b"message";
-        
+
         let mac = blake2b_mac(key, data);
-        
+
         // Should differ from unkeyed hash
         let unkeyed = blake2b(data);
         assert_ne!(mac, unkeyed);

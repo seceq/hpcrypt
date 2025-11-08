@@ -126,11 +126,7 @@ pub trait Signature {
     fn sign(secret_key: &Self::SecretKey, message: &[u8]) -> Self::Signature;
 
     /// Verify a signature
-    fn verify(
-        public_key: &Self::PublicKey,
-        message: &[u8],
-        signature: &Self::Signature,
-    ) -> bool;
+    fn verify(public_key: &Self::PublicKey, message: &[u8], signature: &Self::Signature) -> bool;
 }
 
 /// Key exchange trait

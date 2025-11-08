@@ -3,7 +3,6 @@
 //! Based on the Keccak sponge construction, standardized in FIPS 202.
 //! Supports SHA3-224, SHA3-256, SHA3-384, and SHA3-512.
 
-
 /// SHA3-224 output size in bytes
 pub const SHA3_224_OUTPUT_SIZE: usize = 28;
 /// SHA3-256 output size in bytes
@@ -18,12 +17,30 @@ const STATE_SIZE: usize = 25;
 
 /// Round constants for Keccak-f[1600]
 const ROUND_CONSTANTS: [u64; 24] = [
-    0x0000000000000001, 0x0000000000008082, 0x800000000000808A, 0x8000000080008000,
-    0x000000000000808B, 0x0000000080000001, 0x8000000080008081, 0x8000000000008009,
-    0x000000000000008A, 0x0000000000000088, 0x0000000080008009, 0x000000008000000A,
-    0x000000008000808B, 0x800000000000008B, 0x8000000000008089, 0x8000000000008003,
-    0x8000000000008002, 0x8000000000000080, 0x000000000000800A, 0x800000008000000A,
-    0x8000000080008081, 0x8000000000008080, 0x0000000080000001, 0x8000000080008008,
+    0x0000000000000001,
+    0x0000000000008082,
+    0x800000000000808A,
+    0x8000000080008000,
+    0x000000000000808B,
+    0x0000000080000001,
+    0x8000000080008081,
+    0x8000000000008009,
+    0x000000000000008A,
+    0x0000000000000088,
+    0x0000000080008009,
+    0x000000008000000A,
+    0x000000008000808B,
+    0x800000000000008B,
+    0x8000000000008089,
+    0x8000000000008003,
+    0x8000000000008002,
+    0x8000000000000080,
+    0x000000000000800A,
+    0x800000008000000A,
+    0x8000000080008081,
+    0x8000000000008080,
+    0x0000000080000001,
+    0x8000000080008008,
 ];
 
 /// Rotation offsets for Keccak-f[1600]
@@ -697,7 +714,8 @@ mod tests {
     #[test]
     fn test_sha3_224_empty() {
         let hash = Sha3_224::digest(b"");
-        let expected = hex_literal::hex!("6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7");
+        let expected =
+            hex_literal::hex!("6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7");
         assert_eq!(hash, expected);
     }
 
@@ -718,9 +736,8 @@ mod tests {
         let mut output = [0u8; 32];
         hasher.finalize(&mut output);
 
-        let expected = hex_literal::hex!(
-            "5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc8"
-        );
+        let expected =
+            hex_literal::hex!("5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc8");
         assert_eq!(output, expected);
     }
 

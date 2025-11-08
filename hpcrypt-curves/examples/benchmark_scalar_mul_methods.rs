@@ -8,8 +8,8 @@
 //!
 //! Goal: Validate that current implementation is near-optimal
 
+use hpcrypt_curves::p256::{AffinePoint, Point, Scalar};
 use std::time::Instant;
-use hpcrypt_curves::p256::{Point, Scalar, AffinePoint};
 
 const ITERATIONS: usize = 1_000;
 
@@ -82,7 +82,10 @@ fn benchmark_current_precomputed(scalars: &[Scalar]) {
     let result2 = g.scalar_mul(&scalar);
     let affine1 = result1.to_affine().unwrap();
     let affine2 = result2.to_affine().unwrap();
-    assert_eq!(affine1.x, affine2.x, "Precomputed result should match standard");
+    assert_eq!(
+        affine1.x, affine2.x,
+        "Precomputed result should match standard"
+    );
     println!("  ✅ Correctness verified");
 }
 
@@ -305,7 +308,7 @@ fn extract_column(scalar: &[u8; 32], row: usize) -> usize {
     for tooth in 0..4 {
         let bit_pos = row + tooth * 64;
         if bit_pos < 256 {
-            let byte_idx = 31 - (bit_pos / 8);  // Big-endian
+            let byte_idx = 31 - (bit_pos / 8); // Big-endian
             let bit_offset = bit_pos % 8;
             let bit = (scalar[byte_idx] >> bit_offset) & 1;
             c |= (bit as usize) << tooth;

@@ -178,14 +178,14 @@ impl Point {
         }
 
         // Compute intermediate values
-        let z2 = self.z.square();       // Z²
-        let z4 = z2.square();           // Z⁴
-        let z6 = z4.mul(&z2);           // Z⁶
+        let z2 = self.z.square(); // Z²
+        let z4 = z2.square(); // Z⁴
+        let z6 = z4.mul(&z2); // Z⁶
 
-        let y2 = self.y.square();       // Y²
+        let y2 = self.y.square(); // Y²
 
-        let x2 = self.x.square();       // X²
-        let x3 = x2.mul(&self.x);       // X³
+        let x2 = self.x.square(); // X²
+        let x3 = x2.mul(&self.x); // X³
 
         // For P-384: a = -3
         // aXZ⁴ = -3XZ⁴
@@ -238,16 +238,16 @@ impl Point {
         let ret_inf = is_inf | y_zero;
 
         // Compute doubling formula (always, for constant-time)
-        let y_squared = self.y.square();           // Y²
-        let y_fourth = y_squared.square();         // Y⁴
+        let y_squared = self.y.square(); // Y²
+        let y_fourth = y_squared.square(); // Y⁴
 
         // S = 4·X₁·Y₁²
         let s = self.x.mul(&y_squared).mul(&FE_FOUR);
 
         // M = 3·(X₁ + Z₁²)·(X₁ - Z₁²)  [a=-3 optimization]
-        let z_squared = self.z.square();           // Z²
-        let x_plus_z2 = self.x.add(&z_squared);    // X + Z²
-        let x_minus_z2 = self.x.sub(&z_squared);   // X - Z²
+        let z_squared = self.z.square(); // Z²
+        let x_plus_z2 = self.x.add(&z_squared); // X + Z²
+        let x_minus_z2 = self.x.sub(&z_squared); // X - Z²
         let m = x_plus_z2.mul(&x_minus_z2).mul(&FE_THREE);
 
         // X₃ = M² - 2·S
@@ -263,7 +263,11 @@ impl Point {
         // Z₃ = 2·Y₁·Z₁
         let z3 = self.y.mul(&self.z).mul(&FE_TWO);
 
-        let result = Point { x: x3, y: y3, z: z3 };
+        let result = Point {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
 
         // Constant-time select: return infinity if ret_inf is true, else result
         Point::conditional_select(&result, &Point::infinity(), ret_inf)
@@ -291,17 +295,17 @@ impl Point {
         let ret_inf = is_inf | y_zero;
 
         // Compute doubling formula (always, for constant-time)
-        let y_squared = self.y.square();           // Y²
-        let y_fourth = y_squared.square();         // Y⁴
+        let y_squared = self.y.square(); // Y²
+        let y_fourth = y_squared.square(); // Y⁴
 
         // S = 4·X₁·Y₁²
         let s = self.x.mul(&y_squared).mul(&FE_FOUR);
 
         // M = 3·(X₁ + Z₁²)·(X₁ - Z₁²)  [a=-3 optimization]
         // Use incomplete reduction for x_plus_z2 since it's immediately multiplied
-        let z_squared = self.z.square();                 // Z²
-        let x_plus_z2 = self.x.add_incomplete(&z_squared);  // X + Z² (incomplete)
-        let x_minus_z2 = self.x.sub(&z_squared);         // X - Z²
+        let z_squared = self.z.square(); // Z²
+        let x_plus_z2 = self.x.add_incomplete(&z_squared); // X + Z² (incomplete)
+        let x_minus_z2 = self.x.sub(&z_squared); // X - Z²
         let m = x_plus_z2.mul(&x_minus_z2).mul(&FE_THREE);
 
         // X₃ = M² - 2·S
@@ -317,7 +321,11 @@ impl Point {
         // Z₃ = 2·Y₁·Z₁
         let z3 = self.y.mul(&self.z).mul(&FE_TWO);
 
-        let result = Point { x: x3, y: y3, z: z3 };
+        let result = Point {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
 
         // Constant-time select: return infinity if ret_inf is true, else result
         Point::conditional_select(&result, &Point::infinity(), ret_inf)
@@ -398,11 +406,11 @@ impl Point {
         let points_inverse = h_zero & (!r_zero);
 
         // Compute general addition (even if we might not use it)
-        let h_squared = h.square();           // H²
-        let h_cubed = h_squared.mul(&h);      // H³
+        let h_squared = h.square(); // H²
+        let h_cubed = h_squared.mul(&h); // H³
 
-        let u1_h2 = u1.mul(&h_squared);       // U₁·H²
-        let two_u1_h2 = u1_h2.mul(&FE_TWO);      // 2·U₁·H²
+        let u1_h2 = u1.mul(&h_squared); // U₁·H²
+        let two_u1_h2 = u1_h2.mul(&FE_TWO); // 2·U₁·H²
 
         // X₃ = R² - H³ - 2·U₁·H²
         let r_squared = r.square();
@@ -416,7 +424,11 @@ impl Point {
         // Z₃ = H·Z₁·Z₂
         let z3 = h.mul(&self.z).mul(&other.z);
 
-        let add_result = Point { x: x3, y: y3, z: z3 };
+        let add_result = Point {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
 
         // Select the appropriate result based on special cases
         let doubled = self.double();
@@ -544,8 +556,10 @@ impl Point {
 
         // Process each bit from most significant to least significant
         // Scalar is in big-endian format: byte[0] is MSB, byte[47] is LSB
-        for byte in scalar.iter() {  // Process from byte[0] to byte[47]
-            for bit_index in (0..8).rev() {  // Process each byte's MSB first
+        for byte in scalar.iter() {
+            // Process from byte[0] to byte[47]
+            for bit_index in (0..8).rev() {
+                // Process each byte's MSB first
                 let bit = Choice::from(((byte >> bit_index) & 1) as u8);
 
                 // Montgomery ladder step
@@ -632,10 +646,10 @@ impl Point {
     pub fn double_scalar_mul(k1: &[u8; 48], p: &Point, k2: &[u8; 48], q: &Point) -> Point {
         // Precompute lookup table
         let table = [
-            Point::infinity(),  // 00: neither
-            *q,                  // 01: k2 only
-            *p,                  // 10: k1 only
-            p.add(q),            // 11: both
+            Point::infinity(), // 00: neither
+            *q,                // 01: k2 only
+            *p,                // 10: k1 only
+            p.add(q),          // 11: both
         ];
 
         let mut result = Point::infinity();
@@ -667,13 +681,18 @@ impl Point {
     ///
     /// This is the constant-time variant of Shamir's trick, safe for use with
     /// secret scalars. Uses conditional selection to avoid timing leaks.
-    pub fn double_scalar_mul_constant_time(k1: &[u8; 48], p: &Point, k2: &[u8; 48], q: &Point) -> Point {
+    pub fn double_scalar_mul_constant_time(
+        k1: &[u8; 48],
+        p: &Point,
+        k2: &[u8; 48],
+        q: &Point,
+    ) -> Point {
         // Precompute lookup table
         let table = [
-            Point::infinity(),  // 00: neither
-            *q,                  // 01: k2 only
-            *p,                  // 10: k1 only
-            p.add(q),            // 11: both
+            Point::infinity(), // 00: neither
+            *q,                // 01: k2 only
+            *p,                // 10: k1 only
+            p.add(q),          // 11: both
         ];
 
         let mut result = Point::infinity();
@@ -869,7 +888,7 @@ mod tests {
     fn test_scalar_mul_one() {
         let g = Point::generator();
         let mut one = [0u8; 48];
-        one[47] = 1;  // Big-endian: LSB at end
+        one[47] = 1; // Big-endian: LSB at end
 
         let result = g.scalar_mul(&one);
         assert_eq!(result, g);
@@ -939,10 +958,10 @@ mod tests {
         let two_g = g.double();
 
         let mut k1 = [0u8; 48];
-        k1[47] = 3;  // k1 = 3
+        k1[47] = 3; // k1 = 3
 
         let mut k2 = [0u8; 48];
-        k2[47] = 5;  // k2 = 5
+        k2[47] = 5; // k2 = 5
 
         // Compute 3*G + 5*(2G) = 3*G + 10*G = 13*G
         let result_shamir = Point::double_scalar_mul(&k1, &g, &k2, &two_g);
@@ -966,10 +985,10 @@ mod tests {
         let k1 = [0x42; 48];
         let k2 = [0x13; 48];
 
-        let p = g.double();  // 2*G
+        let p = g.double(); // 2*G
         let mut three_scalar = [0u8; 48];
         three_scalar[47] = 3;
-        let q = g.scalar_mul(&three_scalar);  // 3*G
+        let q = g.scalar_mul(&three_scalar); // 3*G
 
         // Compute k1*P + k2*Q using Shamir's trick
         let result_shamir = Point::double_scalar_mul(&k1, &p, &k2, &q);

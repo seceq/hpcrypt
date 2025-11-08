@@ -35,9 +35,9 @@
 //! - 40-60% faster point operations (lazy reduction)
 //! - Better cache efficiency (more compact representation)
 
+use super::macros::*;
 use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 use hpcrypt_core::error::CurveError;
-use super::macros::*;
 
 /// Number of bits per limb
 const LIMB_BITS: u32 = 52;
@@ -53,7 +53,7 @@ const MODULUS_LIMBS: [u64; 5] = [
     0xFFFFFFFFFFFFF, // bits [52, 104):  4503599627370495
     0xFFFFFFFFFFFFF, // bits [104, 156): 4503599627370495
     0xFFFFFFFFFFFFF, // bits [156, 208): 4503599627370495
-    0xFFFFFFFFFFFFF,  // bits [208, 256): 281474976710655 (only 48 bits used)
+    0xFFFFFFFFFFFFF, // bits [208, 256): 281474976710655 (only 48 bits used)
 ];
 
 /// Reduction constant: 0x1000003D1
@@ -73,10 +73,14 @@ pub struct FieldElement52 {
 
 impl FieldElement52 {
     /// The zero element
-    pub const ZERO: Self = Self { limbs: [0, 0, 0, 0, 0] };
+    pub const ZERO: Self = Self {
+        limbs: [0, 0, 0, 0, 0],
+    };
 
     /// The multiplicative identity
-    pub const ONE: Self = Self { limbs: [1, 0, 0, 0, 0] };
+    pub const ONE: Self = Self {
+        limbs: [1, 0, 0, 0, 0],
+    };
 
     /// Return the additive identity (zero)
     pub const fn zero() -> Self {
@@ -299,7 +303,7 @@ impl FieldElement52 {
 
             // Compute: a + m - b (in u128 to avoid overflow)
             let temp = a_limb + m_limb - b_limb;
-            result[i] = temp as u64;  // Will be > 52 bits, normalize will fix
+            result[i] = temp as u64; // Will be > 52 bits, normalize will fix
         }
 
         let mut fe = Self { limbs: result };
@@ -529,26 +533,14 @@ impl FieldElement52 {
         let m02 = a0 * a2;
         let m12 = a1 * a2;
 
-        let lo_sq = [
-            d0,
-            m01 << 1,
-            (m02 << 1) + d1 + (m12 << 1),
-            0u128,
-            d2,
-            0u128,
-        ];
+        let lo_sq = [d0, m01 << 1, (m02 << 1) + d1 + (m12 << 1), 0u128, d2, 0u128];
 
         // Square a_hi (2x2 schoolbook square = 3 muls)
         let d3 = a3 * a3;
         let d4 = a4 * a4;
         let m34 = a3 * a4;
 
-        let hi_sq = [
-            d3,
-            m34 << 1,
-            d4,
-            0u128,
-        ];
+        let hi_sq = [d3, m34 << 1, d4, 0u128];
 
         // Compute 2 * a_lo * a_hi (3x2 schoolbook = 6 muls)
         let m03 = a0 * a3;
@@ -656,7 +648,10 @@ impl FieldElement52 {
     /// For prime p: a^(-1) ≡ a^(p-2) (mod p)
     pub fn invert(&self) -> Result<Self, CurveError> {
         if bool::from(self.is_zero()) {
-            return Err(CurveError::InvalidScalar { expected: 32, actual: 0 });
+            return Err(CurveError::InvalidScalar {
+                expected: 32,
+                actual: 0,
+            });
         }
 
         // p - 2 for secp256k1
@@ -892,7 +887,10 @@ mod tests {
             ([1u64, 2, 3, 4, 5], [6u64, 7, 8, 9, 10]),
             ([u64::MAX, 0, 0, 0, 0], [2, 0, 0, 0, 0]),
             ([0, 0, 0, 0, 1], [0, 0, 0, 0, 1]),
-            ([LIMB_MASK, LIMB_MASK, LIMB_MASK, LIMB_MASK, LIMB_MASK], [2, 0, 0, 0, 0]),
+            (
+                [LIMB_MASK, LIMB_MASK, LIMB_MASK, LIMB_MASK, LIMB_MASK],
+                [2, 0, 0, 0, 0],
+            ),
         ];
 
         for (a, b) in &test_cases {
@@ -900,8 +898,11 @@ mod tests {
             let school_result = FieldElement52::schoolbook_mul(a, b);
 
             for i in 0..10 {
-                assert_eq!(kara_result[i], school_result[i],
-                    "Mismatch at limb {} for inputs {:?} and {:?}", i, a, b);
+                assert_eq!(
+                    kara_result[i], school_result[i],
+                    "Mismatch at limb {} for inputs {:?} and {:?}",
+                    i, a, b
+                );
             }
         }
     }
@@ -977,8 +978,12 @@ mod tests {
 
         // After normalization, all limbs should be < 2^52
         for i in 0..5 {
-            assert!(normalized.limbs[i] <= LIMB_MASK,
-                "Limb {} = 0x{:016x} exceeds LIMB_MASK", i, normalized.limbs[i]);
+            assert!(
+                normalized.limbs[i] <= LIMB_MASK,
+                "Limb {} = 0x{:016x} exceeds LIMB_MASK",
+                i,
+                normalized.limbs[i]
+            );
         }
     }
 
@@ -1011,9 +1016,22 @@ mod tests {
     fn test_extensive_multiplication() {
         // Test multiplication with many random-ish values
         let test_values = [
-            1u64, 2, 7, 13, 42, 100, 255, 256, 1000,
-            12345, 67890, 0xFFFF, 0x10000, 0xFFFFFFFF,
-            0x100000000, 0xFFFFFFFFFFFF,
+            1u64,
+            2,
+            7,
+            13,
+            42,
+            100,
+            255,
+            256,
+            1000,
+            12345,
+            67890,
+            0xFFFF,
+            0x10000,
+            0xFFFFFFFF,
+            0x100000000,
+            0xFFFFFFFFFFFF,
         ];
 
         for &a_val in &test_values {
@@ -1026,16 +1044,22 @@ mod tests {
 
                 // Verify commutativity
                 let product_rev = b.mul(&a);
-                assert_eq!(product, product_rev,
-                    "Multiplication not commutative for {} * {}", a_val, b_val);
+                assert_eq!(
+                    product, product_rev,
+                    "Multiplication not commutative for {} * {}",
+                    a_val, b_val
+                );
 
                 // Verify against expected for small values
                 if a_val <= 0xFFFFFFFF && b_val <= 0xFFFFFFFF {
                     let expected_u128 = (a_val as u128) * (b_val as u128);
                     if expected_u128 <= u64::MAX as u128 {
                         let expected = FieldElement52::from_u64(expected_u128 as u64);
-                        assert_eq!(product, expected,
-                            "{} * {} should equal {}", a_val, b_val, expected_u128);
+                        assert_eq!(
+                            product, expected,
+                            "{} * {} should equal {}",
+                            a_val, b_val, expected_u128
+                        );
                     }
                 }
             }

@@ -2,8 +2,8 @@
 //!
 //! Run with: cargo run --release --example benchmark_montgomery_accurate
 
-use std::time::Instant;
 use std::hint::black_box;
+use std::time::Instant;
 
 use hpcrypt_curves::p256::{FieldElement, MontgomeryFieldElement};
 use hpcrypt_curves::p384;
@@ -26,7 +26,10 @@ fn benchmark_p256_multiplication() {
     black_box(result); // Prevent optimization
 
     let ns_per_op_standard = duration_standard.as_nanos() / ITERATIONS as u128;
-    println!("Standard:   {} ns/op  (total: {:?})", ns_per_op_standard, duration_standard);
+    println!(
+        "Standard:   {} ns/op  (total: {:?})",
+        ns_per_op_standard, duration_standard
+    );
 
     // Montgomery implementation
     let a_mont = MontgomeryFieldElement::one();
@@ -42,9 +45,14 @@ fn benchmark_p256_multiplication() {
     black_box(result_mont); // Prevent optimization
 
     let ns_per_op_montgomery = duration_montgomery.as_nanos() / ITERATIONS as u128;
-    println!("Montgomery: {} ns/op  (total: {:?})", ns_per_op_montgomery, duration_montgomery);
+    println!(
+        "Montgomery: {} ns/op  (total: {:?})",
+        ns_per_op_montgomery, duration_montgomery
+    );
 
-    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64) / ns_per_op_standard as f64) * 100.0;
+    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64)
+        / ns_per_op_standard as f64)
+        * 100.0;
     if improvement > 0.0 {
         println!("✓ Montgomery is {:.1}% FASTER", improvement);
     } else {
@@ -67,7 +75,10 @@ fn benchmark_p256_squaring() {
     black_box(result);
 
     let ns_per_op_standard = duration_standard.as_nanos() / ITERATIONS as u128;
-    println!("Standard:   {} ns/op  (total: {:?})", ns_per_op_standard, duration_standard);
+    println!(
+        "Standard:   {} ns/op  (total: {:?})",
+        ns_per_op_standard, duration_standard
+    );
 
     // Montgomery implementation
     let a_mont = MontgomeryFieldElement::one();
@@ -82,9 +93,14 @@ fn benchmark_p256_squaring() {
     black_box(result_mont);
 
     let ns_per_op_montgomery = duration_montgomery.as_nanos() / ITERATIONS as u128;
-    println!("Montgomery: {} ns/op  (total: {:?})", ns_per_op_montgomery, duration_montgomery);
+    println!(
+        "Montgomery: {} ns/op  (total: {:?})",
+        ns_per_op_montgomery, duration_montgomery
+    );
 
-    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64) / ns_per_op_standard as f64) * 100.0;
+    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64)
+        / ns_per_op_standard as f64)
+        * 100.0;
     if improvement > 0.0 {
         println!("✓ Montgomery is {:.1}% FASTER", improvement);
     } else {
@@ -108,7 +124,10 @@ fn benchmark_p256_addition() {
     black_box(result);
 
     let ns_per_op_standard = duration_standard.as_nanos() / ITERATIONS as u128;
-    println!("Standard:   {} ns/op  (total: {:?})", ns_per_op_standard, duration_standard);
+    println!(
+        "Standard:   {} ns/op  (total: {:?})",
+        ns_per_op_standard, duration_standard
+    );
 
     // Montgomery implementation
     let a_mont = MontgomeryFieldElement::one();
@@ -123,9 +142,14 @@ fn benchmark_p256_addition() {
     black_box(result_mont);
 
     let ns_per_op_montgomery = duration_montgomery.as_nanos() / ITERATIONS as u128;
-    println!("Montgomery: {} ns/op  (total: {:?})", ns_per_op_montgomery, duration_montgomery);
+    println!(
+        "Montgomery: {} ns/op  (total: {:?})",
+        ns_per_op_montgomery, duration_montgomery
+    );
 
-    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64) / ns_per_op_standard as f64) * 100.0;
+    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64)
+        / ns_per_op_standard as f64)
+        * 100.0;
     if improvement > 0.0 {
         println!("✓ Montgomery is {:.1}% FASTER", improvement);
     } else {
@@ -149,7 +173,10 @@ fn benchmark_p384_multiplication() {
     black_box(result);
 
     let ns_per_op_standard = duration_standard.as_nanos() / ITERATIONS as u128;
-    println!("Standard:   {} ns/op  (total: {:?})", ns_per_op_standard, duration_standard);
+    println!(
+        "Standard:   {} ns/op  (total: {:?})",
+        ns_per_op_standard, duration_standard
+    );
 
     // Montgomery implementation
     let a_mont = p384::MontgomeryFieldElement::one();
@@ -164,9 +191,14 @@ fn benchmark_p384_multiplication() {
     black_box(result_mont);
 
     let ns_per_op_montgomery = duration_montgomery.as_nanos() / ITERATIONS as u128;
-    println!("Montgomery: {} ns/op  (total: {:?})", ns_per_op_montgomery, duration_montgomery);
+    println!(
+        "Montgomery: {} ns/op  (total: {:?})",
+        ns_per_op_montgomery, duration_montgomery
+    );
 
-    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64) / ns_per_op_standard as f64) * 100.0;
+    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64)
+        / ns_per_op_standard as f64)
+        * 100.0;
     if improvement > 0.0 {
         println!("✓ Montgomery is {:.1}% FASTER", improvement);
     } else {

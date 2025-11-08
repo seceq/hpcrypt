@@ -8,7 +8,7 @@
 //! A scalar is a 384-bit integer (6 x 64-bit limbs) reduced modulo the
 //! curve order n, not the field modulus p.
 
-use super::constants::{P384_ORDER, BARRETT_MU_SCALAR};
+use super::constants::{BARRETT_MU_SCALAR, P384_ORDER};
 use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 #[cfg(test)]
@@ -703,8 +703,10 @@ mod barrett_tests {
         let barrett_result = Scalar::reduce_wide_barrett(&limbs);
         let bigint_result = reduce_wide_bigint(&limbs);
 
-        assert_eq!(barrett_result.limbs, bigint_result.limbs,
-            "Barrett and BigUint should match for simple value 42");
+        assert_eq!(
+            barrett_result.limbs, bigint_result.limbs,
+            "Barrett and BigUint should match for simple value 42"
+        );
     }
 
     #[test]
@@ -739,8 +741,11 @@ mod barrett_tests {
             let barrett_result = Scalar::reduce_wide_barrett(&product);
             let bigint_result = reduce_wide_bigint(&product);
 
-            assert_eq!(barrett_result.limbs, bigint_result.limbs,
-                "Barrett and BigUint mismatch at iteration {}", i);
+            assert_eq!(
+                barrett_result.limbs, bigint_result.limbs,
+                "Barrett and BigUint mismatch at iteration {}",
+                i
+            );
         }
     }
 
@@ -752,8 +757,10 @@ mod barrett_tests {
         let barrett_result = Scalar::reduce_wide_barrett(&limbs);
         let bigint_result = reduce_wide_bigint(&limbs);
 
-        assert_eq!(barrett_result.limbs, bigint_result.limbs,
-            "Barrett and BigUint should match for maximum value");
+        assert_eq!(
+            barrett_result.limbs, bigint_result.limbs,
+            "Barrett and BigUint should match for maximum value"
+        );
     }
 
     #[test]
@@ -769,8 +776,10 @@ mod barrett_tests {
         let barrett_result = Scalar::reduce_wide_barrett(&limbs);
         let bigint_result = reduce_wide_bigint(&limbs);
 
-        assert_eq!(barrett_result.limbs, bigint_result.limbs,
-            "Barrett and BigUint should match for value near modulus");
+        assert_eq!(
+            barrett_result.limbs, bigint_result.limbs,
+            "Barrett and BigUint should match for value near modulus"
+        );
     }
 
     #[test]
@@ -790,9 +799,14 @@ mod barrett_tests {
         let barrett_result = Scalar::reduce_wide_barrett(&limbs_2n);
         let bigint_result = reduce_wide_bigint(&limbs_2n);
 
-        assert_eq!(barrett_result.limbs, bigint_result.limbs,
-            "Barrett and BigUint should match for 2*n");
-        assert!(bool::from(barrett_result.is_zero()), "2*n should reduce to 0");
+        assert_eq!(
+            barrett_result.limbs, bigint_result.limbs,
+            "Barrett and BigUint should match for 2*n"
+        );
+        assert!(
+            bool::from(barrett_result.is_zero()),
+            "2*n should reduce to 0"
+        );
     }
 
     #[test]
@@ -817,8 +831,11 @@ mod barrett_tests {
             let test_product = Scalar::schoolbook_mul(&result, &Scalar::one());
             let barrett_result = Scalar::reduce_wide_barrett(&test_product);
 
-            assert_eq!(barrett_result.limbs, result.limbs,
-                "Barrett reduction should preserve correctness for 7^{}", exp);
+            assert_eq!(
+                barrett_result.limbs, result.limbs,
+                "Barrett reduction should preserve correctness for 7^{}",
+                exp
+            );
         }
     }
 
@@ -833,8 +850,10 @@ mod barrett_tests {
         let barrett_result = Scalar::reduce_wide_barrett(&limbs);
         let bigint_result = reduce_wide_bigint(&limbs);
 
-        assert_eq!(barrett_result.limbs, bigint_result.limbs,
-            "Barrett and BigUint should match for all-ones in lower 6 limbs");
+        assert_eq!(
+            barrett_result.limbs, bigint_result.limbs,
+            "Barrett and BigUint should match for all-ones in lower 6 limbs"
+        );
     }
 
     #[test]
@@ -848,8 +867,10 @@ mod barrett_tests {
         let barrett_result = Scalar::reduce_wide_barrett(&limbs);
         let bigint_result = reduce_wide_bigint(&limbs);
 
-        assert_eq!(barrett_result.limbs, bigint_result.limbs,
-            "Barrett and BigUint should match for high-limbs-only case");
+        assert_eq!(
+            barrett_result.limbs, bigint_result.limbs,
+            "Barrett and BigUint should match for high-limbs-only case"
+        );
     }
 
     #[test]
@@ -876,10 +897,14 @@ mod barrett_tests {
         assert!(bool::from(a_times_0.is_zero()), "a * 0 should equal 0");
 
         // Property 4: ((a mod n) * (b mod n)) mod n == (a * b) mod n
-        let a_large = Scalar::from_limbs([u64::MAX, u64::MAX, u64::MAX, u64::MAX, u64::MAX, u64::MAX]);
+        let a_large =
+            Scalar::from_limbs([u64::MAX, u64::MAX, u64::MAX, u64::MAX, u64::MAX, u64::MAX]);
         let a_reduced = a_large.reduce();
         let product1 = a_large.mul(&b);
         let product2 = a_reduced.mul(&b);
-        assert_eq!(product1.limbs, product2.limbs, "Reduction before multiplication should not affect result");
+        assert_eq!(
+            product1.limbs, product2.limbs,
+            "Reduction before multiplication should not affect result"
+        );
     }
 }

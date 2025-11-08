@@ -17,7 +17,7 @@
 //!
 //! Total table size: 64 windows × 16 points × 64 bytes = 65,536 bytes (~64 KB)
 
-use super::{Point, AffinePoint, FieldElement};
+use super::{AffinePoint, FieldElement, Point};
 use once_cell::sync::Lazy;
 
 /// Window size for precomputed tables (in bits)
@@ -59,10 +59,7 @@ impl AffinePoint {
     /// Check if this is the infinity sentinel
     fn is_infinity_sentinel(&self) -> bool {
         use crate::ct_utils::ConstantTimeEq;
-        bool::from(
-            self.x.ct_eq(&FieldElement::zero()) &
-            self.y.ct_eq(&FieldElement::zero())
-        )
+        bool::from(self.x.ct_eq(&FieldElement::zero()) & self.y.ct_eq(&FieldElement::zero()))
     }
 }
 
@@ -94,14 +91,16 @@ impl PrecomputedTable {
 
             // Precompute multiples: 0*base, 1*base, 2*base, ..., 15*base
             tables[window_idx][0] = AffinePoint::infinity_sentinel();
-            tables[window_idx][1] = base_jacobian.to_affine()
+            tables[window_idx][1] = base_jacobian
+                .to_affine()
                 .expect("Base point should not be infinity");
 
             // Build up the rest using Jacobian addition for speed
             let mut current = base_jacobian;
             for i in 2..16 {
                 current = current.add(&base_jacobian);
-                tables[window_idx][i] = current.to_affine()
+                tables[window_idx][i] = current
+                    .to_affine()
                     .expect("Multiple of base should not be infinity");
             }
         }
@@ -171,9 +170,7 @@ impl PrecomputedTable {
 ///
 /// Uses `once_cell::Lazy` to ensure thread-safe initialization.
 /// The table is computed once and cached for the lifetime of the program.
-pub static PRECOMPUTED_TABLE: Lazy<PrecomputedTable> = Lazy::new(|| {
-    PrecomputedTable::generate()
-});
+pub static PRECOMPUTED_TABLE: Lazy<PrecomputedTable> = Lazy::new(|| PrecomputedTable::generate());
 
 #[cfg(test)]
 mod tests {
@@ -186,16 +183,11 @@ mod tests {
         let g = Point::generator();
 
         // Test with several scalars
-        let test_scalars = [
-            [0x01u8; 32],
-            [0x42u8; 32],
-            [0xFFu8; 32],
-            {
-                let mut s = [0u8; 32];
-                s[0] = 0x01;
-                s
-            },
-        ];
+        let test_scalars = [[0x01u8; 32], [0x42u8; 32], [0xFFu8; 32], {
+            let mut s = [0u8; 32];
+            s[0] = 0x01;
+            s
+        }];
 
         for scalar_bytes in &test_scalars {
             let expected = g.scalar_mul(scalar_bytes);
@@ -238,17 +230,16 @@ mod tests {
         let g = Point::generator();
         let expected = g.scalar_mul(&scalar_bytes);
 
-        assert_eq!(result, expected, "Precomputed mul should work with large scalars");
+        assert_eq!(
+            result, expected,
+            "Precomputed mul should work with large scalars"
+        );
     }
 
     #[test]
     fn test_precomputed_vs_variable_time() {
         // Compare performance test vectors against variable-time implementation
-        let test_vectors = [
-            [0x42u8; 32],
-            [0x43u8; 32],
-            [0x44u8; 32],
-        ];
+        let test_vectors = [[0x42u8; 32], [0x43u8; 32], [0x44u8; 32]];
 
         let g = Point::generator();
 

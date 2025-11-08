@@ -51,10 +51,11 @@ name = "squaring_optimization_bench"
 harness = false
 path = "benches/squaring_optimization_bench.rs"
 
-[[bench]]
-name = "montgomery_comparison"
-harness = false
-path = "../benches/montgomery_comparison.rs"
+# Benchmark disabled - file not included in dist release
+# [[bench]]
+# name = "montgomery_comparison"
+# harness = false
+# path = "../benches/montgomery_comparison.rs"
 
 [[bench]]
 name = "benchmark_secp256k1_comparison"

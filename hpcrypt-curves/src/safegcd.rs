@@ -55,8 +55,8 @@ impl SafeGcdInt {
     pub fn from_limbs(limbs: &[u64; 4]) -> Self {
         Self {
             limbs: [
-                limbs[0], limbs[1], limbs[2], limbs[3],
-                0, 0, 0, 0, 0, 0  // High limbs are 0 for positive numbers
+                limbs[0], limbs[1], limbs[2], limbs[3], 0, 0, 0, 0, 0,
+                0, // High limbs are 0 for positive numbers
             ],
         }
     }
@@ -70,24 +70,30 @@ impl SafeGcdInt {
     pub fn from_limbs_extended(limbs: &[u64; 6]) -> Self {
         Self {
             limbs: [
-                limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5],
-                0, 0, 0, 0  // High limbs are 0 for positive numbers
+                limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5], 0, 0, 0,
+                0, // High limbs are 0 for positive numbers
             ],
         }
     }
 
     /// Convert to 6 u64 limbs (for P-384 results)
     pub fn to_limbs_extended(&self) -> [u64; 6] {
-        [self.limbs[0], self.limbs[1], self.limbs[2], self.limbs[3], self.limbs[4], self.limbs[5]]
+        [
+            self.limbs[0],
+            self.limbs[1],
+            self.limbs[2],
+            self.limbs[3],
+            self.limbs[4],
+            self.limbs[5],
+        ]
     }
 
     /// Create from 9 u64 limbs (for P-521, 521-bit values)
     pub fn from_limbs_p521(limbs: &[u64; 9]) -> Self {
         Self {
             limbs: [
-                limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5],
-                limbs[6], limbs[7], limbs[8],
-                0  // High limb is 0 for positive numbers
+                limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5], limbs[6], limbs[7],
+                limbs[8], 0, // High limb is 0 for positive numbers
             ],
         }
     }
@@ -95,17 +101,21 @@ impl SafeGcdInt {
     /// Convert to 9 u64 limbs (for P-521 results)
     pub fn to_limbs_p521(&self) -> [u64; 9] {
         [
-            self.limbs[0], self.limbs[1], self.limbs[2],
-            self.limbs[3], self.limbs[4], self.limbs[5],
-            self.limbs[6], self.limbs[7], self.limbs[8]
+            self.limbs[0],
+            self.limbs[1],
+            self.limbs[2],
+            self.limbs[3],
+            self.limbs[4],
+            self.limbs[5],
+            self.limbs[6],
+            self.limbs[7],
+            self.limbs[8],
         ]
     }
 
     /// Create zero
     pub const fn zero() -> Self {
-        Self {
-            limbs: [0; 10],
-        }
+        Self { limbs: [0; 10] }
     }
 
     /// Create one
@@ -188,7 +198,7 @@ impl SafeGcdInt {
     pub fn sub(&self, other: &Self) -> Self {
         // a - b = a + (-b) = a + (~b + 1) in two's complement
         let mut result = [0u64; 10];
-        let mut carry = 1u64;  // Start with 1 for two's complement negation
+        let mut carry = 1u64; // Start with 1 for two's complement negation
 
         // Add self + (~other + 1)
         for i in 0..10 {
@@ -393,9 +403,7 @@ impl SafeGcdInt {
 ///     return (1 + delta, f, g / 2)
 /// ```
 #[allow(dead_code)]
-fn divstep(delta: i64, f: &SafeGcdInt, g: &SafeGcdInt)
-    -> (i64, SafeGcdInt, SafeGcdInt)
-{
+fn divstep(delta: i64, f: &SafeGcdInt, g: &SafeGcdInt) -> (i64, SafeGcdInt, SafeGcdInt) {
     if delta > 0 && g.is_odd() {
         // Case 1: delta > 0 and g is odd
         // new_delta = 1 - delta
@@ -518,9 +526,7 @@ fn update_de(
 /// - 640-bit precision ✅
 /// - Improved mod_reduce ✅
 /// - Testing in progress
-pub fn safegcd_invert_vartime(value: &[u64; 4], modulus: &[u64; 4])
-    -> [u64; 4]
-{
+pub fn safegcd_invert_vartime(value: &[u64; 4], modulus: &[u64; 4]) -> [u64; 4] {
     // Binary Extended GCD algorithm for modular inversion
     // Computes value^(-1) mod modulus
     //
@@ -534,8 +540,8 @@ pub fn safegcd_invert_vartime(value: &[u64; 4], modulus: &[u64; 4])
     let mod_int = SafeGcdInt::from_limbs(modulus);
     let mut a = SafeGcdInt::from_limbs(value);
     let mut b = mod_int;
-    let mut u = SafeGcdInt::one();   // Coefficient of value in equation for a
-    let mut s = SafeGcdInt::zero();  // Coefficient of value in equation for b
+    let mut u = SafeGcdInt::one(); // Coefficient of value in equation for a
+    let mut s = SafeGcdInt::zero(); // Coefficient of value in equation for b
 
     // Maximum iterations: 2 * bit_length should be more than enough
     // For 256-bit values, 512 iterations is conservative
@@ -588,9 +594,7 @@ pub fn safegcd_invert_vartime(value: &[u64; 4], modulus: &[u64; 4])
 ///
 /// Computes value^(-1) mod modulus using binary extended GCD.
 /// Returns the modular inverse as 6 x 64-bit limbs.
-pub fn safegcd_invert_vartime_p384(value: &[u64; 6], modulus: &[u64; 6])
-    -> [u64; 6]
-{
+pub fn safegcd_invert_vartime_p384(value: &[u64; 6], modulus: &[u64; 6]) -> [u64; 6] {
     // Binary Extended GCD algorithm for P-384
     let mod_int = SafeGcdInt::from_limbs_extended(modulus);
     let mut a = SafeGcdInt::from_limbs_extended(value);
@@ -598,7 +602,7 @@ pub fn safegcd_invert_vartime_p384(value: &[u64; 6], modulus: &[u64; 6])
     let mut u = SafeGcdInt::one();
     let mut s = SafeGcdInt::zero();
 
-    const MAX_ITERS: usize = 768;  // 2 * 384 bits
+    const MAX_ITERS: usize = 768; // 2 * 384 bits
 
     for _ in 0..MAX_ITERS {
         if a.is_zero() {
@@ -657,9 +661,7 @@ pub fn safegcd_invert_vartime_p384(value: &[u64; 6], modulus: &[u64; 6])
 /// # Performance
 ///
 /// Expected to be 40-50% faster than Fermat's Little Theorem method.
-pub fn safegcd_invert_vartime_p521(value: &[u64; 9], modulus: &[u64; 9])
-    -> [u64; 9]
-{
+pub fn safegcd_invert_vartime_p521(value: &[u64; 9], modulus: &[u64; 9]) -> [u64; 9] {
     // Binary Extended GCD algorithm for P-521
     let mod_int = SafeGcdInt::from_limbs_p521(modulus);
     let mut a = SafeGcdInt::from_limbs_p521(value);
@@ -667,7 +669,7 @@ pub fn safegcd_invert_vartime_p521(value: &[u64; 9], modulus: &[u64; 9])
     let mut u = SafeGcdInt::one();
     let mut s = SafeGcdInt::zero();
 
-    const MAX_ITERS: usize = 1042;  // 2 * 521 bits
+    const MAX_ITERS: usize = 1042; // 2 * 521 bits
 
     for _ in 0..MAX_ITERS {
         if a.is_zero() {
@@ -905,8 +907,10 @@ mod tests {
             let e_val = e.mod_reduce(&modulus)[0];
 
             if i == 4 {
-                panic!("STEP {}: delta={} f={} g={} d={} e={}",
-                    i, delta, f_val, g_val, d_val, e_val);
+                panic!(
+                    "STEP {}: delta={} f={} g={} d={} e={}",
+                    i, delta, f_val, g_val, d_val, e_val
+                );
             }
 
             let f_was_swapped = delta > 0 && g.is_odd();
@@ -952,24 +956,24 @@ mod tests {
         // Print final values
         let d_reduced = d.mod_reduce(&modulus);
         let e_reduced = e.mod_reduce(&modulus);
-        let result_d = if f.is_negative() {
-            d.negate()
-        } else {
-            d
-        };
-        let result_e = if f.is_negative() {
-            e.negate()
-        } else {
-            e
-        };
+        let result_d = if f.is_negative() { d.negate() } else { d };
+        let result_e = if f.is_negative() { e.negate() } else { e };
         let result_d_reduced = result_d.mod_reduce(&modulus);
         let result_e_reduced = result_e.mod_reduce(&modulus);
 
         // Verify the result is correct
-        assert_eq!(result_d_reduced[0], 7,
+        assert_eq!(
+            result_d_reduced[0],
+            7,
             "After 744 divsteps: f={} ({}1) g_zero={} d={} e={} d*f={} e*f={}",
-            f.limbs[0], if f.is_negative() { "-" } else { "+" }, g.is_zero(),
-            d_reduced[0], e_reduced[0], result_d_reduced[0], result_e_reduced[0]);
+            f.limbs[0],
+            if f.is_negative() { "-" } else { "+" },
+            g.is_zero(),
+            d_reduced[0],
+            e_reduced[0],
+            result_d_reduced[0],
+            result_e_reduced[0]
+        );
     }
 
     #[test]
@@ -986,12 +990,18 @@ mod tests {
 
         // Verify the actual inverse property: inverse * value ≡ 1 (mod modulus)
         let product = (inverse[0] as u128 * value[0] as u128) % modulus[0] as u128;
-        assert_eq!(product, 1,
+        assert_eq!(
+            product, 1,
             "Product of value ({}) and inverse ({}) should be 1 mod modulus ({}), got {}",
-            value[0], inverse[0], modulus[0], product);
+            value[0], inverse[0], modulus[0], product
+        );
 
         // The inverse should be 7
-        assert_eq!(inverse[0], 7, "Expected inverse of 5 mod 17 to be 7, got {}", inverse[0]);
+        assert_eq!(
+            inverse[0], 7,
+            "Expected inverse of 5 mod 17 to be 7, got {}",
+            inverse[0]
+        );
     }
 
     #[test]
@@ -1028,21 +1038,41 @@ mod tests {
                     let mod_minus_e = (mod_val - e_reduced[0]) % mod_val;
 
                     // Check all possible formulas
-                    let check_d = ((d_reduced[0] as u128 * val_to_invert as u128) % mod_val as u128) == 1;
-                    let check_modd = ((mod_minus_d as u128 * val_to_invert as u128) % mod_val as u128) == 1;
-                    let check_e = ((e_reduced[0] as u128 * val_to_invert as u128) % mod_val as u128) == 1;
-                    let check_mode = ((mod_minus_e as u128 * val_to_invert as u128) % mod_val as u128) == 1;
+                    let check_d =
+                        ((d_reduced[0] as u128 * val_to_invert as u128) % mod_val as u128) == 1;
+                    let check_modd =
+                        ((mod_minus_d as u128 * val_to_invert as u128) % mod_val as u128) == 1;
+                    let check_e =
+                        ((e_reduced[0] as u128 * val_to_invert as u128) % mod_val as u128) == 1;
+                    let check_mode =
+                        ((mod_minus_e as u128 * val_to_invert as u128) % mod_val as u128) == 1;
 
                     // For mod17: which formula works?
                     // For mod31: which formula works?
                     if check_d {
-                        assert_eq!(d_reduced[0], expected_inv, "mod{}: d={} works!", mod_val, d_reduced[0]);
+                        assert_eq!(
+                            d_reduced[0], expected_inv,
+                            "mod{}: d={} works!",
+                            mod_val, d_reduced[0]
+                        );
                     } else if check_modd {
-                        assert_eq!(mod_minus_d, expected_inv, "mod{}: mod-d={} works!", mod_val, mod_minus_d);
+                        assert_eq!(
+                            mod_minus_d, expected_inv,
+                            "mod{}: mod-d={} works!",
+                            mod_val, mod_minus_d
+                        );
                     } else if check_e {
-                        assert_eq!(e_reduced[0], expected_inv, "mod{}: e={} works!", mod_val, e_reduced[0]);
+                        assert_eq!(
+                            e_reduced[0], expected_inv,
+                            "mod{}: e={} works!",
+                            mod_val, e_reduced[0]
+                        );
                     } else if check_mode {
-                        assert_eq!(mod_minus_e, expected_inv, "mod{}: mod-e={} works!", mod_val, mod_minus_e);
+                        assert_eq!(
+                            mod_minus_e, expected_inv,
+                            "mod{}: mod-e={} works!",
+                            mod_val, mod_minus_e
+                        );
                     } else {
                         panic!("mod{} iter{}: NONE work! f={} f_is_neg={} f_limbs[0]={} d={} mod-d={} e={} mod-e={} (expected {})",
                             mod_val, i, f_val, f_is_neg, f_limbs0, d_reduced[0], mod_minus_d, e_reduced[0], mod_minus_e, expected_inv);
@@ -1100,10 +1130,14 @@ mod tests {
         let e_reduced = e.mod_reduce(&modulus);
         let f_sign = if f.is_negative() { "-1" } else { "+1" };
 
-        panic!("mod 31: f={}, d={}, e={}, d+e={}, mod-d={}",
-            f_sign, d_reduced[0], e_reduced[0],
+        panic!(
+            "mod 31: f={}, d={}, e={}, d+e={}, mod-d={}",
+            f_sign,
+            d_reduced[0],
+            e_reduced[0],
             (d_reduced[0] + e_reduced[0]) % modulus[0],
-            (modulus[0] - d_reduced[0]) % modulus[0]);
+            (modulus[0] - d_reduced[0]) % modulus[0]
+        );
     }
 
     #[test]
@@ -1115,8 +1149,16 @@ mod tests {
         let value = [7, 0, 0, 0];
         let inverse = safegcd_invert_vartime(&value, &modulus);
         let product = (inverse[0] as u128 * value[0] as u128) % modulus[0] as u128;
-        assert_eq!(product, 1, "7 * {} = {} mod 31, expected 1", inverse[0],  product);
-        assert_eq!(inverse[0], 9, "Inverse of 7 mod 31 should be 9, got {}", inverse[0]);
+        assert_eq!(
+            product, 1,
+            "7 * {} = {} mod 31, expected 1",
+            inverse[0], product
+        );
+        assert_eq!(
+            inverse[0], 9,
+            "Inverse of 7 mod 31 should be 9, got {}",
+            inverse[0]
+        );
 
         // Test with modulus = 127 (prime)
         // Find inverse of 3 mod 127
@@ -1158,8 +1200,11 @@ mod tests {
         let inv_fe = FieldElement::from_limbs(inverse);
         let product = val_fe.mul(&inv_fe);
 
-        assert_eq!(product, FieldElement::one(),
-            "5 * inv(5) should equal 1 in P-256 field");
+        assert_eq!(
+            product,
+            FieldElement::one(),
+            "5 * inv(5) should equal 1 in P-256 field"
+        );
 
         // Test with a larger value
         let value2 = [
@@ -1173,8 +1218,11 @@ mod tests {
         let inv2_fe = FieldElement::from_limbs(inverse2);
         let product2 = val2_fe.mul(&inv2_fe);
 
-        assert_eq!(product2, FieldElement::one(),
-            "value * inv(value) should equal 1 in P-256 field");
+        assert_eq!(
+            product2,
+            FieldElement::one(),
+            "value * inv(value) should equal 1 in P-256 field"
+        );
     }
 
     #[test]

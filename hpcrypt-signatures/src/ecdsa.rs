@@ -27,8 +27,10 @@
 //! ```
 
 use hpcrypt_core::error::CurveError;
-use hpcrypt_curves::p256::{Point, Scalar, scalar_mul_generator, FieldElement, AffinePoint, P256_B};
 use hpcrypt_curves::ct_utils::ConstantTimeEq;
+use hpcrypt_curves::p256::{
+    scalar_mul_generator, AffinePoint, FieldElement, Point, Scalar, P256_B,
+};
 use hpcrypt_hash::hmac::HmacSha256;
 use hpcrypt_hash::sha256::Sha256;
 
@@ -238,10 +240,9 @@ impl SigningKey {
         // Check if >= n by comparing in big-endian order
         // P-256 order n in big-endian bytes
         const P256_ORDER_BE: [u8; 32] = [
-            0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00,
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-            0xBC, 0xE6, 0xFA, 0xAD, 0xA7, 0x17, 0x9E, 0x84,
-            0xF3, 0xB9, 0xCA, 0xC2, 0xFC, 0x63, 0x25, 0x51,
+            0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xBC, 0xE6, 0xFA, 0xAD, 0xA7, 0x17, 0x9E, 0x84, 0xF3, 0xB9, 0xCA, 0xC2,
+            0xFC, 0x63, 0x25, 0x51,
         ];
 
         // Compare bytes in big-endian order (most significant first)
@@ -294,8 +295,10 @@ impl SigningKey {
         // Try up to 100 times to generate a valid key
         for _ in 0..100 {
             let mut bytes = [0u8; 32];
-            generate_random_bytes(&mut bytes)
-                .map_err(|_| CurveError::InvalidScalar { expected: 32, actual: 32 })?;
+            generate_random_bytes(&mut bytes).map_err(|_| CurveError::InvalidScalar {
+                expected: 32,
+                actual: 32,
+            })?;
 
             // Check if the scalar is in valid range [1, n-1]
             let scalar = Scalar::from_bytes(&bytes);
@@ -307,7 +310,10 @@ impl SigningKey {
         }
 
         // If we failed 100 times, something is seriously wrong
-        Err(CurveError::InvalidScalar { expected: 32, actual: 0 })
+        Err(CurveError::InvalidScalar {
+            expected: 32,
+            actual: 0,
+        })
     }
 
     /// Compute the corresponding verifying key (public key)
@@ -319,9 +325,7 @@ impl SigningKey {
     pub fn verifying_key(&self) -> VerifyingKey {
         let g = Point::generator();
         let public_point = g.scalar_mul_constant_time(&self.secret);
-        VerifyingKey {
-            public_point,
-        }
+        VerifyingKey { public_point }
     }
 
     /// Creates an ECDSA signature for a message.
@@ -531,7 +535,7 @@ impl VerifyingKey {
     /// `Some(VerifyingKey)` if the coordinates represent a valid point on the curve,
     /// `None` otherwise.
     pub fn from_affine_coords(x: &[u8], y: &[u8]) -> Result<Self, CurveError> {
-        use hpcrypt_curves::p256::{Point, field::FieldElement, AffinePoint};
+        use hpcrypt_curves::p256::{field::FieldElement, AffinePoint, Point};
 
         if x.len() != 32 || y.len() != 32 {
             return Err(CurveError::NotOnCurve);
@@ -540,12 +544,13 @@ impl VerifyingKey {
         let x_bytes: [u8; 32] = x.try_into().unwrap();
         let y_bytes: [u8; 32] = y.try_into().unwrap();
 
-        let x_field = FieldElement::from_bytes(&x_bytes)
-            .ok_or(CurveError::NotOnCurve)?;
-        let y_field = FieldElement::from_bytes(&y_bytes)
-            .ok_or(CurveError::NotOnCurve)?;
+        let x_field = FieldElement::from_bytes(&x_bytes).ok_or(CurveError::NotOnCurve)?;
+        let y_field = FieldElement::from_bytes(&y_bytes).ok_or(CurveError::NotOnCurve)?;
 
-        let affine = AffinePoint { x: x_field, y: y_field };
+        let affine = AffinePoint {
+            x: x_field,
+            y: y_field,
+        };
         let point = Point::from_affine(&affine);
 
         // Verify the point is on the curve
@@ -698,7 +703,10 @@ impl VerifyingKey {
     ///
     /// Format: 0x04 || x || y (65 bytes)
     pub fn to_bytes_uncompressed(&self) -> [u8; 65] {
-        let affine = self.public_point.to_affine().expect("Public key should not be infinity");
+        let affine = self
+            .public_point
+            .to_affine()
+            .expect("Public key should not be infinity");
         let mut bytes = [0u8; 65];
         bytes[0] = 0x04; // Uncompressed point indicator
         bytes[1..33].copy_from_slice(&affine.x.to_bytes());
@@ -711,7 +719,10 @@ impl VerifyingKey {
     /// Format: (0x02 | 0x03) || x (33 bytes)
     /// The prefix byte indicates whether y is even (0x02) or odd (0x03)
     pub fn to_bytes_compressed(&self) -> [u8; 33] {
-        let affine = self.public_point.to_affine().expect("Public key should not be infinity");
+        let affine = self
+            .public_point
+            .to_affine()
+            .expect("Public key should not be infinity");
         let x_bytes = affine.x.to_bytes();
         let y_bytes = affine.y.to_bytes();
 
@@ -828,16 +839,14 @@ mod tests {
     fn test_signature_der_encoding() {
         // Test with typical values
         let r = [
-            0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF,
         ];
         let s = [
-            0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
-            0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+            0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54,
+            0x32, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x01,
         ];
 
         let sig = Signature::new(r, s);
@@ -857,16 +866,14 @@ mod tests {
     fn test_signature_der_with_high_bit() {
         // Test with high bit set (requires padding byte)
         let r = [
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFE,
         ];
         let s = [
-            0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+            0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x01,
         ];
 
         let sig = Signature::new(r, s);
@@ -882,16 +889,14 @@ mod tests {
     fn test_signature_der_with_leading_zeros() {
         // Test with leading zeros
         let r = [
-            0x00, 0x00, 0x00, 0x01, 0x23, 0x45, 0x67, 0x89,
-            0xAB, 0xCD, 0xEF, 0xFE, 0xDC, 0xBA, 0x98, 0x76,
-            0x54, 0x32, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+            0x00, 0x00, 0x00, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0xFE, 0xDC, 0xBA,
+            0x98, 0x76, 0x54, 0x32, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x01,
         ];
         let s = [
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x42,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x42,
         ];
 
         let sig = Signature::new(r, s);
@@ -1067,15 +1072,14 @@ mod tests {
         // Manually perform ECDSA sign/verify without using the wrapper methods
         // This helps us isolate where the bug is
 
-        use hpcrypt_curves::p256::{Scalar, Point};
+        use hpcrypt_curves::p256::{Point, Scalar};
         use hpcrypt_hash::sha256::Sha256;
 
         // Step 1: Generate keypair
         let d_bytes = [
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
-            0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
-            0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
+            0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C,
+            0x1D, 0x1E, 0x1F, 0x20,
         ];
         let d = Scalar::from_bytes(&d_bytes);
         let g = Point::generator();
@@ -1083,10 +1087,9 @@ mod tests {
 
         // Step 2: Sign - use a fixed k for testing (NOT RFC 6979, just for debugging)
         let k_bytes = [
-            0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-            0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
-            0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
-            0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F,
+            0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D,
+            0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B,
+            0x2C, 0x2D, 0x2E, 0x2F,
         ];
         let k = Scalar::from_bytes(&k_bytes);
 
@@ -1128,10 +1131,10 @@ mod tests {
         let u2 = r.mul(&w);
 
         // Check: h*w + (r*w)*d should equal w*(h+r*d) (distributivity)
-        let u2_d = u2.mul(&d);  // This is (r*w)*d
-        let u1_plus_u2d = u1.add(&u2_d);  // This is h*w + (r*w)*d
+        let u2_d = u2.mul(&d); // This is (r*w)*d
+        let u1_plus_u2d = u1.add(&u2_d); // This is h*w + (r*w)*d
 
-        let w_h_plus_rd = w.mul(&h_plus_rd);  // This is w*(h+r*d)
+        let w_h_plus_rd = w.mul(&h_plus_rd); // This is w*(h+r*d)
 
         // These MUST be equal due to distributivity: a*(b+c) = a*b + a*c
         // But let's check if they're actually equal in our implementation
@@ -1147,14 +1150,23 @@ mod tests {
             let h_w = h.mul(&w);
             let alt = h_w.add(&r_wd);
 
-            assert!(bool::from(alt.ct_eq(&w_h_plus_rd)), "Associativity broken: (h*w) + (r*(w*d)) != w*(h+r*d)");
+            assert!(
+                bool::from(alt.ct_eq(&w_h_plus_rd)),
+                "Associativity broken: (h*w) + (r*(w*d)) != w*(h+r*d)"
+            );
 
             // If we get here, associativity works but distributivity doesn't
             // This means: r*w*d != r*(w*d) !!!
-            assert!(bool::from(u2_d.ct_eq(&r_wd)), "r*w*d != r*(w*d) - associativity of multiplication broken!");
+            assert!(
+                bool::from(u2_d.ct_eq(&r_wd)),
+                "r*w*d != r*(w*d) - associativity of multiplication broken!"
+            );
         }
 
-        assert!(bool::from(u1_plus_u2d.ct_eq(&w_h_plus_rd)), "Distributivity fails");
+        assert!(
+            bool::from(u1_plus_u2d.ct_eq(&w_h_plus_rd)),
+            "Distributivity fails"
+        );
         assert!(bool::from(u1_plus_u2d.ct_eq(&k)), "u1 + u2*d != k");
 
         // R' = u1 * G + u2 * Q
@@ -1169,7 +1181,10 @@ mod tests {
         let r_prime_affine = r_prime.to_affine().expect("R' should not be infinity");
         let r_prime_x = Scalar::from_bytes(&r_prime_affine.x.to_bytes());
 
-        assert!(bool::from(r.ct_eq(&r_prime_x)), "Verification failed: r != R'.x");
+        assert!(
+            bool::from(r.ct_eq(&r_prime_x)),
+            "Verification failed: r != R'.x"
+        );
     }
 
     #[test]
@@ -1199,7 +1214,10 @@ mod tests {
             (&msg3[..], &sig3, &vk3),
         ];
 
-        assert!(VerifyingKey::batch_verify(&items), "Batch verification should pass for all valid signatures");
+        assert!(
+            VerifyingKey::batch_verify(&items),
+            "Batch verification should pass for all valid signatures"
+        );
 
         // Test: Batch verification should fail if one signature is wrong
         let wrong_sig = key1.sign(b"wrong message");
@@ -1209,14 +1227,23 @@ mod tests {
             (&msg3[..], &sig3, &vk3),
         ];
 
-        assert!(!VerifyingKey::batch_verify(&items_with_wrong), "Batch verification should fail with wrong signature");
+        assert!(
+            !VerifyingKey::batch_verify(&items_with_wrong),
+            "Batch verification should fail with wrong signature"
+        );
 
         // Test: Empty batch should return true
-        assert!(VerifyingKey::batch_verify(&[]), "Empty batch should verify as true");
+        assert!(
+            VerifyingKey::batch_verify(&[]),
+            "Empty batch should verify as true"
+        );
 
         // Test: Single signature in batch should work
         let single = vec![(&msg1[..], &sig1, &vk1)];
-        assert!(VerifyingKey::batch_verify(&single), "Single signature batch should verify");
+        assert!(
+            VerifyingKey::batch_verify(&single),
+            "Single signature batch should verify"
+        );
 
         // Verify that individual verification also works for comparison
         assert!(vk1.verify(msg1, &sig1));
@@ -1245,7 +1272,10 @@ mod tests {
 
         // Verify the signature
         let verifying_key = signing_key.verifying_key();
-        assert!(verifying_key.verify(message, &signature), "RFC 6979 signature should verify");
+        assert!(
+            verifying_key.verify(message, &signature),
+            "RFC 6979 signature should verify"
+        );
     }
 
     #[test]
@@ -1263,8 +1293,14 @@ mod tests {
         let expected_r = hex!("F1ABB023518351CD71D881567B1EA663ED3EFCF6C5132B354F28D3B0B7D38367");
         let expected_s = hex!("019F4113742A2B14BD25926B49C649155F267E60D3814B4C0CC84250E46F0083");
 
-        assert_eq!(signature.r, expected_r, "RFC 6979 r component mismatch for 'test'");
-        assert_eq!(signature.s, expected_s, "RFC 6979 s component mismatch for 'test'");
+        assert_eq!(
+            signature.r, expected_r,
+            "RFC 6979 r component mismatch for 'test'"
+        );
+        assert_eq!(
+            signature.s, expected_s,
+            "RFC 6979 s component mismatch for 'test'"
+        );
 
         let verifying_key = signing_key.verifying_key();
         assert!(verifying_key.verify(message, &signature));
@@ -1283,10 +1319,22 @@ mod tests {
         let sig3 = signing_key.sign(message);
 
         // All signatures should be identical (deterministic)
-        assert_eq!(sig1.r, sig2.r, "RFC 6979 should be deterministic: r mismatch");
-        assert_eq!(sig1.s, sig2.s, "RFC 6979 should be deterministic: s mismatch");
-        assert_eq!(sig2.r, sig3.r, "RFC 6979 should be deterministic: r mismatch");
-        assert_eq!(sig2.s, sig3.s, "RFC 6979 should be deterministic: s mismatch");
+        assert_eq!(
+            sig1.r, sig2.r,
+            "RFC 6979 should be deterministic: r mismatch"
+        );
+        assert_eq!(
+            sig1.s, sig2.s,
+            "RFC 6979 should be deterministic: s mismatch"
+        );
+        assert_eq!(
+            sig2.r, sig3.r,
+            "RFC 6979 should be deterministic: r mismatch"
+        );
+        assert_eq!(
+            sig2.s, sig3.s,
+            "RFC 6979 should be deterministic: s mismatch"
+        );
     }
 
     #[test]

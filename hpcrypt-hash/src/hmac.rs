@@ -285,9 +285,8 @@ mod tests {
         let data = b"Hi There";
 
         let mac = hmac_sha256(&key, data);
-        let expected = hex_literal::hex!(
-            "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7"
-        );
+        let expected =
+            hex_literal::hex!("b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7");
         assert_eq!(mac, expected);
     }
 
@@ -297,9 +296,8 @@ mod tests {
         let data = b"what do ya want for nothing?";
 
         let mac = hmac_sha256(key, data);
-        let expected = hex_literal::hex!(
-            "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843"
-        );
+        let expected =
+            hex_literal::hex!("5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843");
         assert_eq!(mac, expected);
     }
 
@@ -309,9 +307,8 @@ mod tests {
         let data = [0xdd; 50];
 
         let mac = hmac_sha256(&key, &data);
-        let expected = hex_literal::hex!(
-            "773ea91e36800e46854db8ebd09181a72959098b3ef8c122d9635514ced565fe"
-        );
+        let expected =
+            hex_literal::hex!("773ea91e36800e46854db8ebd09181a72959098b3ef8c122d9635514ced565fe");
         assert_eq!(mac, expected);
     }
 
@@ -322,9 +319,8 @@ mod tests {
         let data = b"Test Using Larger Than Block-Size Key - Hash Key First";
 
         let mac = hmac_sha256(&key, data);
-        let expected = hex_literal::hex!(
-            "60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54"
-        );
+        let expected =
+            hex_literal::hex!("60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54");
         assert_eq!(mac, expected);
     }
 

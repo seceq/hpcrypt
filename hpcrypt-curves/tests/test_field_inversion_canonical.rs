@@ -4,8 +4,8 @@
 // was returning non-canonical results (negative or >= modulus), causing
 // ~16.8% of affine coordinate conversions to fail.
 
-use hpcrypt_curves::p384::field::FieldElement as P384Field;
 use hpcrypt_curves::p256::field::FieldElement as P256Field;
+use hpcrypt_curves::p384::field::FieldElement as P384Field;
 use hpcrypt_curves::p521::field::FieldElement as P521Field;
 
 /// Test that field inversion returns results in canonical form [0, p)
@@ -27,18 +27,26 @@ fn test_p256_inversion_canonical() {
 
         // Check that inv * value = 1
         let product = inv.mul(value);
-        assert_eq!(product, P256Field::from_u64(1),
-            "Inverse should satisfy inv * value = 1");
+        assert_eq!(
+            product,
+            P256Field::from_u64(1),
+            "Inverse should satisfy inv * value = 1"
+        );
 
         // Check that inv is in canonical form
         // We can verify this by checking that inv < modulus
         // by converting to bytes and checking it's a valid field element
         let inv_bytes = inv.to_bytes();
         let reconstructed = P256Field::from_bytes(&inv_bytes);
-        assert!(reconstructed.is_some(),
-            "Inverse should be in canonical form [0, p)");
-        assert_eq!(reconstructed.unwrap(), inv,
-            "Inverse should round-trip through bytes");
+        assert!(
+            reconstructed.is_some(),
+            "Inverse should be in canonical form [0, p)"
+        );
+        assert_eq!(
+            reconstructed.unwrap(),
+            inv,
+            "Inverse should round-trip through bytes"
+        );
     }
 }
 
@@ -60,16 +68,24 @@ fn test_p384_inversion_canonical() {
 
         // Check that inv * value = 1
         let product = inv.mul(value);
-        assert_eq!(product, P384Field::from_u64(1),
-            "Inverse should satisfy inv * value = 1");
+        assert_eq!(
+            product,
+            P384Field::from_u64(1),
+            "Inverse should satisfy inv * value = 1"
+        );
 
         // Check that inv is in canonical form
         let inv_bytes = inv.to_bytes();
         let reconstructed = P384Field::from_bytes(&inv_bytes);
-        assert!(reconstructed.is_some(),
-            "Inverse should be in canonical form [0, p)");
-        assert_eq!(reconstructed.unwrap(), inv,
-            "Inverse should round-trip through bytes");
+        assert!(
+            reconstructed.is_some(),
+            "Inverse should be in canonical form [0, p)"
+        );
+        assert_eq!(
+            reconstructed.unwrap(),
+            inv,
+            "Inverse should round-trip through bytes"
+        );
     }
 }
 
@@ -91,16 +107,24 @@ fn test_p521_inversion_canonical() {
 
         // Check that inv * value = 1
         let product = inv.mul(value);
-        assert_eq!(product, P521Field::from_u64(1),
-            "Inverse should satisfy inv * value = 1");
+        assert_eq!(
+            product,
+            P521Field::from_u64(1),
+            "Inverse should satisfy inv * value = 1"
+        );
 
         // Check that inv is in canonical form
         let inv_bytes = inv.to_bytes();
         let reconstructed = P521Field::from_bytes(&inv_bytes);
-        assert!(reconstructed.is_some(),
-            "Inverse should be in canonical form [0, p)");
-        assert_eq!(reconstructed.unwrap(), inv,
-            "Inverse should round-trip through bytes");
+        assert!(
+            reconstructed.is_some(),
+            "Inverse should be in canonical form [0, p)"
+        );
+        assert_eq!(
+            reconstructed.unwrap(),
+            inv,
+            "Inverse should round-trip through bytes"
+        );
     }
 }
 
@@ -124,13 +148,19 @@ fn test_p384_problematic_z_coordinates() {
 
         // Convert to affine (this internally calls field inversion on Z)
         let affine = point.to_affine();
-        assert!(affine.is_some(),
-            "Point for k={} should convert to affine", k);
+        assert!(
+            affine.is_some(),
+            "Point for k={} should convert to affine",
+            k
+        );
 
         // Verify the affine point is valid by converting back
         let reconstructed = Point::from_affine(&affine.unwrap());
-        assert_eq!(reconstructed, point,
-            "Point for k={} should round-trip through affine", k);
+        assert_eq!(
+            reconstructed, point,
+            "Point for k={} should round-trip through affine",
+            k
+        );
     }
 }
 
@@ -166,8 +196,20 @@ fn test_p384_multiple_computation_methods_consistent() {
     let aff2 = method2.to_affine().unwrap();
     let aff3 = method3.to_affine().unwrap();
 
-    assert_eq!(aff1.x, aff2.x, "All methods should produce same x-coordinate");
-    assert_eq!(aff1.y, aff2.y, "All methods should produce same y-coordinate");
-    assert_eq!(aff1.x, aff3.x, "All methods should produce same x-coordinate");
-    assert_eq!(aff1.y, aff3.y, "All methods should produce same y-coordinate");
+    assert_eq!(
+        aff1.x, aff2.x,
+        "All methods should produce same x-coordinate"
+    );
+    assert_eq!(
+        aff1.y, aff2.y,
+        "All methods should produce same y-coordinate"
+    );
+    assert_eq!(
+        aff1.x, aff3.x,
+        "All methods should produce same x-coordinate"
+    );
+    assert_eq!(
+        aff1.y, aff3.y,
+        "All methods should produce same y-coordinate"
+    );
 }

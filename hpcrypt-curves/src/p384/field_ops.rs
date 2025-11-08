@@ -262,7 +262,7 @@ impl FieldElement {
         let b_high = [b.limbs[3], b.limbs[4], b.limbs[5]];
 
         // Compute three sub-products using schoolbook 3x3
-        let z0 = Self::mul_3x3(&a_low, &b_low);   // a_low * b_low
+        let z0 = Self::mul_3x3(&a_low, &b_low); // a_low * b_low
         let z2 = Self::mul_3x3(&a_high, &b_high); // a_high * b_high
 
         // Compute (a_high + a_low) and (b_high + b_low)
@@ -279,7 +279,9 @@ impl FieldElement {
         } else {
             // Extend 3x3 result to 8 limbs for uniform handling
             let z1_3x3 = Self::mul_3x3(&a_sum, &b_sum);
-            [z1_3x3[0], z1_3x3[1], z1_3x3[2], z1_3x3[3], z1_3x3[4], z1_3x3[5], 0, 0]
+            [
+                z1_3x3[0], z1_3x3[1], z1_3x3[2], z1_3x3[3], z1_3x3[4], z1_3x3[5], 0, 0,
+            ]
         };
 
         // Combine: result = z2 * 2^384 + (z1 - z2 - z0) * 2^192 + z0
@@ -548,7 +550,7 @@ impl FieldElement {
             }
 
             let val = limbs[i];
-            let shift_limbs = i - 6;  // How many limbs to shift (0-5)
+            let shift_limbs = i - 6; // How many limbs to shift (0-5)
 
             // Compute val * formula shifted by shift_limbs positions
             // formula = 2^128 + 2^96 - 2^32 + 1
@@ -590,7 +592,9 @@ impl FieldElement {
         // This handles cases where formula application produces carries into high limbs
         while result[6] | result[7] | result[8] | result[9] | result[10] | result[11] != 0 {
             // Save the current high 6 limbs
-            let high_limbs = [result[6], result[7], result[8], result[9], result[10], result[11]];
+            let high_limbs = [
+                result[6], result[7], result[8], result[9], result[10], result[11],
+            ];
 
             // Clear the high limbs FIRST before applying formula
             result[6] = 0;
@@ -675,7 +679,6 @@ impl FieldElement {
         Self::from_limbs(result_limbs)
     }
 
-
     #[cfg(test)]
     #[allow(dead_code)]
     fn nist_p384_reduce_method1(limbs: &[u64; 12]) -> Self {
@@ -685,10 +688,9 @@ impl FieldElement {
         // result = low_6_limbs + sum(limbs[i] * 2^(64*(i-6)) * formula for i in 6..12)
 
         // Formula: 2^384 ≡ 2^128 + 2^96 - 2^32 + 1 (mod p)
-        let formula = (BigUint::from(1u32) << 128)
-                    + (BigUint::from(1u32) << 96)
-                    - (BigUint::from(1u32) << 32)
-                    + BigUint::from(1u32);
+        let formula = (BigUint::from(1u32) << 128) + (BigUint::from(1u32) << 96)
+            - (BigUint::from(1u32) << 32)
+            + BigUint::from(1u32);
 
         // Start with low 6 limbs
         let mut result = BigUint::from(0u32);
@@ -774,10 +776,10 @@ impl FieldElement {
             // Term 3: val * 2^96
             // Note: val << 96 does NOT fit in i128, so we must split it manually
             if shift_limbs + 1 < 7 {
-                extended[shift_limbs + 1] += val << 32;  // Low part of val * 2^96
+                extended[shift_limbs + 1] += val << 32; // Low part of val * 2^96
             }
             if shift_limbs + 2 < 7 {
-                extended[shift_limbs + 2] += val >> 32;  // High part of val * 2^96
+                extended[shift_limbs + 2] += val >> 32; // High part of val * 2^96
             }
 
             // Term 4: val * 2^128
@@ -789,8 +791,8 @@ impl FieldElement {
         // Propagate carries through the extended array (signed arithmetic)
         // The key: treat each limb as signed, extract signed carry, keep low 64 bits
         for i in 0..6 {
-            let carry = extended[i] >> 64;  // Signed (arithmetic) right shift gets carry
-            // Mask to keep only low 64 bits
+            let carry = extended[i] >> 64; // Signed (arithmetic) right shift gets carry
+                                           // Mask to keep only low 64 bits
             extended[i] &= 0xFFFFFFFFFFFFFFFF;
             extended[i + 1] += carry;
         }
@@ -846,8 +848,8 @@ impl FieldElement {
 
             // Term 3: val * 2^96
             // Note: Must split manually as val << 96 exceeds i128
-            extended[1] += val << 32;  // Low part of val * 2^96
-            extended[2] += val >> 32;  // High part of val * 2^96
+            extended[1] += val << 32; // Low part of val * 2^96
+            extended[2] += val >> 32; // High part of val * 2^96
 
             // Term 4: val * 2^128
             extended[2] += val;
@@ -872,8 +874,10 @@ impl FieldElement {
         #[cfg(test)]
         {
             if iterations >= max_iterations {
-                panic!("Iterative reduction hit max iterations ({}) with extended[6] = {}",
-                       max_iterations, extended[6]);
+                panic!(
+                    "Iterative reduction hit max iterations ({}) with extended[6] = {}",
+                    max_iterations, extended[6]
+                );
             }
         }
 
@@ -971,7 +975,8 @@ impl FieldElement {
         let _low = Self::from_limbs([limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5]]);
 
         // Extract high part (bits 384..768) as a field element
-        let _high = Self::from_limbs([limbs[6], limbs[7], limbs[8], limbs[9], limbs[10], limbs[11]]);
+        let _high =
+            Self::from_limbs([limbs[6], limbs[7], limbs[8], limbs[9], limbs[10], limbs[11]]);
 
         // Apply reduction formula: high * 2^384 ≡ high * (2^128 + 2^96 - 2^32 + 1) (mod p)
         // But DON'T reduce yet - we need to allow overflow!
@@ -1082,10 +1087,8 @@ impl FieldElement {
     #[allow(dead_code)]
     fn nist_p384_reduce_incremental(limbs: &[u64; 12]) -> Self {
         // Start with the low part
-        let mut result = Self::from_limbs([
-            limbs[0], limbs[1], limbs[2],
-            limbs[3], limbs[4], limbs[5],
-        ]);
+        let mut result =
+            Self::from_limbs([limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5]]);
 
         // Process each high limb separately and reduce after each
         for i in 6..12 {
@@ -1310,7 +1313,8 @@ impl FieldElement {
                     if pos1 < 6 {
                         working[pos1] = working[pos1].wrapping_add(hi << bit_shift1);
                         if bit_shift1 > 0 && pos1 + 1 < 12 {
-                            working[pos1 + 1] = working[pos1 + 1].wrapping_add(hi >> (64 - bit_shift1));
+                            working[pos1 + 1] =
+                                working[pos1 + 1].wrapping_add(hi >> (64 - bit_shift1));
                         }
                     }
 
@@ -1321,7 +1325,8 @@ impl FieldElement {
                     if pos32 < 6 {
                         working[pos32] = working[pos32].wrapping_sub(hi << bit_shift32);
                         if bit_shift32 > 0 && pos32 + 1 < 12 {
-                            working[pos32 + 1] = working[pos32 + 1].wrapping_sub(hi >> (64 - bit_shift32));
+                            working[pos32 + 1] =
+                                working[pos32 + 1].wrapping_sub(hi >> (64 - bit_shift32));
                         }
                     }
 
@@ -1332,7 +1337,8 @@ impl FieldElement {
                     if pos96 < 6 {
                         working[pos96] = working[pos96].wrapping_add(hi << bit_shift96);
                         if bit_shift96 > 0 && pos96 + 1 < 12 {
-                            working[pos96 + 1] = working[pos96 + 1].wrapping_add(hi >> (64 - bit_shift96));
+                            working[pos96 + 1] =
+                                working[pos96 + 1].wrapping_add(hi >> (64 - bit_shift96));
                         }
                     }
 
@@ -1343,7 +1349,8 @@ impl FieldElement {
                     if pos128 < 6 {
                         working[pos128] = working[pos128].wrapping_add(hi << bit_shift128);
                         if bit_shift128 > 0 && pos128 + 1 < 12 {
-                            working[pos128 + 1] = working[pos128 + 1].wrapping_add(hi >> (64 - bit_shift128));
+                            working[pos128 + 1] =
+                                working[pos128 + 1].wrapping_add(hi >> (64 - bit_shift128));
                         }
                     }
                 }
@@ -1383,31 +1390,22 @@ impl FieldElement {
 
             // Term 2: c * 2^32 = c at limb position 0, shift 32
             // This is limbs[0] = c << 32 low bits, limbs[1] = c >> 32
-            let limbs2 = [0, c, 0, 0, 0, 0];  // c * 2^64 = c in limb 1
+            let limbs2 = [0, c, 0, 0, 0, 0]; // c * 2^64 = c in limb 1
             let _term2_base = Self::from_limbs(limbs2);
             // Now divide by 2^32 by shifting right... actually easier to construct directly
             // c * 2^32 as field element
-            let term2 = Self::from_limbs([
-                (c << 32) as u64,
-                (c >> 32) as u64,
-                0, 0, 0, 0
-            ]);
+            let term2 = Self::from_limbs([(c << 32) as u64, (c >> 32) as u64, 0, 0, 0, 0]);
 
             // Term 3: c * 2^96 = c at bit position 96 = limb 1 shift 32
-            let term3 = Self::from_limbs([
-                0,
-                (c << 32) as u64,
-                (c >> 32) as u64,
-                0, 0, 0
-            ]);
+            let term3 = Self::from_limbs([0, (c << 32) as u64, (c >> 32) as u64, 0, 0, 0]);
 
             // Term 4: c * 2^128 = c at bit position 128 = limb 2
             let term4 = Self::from_limbs([0, 0, c, 0, 0, 0]);
 
-            result = result.add(&term1);  // +1
-            result = result.sub(&term2);  // -2^32
-            result = result.add(&term3);  // +2^96
-            result = result.add(&term4);  // +2^128
+            result = result.add(&term1); // +1
+            result = result.sub(&term2); // -2^32
+            result = result.add(&term3); // +2^96
+            result = result.add(&term4); // +2^128
 
             carry -= c as u128;
         }
@@ -1432,13 +1430,13 @@ impl FieldElement {
         use num_bigint::BigUint;
 
         // Convert 768-bit (12 limb) product to bytes
-        let mut bytes = [0u8; 96];  // 12 * 8 = 96 bytes
+        let mut bytes = [0u8; 96]; // 12 * 8 = 96 bytes
         for i in 0..12 {
             bytes[i * 8..(i + 1) * 8].copy_from_slice(&limbs[i].to_le_bytes());
         }
 
         // Convert modulus to bytes
-        let mut mod_bytes = [0u8; 48];  // 6 * 8 = 48 bytes
+        let mut mod_bytes = [0u8; 48]; // 6 * 8 = 48 bytes
         for i in 0..6 {
             mod_bytes[i * 8..(i + 1) * 8].copy_from_slice(&P384_MODULUS[i].to_le_bytes());
         }
@@ -1520,12 +1518,12 @@ impl FieldElement {
         // So p-2 = 2^384 - 2^128 - 2^96 + 2^32 - 3
 
         self.pow_vartime(&[
-            0x00000000FFFFFFFD,  // limb 0
-            0xFFFFFFFF00000000,  // limb 1
-            0xFFFFFFFFFFFFFFFE,  // limb 2
-            0xFFFFFFFFFFFFFFFF,  // limb 3
-            0xFFFFFFFFFFFFFFFF,  // limb 4
-            0xFFFFFFFFFFFFFFFF,  // limb 5
+            0x00000000FFFFFFFD, // limb 0
+            0xFFFFFFFF00000000, // limb 1
+            0xFFFFFFFFFFFFFFFE, // limb 2
+            0xFFFFFFFFFFFFFFFF, // limb 3
+            0xFFFFFFFFFFFFFFFF, // limb 4
+            0xFFFFFFFFFFFFFFFF, // limb 5
         ])
     }
 
@@ -1566,7 +1564,7 @@ impl FieldElement {
         // Binary exponentiation (square-and-multiply)
 
         // Find the position of the most significant set bit
-        let mut bit_pos = 383;  // Start from the highest possible bit
+        let mut bit_pos = 383; // Start from the highest possible bit
         let mut found_msb = false;
 
         // Find MSB by checking from high limb to low
@@ -1724,7 +1722,7 @@ impl FieldElement {
                 let sum = match acc[i + j].checked_add(product) {
                     Some(temp) => match temp.checked_add(carry) {
                         Some(final_sum) => final_sum,
-                        None => temp.wrapping_add(carry)
+                        None => temp.wrapping_add(carry),
                     },
                     None => {
                         let wrapped = acc[i + j].wrapping_add(product);
@@ -2056,13 +2054,19 @@ mod tests {
             let inv_fermat = value.invert();
             let inv_gcd = value.invert_gcd();
 
-            assert_eq!(inv_fermat, inv_gcd,
-                "invert_gcd should match invert (Fermat) for value {:?}", value);
+            assert_eq!(
+                inv_fermat, inv_gcd,
+                "invert_gcd should match invert (Fermat) for value {:?}",
+                value
+            );
 
             // Also verify that value * inverse = 1
             let product = value.mul(&inv_gcd);
-            assert_eq!(product, FieldElement::one(),
-                "value * invert_gcd should equal 1");
+            assert_eq!(
+                product,
+                FieldElement::one(),
+                "value * invert_gcd should equal 1"
+            );
         }
     }
 
@@ -2090,16 +2094,34 @@ mod tests {
     fn test_karatsuba_vs_schoolbook() {
         // Verify Karatsuba and schoolbook produce identical results
         let test_cases = [
+            (FieldElement::from_u64(7), FieldElement::from_u64(7)),
             (
-                FieldElement::from_u64(7),
-                FieldElement::from_u64(7),
+                FieldElement::from_limbs([
+                    0x0123456789ABCDEF,
+                    0xFEDCBA9876543210,
+                    0x0011223344556677,
+                    0x8899AABBCCDDEEFF,
+                    0xFFEEDDCCBBAA9988,
+                    0x7766554433221100,
+                ]),
+                FieldElement::from_limbs([
+                    0x1337694200BADDCA,
+                    0xCAFEBABE13371337,
+                    0xDEADBEEFBAADF00D,
+                    0x1234567890ABCDEF,
+                    0xFEDCBA0987654321,
+                    0x0FEDCBA987654321,
+                ]),
             ),
             (
-                FieldElement::from_limbs([0x0123456789ABCDEF, 0xFEDCBA9876543210, 0x0011223344556677, 0x8899AABBCCDDEEFF, 0xFFEEDDCCBBAA9988, 0x7766554433221100]),
-                FieldElement::from_limbs([0x1337694200BADDCA, 0xCAFEBABE13371337, 0xDEADBEEFBAADF00D, 0x1234567890ABCDEF, 0xFEDCBA0987654321, 0x0FEDCBA987654321]),
-            ),
-            (
-                FieldElement::from_limbs([0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0x00000000FFFFFFFF]),
+                FieldElement::from_limbs([
+                    0xFFFFFFFFFFFFFFFF,
+                    0xFFFFFFFFFFFFFFFF,
+                    0xFFFFFFFFFFFFFFFE,
+                    0xFFFFFFFFFFFFFFFF,
+                    0xFFFFFFFFFFFFFFFF,
+                    0x00000000FFFFFFFF,
+                ]),
                 FieldElement::from_u64(3),
             ),
         ];
@@ -2151,7 +2173,7 @@ mod tests {
             0xFFFFFFFFFFFFFFFF,
             0xFFFFFFFFFFFFFFFF,
             0xFFFFFFFFFFFFFFFF,
-            0x0000000000FFFFFF,  // Just under modulus
+            0x0000000000FFFFFF, // Just under modulus
         ]);
         let b = FieldElement::from_u64(2);
 
@@ -2160,9 +2182,11 @@ mod tests {
         let result_fast = FieldElement::nist_p384_reduce_fast(&product);
         let result_bigint = FieldElement::nist_p384_reduce_bigint(&product);
 
-        assert_eq!(result_fast, result_bigint,
+        assert_eq!(
+            result_fast, result_bigint,
             "Fast and BigInt reductions should match for large values\nFast:   {:?}\nBigInt: {:?}",
-            result_fast, result_bigint);
+            result_fast, result_bigint
+        );
     }
 
     // TODO: Re-enable these tests when fast reduction is validated
@@ -2183,7 +2207,10 @@ mod tests {
         let result_fast = FieldElement::nist_p384_reduce_fast(&product);
         let result_bigint = FieldElement::nist_p384_reduce_bigint(&product);
 
-        assert_eq!(result_fast, result_bigint, "Fast reduction doesn't match BigUint");
+        assert_eq!(
+            result_fast, result_bigint,
+            "Fast reduction doesn't match BigUint"
+        );
     }
 
     #[test]
@@ -2216,9 +2243,16 @@ mod tests {
         let result_bigint = FieldElement::nist_p384_reduce_bigint(&product);
         let expected = FieldElement::from_u64(10000);
 
-        assert_eq!(result_fast, expected, "100*100 fast reduction failed:\nGot:      {:?}\nExpected: {:?}", result_fast, expected);
+        assert_eq!(
+            result_fast, expected,
+            "100*100 fast reduction failed:\nGot:      {:?}\nExpected: {:?}",
+            result_fast, expected
+        );
         assert_eq!(result_bigint, expected, "100*100 bigint reduction failed");
-        assert_eq!(result_fast, result_bigint, "Fast and BigInt should match for 100*100");
+        assert_eq!(
+            result_fast, result_bigint,
+            "Fast and BigInt should match for 100*100"
+        );
     }
 
     #[test]
@@ -2231,9 +2265,11 @@ mod tests {
         let result_fast = FieldElement::nist_p384_reduce_fast(&product);
         let result_bigint = FieldElement::nist_p384_reduce_bigint(&product);
 
-        assert_eq!(result_fast, result_bigint,
+        assert_eq!(
+            result_fast, result_bigint,
             "2^384 reduction failed:\nFast:   {:?}\nBigInt: {:?}",
-            result_fast, result_bigint);
+            result_fast, result_bigint
+        );
     }
 
     #[test]
@@ -2251,9 +2287,11 @@ mod tests {
         let result_fast = FieldElement::nist_p384_reduce_fast(&product);
         let result_bigint = FieldElement::nist_p384_reduce_bigint(&product);
 
-        assert_eq!(result_fast, result_bigint,
+        assert_eq!(
+            result_fast, result_bigint,
             "Medium value reduction failed:\nFast:   {:?}\nBigInt: {:?}",
-            result_fast, result_bigint);
+            result_fast, result_bigint
+        );
     }
 
     #[test]
@@ -2271,9 +2309,11 @@ mod tests {
         let result_fast = FieldElement::nist_p384_reduce_fast(&product);
         let result_bigint = FieldElement::nist_p384_reduce_bigint(&product);
 
-        assert_eq!(result_fast, result_bigint,
+        assert_eq!(
+            result_fast, result_bigint,
             "Minimal failing case:\nFast:   {:?}\nBigInt: {:?}",
-            result_fast, result_bigint);
+            result_fast, result_bigint
+        );
     }
 
     #[test]
@@ -2291,9 +2331,11 @@ mod tests {
         let result_fast = FieldElement::nist_p384_reduce_fast(&product);
         let result_bigint = FieldElement::nist_p384_reduce_bigint(&product);
 
-        assert_eq!(result_fast, result_bigint,
+        assert_eq!(
+            result_fast, result_bigint,
             "Larger value reduction failed:\nFast:   {:?}\nBigInt: {:?}",
-            result_fast, result_bigint);
+            result_fast, result_bigint
+        );
     }
 
     #[test]
@@ -2312,9 +2354,11 @@ mod tests {
         let result_fast = FieldElement::nist_p384_reduce_fast(&product);
         let result_bigint = FieldElement::nist_p384_reduce_bigint(&product);
 
-        assert_eq!(result_fast, result_bigint,
+        assert_eq!(
+            result_fast, result_bigint,
             "Max value reduction failed:\nFast:   {:?}\nBigInt: {:?}",
-            result_fast, result_bigint);
+            result_fast, result_bigint
+        );
     }
 
     #[test]
@@ -2323,38 +2367,64 @@ mod tests {
         // 1. Compute product a * b
         // 2. Invert the product
         // 3. Multiply to get individual inverses
-        
+
         let a = FieldElement::from_u64(3);
         let b = FieldElement::from_u64(5);
-        
+
         // Individual inversions (known to work)
         let inv_a_direct = a.invert();
         let inv_b_direct = b.invert();
-        
+
         // Check they work
-        assert_eq!(inv_a_direct.mul(&a), FieldElement::one(), "Direct inv(3) * 3 should be 1");
-        assert_eq!(inv_b_direct.mul(&b), FieldElement::one(), "Direct inv(5) * 5 should be 1");
-        
+        assert_eq!(
+            inv_a_direct.mul(&a),
+            FieldElement::one(),
+            "Direct inv(3) * 3 should be 1"
+        );
+        assert_eq!(
+            inv_b_direct.mul(&b),
+            FieldElement::one(),
+            "Direct inv(5) * 5 should be 1"
+        );
+
         // Batch pattern
-        let prod_ab = a.mul(&b);  // products[1] = a * b
-        let inv_prod_ab = prod_ab.invert();  // inv(a * b)
-        
+        let prod_ab = a.mul(&b); // products[1] = a * b
+        let inv_prod_ab = prod_ab.invert(); // inv(a * b)
+
         // Check the product inversion works
-        assert_eq!(inv_prod_ab.mul(&prod_ab), FieldElement::one(), "inv(a*b) * (a*b) should be 1");
-        
+        assert_eq!(
+            inv_prod_ab.mul(&prod_ab),
+            FieldElement::one(),
+            "inv(a*b) * (a*b) should be 1"
+        );
+
         // Compute individual inverses using batch pattern
-        let inv_b_batch = inv_prod_ab.mul(&a);  // inv(a*b) * a = inv(b)
-        let inv_a_batch = inv_prod_ab.mul(&b);  // inv(a*b) * b = inv(a)
-        
+        let inv_b_batch = inv_prod_ab.mul(&a); // inv(a*b) * a = inv(b)
+        let inv_a_batch = inv_prod_ab.mul(&b); // inv(a*b) * b = inv(a)
+
         // Check batch inverses work
-        assert_eq!(inv_a_batch.mul(&a), FieldElement::one(), 
-            "Batch inv(3) * 3 should be 1, got {:?}", inv_a_batch.mul(&a));
-        assert_eq!(inv_b_batch.mul(&b), FieldElement::one(), 
-            "Batch inv(5) * 5 should be 1, got {:?}", inv_b_batch.mul(&b));
-        
+        assert_eq!(
+            inv_a_batch.mul(&a),
+            FieldElement::one(),
+            "Batch inv(3) * 3 should be 1, got {:?}",
+            inv_a_batch.mul(&a)
+        );
+        assert_eq!(
+            inv_b_batch.mul(&b),
+            FieldElement::one(),
+            "Batch inv(5) * 5 should be 1, got {:?}",
+            inv_b_batch.mul(&b)
+        );
+
         // Check they match direct inversions
-        assert_eq!(inv_a_batch, inv_a_direct, "Batch and direct inv(3) should match");
-        assert_eq!(inv_b_batch, inv_b_direct, "Batch and direct inv(5) should match");
+        assert_eq!(
+            inv_a_batch, inv_a_direct,
+            "Batch and direct inv(3) should match"
+        );
+        assert_eq!(
+            inv_b_batch, inv_b_direct,
+            "Batch and direct inv(5) should match"
+        );
     }
 
     #[test]
@@ -2364,8 +2434,14 @@ mod tests {
             let a = FieldElement::from_u64(val);
             let a_inv = a.invert();
             let product = a.mul(&a_inv);
-            assert_eq!(product, FieldElement::one(), 
-                "inv({}) * {} should be 1, got {:?}", val, val, product);
+            assert_eq!(
+                product,
+                FieldElement::one(),
+                "inv({}) * {} should be 1, got {:?}",
+                val,
+                val,
+                product
+            );
         }
     }
 
@@ -2374,10 +2450,10 @@ mod tests {
         //  Test multiplication of 2 with various values
         let two = FieldElement::from_u64(2);
         let three = FieldElement::from_u64(3);
-        
+
         let result = two.mul(&three);
         let expected = FieldElement::from_u64(6);
-        
+
         assert_eq!(result, expected, "2 * 3 should be 6, got {:?}", result);
     }
 
@@ -2385,7 +2461,7 @@ mod tests {
     fn test_inv_two_value() {
         let two = FieldElement::from_u64(2);
         let inv_two = two.invert();
-        
+
         // Expected inv(2) from Python: 0x7fff...
         let expected_limbs = [
             0x0000000080000000,
@@ -2396,7 +2472,7 @@ mod tests {
             0x7fffffffffffffff,
         ];
         let expected = FieldElement::from_limbs(expected_limbs);
-        
+
         assert_eq!(inv_two, expected, "inv(2) should match Python calculation");
     }
 
@@ -2404,7 +2480,7 @@ mod tests {
     fn test_inv_seven_value() {
         let seven = FieldElement::from_u64(7);
         let inv_seven = seven.invert();
-        
+
         // Expected inv(7) from Python
         let expected_limbs = [
             0xb6db6db700000000,
@@ -2416,7 +2492,10 @@ mod tests {
         ];
         let expected = FieldElement::from_limbs(expected_limbs);
 
-        assert_eq!(inv_seven, expected, "inv(7) should match Python calculation");
+        assert_eq!(
+            inv_seven, expected,
+            "inv(7) should match Python calculation"
+        );
     }
 
     #[test]
@@ -2466,8 +2545,14 @@ mod tests {
         let macro_overflow = unroll_add!(macro_limbs, a.limbs, b.limbs, 6);
         let macro_result = FieldElement::from_limbs(macro_limbs);
 
-        assert_eq!(manual_result, macro_result, "Macro and manual results should match");
-        assert_eq!(manual_overflow, macro_overflow, "Overflow flags should match");
+        assert_eq!(
+            manual_result, macro_result,
+            "Macro and manual results should match"
+        );
+        assert_eq!(
+            manual_overflow, macro_overflow,
+            "Overflow flags should match"
+        );
     }
 
     #[test]
@@ -2484,8 +2569,14 @@ mod tests {
         let macro_overflow = unroll_add!(macro_limbs, a.limbs, b.limbs, 6);
         let macro_result = FieldElement::from_limbs(macro_limbs);
 
-        assert_eq!(manual_result, macro_result, "Results with carry should match");
-        assert_eq!(manual_overflow, macro_overflow, "Overflow with carry should match");
+        assert_eq!(
+            manual_result, macro_result,
+            "Results with carry should match"
+        );
+        assert_eq!(
+            manual_overflow, macro_overflow,
+            "Overflow with carry should match"
+        );
     }
 
     #[test]
@@ -2501,8 +2592,14 @@ mod tests {
         let macro_underflow = unroll_sub!(macro_limbs, a.limbs, b.limbs, 6);
         let macro_result = FieldElement::from_limbs(macro_limbs);
 
-        assert_eq!(manual_result, macro_result, "Macro and manual sub results should match");
-        assert_eq!(manual_underflow, macro_underflow, "Underflow flags should match");
+        assert_eq!(
+            manual_result, macro_result,
+            "Macro and manual sub results should match"
+        );
+        assert_eq!(
+            manual_underflow, macro_underflow,
+            "Underflow flags should match"
+        );
     }
 
     // =========================================================================
@@ -2628,4 +2725,3 @@ mod tests {
         }
     }
 }
-

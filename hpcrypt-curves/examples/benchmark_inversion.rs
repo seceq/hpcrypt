@@ -3,10 +3,10 @@
 //! Measures current inversion performance to establish baseline
 //! before implementing optimized addition chains.
 
-use std::time::Instant;
 use hpcrypt_curves::p256::FieldElement as P256FieldElement;
 use hpcrypt_curves::p384::FieldElement as P384FieldElement;
 use hpcrypt_curves::p521::FieldElement as P521FieldElement;
+use std::time::Instant;
 
 const ITERATIONS: usize = 10_000;
 
@@ -60,8 +60,14 @@ fn benchmark_p256() {
     let us_per_inv = ns_per_inv / 1000.0;
 
     println!("  Total inversions: {}", total_inversions);
-    println!("  Time per inversion: {:.2} μs ({:.0} ns)", us_per_inv, ns_per_inv);
-    println!("  Throughput: {:.0} inversions/sec", 1_000_000.0 / us_per_inv);
+    println!(
+        "  Time per inversion: {:.2} μs ({:.0} ns)",
+        us_per_inv, ns_per_inv
+    );
+    println!(
+        "  Throughput: {:.0} inversions/sec",
+        1_000_000.0 / us_per_inv
+    );
 
     // Verify correctness
     let test = P256FieldElement::from_bytes(&[5u8; 32]).unwrap();
@@ -108,8 +114,14 @@ fn benchmark_p384() {
     let us_per_inv = ns_per_inv / 1000.0;
 
     println!("  Total inversions: {}", total_inversions);
-    println!("  Time per inversion: {:.2} μs ({:.0} ns)", us_per_inv, ns_per_inv);
-    println!("  Throughput: {:.0} inversions/sec", 1_000_000.0 / us_per_inv);
+    println!(
+        "  Time per inversion: {:.2} μs ({:.0} ns)",
+        us_per_inv, ns_per_inv
+    );
+    println!(
+        "  Throughput: {:.0} inversions/sec",
+        1_000_000.0 / us_per_inv
+    );
 
     // Verify correctness
     let test = P384FieldElement::from_bytes(&[5u8; 48]).unwrap();
@@ -156,8 +168,14 @@ fn benchmark_p521() {
     let us_per_inv = ns_per_inv / 1000.0;
 
     println!("  Total inversions: {}", total_inversions);
-    println!("  Time per inversion: {:.2} μs ({:.0} ns)", us_per_inv, ns_per_inv);
-    println!("  Throughput: {:.0} inversions/sec", 1_000_000.0 / us_per_inv);
+    println!(
+        "  Time per inversion: {:.2} μs ({:.0} ns)",
+        us_per_inv, ns_per_inv
+    );
+    println!(
+        "  Throughput: {:.0} inversions/sec",
+        1_000_000.0 / us_per_inv
+    );
 
     // Verify correctness
     let test = P521FieldElement::from_bytes(&[5u8; 66]).unwrap();

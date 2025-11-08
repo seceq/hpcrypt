@@ -17,7 +17,7 @@
 //!
 //! Total table size: 64 windows × 16 points × 64 bytes = 65,536 bytes (~64 KB)
 
-use super::{Point, AffinePoint};
+use super::{AffinePoint, Point};
 use once_cell::sync::Lazy;
 
 /// Window size for precomputed tables (in bits)
@@ -87,14 +87,16 @@ impl PrecomputedTable {
 
             // Precompute multiples: 0*base, 1*base, 2*base, ..., 15*base
             tables[window_idx][0] = AffinePoint::infinity_sentinel();
-            tables[window_idx][1] = base_jacobian.to_affine()
+            tables[window_idx][1] = base_jacobian
+                .to_affine()
                 .expect("Base point should not be infinity");
 
             // Build up the rest using Jacobian addition for speed
             let mut current = base_jacobian;
             for i in 2..16 {
                 current = current.add(&base_jacobian);
-                tables[window_idx][i] = current.to_affine()
+                tables[window_idx][i] = current
+                    .to_affine()
                     .expect("Multiple of base should not be infinity");
             }
         }
@@ -114,8 +116,8 @@ impl PrecomputedTable {
         for window_idx in 0..NUM_WINDOWS {
             // Extract the 4-bit window value
             // Optimized: Use bit manipulation instead of division
-            let byte_idx = window_idx >> 1;  // window_idx / 2
-            let bit_offset = (window_idx & 1) << 2;  // (window_idx % 2) * 4
+            let byte_idx = window_idx >> 1; // window_idx / 2
+            let bit_offset = (window_idx & 1) << 2; // (window_idx % 2) * 4
 
             // Get the 4-bit value (0-15)
             let window_value = ((scalar[31 - byte_idx] >> bit_offset) & 0x0F) as usize;
@@ -173,7 +175,8 @@ impl CompressedPrecomputedTable {
 
             // Precompute odd multiples: 1*base, 3*base, 5*base, ..., 15*base
             let mut current = base_jacobian;
-            tables[window_idx][0] = current.to_affine()
+            tables[window_idx][0] = current
+                .to_affine()
                 .expect("Base point should not be infinity");
 
             // Double base to get 2*base for incrementing
@@ -181,7 +184,8 @@ impl CompressedPrecomputedTable {
 
             for i in 1..8 {
                 current = current.add(&base_doubled);
-                tables[window_idx][i] = current.to_affine()
+                tables[window_idx][i] = current
+                    .to_affine()
                     .expect("Odd multiple should not be infinity");
             }
         }
@@ -249,7 +253,8 @@ impl CompressedPrecomputedTable {
 static PRECOMPUTED_TABLE: Lazy<PrecomputedTable> = Lazy::new(|| PrecomputedTable::generate());
 
 /// Compressed table (odd multiples only) - 50% smaller but requires computation
-static COMPRESSED_TABLE: Lazy<CompressedPrecomputedTable> = Lazy::new(|| CompressedPrecomputedTable::generate());
+static COMPRESSED_TABLE: Lazy<CompressedPrecomputedTable> =
+    Lazy::new(|| CompressedPrecomputedTable::generate());
 
 /// Performance-optimized table with 5-bit windows (fewer iterations, more memory)
 ///
@@ -277,7 +282,8 @@ impl WideWindowTable {
             } else {
                 let prev_affine = tables[window_idx - 1][1];
                 let mut point = Point::from_affine(&prev_affine);
-                for _ in 0..5 {  // 5-bit window
+                for _ in 0..5 {
+                    // 5-bit window
                     point = point.double();
                 }
                 point
@@ -285,13 +291,15 @@ impl WideWindowTable {
 
             // Precompute multiples: 0*base, 1*base, ..., 31*base
             tables[window_idx][0] = AffinePoint::infinity_sentinel();
-            tables[window_idx][1] = base_jacobian.to_affine()
+            tables[window_idx][1] = base_jacobian
+                .to_affine()
                 .expect("Base point should not be infinity");
 
             let mut current = base_jacobian;
             for i in 2..32 {
                 current = current.add(&base_jacobian);
-                tables[window_idx][i] = current.to_affine()
+                tables[window_idx][i] = current
+                    .to_affine()
                     .expect("Multiple should not be infinity");
             }
         }
@@ -372,7 +380,8 @@ impl UltraWideWindowTable {
             } else {
                 let prev_affine = tables[window_idx - 1][1];
                 let mut point = Point::from_affine(&prev_affine);
-                for _ in 0..6 {  // 6-bit window
+                for _ in 0..6 {
+                    // 6-bit window
                     point = point.double();
                 }
                 point
@@ -380,13 +389,15 @@ impl UltraWideWindowTable {
 
             // Precompute multiples: 0*base, 1*base, ..., 63*base
             tables[window_idx][0] = AffinePoint::infinity_sentinel();
-            tables[window_idx][1] = base_jacobian.to_affine()
+            tables[window_idx][1] = base_jacobian
+                .to_affine()
                 .expect("Base point should not be infinity");
 
             let mut current = base_jacobian;
             for i in 2..64 {
                 current = current.add(&base_jacobian);
-                tables[window_idx][i] = current.to_affine()
+                tables[window_idx][i] = current
+                    .to_affine()
                     .expect("Multiple should not be infinity");
             }
         }
@@ -436,7 +447,8 @@ impl UltraWideWindowTable {
     }
 }
 
-static ULTRA_WIDE_TABLE: Lazy<UltraWideWindowTable> = Lazy::new(|| UltraWideWindowTable::generate());
+static ULTRA_WIDE_TABLE: Lazy<UltraWideWindowTable> =
+    Lazy::new(|| UltraWideWindowTable::generate());
 
 /// Fast scalar multiplication with the generator using precomputed tables
 ///
@@ -501,17 +513,7 @@ mod tests {
         let g = Point::generator();
 
         // Test various scalars
-        let test_cases = [
-            1u64,
-            2,
-            3,
-            7,
-            15,
-            16,
-            255,
-            256,
-            1000,
-        ];
+        let test_cases = [1u64, 2, 3, 7, 15, 16, 255, 256, 1000];
 
         for &k in &test_cases {
             let mut scalar = [0u8; 32];
@@ -532,10 +534,9 @@ mod tests {
         let g = Point::generator();
 
         let scalar = [
-            0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE,
-            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
-            0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
-            0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+            0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE, 0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC,
+            0xDE, 0xF0, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10, 0x01, 0x23, 0x45, 0x67,
+            0x89, 0xAB, 0xCD, 0xEF,
         ];
 
         let expected = g.scalar_mul(&scalar);
@@ -550,18 +551,10 @@ mod tests {
 
         // Test various scalars including even and odd window values
         let test_cases = [
-            1u64,
-            2,   // Even - tests doubling path
-            3,
-            4,   // Power of 2 - multiple doublings
-            5,
-            7,
-            8,   // Power of 2
-            15,
-            16,
-            255,
-            256,
-            1000,
+            1u64, 2, // Even - tests doubling path
+            3, 4, // Power of 2 - multiple doublings
+            5, 7, 8, // Power of 2
+            15, 16, 255, 256, 1000,
         ];
 
         for &k in &test_cases {
@@ -583,10 +576,9 @@ mod tests {
         let g = Point::generator();
 
         let scalar = [
-            0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE,
-            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
-            0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
-            0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+            0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE, 0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC,
+            0xDE, 0xF0, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10, 0x01, 0x23, 0x45, 0x67,
+            0x89, 0xAB, 0xCD, 0xEF,
         ];
 
         let expected = g.scalar_mul(&scalar);
@@ -598,12 +590,7 @@ mod tests {
     #[test]
     fn test_compressed_vs_full_table() {
         // Verify both methods give the same result
-        let test_scalars = [
-            [0x01; 32],
-            [0xFF; 32],
-            [0xAA; 32],
-            [0x55; 32],
-        ];
+        let test_scalars = [[0x01; 32], [0xFF; 32], [0xAA; 32], [0x55; 32]];
 
         for scalar in &test_scalars {
             let full = scalar_mul_generator(scalar);
@@ -616,9 +603,7 @@ mod tests {
     fn test_wide_window_table() {
         let g = Point::generator();
 
-        let test_cases = [
-            1u64, 2, 3, 7, 15, 16, 31, 32, 255, 256, 1000,
-        ];
+        let test_cases = [1u64, 2, 3, 7, 15, 16, 31, 32, 255, 256, 1000];
 
         for &k in &test_cases {
             let mut scalar = [0u8; 32];
@@ -639,10 +624,9 @@ mod tests {
         let g = Point::generator();
 
         let scalar = [
-            0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE,
-            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
-            0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
-            0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+            0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE, 0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC,
+            0xDE, 0xF0, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10, 0x01, 0x23, 0x45, 0x67,
+            0x89, 0xAB, 0xCD, 0xEF,
         ];
 
         let expected = g.scalar_mul(&scalar);
@@ -658,17 +642,18 @@ mod tests {
             [0xFF; 32],
             [0xAA; 32],
             [0x55; 32],
-            [0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
-             0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
-             0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
-             0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE],
+            [
+                0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54,
+                0x32, 0x10, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF,
+                0xCA, 0xFE, 0xBA, 0xBE,
+            ],
         ];
 
         for scalar in &test_scalars {
-            let ultra = scalar_mul_generator(scalar);  // 6-bit (default)
+            let ultra = scalar_mul_generator(scalar); // 6-bit (default)
             let compressed = scalar_mul_generator_compressed(scalar);
-            let wide = scalar_mul_generator_wide(scalar);  // 5-bit
-            let balanced = scalar_mul_generator_balanced(scalar);  // 4-bit
+            let wide = scalar_mul_generator_wide(scalar); // 5-bit
+            let balanced = scalar_mul_generator_balanced(scalar); // 4-bit
 
             assert_eq!(ultra, compressed, "6-bit vs compressed disagree");
             assert_eq!(ultra, wide, "6-bit vs 5-bit disagree");

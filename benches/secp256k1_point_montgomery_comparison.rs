@@ -1,6 +1,6 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use hpcrypt_curves::secp256k1::{Point, Scalar};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use hpcrypt_curves::secp256k1::point_montgomery::MontgomeryPoint;
+use hpcrypt_curves::secp256k1::{Point, Scalar};
 
 /// Benchmark point doubling: Standard vs Montgomery
 fn bench_point_double(c: &mut Criterion) {
@@ -200,7 +200,7 @@ fn bench_scalar_mul_shamir(c: &mut Criterion) {
             let result = Point::scalar_mul_shamir(
                 black_box(&u1_bytes),
                 black_box(&u2_bytes),
-                black_box(&pubkey_std)
+                black_box(&pubkey_std),
             );
             black_box(result)
         })
@@ -212,7 +212,7 @@ fn bench_scalar_mul_shamir(c: &mut Criterion) {
             let result = MontgomeryPoint::scalar_mul_shamir(
                 black_box(&u1_bytes),
                 black_box(&u2_bytes),
-                black_box(&pubkey_mont)
+                black_box(&pubkey_mont),
             );
             black_box(result)
         })
@@ -311,7 +311,7 @@ fn bench_ecdsa_verification_simulation(c: &mut Criterion) {
             let result = Point::scalar_mul_shamir(
                 black_box(&u1_bytes),
                 black_box(&u2_bytes),
-                black_box(&pubkey_std)
+                black_box(&pubkey_std),
             );
             black_box(result)
         })
@@ -326,7 +326,7 @@ fn bench_ecdsa_verification_simulation(c: &mut Criterion) {
             let result = MontgomeryPoint::scalar_mul_shamir(
                 black_box(&u1_bytes),
                 black_box(&u2_bytes),
-                black_box(&pubkey_mont)
+                black_box(&pubkey_mont),
             );
             black_box(result)
         })

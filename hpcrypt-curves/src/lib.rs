@@ -184,20 +184,20 @@ pub use hpcrypt_core::ct_utils;
 // Status: Phase 1 - Basic implementation in progress
 pub mod safegcd;
 
+pub mod ed25519;
+pub mod ed25519_sliding;
+pub mod ed25519_wnaf;
+pub mod ed448;
 pub mod field25519;
 pub mod field25519_lazy;
-pub mod x25519;
-pub mod ed25519;
-pub mod ed25519_wnaf;
-pub mod ed25519_sliding;
-pub mod ed448;
-pub mod x448;
 pub mod p256;
 pub mod p384;
 pub mod p521;
 pub mod secp256k1;
+pub mod x25519;
+pub mod x448;
 
+pub use ed25519::Ed25519;
 pub use field25519::FieldElement;
 pub use x25519::X25519;
 pub use x448::X448;
-pub use ed25519::Ed25519;

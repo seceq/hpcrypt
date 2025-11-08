@@ -4,9 +4,9 @@ mod doubling_debug_tests {
     extern crate std;
     use std::println;
 
+    use crate::secp256k1::field_ops::FieldElement;
     use crate::secp256k1::point::Point;
     use crate::secp256k1::point_montgomery::MontgomeryPoint;
-    use crate::secp256k1::field_ops::FieldElement;
 
     #[test]
     #[ignore] // Run manually with: cargo test --package hpcrypt-curves test_doubling_step_by_step -- --ignored --nocapture
@@ -212,36 +212,83 @@ mod doubling_debug_tests {
         println!();
         println!("Montgomery final result (via double()):");
         let g2_mont = g_mont.double();
-        let g2_mont_std = g2_mont.to_affine().expect("Should not be infinity").to_standard();
+        let g2_mont_std = g2_mont
+            .to_affine()
+            .expect("Should not be infinity")
+            .to_standard();
         println!("  X₃ = {:?}", g2_mont_std.x.to_bytes());
         println!("  Y₃ = {:?}", g2_mont_std.y.to_bytes());
 
         println!();
         println!("=== Summary ===");
-        let all_match = match1 && match2 && match3 && match4 && match5 && match6 &&
-                        match7 && match8 && match9 && match10 && match11 && match12 &&
-                        match13 && match14 && match15;
+        let all_match = match1
+            && match2
+            && match3
+            && match4
+            && match5
+            && match6
+            && match7
+            && match8
+            && match9
+            && match10
+            && match11
+            && match12
+            && match13
+            && match14
+            && match15;
 
         if all_match {
             println!("✅ All intermediate steps match!");
             println!("✅ Montgomery arithmetic is correct!");
         } else {
             println!("❌ Mismatch detected in intermediate steps:");
-            if !match1 { println!("  - Step 1: Y²"); }
-            if !match2 { println!("  - Step 2: Y⁴"); }
-            if !match3 { println!("  - Step 3: X·Y²"); }
-            if !match4 { println!("  - Step 4: S = 4·X·Y² *** THIS IS LIKELY THE BUG"); }
-            if !match5 { println!("  - Step 5: X²"); }
-            if !match6 { println!("  - Step 6: M = 3·X² *** THIS IS LIKELY THE BUG"); }
-            if !match7 { println!("  - Step 7: M²"); }
-            if !match8 { println!("  - Step 8: 2·S"); }
-            if !match9 { println!("  - Step 9: X₃ = M² - 2·S *** THIS AFFECTS FINAL X"); }
-            if !match10 { println!("  - Step 10: 8·Y⁴ *** THIS IS LIKELY THE BUG"); }
-            if !match11 { println!("  - Step 11: S - X₃"); }
-            if !match12 { println!("  - Step 12: M·(S - X₃)"); }
-            if !match13 { println!("  - Step 13: Y₃ = M·(S - X₃) - 8·Y⁴ *** THIS AFFECTS FINAL Y"); }
-            if !match14 { println!("  - Step 14: Y·Z"); }
-            if !match15 { println!("  - Step 15: Z₃ = 2·Y·Z *** THIS AFFECTS FINAL Z (but we know Z matches!)"); }
+            if !match1 {
+                println!("  - Step 1: Y²");
+            }
+            if !match2 {
+                println!("  - Step 2: Y⁴");
+            }
+            if !match3 {
+                println!("  - Step 3: X·Y²");
+            }
+            if !match4 {
+                println!("  - Step 4: S = 4·X·Y² *** THIS IS LIKELY THE BUG");
+            }
+            if !match5 {
+                println!("  - Step 5: X²");
+            }
+            if !match6 {
+                println!("  - Step 6: M = 3·X² *** THIS IS LIKELY THE BUG");
+            }
+            if !match7 {
+                println!("  - Step 7: M²");
+            }
+            if !match8 {
+                println!("  - Step 8: 2·S");
+            }
+            if !match9 {
+                println!("  - Step 9: X₃ = M² - 2·S *** THIS AFFECTS FINAL X");
+            }
+            if !match10 {
+                println!("  - Step 10: 8·Y⁴ *** THIS IS LIKELY THE BUG");
+            }
+            if !match11 {
+                println!("  - Step 11: S - X₃");
+            }
+            if !match12 {
+                println!("  - Step 12: M·(S - X₃)");
+            }
+            if !match13 {
+                println!("  - Step 13: Y₃ = M·(S - X₃) - 8·Y⁴ *** THIS AFFECTS FINAL Y");
+            }
+            if !match14 {
+                println!("  - Step 14: Y·Z");
+            }
+            if !match15 {
+                println!(
+                    "  - Step 15: Z₃ = 2·Y·Z *** THIS AFFECTS FINAL Z (but we know Z matches!)"
+                );
+            }
         }
     }
 }

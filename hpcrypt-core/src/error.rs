@@ -127,7 +127,10 @@ impl fmt::Display for AeadError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::AuthenticationFailed => {
-                write!(f, "Authentication failed: ciphertext has been tampered with or corrupted")
+                write!(
+                    f,
+                    "Authentication failed: ciphertext has been tampered with or corrupted"
+                )
             }
             Self::InvalidNonceLength { expected, actual } => {
                 write!(
@@ -624,10 +627,7 @@ impl fmt::Display for CipherError {
                     expected, actual
                 )
             }
-            Self::InvalidPlaintextLength {
-                block_size,
-                actual,
-            } => {
+            Self::InvalidPlaintextLength { block_size, actual } => {
                 write!(
                     f,
                     "Invalid plaintext length: must be multiple of {} bytes, got {} bytes",
@@ -793,7 +793,10 @@ mod tests {
     fn test_error_conversions() {
         let aead_err = AeadError::AuthenticationFailed;
         let crypto_err: CryptoError = aead_err.into();
-        assert_eq!(crypto_err, CryptoError::Aead(AeadError::AuthenticationFailed));
+        assert_eq!(
+            crypto_err,
+            CryptoError::Aead(AeadError::AuthenticationFailed)
+        );
 
         let curve_err = CurveError::NotOnCurve;
         let crypto_err: CryptoError = curve_err.into();
