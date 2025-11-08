@@ -1307,6 +1307,7 @@ impl CombTable {
 use once_cell::sync::Lazy;
 
 #[cfg(feature = "std")]
+#[allow(dead_code)]
 static BASE_TABLE: Lazy<BasePointTable> = Lazy::new(|| BasePointTable::generate());
 
 #[cfg(feature = "std")]

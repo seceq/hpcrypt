@@ -1044,9 +1044,8 @@ impl Point {
             #[cfg(feature = "std")]
             extern crate std;
             #[cfg(feature = "std")]
-            use std::vec;
             #[cfg(feature = "std")]
-            use std::vec::Vec;
+            use std::vec;
 
             let mut buckets = vec![Point::identity(); num_buckets];
 

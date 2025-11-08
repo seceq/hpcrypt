@@ -123,6 +123,7 @@ impl FieldElement {
 
     /// Check if this element is less than the modulus
     /// Returns true if self < p, false otherwise
+    #[allow(dead_code)]
     fn lt_modulus(&self) -> bool {
         // Compare limbs from most significant to least significant
         for i in (0..4).rev() {
@@ -138,6 +139,7 @@ impl FieldElement {
 
     /// Subtract the modulus from this element
     /// Does not check if self >= p, caller must ensure this
+    #[allow(dead_code)]
     fn sub_modulus(&self) -> Self {
         let mut result = [0u64; 4];
         let mut borrow = 0i128;
@@ -658,7 +660,7 @@ impl FieldElement {
         let mut c1 = wide[1] as u128;
         let mut c2 = wide[2] as u128;
         let mut c3 = wide[3] as u128;
-        let mut c4 = 0u128;
+        let mut _c4 = 0u128;
 
         // Process each high limb: wide[i] * 2^(256 + 64*(i-4)) ≡ wide[i] * R * 2^(64*(i-4)) (mod p)
 
@@ -668,7 +670,7 @@ impl FieldElement {
         c1 += c0 >> 64; c0 &= 0xFFFFFFFFFFFFFFFF;
         c2 += c1 >> 64; c1 &= 0xFFFFFFFFFFFFFFFF;
         c3 += c2 >> 64; c2 &= 0xFFFFFFFFFFFFFFFF;
-        c4 = c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
+        _c4 = c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
 
         // wide[5] * 2^320 ≡ wide[5] * R * 2^64 (mod p)
         let d = (wide[5] as u128) * (R as u128);
@@ -697,7 +699,7 @@ impl FieldElement {
             c1 += c0 >> 64; c0 &= 0xFFFFFFFFFFFFFFFF;
             c2 += c1 >> 64; c1 &= 0xFFFFFFFFFFFFFFFF;
             c3 += c2 >> 64; c2 &= 0xFFFFFFFFFFFFFFFF;
-            c4 = c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
+            _c4 = c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
         }
 
         let limbs = [c0 as u64, c1 as u64, c2 as u64, c3 as u64];

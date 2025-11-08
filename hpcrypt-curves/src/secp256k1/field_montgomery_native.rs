@@ -331,6 +331,7 @@ impl MontgomeryFieldElement {
     }
 
     /// Compute a^exp using square-and-multiply (binary method)
+    #[allow(dead_code)]
     fn pow(&self, exp: &[u64; 4]) -> Self {
         let mut result = Self::ONE;
 

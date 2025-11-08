@@ -10,7 +10,9 @@ use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 // Common field element constants used in point arithmetic
 const FE_TWO: FieldElement = FieldElement::from_u64(2);
 const FE_THREE: FieldElement = FieldElement::from_u64(3);
+#[allow(dead_code)]
 const FE_FOUR: FieldElement = FieldElement::from_u64(4);
+#[allow(dead_code)]
 const FE_EIGHT: FieldElement = FieldElement::from_u64(8);
 
 // Montgomery-form constants for PointMontgomery operations

@@ -51,6 +51,7 @@ pub const WINDOW_WIDTH: usize = 4;
 #[cfg(all(feature = "scalar-mul-fast", not(feature = "scalar-mul-very-fast")))]
 pub const WINDOW_WIDTH: usize = 5;
 
+/// Window width for wNAF scalar multiplication (very fast configuration, w=6)
 #[cfg(feature = "scalar-mul-very-fast")]
 pub const WINDOW_WIDTH: usize = 6;
 

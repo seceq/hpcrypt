@@ -7,7 +7,7 @@
 #![allow(clippy::needless_range_loop)]
 #![allow(clippy::needless_borrows_for_generic_args)]
 
-use super::constants::{P384_MODULUS, MONTGOMERY_P_PRIME, MONTGOMERY_R, MONTGOMERY_R2};
+use super::constants::P384_MODULUS;
 use super::field::FieldElement;
 use crate::ct_utils::{Choice, ConditionallySelectable};
 use core::ops::{Add, AddAssign, Sub, SubAssign};
@@ -959,15 +959,16 @@ impl FieldElement {
         Self::from_limbs(result_limbs)
     }
 
+    #[allow(dead_code)]
     fn nist_p384_reduce_native_extended(limbs: &[u64; 12]) -> Self {
         // Use an extended representation that can hold up to ~448 bits
         // This allows us to compute the intermediate value before final reduction
 
         // Extract low part (bits 0..384) - this is already < p
-        let low = Self::from_limbs([limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5]]);
+        let _low = Self::from_limbs([limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5]]);
 
         // Extract high part (bits 384..768) as a field element
-        let high = Self::from_limbs([limbs[6], limbs[7], limbs[8], limbs[9], limbs[10], limbs[11]]);
+        let _high = Self::from_limbs([limbs[6], limbs[7], limbs[8], limbs[9], limbs[10], limbs[11]]);
 
         // Apply reduction formula: high * 2^384 ≡ high * (2^128 + 2^96 - 2^32 + 1) (mod p)
         // But DON'T reduce yet - we need to allow overflow!
@@ -1075,6 +1076,7 @@ impl FieldElement {
         result
     }
 
+    #[allow(dead_code)]
     fn nist_p384_reduce_incremental(limbs: &[u64; 12]) -> Self {
         // Start with the low part
         let mut result = Self::from_limbs([
@@ -1125,6 +1127,7 @@ impl FieldElement {
 
     // Helper: create a field element from a u64 shifted left by a given number of bits
     // Only works for shifts < 384 bits
+    #[allow(dead_code)]
     fn from_shifted_u64(val: u64, shift_bits: usize) -> Self {
         if shift_bits >= 384 {
             // Value would be >= 2^384, need to reduce it first

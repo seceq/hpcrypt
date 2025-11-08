@@ -19,8 +19,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use super::ed25519::{EdwardsPoint, Scalar};
-use super::field25519::FieldElement;
+use super::ed25519::EdwardsPoint;
 
 /// Window width for wNAF scalar multiplication
 ///
@@ -32,6 +31,7 @@ pub const WINDOW_WIDTH: usize = 4;
 /// Maximum value in wNAF representation for window width w
 /// - w=4: values in range [-15, 15], 8 odd multiples
 /// - w=5: values in range [-31, 31], 16 odd multiples
+#[allow(dead_code)]
 const MAX_WNAF_VALUE: usize = (1 << WINDOW_WIDTH) - 1;
 
 /// Maximum table size (for w=5 which needs most entries)
@@ -79,7 +79,7 @@ impl WNafTable {
 
         debug_assert!(width >= 2 && width <= 5, "Window width must be in range [2, 5]");
 
-        let num_entries = (1 << (width - 1));  // 2^(w-1) = number of odd multiples
+        let num_entries = 1 << (width - 1);  // 2^(w-1) = number of odd multiples
 
         // Step 1: Compute odd multiples in extended coordinates
         let mut extended_table = [EdwardsPoint::IDENTITY; MAX_TABLE_SIZE];

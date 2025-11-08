@@ -241,20 +241,20 @@ impl SafeGcdInt {
         // Compare magnitudes: check if result >= modulus
         while !result.is_zero() {
             // Check if result >= modulus by comparing limbs
-            let mut is_gte = false;
+            let mut _is_gte = false;
 
             // First check high limbs are zero (otherwise definitely >= modulus)
             if result.limbs[4..10].iter().any(|&x| x != 0) {
-                is_gte = true;
+                _is_gte = true;
             } else {
                 // Compare low 4 limbs
-                is_gte = true;
+                _is_gte = true;
                 for i in (0..4).rev() {
                     if result.limbs[i] < modulus[i] {
                         is_gte = false;
                         break;
                     } else if result.limbs[i] > modulus[i] {
-                        is_gte = true;
+                        _is_gte = true;
                         break;
                     }
                     // If equal, continue to next limb
@@ -293,16 +293,16 @@ impl SafeGcdInt {
 
             // First check high limbs are zero (otherwise definitely >= modulus)
             if result.limbs[6..10].iter().any(|&x| x != 0) {
-                is_gte = true;
+                _is_gte = true;
             } else {
                 // Compare low 6 limbs
-                is_gte = true;
+                _is_gte = true;
                 for i in (0..6).rev() {
                     if result.limbs[i] < modulus[i] {
                         is_gte = false;
                         break;
                     } else if result.limbs[i] > modulus[i] {
-                        is_gte = true;
+                        _is_gte = true;
                         break;
                     }
                     // If equal, continue to next limb
@@ -341,16 +341,16 @@ impl SafeGcdInt {
 
             // First check high limb (limb[9]) is zero (otherwise definitely >= modulus)
             if result.limbs[9] != 0 {
-                is_gte = true;
+                _is_gte = true;
             } else {
                 // Compare low 9 limbs
-                is_gte = true;
+                _is_gte = true;
                 for i in (0..9).rev() {
                     if result.limbs[i] < modulus[i] {
                         is_gte = false;
                         break;
                     } else if result.limbs[i] > modulus[i] {
-                        is_gte = true;
+                        _is_gte = true;
                         break;
                     }
                     // If equal, continue to next limb
@@ -392,6 +392,7 @@ impl SafeGcdInt {
 /// else:
 ///     return (1 + delta, f, g / 2)
 /// ```
+#[allow(dead_code)]
 fn divstep(delta: i64, f: &SafeGcdInt, g: &SafeGcdInt)
     -> (i64, SafeGcdInt, SafeGcdInt)
 {
@@ -437,6 +438,7 @@ fn divstep(delta: i64, f: &SafeGcdInt, g: &SafeGcdInt)
 /// # Returns
 ///
 /// `(new_d, new_e)`
+#[allow(dead_code)]
 fn update_de(
     _delta: i64,
     d: &SafeGcdInt,

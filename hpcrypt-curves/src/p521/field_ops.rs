@@ -628,6 +628,7 @@ impl FieldElement {
     ///
     /// Expected speedup: 20-30% faster than schoolbook_mul(a, a)
     #[inline]
+    #[allow(dead_code)]
     fn schoolbook_square(a: &Self) -> [u64; 18] {
         let mut result = [0u64; 18];
 

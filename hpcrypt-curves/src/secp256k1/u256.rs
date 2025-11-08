@@ -37,12 +37,14 @@ impl U256 {
 
     /// Create from 4 limbs (little-endian)
     #[inline]
+    #[allow(dead_code)]
     pub const fn from_limbs(limbs: [u64; 4]) -> Self {
         Self { limbs }
     }
 
     /// Create from a u64
     #[inline]
+    #[allow(dead_code)]
     pub const fn from_u64(value: u64) -> Self {
         Self {
             limbs: [value, 0, 0, 0],
@@ -117,6 +119,7 @@ impl U256 {
 
     /// Get a reference to the limbs
     #[inline]
+    #[allow(dead_code)]
     pub const fn limbs(&self) -> &[u64; 4] {
         &self.limbs
     }
@@ -192,6 +195,7 @@ impl U256 {
     /// Multiply and get full 512-bit result
     ///
     /// Returns (low 256 bits, high 256 bits)
+    #[allow(dead_code)]
     pub fn mul_wide(&self, rhs: &U256) -> (U256, U256) {
         let mut result = [0u64; 8];
 
@@ -320,6 +324,7 @@ impl U256 {
     }
 
     /// Right shift: self >> bits
+    #[allow(dead_code)]
     pub fn shr(&self, bits: u32) -> U256 {
         if bits == 0 {
             return *self;
@@ -374,18 +379,21 @@ impl U256 {
 
     /// Less than
     #[inline]
+    #[allow(dead_code)]
     pub fn lt(&self, other: &U256) -> bool {
         self.cmp(other) == Ordering::Less
     }
 
     /// Greater than or equal
     #[inline]
+    #[allow(dead_code)]
     pub fn ge(&self, other: &U256) -> bool {
         self.cmp(other) != Ordering::Less
     }
 
     /// Less than or equal
     #[inline]
+    #[allow(dead_code)]
     pub fn le(&self, other: &U256) -> bool {
         self.cmp(other) != Ordering::Greater
     }

@@ -41,6 +41,7 @@ impl FieldElement {
     /// # Performance
     ///
     /// Expected 5-10% faster than `add()` for operations that can tolerate [0, 2p).
+    #[allow(dead_code)]
     pub(crate) fn add_incomplete(&self, rhs: &Self) -> Self {
         let (sum, overflow) = self.add_no_reduce(rhs);
 
@@ -293,6 +294,7 @@ impl FieldElement {
     ///
     /// Expected speedup: 10-15% over schoolbook due to fewer multiplications.
     #[inline(always)]
+    #[allow(dead_code)]
     fn karatsuba_mul(a: &Self, b: &Self) -> [u64; 8] {
         // Helper: 2x2 schoolbook multiplication
         // This is simple and has no overflow issues
@@ -595,6 +597,7 @@ impl FieldElement {
     ///
     /// Uses signed arithmetic throughout to avoid wrapping issues.
     #[inline]
+    #[allow(dead_code)]
     pub(super) fn simple_reduce(limbs: &[u64; 8]) -> Self {
         // NIST P-256 fast reduction algorithm from FIPS 186-4 Appendix D.2.3
         //
