@@ -137,9 +137,6 @@
 #[cfg(feature = "std")]
 extern crate std;
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
-
 /// ECDSA signatures for NIST P-256
 pub mod ecdsa;
 /// ECDSA signatures for NIST P-384

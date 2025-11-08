@@ -68,9 +68,6 @@
 #[cfg(feature = "std")]
 extern crate std;
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
-
 mod error;
 pub use error::{RngError, Result};
 
@@ -78,11 +75,6 @@ pub use error::{RngError, Result};
 mod os_rng;
 #[cfg(feature = "os-rng")]
 pub use os_rng::*;
-
-#[cfg(feature = "chacha20-rng")]
-mod chacha20_rng;
-#[cfg(feature = "chacha20-rng")]
-pub use chacha20_rng::*;
 
 /// Generate cryptographically secure random bytes
 ///

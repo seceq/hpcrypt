@@ -27,7 +27,7 @@
 //! ```
 
 use hpcrypt_core::error::CurveError;
-use hpcrypt_curves::p256::{Point, Scalar, scalar_mul_generator, msm_2_points, FieldElement, AffinePoint, P256_B};
+use hpcrypt_curves::p256::{Point, Scalar, scalar_mul_generator, FieldElement, AffinePoint, P256_B};
 use hpcrypt_curves::ct_utils::ConstantTimeEq;
 use hpcrypt_hash::hmac::HmacSha256;
 use hpcrypt_hash::sha256::Sha256;
