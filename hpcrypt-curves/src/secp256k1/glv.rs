@@ -501,7 +501,7 @@ mod tests {
 
         // Check r1 and r2 raw values
         let r1_bytes = r1_scalar.to_bytes();
-        let r2_bytes_check = r2_scalar.to_bytes();
+        let _r2_bytes_check = r2_scalar.to_bytes();
 
         // Expected from Python:
         // r1 = 0xfffffffffffffffffffffffffffffffe5d3fcaa69117fad4bcf46ec388a5a78c
@@ -525,7 +525,7 @@ mod tests {
         // Test that decomposition actually produces values < 2^128
         let scalar = [0x01u8; 32];  // The problematic scalar
         let k = Scalar::from_bytes(&scalar);
-        let (k1, k2, k1_neg, k2_neg) = decompose_scalar(&k);
+        let (k1, k2, _k1_neg, _k2_neg) = decompose_scalar(&k);
 
         let k1_bytes = k1.to_bytes();
         let k2_bytes = k2.to_bytes();

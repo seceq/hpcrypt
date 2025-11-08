@@ -14,6 +14,7 @@ use core::ops::{Add, AddAssign, Sub, SubAssign};
 
 // BigUint is only used for test comparison functions, not in production code
 #[cfg(test)]
+#[allow(unused_imports)]
 use num_bigint::BigUint;
 
 impl FieldElement {
@@ -676,6 +677,7 @@ impl FieldElement {
 
 
     #[cfg(test)]
+    #[allow(dead_code)]
     fn nist_p384_reduce_method1(limbs: &[u64; 12]) -> Self {
         use num_bigint::BigUint;
 
@@ -735,6 +737,7 @@ impl FieldElement {
     }
 
     #[cfg(test)]
+    #[allow(dead_code)]
     fn nist_p384_reduce_extended_final(limbs: &[u64; 12]) -> Self {
         // CRITICAL INSIGHT: The NIST reduction formula can produce negative intermediate values
         // when using wrapping arithmetic. We need to handle this properly.
@@ -1151,6 +1154,7 @@ impl FieldElement {
     }
 
     #[cfg(test)]
+    #[allow(dead_code)]
     fn nist_p384_reduce_native_debug(limbs: &[u64; 12]) -> Self {
         // P-384 fast reduction using NIST formula
         // p = 2^384 - 2^128 - 2^96 + 2^32 - 1
@@ -1253,6 +1257,7 @@ impl FieldElement {
 
     /// Experimental bit-level reduction (work in progress)
     #[cfg(test)]
+    #[allow(dead_code)]
     fn nist_p384_reduce_bitlevel(limbs: &[u64; 12]) -> Self {
         // TODO: Implement OpenSSL-style bit-level reduction
         // This requires:
@@ -1268,6 +1273,7 @@ impl FieldElement {
 
     /// Old limb-level reduction attempt (BUGGY - produces 2x error)
     #[cfg(test)]
+    #[allow(dead_code)]
     fn nist_p384_reduce_limb_level_buggy(limbs: &[u64; 12]) -> Self {
         // P-384: p = 2^384 - 2^128 - 2^96 + 2^32 - 1
         // Therefore: 2^384 ≡ 2^128 + 2^96 - 2^32 + 1 (mod p)
@@ -1378,7 +1384,7 @@ impl FieldElement {
             // Term 2: c * 2^32 = c at limb position 0, shift 32
             // This is limbs[0] = c << 32 low bits, limbs[1] = c >> 32
             let limbs2 = [0, c, 0, 0, 0, 0];  // c * 2^64 = c in limb 1
-            let term2_base = Self::from_limbs(limbs2);
+            let _term2_base = Self::from_limbs(limbs2);
             // Now divide by 2^32 by shifting right... actually easier to construct directly
             // c * 2^32 as field element
             let term2 = Self::from_limbs([

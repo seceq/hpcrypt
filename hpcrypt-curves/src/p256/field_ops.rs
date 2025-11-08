@@ -2981,7 +2981,7 @@ mod tests {
         // Verify that R mod p is correct
         // R = 2^256, so R mod p should satisfy certain properties
 
-        use crate::p256::constants::{MONTGOMERY_R, MONTGOMERY_R2, MONTGOMERY_P_PRIME, P256_MODULUS};
+        use crate::p256::constants::{MONTGOMERY_R, MONTGOMERY_R2};
 
         // Test 1: Verify R * R^(-1) = 1 (mod p) by converting to and from Montgomery
         let one = FieldElement::one();

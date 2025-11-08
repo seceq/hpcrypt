@@ -1014,7 +1014,7 @@ mod tests {
             let mut converged = false;
             for i in 0..744 {
                 if g.is_zero() && !converged {
-                    converged = true;
+                    let _converged = true;
                     let d_reduced = d.mod_reduce(&modulus);
                     let e_reduced = e.mod_reduce(&modulus);
                     let f_is_neg = f.is_negative();

@@ -297,6 +297,7 @@ pub(crate) use {unroll_add, unroll_sub};
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

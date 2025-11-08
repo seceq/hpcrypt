@@ -189,6 +189,7 @@ pub fn generator_mul(scalar: &Scalar) -> Point {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[allow(unused_imports)]
     use crate::ct_utils::ConstantTimeEq;
 
     #[test]
@@ -287,7 +288,7 @@ mod tests {
         scalar_bytes[0] = 0b10110101; // LSB
 
         let scalar = Scalar::from_bytes(&scalar_bytes);
-        let table = PrecomputedTable::generate();
+        let _table = PrecomputedTable::generate();
 
         // Window 0 should extract bits [0:3] = 0101 = 5
         // Window 1 should extract bits [4:7] = 1011 = 11

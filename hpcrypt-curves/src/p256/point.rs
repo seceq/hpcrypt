@@ -2104,6 +2104,7 @@ mod tests {
     #[test]
     fn test_double_scalar_mul_ecdsa_pattern() {
         // Test the typical ECDSA verification pattern: u1*G + u2*PK
+        #[allow(unused_imports)]
         use crate::p256::Scalar;
 
         let g = Point::generator();
