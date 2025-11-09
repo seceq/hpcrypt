@@ -358,6 +358,7 @@ impl Sha1 {
     ///
     /// This is marked `#[inline(always)]` to enable maximum optimization.
     #[inline(always)]
+    #[allow(dead_code)]
     fn process_aligned_block(&mut self, block: &AlignedBlock) {
         // Use circular buffer: only 16 words instead of 80
         let mut w = [0u32; 16];
