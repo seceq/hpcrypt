@@ -42,7 +42,7 @@ fn test_single_byte() {
 #[test]
 fn test_two_blocks() {
     // Test a message that spans exactly two blocks
-    let mut message = vec![b'a'; 56];
+    let message = vec![b'a'; 56];
     let hash = sha1(&message);
     let expected = hex_literal::hex!("c2db330f6083854c99d4b5bfb6e8f29f201be699");
     assert_eq!(hash, expected, "Two-block message test failed");
@@ -53,7 +53,6 @@ fn test_55_bytes() {
     // Boundary case: 55 bytes is the largest single-block message
     let message = vec![b'a'; 55];
     let hash = sha1(&message);
-    let expected = hex_literal::hex!("f9f7c9eada8bc6b8c8e25d7b54d6e08f7e0e6e0e");
 
     // Also verify incremental hashing gives same result
     let mut hasher = Sha1::new();

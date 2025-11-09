@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hpcrypt_curves::p521::{FieldElement, Point, Scalar};
 
 fn field_operations(c: &mut Criterion) {

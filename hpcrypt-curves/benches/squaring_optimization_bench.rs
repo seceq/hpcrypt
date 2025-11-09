@@ -1,6 +1,6 @@
 // Benchmark comparing different squaring implementations
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hpcrypt_curves::secp256k1::{FieldElement, FieldElement52};
 
 fn bench_64bit_squaring(c: &mut Criterion) {
