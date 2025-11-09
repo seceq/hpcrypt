@@ -307,7 +307,7 @@ mod tests {
     #[test]
     fn test_bip340_vector1() {
         // BIP 340 test vector #0
-        // https://github.com/bitcoin/bips/blob/master/bip-0340/test-vectors.csv
+        // <https://github.com/bitcoin/bips/blob/master/bip-0340/test-vectors.csv>
 
         let secret_key =
             hex_to_bytes_32("0000000000000000000000000000000000000000000000000000000000000003");
