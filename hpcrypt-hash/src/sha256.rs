@@ -8,6 +8,8 @@
 //! Features:
 //! - Fixed 256-bit output
 //! - NIST standardized (FIPS 180-4)
+
+#![allow(clippy::needless_range_loop)]
 //! - Widely used and well-analyzed
 //! - No known practical attacks
 

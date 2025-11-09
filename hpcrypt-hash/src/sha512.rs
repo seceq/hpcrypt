@@ -8,6 +8,8 @@
 //! Features:
 //! - Fixed 512-bit output
 //! - NIST standardized (FIPS 180-4)
+
+#![allow(clippy::needless_range_loop)]
 //! - Optimized for 64-bit platforms
 
 use hpcrypt_core::utils::{read_u64_be, write_u64_be, rotr64};

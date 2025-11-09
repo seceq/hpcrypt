@@ -7,6 +7,7 @@
 //! through function name and customization strings.
 
 #![forbid(unsafe_code)]
+#![allow(clippy::needless_range_loop)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;

@@ -8,6 +8,8 @@
 //!
 //! Features:
 //! - Arbitrary output length (1-32 bytes)
+
+#![allow(clippy::needless_range_loop)]
 //! - Keyed hashing (MAC mode)
 //! - Personalization and salt support
 

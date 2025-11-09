@@ -3,6 +3,7 @@
 //! Based on the Keccak sponge construction, standardized in FIPS 202.
 //! Supports SHA3-224, SHA3-256, SHA3-384, and SHA3-512.
 
+#![allow(clippy::needless_range_loop)]
 
 /// SHA3-224 output size in bytes
 pub const SHA3_224_OUTPUT_SIZE: usize = 28;

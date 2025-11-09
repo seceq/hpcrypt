@@ -8,6 +8,8 @@
 //! Security properties:
 //! - Provides message authenticity and integrity
 //! - Resists length extension attacks
+
+#![allow(clippy::needless_range_loop)]
 //! - Key-dependent pseudorandom function
 
 extern crate alloc;

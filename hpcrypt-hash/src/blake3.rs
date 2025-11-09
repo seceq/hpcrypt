@@ -8,6 +8,8 @@
 //!
 //! Key features:
 //! - Single-pass Merkle tree construction
+
+#![allow(clippy::needless_range_loop)]
 //! - Unlimited output length (XOF mode)
 //! - Keyed hash and key derivation modes
 //! - Highly parallelizable
