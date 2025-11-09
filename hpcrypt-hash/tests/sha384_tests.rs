@@ -103,7 +103,7 @@ fn test_multiple_updates() {
     hasher.update(b"bc"); // 2 bytes
     hasher.update(b"def"); // 3 bytes
     hasher.update(b"ghijklm"); // 7 bytes
-    hasher.update(&vec![b'n'; 100]); // 100 bytes
+    hasher.update(&[b'n'; 100]); // 100 bytes
     hasher.update(b"o"); // 1 byte
     hasher.update(b"pqr"); // 3 more bytes
 
@@ -113,7 +113,7 @@ fn test_multiple_updates() {
         msg.extend_from_slice(b"bc");
         msg.extend_from_slice(b"def");
         msg.extend_from_slice(b"ghijklm");
-        msg.extend_from_slice(&vec![b'n'; 100]);
+        msg.extend_from_slice(&[b'n'; 100]);
         msg.extend_from_slice(b"o");
         msg.extend_from_slice(b"pqr");
         msg
