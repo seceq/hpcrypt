@@ -65,10 +65,7 @@ fn test_incremental_hashing() {
 
     let hash_direct = sha256(b"Hello, World!");
 
-    assert_eq!(
-        hash_incremental, hash_direct,
-        "Incremental hashing failed"
-    );
+    assert_eq!(hash_incremental, hash_direct, "Incremental hashing failed");
 }
 
 #[test]

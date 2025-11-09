@@ -88,10 +88,7 @@ fn test_incremental_hashing() {
     hasher2.update(b"The quick brown fox jumps over the lazy dog");
     let hash_direct = hasher2.finalize();
 
-    assert_eq!(
-        hash_incremental, hash_direct,
-        "Incremental hashing failed"
-    );
+    assert_eq!(hash_incremental, hash_direct, "Incremental hashing failed");
 }
 
 #[test]
