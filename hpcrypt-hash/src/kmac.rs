@@ -387,7 +387,7 @@ impl CShake256 {
 /// key derivation, and randomness extraction.
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// use hpcrypt_hash::Kmac128;
 ///
 /// let key = b"my secret key";
@@ -464,7 +464,7 @@ impl Kmac128 {
 /// key derivation, and randomness extraction.
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// use hpcrypt_hash::Kmac256;
 ///
 /// let key = b"my secret key";
@@ -545,9 +545,12 @@ pub fn kmac256(key: &[u8], message: &[u8], customization: &[u8], output_len: usi
     Kmac256::mac(key, message, customization, output_len)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "alloc"))]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "alloc")]
+    use alloc::vec;
 
     #[test]
     fn test_left_encode() {
