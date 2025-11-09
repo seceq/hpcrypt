@@ -4,7 +4,7 @@ use hpcrypt_hash::sha384::Sha384;
 
 #[test]
 fn test_empty() {
-    let mut hasher = Sha384::new();
+    let hasher = Sha384::new();
     let hash = hasher.finalize();
     let expected = hex_literal::hex!(
         "38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da
