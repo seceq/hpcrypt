@@ -110,6 +110,12 @@ pub struct Sha512 {
     len: u128,
 }
 
+impl Default for Sha512 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Sha512 {
     pub fn new() -> Self {
         Self {
@@ -416,12 +422,6 @@ impl Sha512 {
         self.h[5] = self.h[5].wrapping_add(f);
         self.h[6] = self.h[6].wrapping_add(g);
         self.h[7] = self.h[7].wrapping_add(h);
-    }
-}
-
-impl Default for Sha512 {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
