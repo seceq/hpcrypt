@@ -84,7 +84,8 @@ fn main() {
 
 /// Helper function to encode bytes as hexadecimal string
 fn hex_encode(bytes: &[u8]) -> String {
-    bytes.iter()
+    bytes
+        .iter()
         .map(|b| format!("{:02x}", b))
         .collect::<String>()
 }

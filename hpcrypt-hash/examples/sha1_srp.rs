@@ -117,7 +117,8 @@ fn main() {
 }
 
 fn hex_encode(bytes: &[u8]) -> String {
-    bytes.iter()
+    bytes
+        .iter()
         .map(|b| format!("{:02x}", b))
         .collect::<String>()
 }

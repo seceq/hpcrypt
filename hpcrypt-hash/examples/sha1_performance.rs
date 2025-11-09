@@ -25,8 +25,10 @@ fn main() {
     let duration = start.elapsed();
     println!("   {} iterations of {} bytes", iterations, small_msg.len());
     println!("   Time: {:?}", duration);
-    println!("   Rate: {:.2} million hashes/sec",
-             iterations as f64 / duration.as_secs_f64() / 1_000_000.0);
+    println!(
+        "   Rate: {:.2} million hashes/sec",
+        iterations as f64 / duration.as_secs_f64() / 1_000_000.0
+    );
     println!();
 
     // Example 2: Empty message performance (precomputed)
@@ -39,8 +41,10 @@ fn main() {
     let duration = start.elapsed();
     println!("   {} iterations", iterations);
     println!("   Time: {:?}", duration);
-    println!("   Rate: {:.2} million hashes/sec",
-             iterations as f64 / duration.as_secs_f64() / 1_000_000.0);
+    println!(
+        "   Rate: {:.2} million hashes/sec",
+        iterations as f64 / duration.as_secs_f64() / 1_000_000.0
+    );
     println!();
 
     // Example 3: Medium message (multi-block)
@@ -68,7 +72,11 @@ fn main() {
     }
     let duration = start.elapsed();
     let throughput = (iterations * large_msg.len()) as f64 / duration.as_secs_f64() / 1_000_000.0;
-    println!("   {} iterations of {} MB", iterations, large_msg.len() / 1_000_000);
+    println!(
+        "   {} iterations of {} MB",
+        iterations,
+        large_msg.len() / 1_000_000
+    );
     println!("   Time: {:?}", duration);
     println!("   Throughput: {:.2} MB/s", throughput);
     println!();
@@ -99,7 +107,10 @@ fn main() {
     println!("   Message size: {} bytes", message.len());
     println!("   One-shot time:    {:?}", oneshot_duration);
     println!("   Incremental time: {:?}", incremental_duration);
-    println!("   Ratio: {:.2}x", incremental_duration.as_secs_f64() / oneshot_duration.as_secs_f64());
+    println!(
+        "   Ratio: {:.2}x",
+        incremental_duration.as_secs_f64() / oneshot_duration.as_secs_f64()
+    );
     println!();
 
     // Example 6: Different message sizes
@@ -131,9 +142,12 @@ fn main() {
         }
         let duration = start.elapsed();
 
-        println!("   {} bytes: {:?} ({:.2} M hashes/s)",
-                 size, duration,
-                 iterations as f64 / duration.as_secs_f64() / 1_000_000.0);
+        println!(
+            "   {} bytes: {:?} ({:.2} M hashes/s)",
+            size,
+            duration,
+            iterations as f64 / duration.as_secs_f64() / 1_000_000.0
+        );
     }
     println!();
 

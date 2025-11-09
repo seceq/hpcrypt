@@ -8,7 +8,7 @@
 //! - Aligned block handling
 //! - Performance-critical paths
 
-use hpcrypt_hash::sha1::{sha1, Sha1, AlignedBlock};
+use hpcrypt_hash::sha1::{sha1, AlignedBlock, Sha1};
 
 #[test]
 fn test_empty_string() {
@@ -113,7 +113,10 @@ fn test_incremental_single_bytes() {
     let hash = hasher.finalize();
 
     let hash_direct = sha1(message);
-    assert_eq!(hash, hash_direct, "Single-byte incremental hashing mismatch");
+    assert_eq!(
+        hash, hash_direct,
+        "Single-byte incremental hashing mismatch"
+    );
 }
 
 #[test]
@@ -150,13 +153,13 @@ fn test_multiple_updates() {
     let mut hasher = Sha1::new();
 
     // Update with various sizes to test buffer handling
-    hasher.update(b"a");           // 1 byte
-    hasher.update(b"bc");          // 2 bytes
-    hasher.update(b"def");         // 3 bytes
-    hasher.update(b"ghijklm");     // 7 bytes
+    hasher.update(b"a"); // 1 byte
+    hasher.update(b"bc"); // 2 bytes
+    hasher.update(b"def"); // 3 bytes
+    hasher.update(b"ghijklm"); // 7 bytes
     hasher.update(&vec![b'n'; 50]); // 50 bytes (total: 63)
-    hasher.update(b"o");           // 1 byte (triggers block processing)
-    hasher.update(b"pqr");         // 3 more bytes
+    hasher.update(b"o"); // 1 byte (triggers block processing)
+    hasher.update(b"pqr"); // 3 more bytes
 
     let hash = hasher.finalize();
 
@@ -277,7 +280,7 @@ fn test_srp_compatibility() {
 fn test_hmac_compatibility() {
     // SHA-1 is commonly used with HMAC
     // Test that we can hash typical HMAC block sizes
-    let key = vec![0x0b; 20];  // 20-byte key
+    let key = vec![0x0b; 20]; // 20-byte key
     let data = b"Hi There";
 
     // Inner hash: hash((key ^ ipad) || data)
@@ -314,5 +317,8 @@ fn test_large_buffer_incremental() {
     let hash_incremental = hasher.finalize();
     let hash_direct = sha1(&full_message);
 
-    assert_eq!(hash_incremental, hash_direct, "Large buffer incremental test failed");
+    assert_eq!(
+        hash_incremental, hash_direct,
+        "Large buffer incremental test failed"
+    );
 }

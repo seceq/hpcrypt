@@ -17,7 +17,7 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 
-use hpcrypt_core::utils::{read_u32_le, write_u32_le, rotr32};
+use hpcrypt_core::utils::{read_u32_le, rotr32, write_u32_le};
 
 /// BLAKE2s output size (default: 256 bits = 32 bytes)
 pub const OUT_LEN: usize = 32;
@@ -30,8 +30,7 @@ const BLOCK_LEN: usize = 64;
 
 /// BLAKE2s initialization vector
 const IV: [u32; 8] = [
-    0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A,
-    0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19,
+    0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19,
 ];
 
 /// BLAKE2s sigma permutation table (same as BLAKE2b)
@@ -307,18 +306,16 @@ mod tests {
     #[test]
     fn test_blake2s_empty() {
         let hash = blake2s(b"");
-        let expected = hex_literal::hex!(
-            "69217a3079908094e11121d042354a7c1f55b6482ca1a51e1b250dfd1ed0eef9"
-        );
+        let expected =
+            hex_literal::hex!("69217a3079908094e11121d042354a7c1f55b6482ca1a51e1b250dfd1ed0eef9");
         assert_eq!(hash.as_slice(), &expected[..]);
     }
 
     #[test]
     fn test_blake2s_abc() {
         let hash = blake2s(b"abc");
-        let expected = hex_literal::hex!(
-            "508c5e8c327c14e2e1a72ba34eeb452f37458b209ed63a294d999b4c86675982"
-        );
+        let expected =
+            hex_literal::hex!("508c5e8c327c14e2e1a72ba34eeb452f37458b209ed63a294d999b4c86675982");
         assert_eq!(hash.as_slice(), &expected[..]);
     }
 

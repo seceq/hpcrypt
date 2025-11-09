@@ -34,8 +34,7 @@ pub const CHUNK_LEN: usize = 1024;
 
 /// BLAKE3 initialization vector (first 8 words of SHA-256 IV)
 const IV: [u32; 8] = [
-    0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A,
-    0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19,
+    0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19,
 ];
 
 /// Domain separation flags
@@ -129,10 +128,22 @@ impl Output {
             // Permute block for next round (MSG_PERMUTATION = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9, 14, 15, 8])
             let original = block;
             block = [
-                original[2], original[6], original[3], original[10],
-                original[7], original[0], original[4], original[13],
-                original[1], original[11], original[12], original[5],
-                original[9], original[14], original[15], original[8],
+                original[2],
+                original[6],
+                original[3],
+                original[10],
+                original[7],
+                original[0],
+                original[4],
+                original[13],
+                original[1],
+                original[11],
+                original[12],
+                original[5],
+                original[9],
+                original[14],
+                original[15],
+                original[8],
             ];
         }
 
@@ -176,16 +187,80 @@ impl Output {
             let schedule = &MSG_SCHEDULE[round];
 
             // Column step
-            Self::g(&mut v, 0, 4, 8, 12, self.block_words[schedule[0]], self.block_words[schedule[1]]);
-            Self::g(&mut v, 1, 5, 9, 13, self.block_words[schedule[2]], self.block_words[schedule[3]]);
-            Self::g(&mut v, 2, 6, 10, 14, self.block_words[schedule[4]], self.block_words[schedule[5]]);
-            Self::g(&mut v, 3, 7, 11, 15, self.block_words[schedule[6]], self.block_words[schedule[7]]);
+            Self::g(
+                &mut v,
+                0,
+                4,
+                8,
+                12,
+                self.block_words[schedule[0]],
+                self.block_words[schedule[1]],
+            );
+            Self::g(
+                &mut v,
+                1,
+                5,
+                9,
+                13,
+                self.block_words[schedule[2]],
+                self.block_words[schedule[3]],
+            );
+            Self::g(
+                &mut v,
+                2,
+                6,
+                10,
+                14,
+                self.block_words[schedule[4]],
+                self.block_words[schedule[5]],
+            );
+            Self::g(
+                &mut v,
+                3,
+                7,
+                11,
+                15,
+                self.block_words[schedule[6]],
+                self.block_words[schedule[7]],
+            );
 
             // Diagonal step
-            Self::g(&mut v, 0, 5, 10, 15, self.block_words[schedule[8]], self.block_words[schedule[9]]);
-            Self::g(&mut v, 1, 6, 11, 12, self.block_words[schedule[10]], self.block_words[schedule[11]]);
-            Self::g(&mut v, 2, 7, 8, 13, self.block_words[schedule[12]], self.block_words[schedule[13]]);
-            Self::g(&mut v, 3, 4, 9, 14, self.block_words[schedule[14]], self.block_words[schedule[15]]);
+            Self::g(
+                &mut v,
+                0,
+                5,
+                10,
+                15,
+                self.block_words[schedule[8]],
+                self.block_words[schedule[9]],
+            );
+            Self::g(
+                &mut v,
+                1,
+                6,
+                11,
+                12,
+                self.block_words[schedule[10]],
+                self.block_words[schedule[11]],
+            );
+            Self::g(
+                &mut v,
+                2,
+                7,
+                8,
+                13,
+                self.block_words[schedule[12]],
+                self.block_words[schedule[13]],
+            );
+            Self::g(
+                &mut v,
+                3,
+                4,
+                9,
+                14,
+                self.block_words[schedule[14]],
+                self.block_words[schedule[15]],
+            );
         }
 
         // XOR state with compressed output (first 8 words only for chaining_value)
@@ -495,18 +570,16 @@ mod tests {
     #[test]
     fn test_blake3_empty() {
         let hash = blake3(b"");
-        let expected = hex_literal::hex!(
-            "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
-        );
+        let expected =
+            hex_literal::hex!("af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262");
         assert_eq!(hash, expected);
     }
 
     #[test]
     fn test_blake3_hello() {
         let hash = blake3(b"hello world");
-        let expected = hex_literal::hex!(
-            "d74981efa70a0c880b8d8c1985d075dbcbf679b99a5f9914e5aaf96b831a9e24"
-        );
+        let expected =
+            hex_literal::hex!("d74981efa70a0c880b8d8c1985d075dbcbf679b99a5f9914e5aaf96b831a9e24");
         assert_eq!(hash, expected);
     }
 
@@ -569,9 +642,8 @@ mod tests {
         assert_eq!(hash1, hash2);
 
         // Expected hash for 2KB of 0xAB bytes (verified against official BLAKE3)
-        let expected = hex_literal::hex!(
-            "5ce2bb471d0c7dddfa641ef980c1bb11dfda024dd5a5e647cf9eb150f9684f5c"
-        );
+        let expected =
+            hex_literal::hex!("5ce2bb471d0c7dddfa641ef980c1bb11dfda024dd5a5e647cf9eb150f9684f5c");
         assert_eq!(hash1, expected);
     }
 
@@ -583,9 +655,8 @@ mod tests {
         let hash = blake3(&data);
 
         // Expected hash for 5KB of 0x42 bytes (verified against official BLAKE3)
-        let expected = hex_literal::hex!(
-            "0633d9f3a4a212819dd3bd6b257241e141362101838e1d83a88bdafee45c1f0f"
-        );
+        let expected =
+            hex_literal::hex!("0633d9f3a4a212819dd3bd6b257241e141362101838e1d83a88bdafee45c1f0f");
         assert_eq!(hash, expected);
     }
 
