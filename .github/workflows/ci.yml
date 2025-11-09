@@ -241,13 +241,11 @@ jobs:
 
     - name: Check SHA-1 compilation
       run: |
-        cd dist
         rustc --crate-type lib sha1.rs --edition 2021 -C opt-level=3
         echo "SHA-1 standalone implementation compiles successfully"
 
     - name: Verify SHA-1 documentation
       run: |
-        cd dist
         RUSTDOCFLAGS="-D missing_docs -D warnings" rustdoc sha1.rs --edition 2021 --crate-name sha1 --crate-type lib
         echo "SHA-1 documentation is complete and valid"
 
