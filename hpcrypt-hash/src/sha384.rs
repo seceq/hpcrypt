@@ -84,7 +84,7 @@ impl Sha384 {
             self.buffer_len = 0;
         }
 
-        // Pad with zeros
+        // Pad with zeros up to length field
         self.buffer[self.buffer_len..BLOCK_LEN - 16].fill(0);
 
         // Append length in bits as 128-bit big-endian (upper 64 bits are 0)
@@ -104,6 +104,7 @@ impl Sha384 {
     }
 
     /// Process a single 1024-bit block
+    #[inline(always)]
     fn process_block(&mut self, block: &[u8]) {
         // Same as SHA-512 compression function
         const K: [u64; 80] = [
@@ -189,8 +190,8 @@ impl Sha384 {
             0x6c44198c4a475817,
         ];
 
-        // Prepare message schedule
-        let mut w = [0u64; 80];
+        // Circular buffer optimization: use only 16 entries instead of 80
+        let mut w = [0u64; 16];
         for i in 0..16 {
             w[i] = u64::from_be_bytes([
                 block[i * 8],
@@ -204,15 +205,6 @@ impl Sha384 {
             ]);
         }
 
-        for i in 16..80 {
-            let s0 = w[i - 15].rotate_right(1) ^ w[i - 15].rotate_right(8) ^ (w[i - 15] >> 7);
-            let s1 = w[i - 2].rotate_right(19) ^ w[i - 2].rotate_right(61) ^ (w[i - 2] >> 6);
-            w[i] = w[i - 16]
-                .wrapping_add(s0)
-                .wrapping_add(w[i - 7])
-                .wrapping_add(s1);
-        }
-
         // Initialize working variables
         let mut a = self.state[0];
         let mut b = self.state[1];
@@ -223,18 +215,34 @@ impl Sha384 {
         let mut g = self.state[6];
         let mut h = self.state[7];
 
-        // Main loop
+        // Main loop with on-the-fly message schedule
         for i in 0..80 {
+            // Compute next message schedule word on-the-fly (after first 16)
+            if i >= 16 {
+                let s0 = w[(i - 15) & 15].rotate_right(1)
+                    ^ w[(i - 15) & 15].rotate_right(8)
+                    ^ (w[(i - 15) & 15] >> 7);
+                let s1 = w[(i - 2) & 15].rotate_right(19)
+                    ^ w[(i - 2) & 15].rotate_right(61)
+                    ^ (w[(i - 2) & 15] >> 6);
+                w[i & 15] = w[(i - 16) & 15]
+                    .wrapping_add(s0)
+                    .wrapping_add(w[(i - 7) & 15])
+                    .wrapping_add(s1);
+            }
+
             let s1 = e.rotate_right(14) ^ e.rotate_right(18) ^ e.rotate_right(41);
-            let ch = (e & f) ^ ((!e) & g);
+            // Optimized Ch function: g ^ (e & (f ^ g))
+            let ch = g ^ (e & (f ^ g));
             let temp1 = h
                 .wrapping_add(s1)
                 .wrapping_add(ch)
                 .wrapping_add(K[i])
-                .wrapping_add(w[i]);
+                .wrapping_add(w[i & 15]);
 
             let s0 = a.rotate_right(28) ^ a.rotate_right(34) ^ a.rotate_right(39);
-            let maj = (a & b) ^ (a & c) ^ (b & c);
+            // Optimized Maj function: (a & b) | (c & (a | b))
+            let maj = (a & b) | (c & (a | b));
             let temp2 = s0.wrapping_add(maj);
 
             h = g;
@@ -263,6 +271,13 @@ impl Default for Sha384 {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// One-shot SHA-384 hash
+pub fn sha384(data: &[u8]) -> [u8; OUTPUT_LEN] {
+    let mut hasher = Sha384::new();
+    hasher.update(data);
+    hasher.finalize()
 }
 
 #[cfg(test)]

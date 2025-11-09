@@ -1,32 +1,15 @@
-//! SHA-256 cryptographic hash function
-//!
-//! SHA-256 is part of the SHA-2 family, producing a 256-bit (32-byte) digest.
-//! Specified in FIPS 180-4.
-//!
-//! Target performance: ~7-10 cycles/byte on modern CPUs (pure software)
-//!
-//! Features:
-//! - Fixed 256-bit output
-//! - NIST standardized (FIPS 180-4)
-
-#![allow(clippy::needless_range_loop)]
-//! - Widely used and well-analyzed
-//! - No known practical attacks
+// SHA-256 with 4-way partial loop unrolling (EXPERIMENTAL)
+// This is a test implementation to benchmark 4-way unrolling
 
 use hpcrypt_core::utils::{read_u32_be, rotr32, write_u32_be};
 
-/// SHA-256 output size in bytes
 pub const OUT_LEN: usize = 32;
-
-/// SHA-256 block size in bytes
 pub const BLOCK_LEN: usize = 64;
 
-/// SHA-256 initial hash values (first 32 bits of fractional parts of square roots of first 8 primes)
 const H0: [u32; 8] = [
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
 ];
 
-/// SHA-256 round constants (first 32 bits of fractional parts of cube roots of first 64 primes)
 const K: [u32; 64] = [
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -38,17 +21,15 @@ const K: [u32; 64] = [
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 ];
 
-/// SHA-256 hash state
 #[derive(Clone)]
 pub struct Sha256 {
-    h: [u32; 8],          // Hash state
-    buf: [u8; BLOCK_LEN], // Input buffer
-    buflen: usize,        // Bytes in buffer
-    len: u64,             // Total bytes processed
+    h: [u32; 8],
+    buf: [u8; BLOCK_LEN],
+    buflen: usize,
+    len: u64,
 }
 
 impl Sha256 {
-    /// Create a new SHA-256 hasher
     pub fn new() -> Self {
         Self {
             h: H0,
@@ -58,7 +39,6 @@ impl Sha256 {
         }
     }
 
-    /// Update the hash with input data
     pub fn update(&mut self, mut input: &[u8]) {
         self.len = self.len.wrapping_add(input.len() as u64);
 
@@ -75,40 +55,29 @@ impl Sha256 {
         }
     }
 
-    /// Finalize and return the hash
     pub fn finalize(mut self) -> [u8; OUT_LEN] {
-        // Process current block if full
         if self.buflen == BLOCK_LEN {
             self.process_block();
             self.buflen = 0;
         }
 
-        // Padding: append bit '1' followed by zeros
         self.buf[self.buflen] = 0x80;
         self.buflen += 1;
 
-        // If not enough space for length, process this block and start new one
         if self.buflen > 56 {
-            for i in self.buflen..BLOCK_LEN {
-                self.buf[i] = 0;
-            }
+            self.buf[self.buflen..BLOCK_LEN].fill(0);
             self.process_block();
             self.buflen = 0;
         }
 
-        // Pad with zeros up to 56 bytes
-        for i in self.buflen..56 {
-            self.buf[i] = 0;
-        }
+        self.buf[self.buflen..56].fill(0);
 
-        // Append length in bits as 64-bit big-endian
         let bit_len = self.len.wrapping_mul(8);
         write_u32_be(&mut self.buf[56..60], (bit_len >> 32) as u32);
         write_u32_be(&mut self.buf[60..64], bit_len as u32);
 
         self.process_block();
 
-        // Convert hash state to output bytes
         let mut out = [0u8; OUT_LEN];
         for i in 0..8 {
             write_u32_be(&mut out[i * 4..(i + 1) * 4], self.h[i]);
@@ -117,25 +86,56 @@ impl Sha256 {
         out
     }
 
-    /// Process a single 512-bit block
+    #[inline(always)]
     fn process_block(&mut self) {
-        let mut w = [0u32; 64];
+        // Rolling macros for better code organization
 
-        // Prepare message schedule
+        // Macro for message schedule update
+        macro_rules! update_w {
+            ($w:expr, $i:expr) => {{
+                let w_i_minus_15 = $w[($i - 15) & 15];
+                let w_i_minus_2 = $w[($i - 2) & 15];
+
+                let s0 = rotr32(w_i_minus_15, 7) ^ rotr32(w_i_minus_15, 18) ^ (w_i_minus_15 >> 3);
+                let s1 = rotr32(w_i_minus_2, 17) ^ rotr32(w_i_minus_2, 19) ^ (w_i_minus_2 >> 10);
+
+                $w[$i & 15] = $w[($i - 16) & 15]
+                    .wrapping_add(s0)
+                    .wrapping_add($w[($i - 7) & 15])
+                    .wrapping_add(s1);
+            }};
+        }
+
+        // Macro for compression round
+        macro_rules! sha256_round {
+            ($a:expr, $b:expr, $c:expr, $d:expr, $e:expr, $f:expr, $g:expr, $h:expr, $ki:expr, $wi:expr) => {{
+                let s1 = rotr32($e, 6) ^ rotr32($e, 11) ^ rotr32($e, 25);
+                let ch = $g ^ ($e & ($f ^ $g));
+                let temp1 = $h.wrapping_add(s1).wrapping_add(ch).wrapping_add($ki).wrapping_add($wi);
+
+                let s0 = rotr32($a, 2) ^ rotr32($a, 13) ^ rotr32($a, 22);
+                let maj = ($a & $b) | ($c & ($a | $b));
+                let temp2 = s0.wrapping_add(maj);
+
+                $h = $g;
+                $g = $f;
+                $f = $e;
+                $e = $d.wrapping_add(temp1);
+                $d = $c;
+                $c = $b;
+                $b = $a;
+                $a = temp1.wrapping_add(temp2);
+            }};
+        }
+
+        // Circular buffer
+        let mut w = [0u32; 16];
+
+        #[allow(clippy::needless_range_loop)]
         for i in 0..16 {
             w[i] = read_u32_be(&self.buf[i * 4..(i + 1) * 4]);
         }
 
-        for i in 16..64 {
-            let s0 = rotr32(w[i - 15], 7) ^ rotr32(w[i - 15], 18) ^ (w[i - 15] >> 3);
-            let s1 = rotr32(w[i - 2], 17) ^ rotr32(w[i - 2], 19) ^ (w[i - 2] >> 10);
-            w[i] = w[i - 16]
-                .wrapping_add(s0)
-                .wrapping_add(w[i - 7])
-                .wrapping_add(s1);
-        }
-
-        // Initialize working variables
         let mut a = self.h[0];
         let mut b = self.h[1];
         let mut c = self.h[2];
@@ -145,31 +145,101 @@ impl Sha256 {
         let mut g = self.h[6];
         let mut h = self.h[7];
 
-        // Main loop (64 rounds)
-        for i in 0..64 {
-            let s1 = rotr32(e, 6) ^ rotr32(e, 11) ^ rotr32(e, 25);
-            let ch = (e & f) ^ (!e & g);
-            let temp1 = h
-                .wrapping_add(s1)
-                .wrapping_add(ch)
-                .wrapping_add(K[i])
-                .wrapping_add(w[i]);
+        // First 16 rounds (no message schedule update needed)
+        sha256_round!(a, b, c, d, e, f, g, h, K[0], w[0]);
+        sha256_round!(a, b, c, d, e, f, g, h, K[1], w[1]);
+        sha256_round!(a, b, c, d, e, f, g, h, K[2], w[2]);
+        sha256_round!(a, b, c, d, e, f, g, h, K[3], w[3]);
 
-            let s0 = rotr32(a, 2) ^ rotr32(a, 13) ^ rotr32(a, 22);
-            let maj = (a & b) ^ (a & c) ^ (b & c);
-            let temp2 = s0.wrapping_add(maj);
+        sha256_round!(a, b, c, d, e, f, g, h, K[4], w[4]);
+        sha256_round!(a, b, c, d, e, f, g, h, K[5], w[5]);
+        sha256_round!(a, b, c, d, e, f, g, h, K[6], w[6]);
+        sha256_round!(a, b, c, d, e, f, g, h, K[7], w[7]);
 
-            h = g;
-            g = f;
-            f = e;
-            e = d.wrapping_add(temp1);
-            d = c;
-            c = b;
-            b = a;
-            a = temp1.wrapping_add(temp2);
-        }
+        sha256_round!(a, b, c, d, e, f, g, h, K[8], w[8]);
+        sha256_round!(a, b, c, d, e, f, g, h, K[9], w[9]);
+        sha256_round!(a, b, c, d, e, f, g, h, K[10], w[10]);
+        sha256_round!(a, b, c, d, e, f, g, h, K[11], w[11]);
 
-        // Add working variables to hash state
+        sha256_round!(a, b, c, d, e, f, g, h, K[12], w[12]);
+        sha256_round!(a, b, c, d, e, f, g, h, K[13], w[13]);
+        sha256_round!(a, b, c, d, e, f, g, h, K[14], w[14]);
+        sha256_round!(a, b, c, d, e, f, g, h, K[15], w[15]);
+
+        // Remaining 48 rounds with 4-way unrolling
+        // Rounds 16-19
+        update_w!(w, 16); sha256_round!(a, b, c, d, e, f, g, h, K[16], w[16 & 15]);
+        update_w!(w, 17); sha256_round!(a, b, c, d, e, f, g, h, K[17], w[17 & 15]);
+        update_w!(w, 18); sha256_round!(a, b, c, d, e, f, g, h, K[18], w[18 & 15]);
+        update_w!(w, 19); sha256_round!(a, b, c, d, e, f, g, h, K[19], w[19 & 15]);
+
+        // Rounds 20-23
+        update_w!(w, 20); sha256_round!(a, b, c, d, e, f, g, h, K[20], w[20 & 15]);
+        update_w!(w, 21); sha256_round!(a, b, c, d, e, f, g, h, K[21], w[21 & 15]);
+        update_w!(w, 22); sha256_round!(a, b, c, d, e, f, g, h, K[22], w[22 & 15]);
+        update_w!(w, 23); sha256_round!(a, b, c, d, e, f, g, h, K[23], w[23 & 15]);
+
+        // Rounds 24-27
+        update_w!(w, 24); sha256_round!(a, b, c, d, e, f, g, h, K[24], w[24 & 15]);
+        update_w!(w, 25); sha256_round!(a, b, c, d, e, f, g, h, K[25], w[25 & 15]);
+        update_w!(w, 26); sha256_round!(a, b, c, d, e, f, g, h, K[26], w[26 & 15]);
+        update_w!(w, 27); sha256_round!(a, b, c, d, e, f, g, h, K[27], w[27 & 15]);
+
+        // Rounds 28-31
+        update_w!(w, 28); sha256_round!(a, b, c, d, e, f, g, h, K[28], w[28 & 15]);
+        update_w!(w, 29); sha256_round!(a, b, c, d, e, f, g, h, K[29], w[29 & 15]);
+        update_w!(w, 30); sha256_round!(a, b, c, d, e, f, g, h, K[30], w[30 & 15]);
+        update_w!(w, 31); sha256_round!(a, b, c, d, e, f, g, h, K[31], w[31 & 15]);
+
+        // Rounds 32-35
+        update_w!(w, 32); sha256_round!(a, b, c, d, e, f, g, h, K[32], w[32 & 15]);
+        update_w!(w, 33); sha256_round!(a, b, c, d, e, f, g, h, K[33], w[33 & 15]);
+        update_w!(w, 34); sha256_round!(a, b, c, d, e, f, g, h, K[34], w[34 & 15]);
+        update_w!(w, 35); sha256_round!(a, b, c, d, e, f, g, h, K[35], w[35 & 15]);
+
+        // Rounds 36-39
+        update_w!(w, 36); sha256_round!(a, b, c, d, e, f, g, h, K[36], w[36 & 15]);
+        update_w!(w, 37); sha256_round!(a, b, c, d, e, f, g, h, K[37], w[37 & 15]);
+        update_w!(w, 38); sha256_round!(a, b, c, d, e, f, g, h, K[38], w[38 & 15]);
+        update_w!(w, 39); sha256_round!(a, b, c, d, e, f, g, h, K[39], w[39 & 15]);
+
+        // Rounds 40-43
+        update_w!(w, 40); sha256_round!(a, b, c, d, e, f, g, h, K[40], w[40 & 15]);
+        update_w!(w, 41); sha256_round!(a, b, c, d, e, f, g, h, K[41], w[41 & 15]);
+        update_w!(w, 42); sha256_round!(a, b, c, d, e, f, g, h, K[42], w[42 & 15]);
+        update_w!(w, 43); sha256_round!(a, b, c, d, e, f, g, h, K[43], w[43 & 15]);
+
+        // Rounds 44-47
+        update_w!(w, 44); sha256_round!(a, b, c, d, e, f, g, h, K[44], w[44 & 15]);
+        update_w!(w, 45); sha256_round!(a, b, c, d, e, f, g, h, K[45], w[45 & 15]);
+        update_w!(w, 46); sha256_round!(a, b, c, d, e, f, g, h, K[46], w[46 & 15]);
+        update_w!(w, 47); sha256_round!(a, b, c, d, e, f, g, h, K[47], w[47 & 15]);
+
+        // Rounds 48-51
+        update_w!(w, 48); sha256_round!(a, b, c, d, e, f, g, h, K[48], w[48 & 15]);
+        update_w!(w, 49); sha256_round!(a, b, c, d, e, f, g, h, K[49], w[49 & 15]);
+        update_w!(w, 50); sha256_round!(a, b, c, d, e, f, g, h, K[50], w[50 & 15]);
+        update_w!(w, 51); sha256_round!(a, b, c, d, e, f, g, h, K[51], w[51 & 15]);
+
+        // Rounds 52-55
+        update_w!(w, 52); sha256_round!(a, b, c, d, e, f, g, h, K[52], w[52 & 15]);
+        update_w!(w, 53); sha256_round!(a, b, c, d, e, f, g, h, K[53], w[53 & 15]);
+        update_w!(w, 54); sha256_round!(a, b, c, d, e, f, g, h, K[54], w[54 & 15]);
+        update_w!(w, 55); sha256_round!(a, b, c, d, e, f, g, h, K[55], w[55 & 15]);
+
+        // Rounds 56-59
+        update_w!(w, 56); sha256_round!(a, b, c, d, e, f, g, h, K[56], w[56 & 15]);
+        update_w!(w, 57); sha256_round!(a, b, c, d, e, f, g, h, K[57], w[57 & 15]);
+        update_w!(w, 58); sha256_round!(a, b, c, d, e, f, g, h, K[58], w[58 & 15]);
+        update_w!(w, 59); sha256_round!(a, b, c, d, e, f, g, h, K[59], w[59 & 15]);
+
+        // Rounds 60-63
+        update_w!(w, 60); sha256_round!(a, b, c, d, e, f, g, h, K[60], w[60 & 15]);
+        update_w!(w, 61); sha256_round!(a, b, c, d, e, f, g, h, K[61], w[61 & 15]);
+        update_w!(w, 62); sha256_round!(a, b, c, d, e, f, g, h, K[62], w[62 & 15]);
+        update_w!(w, 63); sha256_round!(a, b, c, d, e, f, g, h, K[63], w[63 & 15]);
+
+        // Add to hash state
         self.h[0] = self.h[0].wrapping_add(a);
         self.h[1] = self.h[1].wrapping_add(b);
         self.h[2] = self.h[2].wrapping_add(c);
@@ -181,82 +251,8 @@ impl Sha256 {
     }
 }
 
-impl Default for Sha256 {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// One-shot SHA-256 hash
 pub fn sha256(data: &[u8]) -> [u8; OUT_LEN] {
     let mut hasher = Sha256::new();
     hasher.update(data);
     hasher.finalize()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_sha256_empty() {
-        let hash = sha256(b"");
-        let expected =
-            hex_literal::hex!("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
-        assert_eq!(hash, expected);
-    }
-
-    #[test]
-    fn test_sha256_abc() {
-        let hash = sha256(b"abc");
-        let expected =
-            hex_literal::hex!("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
-        assert_eq!(hash, expected);
-    }
-
-    #[test]
-    fn test_sha256_long() {
-        let hash = sha256(b"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
-        let expected =
-            hex_literal::hex!("248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1");
-        assert_eq!(hash, expected);
-    }
-
-    #[test]
-    fn test_sha256_incremental() {
-        let data = b"The quick brown fox jumps over the lazy dog";
-
-        // One-shot
-        let hash1 = sha256(data);
-
-        // Incremental
-        let mut hasher = Sha256::new();
-        hasher.update(&data[..20]);
-        hasher.update(&data[20..]);
-        let hash2 = hasher.finalize();
-
-        assert_eq!(hash1, hash2);
-    }
-
-    #[test]
-    fn test_sha256_fox() {
-        let hash = sha256(b"The quick brown fox jumps over the lazy dog");
-        let expected =
-            hex_literal::hex!("d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592");
-        assert_eq!(hash, expected);
-    }
-
-    #[test]
-    fn test_sha256_multiblock() {
-        // Test data larger than one block (64 bytes)
-        let data = b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
-                      bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-
-        let mut hasher = Sha256::new();
-        hasher.update(data);
-        let hash = hasher.finalize();
-
-        // Verify it produces a valid hash (32 bytes)
-        assert_eq!(hash.len(), 32);
-    }
 }

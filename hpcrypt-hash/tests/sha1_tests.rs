@@ -54,7 +54,7 @@ fn test_55_bytes() {
     let message = vec![b'a'; 55];
     let hash = sha1(&message);
 
-    // Also verify incremental hashing gives same result
+    // Verify incremental hashing gives same result
     let mut hasher = Sha1::new();
     hasher.update(&message);
     let hash_incremental = hasher.finalize();
