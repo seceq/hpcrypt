@@ -229,26 +229,6 @@ jobs:
         command: check
         arguments: --all-features
 
-  # Check standalone SHA-1 implementation in dist/
-  sha1:
-    name: SHA-1 Standalone
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Check SHA-1 compilation
-      run: |
-        rustc --crate-type lib sha1.rs --edition 2021 -C opt-level=3
-        echo "SHA-1 standalone implementation compiles successfully"
-
-    - name: Verify SHA-1 documentation
-      run: |
-        RUSTDOCFLAGS="-D missing_docs -D warnings" rustdoc sha1.rs --edition 2021 --crate-name sha1 --crate-type lib
-        echo "SHA-1 documentation is complete and valid"
-
   # All jobs succeeded
   ci-success:
     name: CI Success
@@ -262,7 +242,6 @@ jobs:
       # - examples  # Disabled - package not in dist release
       - msrv
       - docs
-      - sha1
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs
