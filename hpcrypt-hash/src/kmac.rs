@@ -1,6 +1,4 @@
 //! KMAC - Keccak Message Authentication Code
-
-#![allow(clippy::needless_range_loop)]
 //!
 //! Based on NIST SP 800-185: SHA-3 Derived Functions
 //! KMAC provides variable-length message authentication using the Keccak/SHA-3 sponge construction.
@@ -22,30 +20,12 @@ const STATE_SIZE: usize = 25;
 
 /// Round constants for Keccak-f[1600] (from sha3.rs)
 const ROUND_CONSTANTS: [u64; 24] = [
-    0x0000000000000001,
-    0x0000000000008082,
-    0x800000000000808A,
-    0x8000000080008000,
-    0x000000000000808B,
-    0x0000000080000001,
-    0x8000000080008081,
-    0x8000000000008009,
-    0x000000000000008A,
-    0x0000000000000088,
-    0x0000000080008009,
-    0x000000008000000A,
-    0x000000008000808B,
-    0x800000000000008B,
-    0x8000000000008089,
-    0x8000000000008003,
-    0x8000000000008002,
-    0x8000000000000080,
-    0x000000000000800A,
-    0x800000008000000A,
-    0x8000000080008081,
-    0x8000000000008080,
-    0x0000000080000001,
-    0x8000000080008008,
+    0x0000000000000001, 0x0000000000008082, 0x800000000000808A, 0x8000000080008000,
+    0x000000000000808B, 0x0000000080000001, 0x8000000080008081, 0x8000000000008009,
+    0x000000000000008A, 0x0000000000000088, 0x0000000080008009, 0x000000008000000A,
+    0x000000008000808B, 0x800000000000008B, 0x8000000000008089, 0x8000000000008003,
+    0x8000000000008002, 0x8000000000000080, 0x000000000000800A, 0x800000008000000A,
+    0x8000000080008081, 0x8000000000008080, 0x0000000080000001, 0x8000000080008008,
 ];
 
 /// Rotation offsets for Keccak-f[1600] (from sha3.rs)
@@ -406,7 +386,7 @@ impl CShake256 {
 /// key derivation, and randomness extraction.
 ///
 /// # Example
-/// ```ignore
+/// ```
 /// use hpcrypt_hash::Kmac128;
 ///
 /// let key = b"my secret key";
@@ -483,7 +463,7 @@ impl Kmac128 {
 /// key derivation, and randomness extraction.
 ///
 /// # Example
-/// ```ignore
+/// ```
 /// use hpcrypt_hash::Kmac256;
 ///
 /// let key = b"my secret key";
@@ -564,12 +544,9 @@ pub fn kmac256(key: &[u8], message: &[u8], customization: &[u8], output_len: usi
     Kmac256::mac(key, message, customization, output_len)
 }
 
-#[cfg(all(test, feature = "alloc"))]
+#[cfg(test)]
 mod tests {
     use super::*;
-
-    #[cfg(feature = "alloc")]
-    use alloc::vec;
 
     #[test]
     fn test_left_encode() {

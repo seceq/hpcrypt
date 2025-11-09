@@ -1,6 +1,4 @@
 //! SHA-256 cryptographic hash function
-
-#![allow(clippy::needless_range_loop)]
 //!
 //! SHA-256 is part of the SHA-2 family, producing a 256-bit (32-byte) digest.
 //! Specified in FIPS 180-4.
@@ -13,7 +11,7 @@
 //! - Widely used and well-analyzed
 //! - No known practical attacks
 
-use hpcrypt_core::utils::{read_u32_be, rotr32, write_u32_be};
+use hpcrypt_core::utils::{read_u32_be, write_u32_be, rotr32};
 
 /// SHA-256 output size in bytes
 pub const OUT_LEN: usize = 32;
@@ -23,7 +21,8 @@ pub const BLOCK_LEN: usize = 64;
 
 /// SHA-256 initial hash values (first 32 bits of fractional parts of square roots of first 8 primes)
 const H0: [u32; 8] = [
-    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
 ];
 
 /// SHA-256 round constants (first 32 bits of fractional parts of cube roots of first 64 primes)
@@ -41,10 +40,10 @@ const K: [u32; 64] = [
 /// SHA-256 hash state
 #[derive(Clone)]
 pub struct Sha256 {
-    h: [u32; 8],          // Hash state
-    buf: [u8; BLOCK_LEN], // Input buffer
-    buflen: usize,        // Bytes in buffer
-    len: u64,             // Total bytes processed
+    h: [u32; 8],            // Hash state
+    buf: [u8; BLOCK_LEN],   // Input buffer
+    buflen: usize,          // Bytes in buffer
+    len: u64,               // Total bytes processed
 }
 
 impl Sha256 {
@@ -201,24 +200,27 @@ mod tests {
     #[test]
     fn test_sha256_empty() {
         let hash = sha256(b"");
-        let expected =
-            hex_literal::hex!("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+        let expected = hex_literal::hex!(
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
         assert_eq!(hash, expected);
     }
 
     #[test]
     fn test_sha256_abc() {
         let hash = sha256(b"abc");
-        let expected =
-            hex_literal::hex!("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+        let expected = hex_literal::hex!(
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
         assert_eq!(hash, expected);
     }
 
     #[test]
     fn test_sha256_long() {
         let hash = sha256(b"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
-        let expected =
-            hex_literal::hex!("248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1");
+        let expected = hex_literal::hex!(
+            "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"
+        );
         assert_eq!(hash, expected);
     }
 
@@ -241,8 +243,9 @@ mod tests {
     #[test]
     fn test_sha256_fox() {
         let hash = sha256(b"The quick brown fox jumps over the lazy dog");
-        let expected =
-            hex_literal::hex!("d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592");
+        let expected = hex_literal::hex!(
+            "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592"
+        );
         assert_eq!(hash, expected);
     }
 

@@ -14,7 +14,13 @@ const K: [u32; 4] = [
 ];
 
 /// SHA-1 initial hash values (as per FIPS 180-4)
-const H_INIT: [u32; 5] = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0];
+const H_INIT: [u32; 5] = [
+    0x67452301,
+    0xEFCDAB89,
+    0x98BADCFE,
+    0x10325476,
+    0xC3D2E1F0,
+];
 
 // Rolling macro for SHA-1 rounds
 // This uses a "rolling" pattern where variables rotate: (a,b,c,d,e) -> (e,a,b,c,d)
@@ -23,8 +29,7 @@ const H_INIT: [u32; 5] = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2
 /// Round macro for choice function (rounds 0-19)
 macro_rules! round_ch {
     ($a:expr, $b:expr, $c:expr, $d:expr, $e:expr, $w:expr) => {
-        $e = $e
-            .wrapping_add($a.rotate_left(5))
+        $e = $e.wrapping_add($a.rotate_left(5))
             .wrapping_add($d ^ ($b & ($c ^ $d)))
             .wrapping_add(K[0])
             .wrapping_add($w);
@@ -35,8 +40,7 @@ macro_rules! round_ch {
 /// Round macro for parity function (rounds 20-39, 60-79)
 macro_rules! round_parity {
     ($a:expr, $b:expr, $c:expr, $d:expr, $e:expr, $w:expr, $k:expr) => {
-        $e = $e
-            .wrapping_add($a.rotate_left(5))
+        $e = $e.wrapping_add($a.rotate_left(5))
             .wrapping_add($b ^ $c ^ $d)
             .wrapping_add($k)
             .wrapping_add($w);
@@ -47,8 +51,7 @@ macro_rules! round_parity {
 /// Round macro for majority function (rounds 40-59)
 macro_rules! round_maj {
     ($a:expr, $b:expr, $c:expr, $d:expr, $e:expr, $w:expr) => {
-        $e = $e
-            .wrapping_add($a.rotate_left(5))
+        $e = $e.wrapping_add($a.rotate_left(5))
             .wrapping_add(($b & $c) | (($b | $c) & $d))
             .wrapping_add(K[2])
             .wrapping_add($w);
@@ -59,9 +62,9 @@ macro_rules! round_maj {
 /// Macro to compute next message schedule word in circular buffer
 macro_rules! schedule {
     ($w:expr, $t:expr) => {
-        $w[($t) & 0xF] =
-            ($w[($t - 3) & 0xF] ^ $w[($t - 8) & 0xF] ^ $w[($t - 14) & 0xF] ^ $w[($t - 16) & 0xF])
-                .rotate_left(1)
+        $w[($t) & 0xF] = ($w[($t - 3) & 0xF] ^ $w[($t - 8) & 0xF] ^
+                          $w[($t - 14) & 0xF] ^ $w[($t - 16) & 0xF])
+                         .rotate_left(1)
     };
 }
 
@@ -257,149 +260,85 @@ impl Sha1 {
         round_ch!(b, c, d, e, a, w[14]);
 
         round_ch!(a, b, c, d, e, w[15]);
-        schedule!(w, 16);
-        round_ch!(e, a, b, c, d, w[16 & 0xF]);
-        schedule!(w, 17);
-        round_ch!(d, e, a, b, c, w[17 & 0xF]);
-        schedule!(w, 18);
-        round_ch!(c, d, e, a, b, w[18 & 0xF]);
-        schedule!(w, 19);
-        round_ch!(b, c, d, e, a, w[19 & 0xF]);
+        schedule!(w, 16); round_ch!(e, a, b, c, d, w[16 & 0xF]);
+        schedule!(w, 17); round_ch!(d, e, a, b, c, w[17 & 0xF]);
+        schedule!(w, 18); round_ch!(c, d, e, a, b, w[18 & 0xF]);
+        schedule!(w, 19); round_ch!(b, c, d, e, a, w[19 & 0xF]);
 
         // Rounds 20-39: Parity function
-        schedule!(w, 20);
-        round_parity!(a, b, c, d, e, w[20 & 0xF], K[1]);
-        schedule!(w, 21);
-        round_parity!(e, a, b, c, d, w[21 & 0xF], K[1]);
-        schedule!(w, 22);
-        round_parity!(d, e, a, b, c, w[22 & 0xF], K[1]);
-        schedule!(w, 23);
-        round_parity!(c, d, e, a, b, w[23 & 0xF], K[1]);
-        schedule!(w, 24);
-        round_parity!(b, c, d, e, a, w[24 & 0xF], K[1]);
+        schedule!(w, 20); round_parity!(a, b, c, d, e, w[20 & 0xF], K[1]);
+        schedule!(w, 21); round_parity!(e, a, b, c, d, w[21 & 0xF], K[1]);
+        schedule!(w, 22); round_parity!(d, e, a, b, c, w[22 & 0xF], K[1]);
+        schedule!(w, 23); round_parity!(c, d, e, a, b, w[23 & 0xF], K[1]);
+        schedule!(w, 24); round_parity!(b, c, d, e, a, w[24 & 0xF], K[1]);
 
-        schedule!(w, 25);
-        round_parity!(a, b, c, d, e, w[25 & 0xF], K[1]);
-        schedule!(w, 26);
-        round_parity!(e, a, b, c, d, w[26 & 0xF], K[1]);
-        schedule!(w, 27);
-        round_parity!(d, e, a, b, c, w[27 & 0xF], K[1]);
-        schedule!(w, 28);
-        round_parity!(c, d, e, a, b, w[28 & 0xF], K[1]);
-        schedule!(w, 29);
-        round_parity!(b, c, d, e, a, w[29 & 0xF], K[1]);
+        schedule!(w, 25); round_parity!(a, b, c, d, e, w[25 & 0xF], K[1]);
+        schedule!(w, 26); round_parity!(e, a, b, c, d, w[26 & 0xF], K[1]);
+        schedule!(w, 27); round_parity!(d, e, a, b, c, w[27 & 0xF], K[1]);
+        schedule!(w, 28); round_parity!(c, d, e, a, b, w[28 & 0xF], K[1]);
+        schedule!(w, 29); round_parity!(b, c, d, e, a, w[29 & 0xF], K[1]);
 
-        schedule!(w, 30);
-        round_parity!(a, b, c, d, e, w[30 & 0xF], K[1]);
-        schedule!(w, 31);
-        round_parity!(e, a, b, c, d, w[31 & 0xF], K[1]);
-        schedule!(w, 32);
-        round_parity!(d, e, a, b, c, w[32 & 0xF], K[1]);
-        schedule!(w, 33);
-        round_parity!(c, d, e, a, b, w[33 & 0xF], K[1]);
-        schedule!(w, 34);
-        round_parity!(b, c, d, e, a, w[34 & 0xF], K[1]);
+        schedule!(w, 30); round_parity!(a, b, c, d, e, w[30 & 0xF], K[1]);
+        schedule!(w, 31); round_parity!(e, a, b, c, d, w[31 & 0xF], K[1]);
+        schedule!(w, 32); round_parity!(d, e, a, b, c, w[32 & 0xF], K[1]);
+        schedule!(w, 33); round_parity!(c, d, e, a, b, w[33 & 0xF], K[1]);
+        schedule!(w, 34); round_parity!(b, c, d, e, a, w[34 & 0xF], K[1]);
 
-        schedule!(w, 35);
-        round_parity!(a, b, c, d, e, w[35 & 0xF], K[1]);
-        schedule!(w, 36);
-        round_parity!(e, a, b, c, d, w[36 & 0xF], K[1]);
-        schedule!(w, 37);
-        round_parity!(d, e, a, b, c, w[37 & 0xF], K[1]);
-        schedule!(w, 38);
-        round_parity!(c, d, e, a, b, w[38 & 0xF], K[1]);
-        schedule!(w, 39);
-        round_parity!(b, c, d, e, a, w[39 & 0xF], K[1]);
+        schedule!(w, 35); round_parity!(a, b, c, d, e, w[35 & 0xF], K[1]);
+        schedule!(w, 36); round_parity!(e, a, b, c, d, w[36 & 0xF], K[1]);
+        schedule!(w, 37); round_parity!(d, e, a, b, c, w[37 & 0xF], K[1]);
+        schedule!(w, 38); round_parity!(c, d, e, a, b, w[38 & 0xF], K[1]);
+        schedule!(w, 39); round_parity!(b, c, d, e, a, w[39 & 0xF], K[1]);
 
         // Rounds 40-59: Majority function
-        schedule!(w, 40);
-        round_maj!(a, b, c, d, e, w[40 & 0xF]);
-        schedule!(w, 41);
-        round_maj!(e, a, b, c, d, w[41 & 0xF]);
-        schedule!(w, 42);
-        round_maj!(d, e, a, b, c, w[42 & 0xF]);
-        schedule!(w, 43);
-        round_maj!(c, d, e, a, b, w[43 & 0xF]);
-        schedule!(w, 44);
-        round_maj!(b, c, d, e, a, w[44 & 0xF]);
+        schedule!(w, 40); round_maj!(a, b, c, d, e, w[40 & 0xF]);
+        schedule!(w, 41); round_maj!(e, a, b, c, d, w[41 & 0xF]);
+        schedule!(w, 42); round_maj!(d, e, a, b, c, w[42 & 0xF]);
+        schedule!(w, 43); round_maj!(c, d, e, a, b, w[43 & 0xF]);
+        schedule!(w, 44); round_maj!(b, c, d, e, a, w[44 & 0xF]);
 
-        schedule!(w, 45);
-        round_maj!(a, b, c, d, e, w[45 & 0xF]);
-        schedule!(w, 46);
-        round_maj!(e, a, b, c, d, w[46 & 0xF]);
-        schedule!(w, 47);
-        round_maj!(d, e, a, b, c, w[47 & 0xF]);
-        schedule!(w, 48);
-        round_maj!(c, d, e, a, b, w[48 & 0xF]);
-        schedule!(w, 49);
-        round_maj!(b, c, d, e, a, w[49 & 0xF]);
+        schedule!(w, 45); round_maj!(a, b, c, d, e, w[45 & 0xF]);
+        schedule!(w, 46); round_maj!(e, a, b, c, d, w[46 & 0xF]);
+        schedule!(w, 47); round_maj!(d, e, a, b, c, w[47 & 0xF]);
+        schedule!(w, 48); round_maj!(c, d, e, a, b, w[48 & 0xF]);
+        schedule!(w, 49); round_maj!(b, c, d, e, a, w[49 & 0xF]);
 
-        schedule!(w, 50);
-        round_maj!(a, b, c, d, e, w[50 & 0xF]);
-        schedule!(w, 51);
-        round_maj!(e, a, b, c, d, w[51 & 0xF]);
-        schedule!(w, 52);
-        round_maj!(d, e, a, b, c, w[52 & 0xF]);
-        schedule!(w, 53);
-        round_maj!(c, d, e, a, b, w[53 & 0xF]);
-        schedule!(w, 54);
-        round_maj!(b, c, d, e, a, w[54 & 0xF]);
+        schedule!(w, 50); round_maj!(a, b, c, d, e, w[50 & 0xF]);
+        schedule!(w, 51); round_maj!(e, a, b, c, d, w[51 & 0xF]);
+        schedule!(w, 52); round_maj!(d, e, a, b, c, w[52 & 0xF]);
+        schedule!(w, 53); round_maj!(c, d, e, a, b, w[53 & 0xF]);
+        schedule!(w, 54); round_maj!(b, c, d, e, a, w[54 & 0xF]);
 
-        schedule!(w, 55);
-        round_maj!(a, b, c, d, e, w[55 & 0xF]);
-        schedule!(w, 56);
-        round_maj!(e, a, b, c, d, w[56 & 0xF]);
-        schedule!(w, 57);
-        round_maj!(d, e, a, b, c, w[57 & 0xF]);
-        schedule!(w, 58);
-        round_maj!(c, d, e, a, b, w[58 & 0xF]);
-        schedule!(w, 59);
-        round_maj!(b, c, d, e, a, w[59 & 0xF]);
+        schedule!(w, 55); round_maj!(a, b, c, d, e, w[55 & 0xF]);
+        schedule!(w, 56); round_maj!(e, a, b, c, d, w[56 & 0xF]);
+        schedule!(w, 57); round_maj!(d, e, a, b, c, w[57 & 0xF]);
+        schedule!(w, 58); round_maj!(c, d, e, a, b, w[58 & 0xF]);
+        schedule!(w, 59); round_maj!(b, c, d, e, a, w[59 & 0xF]);
 
         // Rounds 60-79: Parity function again
-        schedule!(w, 60);
-        round_parity!(a, b, c, d, e, w[60 & 0xF], K[3]);
-        schedule!(w, 61);
-        round_parity!(e, a, b, c, d, w[61 & 0xF], K[3]);
-        schedule!(w, 62);
-        round_parity!(d, e, a, b, c, w[62 & 0xF], K[3]);
-        schedule!(w, 63);
-        round_parity!(c, d, e, a, b, w[63 & 0xF], K[3]);
-        schedule!(w, 64);
-        round_parity!(b, c, d, e, a, w[64 & 0xF], K[3]);
+        schedule!(w, 60); round_parity!(a, b, c, d, e, w[60 & 0xF], K[3]);
+        schedule!(w, 61); round_parity!(e, a, b, c, d, w[61 & 0xF], K[3]);
+        schedule!(w, 62); round_parity!(d, e, a, b, c, w[62 & 0xF], K[3]);
+        schedule!(w, 63); round_parity!(c, d, e, a, b, w[63 & 0xF], K[3]);
+        schedule!(w, 64); round_parity!(b, c, d, e, a, w[64 & 0xF], K[3]);
 
-        schedule!(w, 65);
-        round_parity!(a, b, c, d, e, w[65 & 0xF], K[3]);
-        schedule!(w, 66);
-        round_parity!(e, a, b, c, d, w[66 & 0xF], K[3]);
-        schedule!(w, 67);
-        round_parity!(d, e, a, b, c, w[67 & 0xF], K[3]);
-        schedule!(w, 68);
-        round_parity!(c, d, e, a, b, w[68 & 0xF], K[3]);
-        schedule!(w, 69);
-        round_parity!(b, c, d, e, a, w[69 & 0xF], K[3]);
+        schedule!(w, 65); round_parity!(a, b, c, d, e, w[65 & 0xF], K[3]);
+        schedule!(w, 66); round_parity!(e, a, b, c, d, w[66 & 0xF], K[3]);
+        schedule!(w, 67); round_parity!(d, e, a, b, c, w[67 & 0xF], K[3]);
+        schedule!(w, 68); round_parity!(c, d, e, a, b, w[68 & 0xF], K[3]);
+        schedule!(w, 69); round_parity!(b, c, d, e, a, w[69 & 0xF], K[3]);
 
-        schedule!(w, 70);
-        round_parity!(a, b, c, d, e, w[70 & 0xF], K[3]);
-        schedule!(w, 71);
-        round_parity!(e, a, b, c, d, w[71 & 0xF], K[3]);
-        schedule!(w, 72);
-        round_parity!(d, e, a, b, c, w[72 & 0xF], K[3]);
-        schedule!(w, 73);
-        round_parity!(c, d, e, a, b, w[73 & 0xF], K[3]);
-        schedule!(w, 74);
-        round_parity!(b, c, d, e, a, w[74 & 0xF], K[3]);
+        schedule!(w, 70); round_parity!(a, b, c, d, e, w[70 & 0xF], K[3]);
+        schedule!(w, 71); round_parity!(e, a, b, c, d, w[71 & 0xF], K[3]);
+        schedule!(w, 72); round_parity!(d, e, a, b, c, w[72 & 0xF], K[3]);
+        schedule!(w, 73); round_parity!(c, d, e, a, b, w[73 & 0xF], K[3]);
+        schedule!(w, 74); round_parity!(b, c, d, e, a, w[74 & 0xF], K[3]);
 
-        schedule!(w, 75);
-        round_parity!(a, b, c, d, e, w[75 & 0xF], K[3]);
-        schedule!(w, 76);
-        round_parity!(e, a, b, c, d, w[76 & 0xF], K[3]);
-        schedule!(w, 77);
-        round_parity!(d, e, a, b, c, w[77 & 0xF], K[3]);
-        schedule!(w, 78);
-        round_parity!(c, d, e, a, b, w[78 & 0xF], K[3]);
-        schedule!(w, 79);
-        round_parity!(b, c, d, e, a, w[79 & 0xF], K[3]);
+        schedule!(w, 75); round_parity!(a, b, c, d, e, w[75 & 0xF], K[3]);
+        schedule!(w, 76); round_parity!(e, a, b, c, d, w[76 & 0xF], K[3]);
+        schedule!(w, 77); round_parity!(d, e, a, b, c, w[77 & 0xF], K[3]);
+        schedule!(w, 78); round_parity!(c, d, e, a, b, w[78 & 0xF], K[3]);
+        schedule!(w, 79); round_parity!(b, c, d, e, a, w[79 & 0xF], K[3]);
 
         // Add to hash - note the final rotation state
         self.h[0] = self.h[0].wrapping_add(a);
@@ -419,7 +358,6 @@ impl Sha1 {
     ///
     /// This is marked `#[inline(always)]` to enable maximum optimization.
     #[inline(always)]
-    #[allow(dead_code)]
     fn process_aligned_block(&mut self, block: &AlignedBlock) {
         // Use circular buffer: only 16 words instead of 80
         let mut w = [0u32; 16];
@@ -471,149 +409,85 @@ impl Sha1 {
         round_ch!(b, c, d, e, a, w[14]);
 
         round_ch!(a, b, c, d, e, w[15]);
-        schedule!(w, 16);
-        round_ch!(e, a, b, c, d, w[16 & 0xF]);
-        schedule!(w, 17);
-        round_ch!(d, e, a, b, c, w[17 & 0xF]);
-        schedule!(w, 18);
-        round_ch!(c, d, e, a, b, w[18 & 0xF]);
-        schedule!(w, 19);
-        round_ch!(b, c, d, e, a, w[19 & 0xF]);
+        schedule!(w, 16); round_ch!(e, a, b, c, d, w[16 & 0xF]);
+        schedule!(w, 17); round_ch!(d, e, a, b, c, w[17 & 0xF]);
+        schedule!(w, 18); round_ch!(c, d, e, a, b, w[18 & 0xF]);
+        schedule!(w, 19); round_ch!(b, c, d, e, a, w[19 & 0xF]);
 
         // Rounds 20-39: Parity function
-        schedule!(w, 20);
-        round_parity!(a, b, c, d, e, w[20 & 0xF], K[1]);
-        schedule!(w, 21);
-        round_parity!(e, a, b, c, d, w[21 & 0xF], K[1]);
-        schedule!(w, 22);
-        round_parity!(d, e, a, b, c, w[22 & 0xF], K[1]);
-        schedule!(w, 23);
-        round_parity!(c, d, e, a, b, w[23 & 0xF], K[1]);
-        schedule!(w, 24);
-        round_parity!(b, c, d, e, a, w[24 & 0xF], K[1]);
+        schedule!(w, 20); round_parity!(a, b, c, d, e, w[20 & 0xF], K[1]);
+        schedule!(w, 21); round_parity!(e, a, b, c, d, w[21 & 0xF], K[1]);
+        schedule!(w, 22); round_parity!(d, e, a, b, c, w[22 & 0xF], K[1]);
+        schedule!(w, 23); round_parity!(c, d, e, a, b, w[23 & 0xF], K[1]);
+        schedule!(w, 24); round_parity!(b, c, d, e, a, w[24 & 0xF], K[1]);
 
-        schedule!(w, 25);
-        round_parity!(a, b, c, d, e, w[25 & 0xF], K[1]);
-        schedule!(w, 26);
-        round_parity!(e, a, b, c, d, w[26 & 0xF], K[1]);
-        schedule!(w, 27);
-        round_parity!(d, e, a, b, c, w[27 & 0xF], K[1]);
-        schedule!(w, 28);
-        round_parity!(c, d, e, a, b, w[28 & 0xF], K[1]);
-        schedule!(w, 29);
-        round_parity!(b, c, d, e, a, w[29 & 0xF], K[1]);
+        schedule!(w, 25); round_parity!(a, b, c, d, e, w[25 & 0xF], K[1]);
+        schedule!(w, 26); round_parity!(e, a, b, c, d, w[26 & 0xF], K[1]);
+        schedule!(w, 27); round_parity!(d, e, a, b, c, w[27 & 0xF], K[1]);
+        schedule!(w, 28); round_parity!(c, d, e, a, b, w[28 & 0xF], K[1]);
+        schedule!(w, 29); round_parity!(b, c, d, e, a, w[29 & 0xF], K[1]);
 
-        schedule!(w, 30);
-        round_parity!(a, b, c, d, e, w[30 & 0xF], K[1]);
-        schedule!(w, 31);
-        round_parity!(e, a, b, c, d, w[31 & 0xF], K[1]);
-        schedule!(w, 32);
-        round_parity!(d, e, a, b, c, w[32 & 0xF], K[1]);
-        schedule!(w, 33);
-        round_parity!(c, d, e, a, b, w[33 & 0xF], K[1]);
-        schedule!(w, 34);
-        round_parity!(b, c, d, e, a, w[34 & 0xF], K[1]);
+        schedule!(w, 30); round_parity!(a, b, c, d, e, w[30 & 0xF], K[1]);
+        schedule!(w, 31); round_parity!(e, a, b, c, d, w[31 & 0xF], K[1]);
+        schedule!(w, 32); round_parity!(d, e, a, b, c, w[32 & 0xF], K[1]);
+        schedule!(w, 33); round_parity!(c, d, e, a, b, w[33 & 0xF], K[1]);
+        schedule!(w, 34); round_parity!(b, c, d, e, a, w[34 & 0xF], K[1]);
 
-        schedule!(w, 35);
-        round_parity!(a, b, c, d, e, w[35 & 0xF], K[1]);
-        schedule!(w, 36);
-        round_parity!(e, a, b, c, d, w[36 & 0xF], K[1]);
-        schedule!(w, 37);
-        round_parity!(d, e, a, b, c, w[37 & 0xF], K[1]);
-        schedule!(w, 38);
-        round_parity!(c, d, e, a, b, w[38 & 0xF], K[1]);
-        schedule!(w, 39);
-        round_parity!(b, c, d, e, a, w[39 & 0xF], K[1]);
+        schedule!(w, 35); round_parity!(a, b, c, d, e, w[35 & 0xF], K[1]);
+        schedule!(w, 36); round_parity!(e, a, b, c, d, w[36 & 0xF], K[1]);
+        schedule!(w, 37); round_parity!(d, e, a, b, c, w[37 & 0xF], K[1]);
+        schedule!(w, 38); round_parity!(c, d, e, a, b, w[38 & 0xF], K[1]);
+        schedule!(w, 39); round_parity!(b, c, d, e, a, w[39 & 0xF], K[1]);
 
         // Rounds 40-59: Majority function
-        schedule!(w, 40);
-        round_maj!(a, b, c, d, e, w[40 & 0xF]);
-        schedule!(w, 41);
-        round_maj!(e, a, b, c, d, w[41 & 0xF]);
-        schedule!(w, 42);
-        round_maj!(d, e, a, b, c, w[42 & 0xF]);
-        schedule!(w, 43);
-        round_maj!(c, d, e, a, b, w[43 & 0xF]);
-        schedule!(w, 44);
-        round_maj!(b, c, d, e, a, w[44 & 0xF]);
+        schedule!(w, 40); round_maj!(a, b, c, d, e, w[40 & 0xF]);
+        schedule!(w, 41); round_maj!(e, a, b, c, d, w[41 & 0xF]);
+        schedule!(w, 42); round_maj!(d, e, a, b, c, w[42 & 0xF]);
+        schedule!(w, 43); round_maj!(c, d, e, a, b, w[43 & 0xF]);
+        schedule!(w, 44); round_maj!(b, c, d, e, a, w[44 & 0xF]);
 
-        schedule!(w, 45);
-        round_maj!(a, b, c, d, e, w[45 & 0xF]);
-        schedule!(w, 46);
-        round_maj!(e, a, b, c, d, w[46 & 0xF]);
-        schedule!(w, 47);
-        round_maj!(d, e, a, b, c, w[47 & 0xF]);
-        schedule!(w, 48);
-        round_maj!(c, d, e, a, b, w[48 & 0xF]);
-        schedule!(w, 49);
-        round_maj!(b, c, d, e, a, w[49 & 0xF]);
+        schedule!(w, 45); round_maj!(a, b, c, d, e, w[45 & 0xF]);
+        schedule!(w, 46); round_maj!(e, a, b, c, d, w[46 & 0xF]);
+        schedule!(w, 47); round_maj!(d, e, a, b, c, w[47 & 0xF]);
+        schedule!(w, 48); round_maj!(c, d, e, a, b, w[48 & 0xF]);
+        schedule!(w, 49); round_maj!(b, c, d, e, a, w[49 & 0xF]);
 
-        schedule!(w, 50);
-        round_maj!(a, b, c, d, e, w[50 & 0xF]);
-        schedule!(w, 51);
-        round_maj!(e, a, b, c, d, w[51 & 0xF]);
-        schedule!(w, 52);
-        round_maj!(d, e, a, b, c, w[52 & 0xF]);
-        schedule!(w, 53);
-        round_maj!(c, d, e, a, b, w[53 & 0xF]);
-        schedule!(w, 54);
-        round_maj!(b, c, d, e, a, w[54 & 0xF]);
+        schedule!(w, 50); round_maj!(a, b, c, d, e, w[50 & 0xF]);
+        schedule!(w, 51); round_maj!(e, a, b, c, d, w[51 & 0xF]);
+        schedule!(w, 52); round_maj!(d, e, a, b, c, w[52 & 0xF]);
+        schedule!(w, 53); round_maj!(c, d, e, a, b, w[53 & 0xF]);
+        schedule!(w, 54); round_maj!(b, c, d, e, a, w[54 & 0xF]);
 
-        schedule!(w, 55);
-        round_maj!(a, b, c, d, e, w[55 & 0xF]);
-        schedule!(w, 56);
-        round_maj!(e, a, b, c, d, w[56 & 0xF]);
-        schedule!(w, 57);
-        round_maj!(d, e, a, b, c, w[57 & 0xF]);
-        schedule!(w, 58);
-        round_maj!(c, d, e, a, b, w[58 & 0xF]);
-        schedule!(w, 59);
-        round_maj!(b, c, d, e, a, w[59 & 0xF]);
+        schedule!(w, 55); round_maj!(a, b, c, d, e, w[55 & 0xF]);
+        schedule!(w, 56); round_maj!(e, a, b, c, d, w[56 & 0xF]);
+        schedule!(w, 57); round_maj!(d, e, a, b, c, w[57 & 0xF]);
+        schedule!(w, 58); round_maj!(c, d, e, a, b, w[58 & 0xF]);
+        schedule!(w, 59); round_maj!(b, c, d, e, a, w[59 & 0xF]);
 
         // Rounds 60-79: Parity function again
-        schedule!(w, 60);
-        round_parity!(a, b, c, d, e, w[60 & 0xF], K[3]);
-        schedule!(w, 61);
-        round_parity!(e, a, b, c, d, w[61 & 0xF], K[3]);
-        schedule!(w, 62);
-        round_parity!(d, e, a, b, c, w[62 & 0xF], K[3]);
-        schedule!(w, 63);
-        round_parity!(c, d, e, a, b, w[63 & 0xF], K[3]);
-        schedule!(w, 64);
-        round_parity!(b, c, d, e, a, w[64 & 0xF], K[3]);
+        schedule!(w, 60); round_parity!(a, b, c, d, e, w[60 & 0xF], K[3]);
+        schedule!(w, 61); round_parity!(e, a, b, c, d, w[61 & 0xF], K[3]);
+        schedule!(w, 62); round_parity!(d, e, a, b, c, w[62 & 0xF], K[3]);
+        schedule!(w, 63); round_parity!(c, d, e, a, b, w[63 & 0xF], K[3]);
+        schedule!(w, 64); round_parity!(b, c, d, e, a, w[64 & 0xF], K[3]);
 
-        schedule!(w, 65);
-        round_parity!(a, b, c, d, e, w[65 & 0xF], K[3]);
-        schedule!(w, 66);
-        round_parity!(e, a, b, c, d, w[66 & 0xF], K[3]);
-        schedule!(w, 67);
-        round_parity!(d, e, a, b, c, w[67 & 0xF], K[3]);
-        schedule!(w, 68);
-        round_parity!(c, d, e, a, b, w[68 & 0xF], K[3]);
-        schedule!(w, 69);
-        round_parity!(b, c, d, e, a, w[69 & 0xF], K[3]);
+        schedule!(w, 65); round_parity!(a, b, c, d, e, w[65 & 0xF], K[3]);
+        schedule!(w, 66); round_parity!(e, a, b, c, d, w[66 & 0xF], K[3]);
+        schedule!(w, 67); round_parity!(d, e, a, b, c, w[67 & 0xF], K[3]);
+        schedule!(w, 68); round_parity!(c, d, e, a, b, w[68 & 0xF], K[3]);
+        schedule!(w, 69); round_parity!(b, c, d, e, a, w[69 & 0xF], K[3]);
 
-        schedule!(w, 70);
-        round_parity!(a, b, c, d, e, w[70 & 0xF], K[3]);
-        schedule!(w, 71);
-        round_parity!(e, a, b, c, d, w[71 & 0xF], K[3]);
-        schedule!(w, 72);
-        round_parity!(d, e, a, b, c, w[72 & 0xF], K[3]);
-        schedule!(w, 73);
-        round_parity!(c, d, e, a, b, w[73 & 0xF], K[3]);
-        schedule!(w, 74);
-        round_parity!(b, c, d, e, a, w[74 & 0xF], K[3]);
+        schedule!(w, 70); round_parity!(a, b, c, d, e, w[70 & 0xF], K[3]);
+        schedule!(w, 71); round_parity!(e, a, b, c, d, w[71 & 0xF], K[3]);
+        schedule!(w, 72); round_parity!(d, e, a, b, c, w[72 & 0xF], K[3]);
+        schedule!(w, 73); round_parity!(c, d, e, a, b, w[73 & 0xF], K[3]);
+        schedule!(w, 74); round_parity!(b, c, d, e, a, w[74 & 0xF], K[3]);
 
-        schedule!(w, 75);
-        round_parity!(a, b, c, d, e, w[75 & 0xF], K[3]);
-        schedule!(w, 76);
-        round_parity!(e, a, b, c, d, w[76 & 0xF], K[3]);
-        schedule!(w, 77);
-        round_parity!(d, e, a, b, c, w[77 & 0xF], K[3]);
-        schedule!(w, 78);
-        round_parity!(c, d, e, a, b, w[78 & 0xF], K[3]);
-        schedule!(w, 79);
-        round_parity!(b, c, d, e, a, w[79 & 0xF], K[3]);
+        schedule!(w, 75); round_parity!(a, b, c, d, e, w[75 & 0xF], K[3]);
+        schedule!(w, 76); round_parity!(e, a, b, c, d, w[76 & 0xF], K[3]);
+        schedule!(w, 77); round_parity!(d, e, a, b, c, w[77 & 0xF], K[3]);
+        schedule!(w, 78); round_parity!(c, d, e, a, b, w[78 & 0xF], K[3]);
+        schedule!(w, 79); round_parity!(b, c, d, e, a, w[79 & 0xF], K[3]);
 
         // Add to hash - note the final rotation state
         self.h[0] = self.h[0].wrapping_add(a);
@@ -640,10 +514,7 @@ impl Default for Sha1 {
 /// **WARNING**: SHA-1 is broken! Only use for legacy compatibility.
 #[inline]
 pub fn sha1_single_block_small(data: &[u8]) -> [u8; 20] {
-    debug_assert!(
-        data.len() <= 55,
-        "Data must be <= 55 bytes for single-block fast path"
-    );
+    debug_assert!(data.len() <= 55, "Data must be <= 55 bytes for single-block fast path");
 
     // Initialize hash state from const
     let mut h0 = H_INIT[0];
@@ -708,149 +579,85 @@ pub fn sha1_single_block_small(data: &[u8]) -> [u8; 20] {
     round_ch!(b, c, d, e, a, w[14]);
 
     round_ch!(a, b, c, d, e, w[15]);
-    schedule!(w, 16);
-    round_ch!(e, a, b, c, d, w[16 & 0xF]);
-    schedule!(w, 17);
-    round_ch!(d, e, a, b, c, w[17 & 0xF]);
-    schedule!(w, 18);
-    round_ch!(c, d, e, a, b, w[18 & 0xF]);
-    schedule!(w, 19);
-    round_ch!(b, c, d, e, a, w[19 & 0xF]);
+    schedule!(w, 16); round_ch!(e, a, b, c, d, w[16 & 0xF]);
+    schedule!(w, 17); round_ch!(d, e, a, b, c, w[17 & 0xF]);
+    schedule!(w, 18); round_ch!(c, d, e, a, b, w[18 & 0xF]);
+    schedule!(w, 19); round_ch!(b, c, d, e, a, w[19 & 0xF]);
 
     // Rounds 20-39: Parity function
-    schedule!(w, 20);
-    round_parity!(a, b, c, d, e, w[20 & 0xF], K[1]);
-    schedule!(w, 21);
-    round_parity!(e, a, b, c, d, w[21 & 0xF], K[1]);
-    schedule!(w, 22);
-    round_parity!(d, e, a, b, c, w[22 & 0xF], K[1]);
-    schedule!(w, 23);
-    round_parity!(c, d, e, a, b, w[23 & 0xF], K[1]);
-    schedule!(w, 24);
-    round_parity!(b, c, d, e, a, w[24 & 0xF], K[1]);
+    schedule!(w, 20); round_parity!(a, b, c, d, e, w[20 & 0xF], K[1]);
+    schedule!(w, 21); round_parity!(e, a, b, c, d, w[21 & 0xF], K[1]);
+    schedule!(w, 22); round_parity!(d, e, a, b, c, w[22 & 0xF], K[1]);
+    schedule!(w, 23); round_parity!(c, d, e, a, b, w[23 & 0xF], K[1]);
+    schedule!(w, 24); round_parity!(b, c, d, e, a, w[24 & 0xF], K[1]);
 
-    schedule!(w, 25);
-    round_parity!(a, b, c, d, e, w[25 & 0xF], K[1]);
-    schedule!(w, 26);
-    round_parity!(e, a, b, c, d, w[26 & 0xF], K[1]);
-    schedule!(w, 27);
-    round_parity!(d, e, a, b, c, w[27 & 0xF], K[1]);
-    schedule!(w, 28);
-    round_parity!(c, d, e, a, b, w[28 & 0xF], K[1]);
-    schedule!(w, 29);
-    round_parity!(b, c, d, e, a, w[29 & 0xF], K[1]);
+    schedule!(w, 25); round_parity!(a, b, c, d, e, w[25 & 0xF], K[1]);
+    schedule!(w, 26); round_parity!(e, a, b, c, d, w[26 & 0xF], K[1]);
+    schedule!(w, 27); round_parity!(d, e, a, b, c, w[27 & 0xF], K[1]);
+    schedule!(w, 28); round_parity!(c, d, e, a, b, w[28 & 0xF], K[1]);
+    schedule!(w, 29); round_parity!(b, c, d, e, a, w[29 & 0xF], K[1]);
 
-    schedule!(w, 30);
-    round_parity!(a, b, c, d, e, w[30 & 0xF], K[1]);
-    schedule!(w, 31);
-    round_parity!(e, a, b, c, d, w[31 & 0xF], K[1]);
-    schedule!(w, 32);
-    round_parity!(d, e, a, b, c, w[32 & 0xF], K[1]);
-    schedule!(w, 33);
-    round_parity!(c, d, e, a, b, w[33 & 0xF], K[1]);
-    schedule!(w, 34);
-    round_parity!(b, c, d, e, a, w[34 & 0xF], K[1]);
+    schedule!(w, 30); round_parity!(a, b, c, d, e, w[30 & 0xF], K[1]);
+    schedule!(w, 31); round_parity!(e, a, b, c, d, w[31 & 0xF], K[1]);
+    schedule!(w, 32); round_parity!(d, e, a, b, c, w[32 & 0xF], K[1]);
+    schedule!(w, 33); round_parity!(c, d, e, a, b, w[33 & 0xF], K[1]);
+    schedule!(w, 34); round_parity!(b, c, d, e, a, w[34 & 0xF], K[1]);
 
-    schedule!(w, 35);
-    round_parity!(a, b, c, d, e, w[35 & 0xF], K[1]);
-    schedule!(w, 36);
-    round_parity!(e, a, b, c, d, w[36 & 0xF], K[1]);
-    schedule!(w, 37);
-    round_parity!(d, e, a, b, c, w[37 & 0xF], K[1]);
-    schedule!(w, 38);
-    round_parity!(c, d, e, a, b, w[38 & 0xF], K[1]);
-    schedule!(w, 39);
-    round_parity!(b, c, d, e, a, w[39 & 0xF], K[1]);
+    schedule!(w, 35); round_parity!(a, b, c, d, e, w[35 & 0xF], K[1]);
+    schedule!(w, 36); round_parity!(e, a, b, c, d, w[36 & 0xF], K[1]);
+    schedule!(w, 37); round_parity!(d, e, a, b, c, w[37 & 0xF], K[1]);
+    schedule!(w, 38); round_parity!(c, d, e, a, b, w[38 & 0xF], K[1]);
+    schedule!(w, 39); round_parity!(b, c, d, e, a, w[39 & 0xF], K[1]);
 
     // Rounds 40-59: Majority function
-    schedule!(w, 40);
-    round_maj!(a, b, c, d, e, w[40 & 0xF]);
-    schedule!(w, 41);
-    round_maj!(e, a, b, c, d, w[41 & 0xF]);
-    schedule!(w, 42);
-    round_maj!(d, e, a, b, c, w[42 & 0xF]);
-    schedule!(w, 43);
-    round_maj!(c, d, e, a, b, w[43 & 0xF]);
-    schedule!(w, 44);
-    round_maj!(b, c, d, e, a, w[44 & 0xF]);
+    schedule!(w, 40); round_maj!(a, b, c, d, e, w[40 & 0xF]);
+    schedule!(w, 41); round_maj!(e, a, b, c, d, w[41 & 0xF]);
+    schedule!(w, 42); round_maj!(d, e, a, b, c, w[42 & 0xF]);
+    schedule!(w, 43); round_maj!(c, d, e, a, b, w[43 & 0xF]);
+    schedule!(w, 44); round_maj!(b, c, d, e, a, w[44 & 0xF]);
 
-    schedule!(w, 45);
-    round_maj!(a, b, c, d, e, w[45 & 0xF]);
-    schedule!(w, 46);
-    round_maj!(e, a, b, c, d, w[46 & 0xF]);
-    schedule!(w, 47);
-    round_maj!(d, e, a, b, c, w[47 & 0xF]);
-    schedule!(w, 48);
-    round_maj!(c, d, e, a, b, w[48 & 0xF]);
-    schedule!(w, 49);
-    round_maj!(b, c, d, e, a, w[49 & 0xF]);
+    schedule!(w, 45); round_maj!(a, b, c, d, e, w[45 & 0xF]);
+    schedule!(w, 46); round_maj!(e, a, b, c, d, w[46 & 0xF]);
+    schedule!(w, 47); round_maj!(d, e, a, b, c, w[47 & 0xF]);
+    schedule!(w, 48); round_maj!(c, d, e, a, b, w[48 & 0xF]);
+    schedule!(w, 49); round_maj!(b, c, d, e, a, w[49 & 0xF]);
 
-    schedule!(w, 50);
-    round_maj!(a, b, c, d, e, w[50 & 0xF]);
-    schedule!(w, 51);
-    round_maj!(e, a, b, c, d, w[51 & 0xF]);
-    schedule!(w, 52);
-    round_maj!(d, e, a, b, c, w[52 & 0xF]);
-    schedule!(w, 53);
-    round_maj!(c, d, e, a, b, w[53 & 0xF]);
-    schedule!(w, 54);
-    round_maj!(b, c, d, e, a, w[54 & 0xF]);
+    schedule!(w, 50); round_maj!(a, b, c, d, e, w[50 & 0xF]);
+    schedule!(w, 51); round_maj!(e, a, b, c, d, w[51 & 0xF]);
+    schedule!(w, 52); round_maj!(d, e, a, b, c, w[52 & 0xF]);
+    schedule!(w, 53); round_maj!(c, d, e, a, b, w[53 & 0xF]);
+    schedule!(w, 54); round_maj!(b, c, d, e, a, w[54 & 0xF]);
 
-    schedule!(w, 55);
-    round_maj!(a, b, c, d, e, w[55 & 0xF]);
-    schedule!(w, 56);
-    round_maj!(e, a, b, c, d, w[56 & 0xF]);
-    schedule!(w, 57);
-    round_maj!(d, e, a, b, c, w[57 & 0xF]);
-    schedule!(w, 58);
-    round_maj!(c, d, e, a, b, w[58 & 0xF]);
-    schedule!(w, 59);
-    round_maj!(b, c, d, e, a, w[59 & 0xF]);
+    schedule!(w, 55); round_maj!(a, b, c, d, e, w[55 & 0xF]);
+    schedule!(w, 56); round_maj!(e, a, b, c, d, w[56 & 0xF]);
+    schedule!(w, 57); round_maj!(d, e, a, b, c, w[57 & 0xF]);
+    schedule!(w, 58); round_maj!(c, d, e, a, b, w[58 & 0xF]);
+    schedule!(w, 59); round_maj!(b, c, d, e, a, w[59 & 0xF]);
 
     // Rounds 60-79: Parity function again
-    schedule!(w, 60);
-    round_parity!(a, b, c, d, e, w[60 & 0xF], K[3]);
-    schedule!(w, 61);
-    round_parity!(e, a, b, c, d, w[61 & 0xF], K[3]);
-    schedule!(w, 62);
-    round_parity!(d, e, a, b, c, w[62 & 0xF], K[3]);
-    schedule!(w, 63);
-    round_parity!(c, d, e, a, b, w[63 & 0xF], K[3]);
-    schedule!(w, 64);
-    round_parity!(b, c, d, e, a, w[64 & 0xF], K[3]);
+    schedule!(w, 60); round_parity!(a, b, c, d, e, w[60 & 0xF], K[3]);
+    schedule!(w, 61); round_parity!(e, a, b, c, d, w[61 & 0xF], K[3]);
+    schedule!(w, 62); round_parity!(d, e, a, b, c, w[62 & 0xF], K[3]);
+    schedule!(w, 63); round_parity!(c, d, e, a, b, w[63 & 0xF], K[3]);
+    schedule!(w, 64); round_parity!(b, c, d, e, a, w[64 & 0xF], K[3]);
 
-    schedule!(w, 65);
-    round_parity!(a, b, c, d, e, w[65 & 0xF], K[3]);
-    schedule!(w, 66);
-    round_parity!(e, a, b, c, d, w[66 & 0xF], K[3]);
-    schedule!(w, 67);
-    round_parity!(d, e, a, b, c, w[67 & 0xF], K[3]);
-    schedule!(w, 68);
-    round_parity!(c, d, e, a, b, w[68 & 0xF], K[3]);
-    schedule!(w, 69);
-    round_parity!(b, c, d, e, a, w[69 & 0xF], K[3]);
+    schedule!(w, 65); round_parity!(a, b, c, d, e, w[65 & 0xF], K[3]);
+    schedule!(w, 66); round_parity!(e, a, b, c, d, w[66 & 0xF], K[3]);
+    schedule!(w, 67); round_parity!(d, e, a, b, c, w[67 & 0xF], K[3]);
+    schedule!(w, 68); round_parity!(c, d, e, a, b, w[68 & 0xF], K[3]);
+    schedule!(w, 69); round_parity!(b, c, d, e, a, w[69 & 0xF], K[3]);
 
-    schedule!(w, 70);
-    round_parity!(a, b, c, d, e, w[70 & 0xF], K[3]);
-    schedule!(w, 71);
-    round_parity!(e, a, b, c, d, w[71 & 0xF], K[3]);
-    schedule!(w, 72);
-    round_parity!(d, e, a, b, c, w[72 & 0xF], K[3]);
-    schedule!(w, 73);
-    round_parity!(c, d, e, a, b, w[73 & 0xF], K[3]);
-    schedule!(w, 74);
-    round_parity!(b, c, d, e, a, w[74 & 0xF], K[3]);
+    schedule!(w, 70); round_parity!(a, b, c, d, e, w[70 & 0xF], K[3]);
+    schedule!(w, 71); round_parity!(e, a, b, c, d, w[71 & 0xF], K[3]);
+    schedule!(w, 72); round_parity!(d, e, a, b, c, w[72 & 0xF], K[3]);
+    schedule!(w, 73); round_parity!(c, d, e, a, b, w[73 & 0xF], K[3]);
+    schedule!(w, 74); round_parity!(b, c, d, e, a, w[74 & 0xF], K[3]);
 
-    schedule!(w, 75);
-    round_parity!(a, b, c, d, e, w[75 & 0xF], K[3]);
-    schedule!(w, 76);
-    round_parity!(e, a, b, c, d, w[76 & 0xF], K[3]);
-    schedule!(w, 77);
-    round_parity!(d, e, a, b, c, w[77 & 0xF], K[3]);
-    schedule!(w, 78);
-    round_parity!(c, d, e, a, b, w[78 & 0xF], K[3]);
-    schedule!(w, 79);
-    round_parity!(b, c, d, e, a, w[79 & 0xF], K[3]);
+    schedule!(w, 75); round_parity!(a, b, c, d, e, w[75 & 0xF], K[3]);
+    schedule!(w, 76); round_parity!(e, a, b, c, d, w[76 & 0xF], K[3]);
+    schedule!(w, 77); round_parity!(d, e, a, b, c, w[77 & 0xF], K[3]);
+    schedule!(w, 78); round_parity!(c, d, e, a, b, w[78 & 0xF], K[3]);
+    schedule!(w, 79); round_parity!(b, c, d, e, a, w[79 & 0xF], K[3]);
 
     // Add to hash - note the final rotation state
     h0 = h0.wrapping_add(a);
@@ -874,7 +681,8 @@ pub fn sha1_single_block_small(data: &[u8]) -> [u8; 20] {
 /// This is the result of hashing zero bytes, precomputed at compile time.
 /// SHA-1("") = da39a3ee5e6b4b0d3255bfef95601890afd80709
 const SHA1_EMPTY: [u8; 20] = [
-    0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95, 0x60, 0x18, 0x90,
+    0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d,
+    0x32, 0x55, 0xbf, 0xef, 0x95, 0x60, 0x18, 0x90,
     0xaf, 0xd8, 0x07, 0x09,
 ];
 
