@@ -31,41 +31,6 @@ macro_rules! squeeze_words_no_complement {
     };
 }
 
-/// Macro to extract squeezing logic by u64 words (with lane-complement)
-///
-/// Same as above but handles complemented lanes correctly
-macro_rules! squeeze_words_with_complement {
-    ($state:expr, $output:expr, $offset:expr, $to_copy:expr, $complemented:expr) => {
-        {
-            // Extract complete u64 words
-            let complete_words = $to_copy / 8;
-            for i in 0..complete_words {
-                let lane = if $complemented[i] {
-                    !$state[i]
-                } else {
-                    $state[i]
-                };
-                let bytes = lane.to_le_bytes();
-                $output[$offset + i * 8..$offset + (i + 1) * 8].copy_from_slice(&bytes);
-            }
-
-            // Handle remaining bytes
-            let remainder_offset = complete_words * 8;
-            if $to_copy > remainder_offset {
-                let lane = if $complemented[complete_words] {
-                    !$state[complete_words]
-                } else {
-                    $state[complete_words]
-                };
-                let bytes = lane.to_le_bytes();
-                let remainder = $to_copy - remainder_offset;
-                $output[$offset + remainder_offset..$offset + $to_copy]
-                    .copy_from_slice(&bytes[..remainder]);
-            }
-        }
-    };
-}
-
 // ===== End of Phase 1 Optimization Macros =====
 
 // ===== Phase 2 Optimization Macros =====
@@ -268,11 +233,6 @@ const ROUND_CONSTANTS: [u64; 24] = [
     0x8000000000008080,
     0x0000000080000001,
     0x8000000080008008,
-];
-
-/// Rotation offsets for Keccak-f[1600]
-const ROTATION_OFFSETS: [u32; 24] = [
-    1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14, 27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44,
 ];
 
 /// SHA3-256 hasher
