@@ -1018,6 +1018,7 @@ pub fn kmac256(key: &[u8], message: &[u8], customization: &[u8], output_len: usi
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "alloc")]
     use super::*;
 
     #[cfg(feature = "alloc")]
@@ -1044,6 +1045,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn test_kmac128_basic() {
         // Basic smoke test
         let key = b"my secret key";
@@ -1061,6 +1063,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn test_kmac256_basic() {
         // Basic smoke test
         let key = b"my secret key";
@@ -1078,6 +1081,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn test_kmac_variable_output_length() {
         let key = b"test";
         let message = b"data";
@@ -1090,6 +1094,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn test_kmac_customization() {
         let key = b"key";
         let message = b"message";
@@ -1106,6 +1111,7 @@ mod tests {
 
     // NIST SP 800-185 test vectors
     #[test]
+    #[cfg(feature = "alloc")]
     fn test_kmac128_nist_sample_1() {
         use hex_literal::hex;
         // Sample #1 from NIST SP 800-185
@@ -1120,6 +1126,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn test_kmac256_nist_sample_1() {
         use hex_literal::hex;
         // Sample #4 from NIST SP 800-185
@@ -1134,6 +1141,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn test_kmac128_verify() {
         let key = b"test key";
         let message = b"test message";
@@ -1170,6 +1178,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn test_kmac256_verify() {
         let key = b"test key";
         let message = b"test message";
