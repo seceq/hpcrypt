@@ -1313,8 +1313,9 @@ fn keccak_p_12(state: &mut [u64; 25]) {
 
         let mut x = 1;
         let mut y = 0;
-        for rotation in &ROTATION_OFFSETS {
-            b[y + 5 * ((2 * x + 3 * y) % 5)] = state[x + 5 * y].rotate_left(*rotation);
+        #[allow(clippy::needless_range_loop)]
+        for i in 0..24 {
+            b[y + 5 * ((2 * x + 3 * y) % 5)] = state[x + 5 * y].rotate_left(ROTATION_OFFSETS[i]);
             let temp = y;
             y = (2 * x + 3 * y) % 5;
             x = temp;
@@ -1398,8 +1399,9 @@ fn keccak_f(state: &mut [u64; 25]) {
 
         let mut x = 1;
         let mut y = 0;
-        for rotation in &ROTATION_OFFSETS {
-            b[y + 5 * ((2 * x + 3 * y) % 5)] = state[x + 5 * y].rotate_left(*rotation);
+        #[allow(clippy::needless_range_loop)]
+        for i in 0..24 {
+            b[y + 5 * ((2 * x + 3 * y) % 5)] = state[x + 5 * y].rotate_left(ROTATION_OFFSETS[i]);
             let temp = y;
             y = (2 * x + 3 * y) % 5;
             x = temp;
