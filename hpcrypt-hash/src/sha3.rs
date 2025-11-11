@@ -56,25 +56,23 @@
 /// This replaces the slow byte-at-a-time extraction with word-at-a-time extraction.
 /// Expected improvement: 40-50% for small outputs
 macro_rules! squeeze_words_no_complement {
-    ($state:expr, $output:expr, $offset:expr, $to_copy:expr) => {
-        {
-            // Extract complete u64 words
-            let complete_words = $to_copy / 8;
-            for i in 0..complete_words {
-                let bytes = $state[i].to_le_bytes();
-                $output[$offset + i * 8..$offset + (i + 1) * 8].copy_from_slice(&bytes);
-            }
-
-            // Handle remaining 0-7 bytes
-            let remainder_offset = complete_words * 8;
-            if $to_copy > remainder_offset {
-                let bytes = $state[complete_words].to_le_bytes();
-                let remainder = $to_copy - remainder_offset;
-                $output[$offset + remainder_offset..$offset + $to_copy]
-                    .copy_from_slice(&bytes[..remainder]);
-            }
+    ($state:expr, $output:expr, $offset:expr, $to_copy:expr) => {{
+        // Extract complete u64 words
+        let complete_words = $to_copy / 8;
+        for i in 0..complete_words {
+            let bytes = $state[i].to_le_bytes();
+            $output[$offset + i * 8..$offset + (i + 1) * 8].copy_from_slice(&bytes);
         }
-    };
+
+        // Handle remaining 0-7 bytes
+        let remainder_offset = complete_words * 8;
+        if $to_copy > remainder_offset {
+            let bytes = $state[complete_words].to_le_bytes();
+            let remainder = $to_copy - remainder_offset;
+            $output[$offset + remainder_offset..$offset + $to_copy]
+                .copy_from_slice(&bytes[..remainder]);
+        }
+    }};
 }
 
 // ===== End of Phase 1 Optimization Macros =====
@@ -86,50 +84,48 @@ macro_rules! squeeze_words_no_complement {
 /// Unrolls the Theta column parity computation and D array calculation
 /// Expected improvement: Part of 15-20% cumulative gain
 macro_rules! theta_unrolled {
-    ($state:expr, $c:ident, $d:ident) => {
-        {
-            // Compute column parities (unrolled)
-            $c[0] = $state[0] ^ $state[5] ^ $state[10] ^ $state[15] ^ $state[20];
-            $c[1] = $state[1] ^ $state[6] ^ $state[11] ^ $state[16] ^ $state[21];
-            $c[2] = $state[2] ^ $state[7] ^ $state[12] ^ $state[17] ^ $state[22];
-            $c[3] = $state[3] ^ $state[8] ^ $state[13] ^ $state[18] ^ $state[23];
-            $c[4] = $state[4] ^ $state[9] ^ $state[14] ^ $state[19] ^ $state[24];
+    ($state:expr, $c:ident, $d:ident) => {{
+        // Compute column parities (unrolled)
+        $c[0] = $state[0] ^ $state[5] ^ $state[10] ^ $state[15] ^ $state[20];
+        $c[1] = $state[1] ^ $state[6] ^ $state[11] ^ $state[16] ^ $state[21];
+        $c[2] = $state[2] ^ $state[7] ^ $state[12] ^ $state[17] ^ $state[22];
+        $c[3] = $state[3] ^ $state[8] ^ $state[13] ^ $state[18] ^ $state[23];
+        $c[4] = $state[4] ^ $state[9] ^ $state[14] ^ $state[19] ^ $state[24];
 
-            // Compute D values (unrolled)
-            $d[0] = $c[4] ^ $c[1].rotate_left(1);
-            $d[1] = $c[0] ^ $c[2].rotate_left(1);
-            $d[2] = $c[1] ^ $c[3].rotate_left(1);
-            $d[3] = $c[2] ^ $c[4].rotate_left(1);
-            $d[4] = $c[3] ^ $c[0].rotate_left(1);
+        // Compute D values (unrolled)
+        $d[0] = $c[4] ^ $c[1].rotate_left(1);
+        $d[1] = $c[0] ^ $c[2].rotate_left(1);
+        $d[2] = $c[1] ^ $c[3].rotate_left(1);
+        $d[3] = $c[2] ^ $c[4].rotate_left(1);
+        $d[4] = $c[3] ^ $c[0].rotate_left(1);
 
-            // Apply D to all lanes (fully unrolled)
-            $state[0] ^= $d[0];
-            $state[1] ^= $d[1];
-            $state[2] ^= $d[2];
-            $state[3] ^= $d[3];
-            $state[4] ^= $d[4];
-            $state[5] ^= $d[0];
-            $state[6] ^= $d[1];
-            $state[7] ^= $d[2];
-            $state[8] ^= $d[3];
-            $state[9] ^= $d[4];
-            $state[10] ^= $d[0];
-            $state[11] ^= $d[1];
-            $state[12] ^= $d[2];
-            $state[13] ^= $d[3];
-            $state[14] ^= $d[4];
-            $state[15] ^= $d[0];
-            $state[16] ^= $d[1];
-            $state[17] ^= $d[2];
-            $state[18] ^= $d[3];
-            $state[19] ^= $d[4];
-            $state[20] ^= $d[0];
-            $state[21] ^= $d[1];
-            $state[22] ^= $d[2];
-            $state[23] ^= $d[3];
-            $state[24] ^= $d[4];
-        }
-    };
+        // Apply D to all lanes (fully unrolled)
+        $state[0] ^= $d[0];
+        $state[1] ^= $d[1];
+        $state[2] ^= $d[2];
+        $state[3] ^= $d[3];
+        $state[4] ^= $d[4];
+        $state[5] ^= $d[0];
+        $state[6] ^= $d[1];
+        $state[7] ^= $d[2];
+        $state[8] ^= $d[3];
+        $state[9] ^= $d[4];
+        $state[10] ^= $d[0];
+        $state[11] ^= $d[1];
+        $state[12] ^= $d[2];
+        $state[13] ^= $d[3];
+        $state[14] ^= $d[4];
+        $state[15] ^= $d[0];
+        $state[16] ^= $d[1];
+        $state[17] ^= $d[2];
+        $state[18] ^= $d[3];
+        $state[19] ^= $d[4];
+        $state[20] ^= $d[0];
+        $state[21] ^= $d[1];
+        $state[22] ^= $d[2];
+        $state[23] ^= $d[3];
+        $state[24] ^= $d[4];
+    }};
 }
 
 /// Macro for unrolled Chi step (standard version without lane complement)
@@ -137,69 +133,67 @@ macro_rules! theta_unrolled {
 /// Unrolls the 5 rows of Chi step completely
 /// Expected improvement: Part of 15-20% cumulative gain
 macro_rules! chi_unrolled {
-    ($state:expr, $b:expr) => {
-        {
-            // Row 0 (unrolled)
-            let t0 = $b[0];
-            let t1 = $b[1];
-            let t2 = $b[2];
-            let t3 = $b[3];
-            let t4 = $b[4];
-            $state[0] = t0 ^ ((!t1) & t2);
-            $state[1] = t1 ^ ((!t2) & t3);
-            $state[2] = t2 ^ ((!t3) & t4);
-            $state[3] = t3 ^ ((!t4) & t0);
-            $state[4] = t4 ^ ((!t0) & t1);
+    ($state:expr, $b:expr) => {{
+        // Row 0 (unrolled)
+        let t0 = $b[0];
+        let t1 = $b[1];
+        let t2 = $b[2];
+        let t3 = $b[3];
+        let t4 = $b[4];
+        $state[0] = t0 ^ ((!t1) & t2);
+        $state[1] = t1 ^ ((!t2) & t3);
+        $state[2] = t2 ^ ((!t3) & t4);
+        $state[3] = t3 ^ ((!t4) & t0);
+        $state[4] = t4 ^ ((!t0) & t1);
 
-            // Row 1 (unrolled)
-            let t0 = $b[5];
-            let t1 = $b[6];
-            let t2 = $b[7];
-            let t3 = $b[8];
-            let t4 = $b[9];
-            $state[5] = t0 ^ ((!t1) & t2);
-            $state[6] = t1 ^ ((!t2) & t3);
-            $state[7] = t2 ^ ((!t3) & t4);
-            $state[8] = t3 ^ ((!t4) & t0);
-            $state[9] = t4 ^ ((!t0) & t1);
+        // Row 1 (unrolled)
+        let t0 = $b[5];
+        let t1 = $b[6];
+        let t2 = $b[7];
+        let t3 = $b[8];
+        let t4 = $b[9];
+        $state[5] = t0 ^ ((!t1) & t2);
+        $state[6] = t1 ^ ((!t2) & t3);
+        $state[7] = t2 ^ ((!t3) & t4);
+        $state[8] = t3 ^ ((!t4) & t0);
+        $state[9] = t4 ^ ((!t0) & t1);
 
-            // Row 2 (unrolled)
-            let t0 = $b[10];
-            let t1 = $b[11];
-            let t2 = $b[12];
-            let t3 = $b[13];
-            let t4 = $b[14];
-            $state[10] = t0 ^ ((!t1) & t2);
-            $state[11] = t1 ^ ((!t2) & t3);
-            $state[12] = t2 ^ ((!t3) & t4);
-            $state[13] = t3 ^ ((!t4) & t0);
-            $state[14] = t4 ^ ((!t0) & t1);
+        // Row 2 (unrolled)
+        let t0 = $b[10];
+        let t1 = $b[11];
+        let t2 = $b[12];
+        let t3 = $b[13];
+        let t4 = $b[14];
+        $state[10] = t0 ^ ((!t1) & t2);
+        $state[11] = t1 ^ ((!t2) & t3);
+        $state[12] = t2 ^ ((!t3) & t4);
+        $state[13] = t3 ^ ((!t4) & t0);
+        $state[14] = t4 ^ ((!t0) & t1);
 
-            // Row 3 (unrolled)
-            let t0 = $b[15];
-            let t1 = $b[16];
-            let t2 = $b[17];
-            let t3 = $b[18];
-            let t4 = $b[19];
-            $state[15] = t0 ^ ((!t1) & t2);
-            $state[16] = t1 ^ ((!t2) & t3);
-            $state[17] = t2 ^ ((!t3) & t4);
-            $state[18] = t3 ^ ((!t4) & t0);
-            $state[19] = t4 ^ ((!t0) & t1);
+        // Row 3 (unrolled)
+        let t0 = $b[15];
+        let t1 = $b[16];
+        let t2 = $b[17];
+        let t3 = $b[18];
+        let t4 = $b[19];
+        $state[15] = t0 ^ ((!t1) & t2);
+        $state[16] = t1 ^ ((!t2) & t3);
+        $state[17] = t2 ^ ((!t3) & t4);
+        $state[18] = t3 ^ ((!t4) & t0);
+        $state[19] = t4 ^ ((!t0) & t1);
 
-            // Row 4 (unrolled)
-            let t0 = $b[20];
-            let t1 = $b[21];
-            let t2 = $b[22];
-            let t3 = $b[23];
-            let t4 = $b[24];
-            $state[20] = t0 ^ ((!t1) & t2);
-            $state[21] = t1 ^ ((!t2) & t3);
-            $state[22] = t2 ^ ((!t3) & t4);
-            $state[23] = t3 ^ ((!t4) & t0);
-            $state[24] = t4 ^ ((!t0) & t1);
-        }
-    };
+        // Row 4 (unrolled)
+        let t0 = $b[20];
+        let t1 = $b[21];
+        let t2 = $b[22];
+        let t3 = $b[23];
+        let t4 = $b[24];
+        $state[20] = t0 ^ ((!t1) & t2);
+        $state[21] = t1 ^ ((!t2) & t3);
+        $state[22] = t2 ^ ((!t3) & t4);
+        $state[23] = t3 ^ ((!t4) & t0);
+        $state[24] = t4 ^ ((!t0) & t1);
+    }};
 }
 
 /// Macro for unrolled Rho-Pi step
@@ -207,36 +201,34 @@ macro_rules! chi_unrolled {
 /// Unrolls the Rho-Pi permutation completely with hardcoded rotation offsets
 /// Expected improvement: 5-8%
 macro_rules! rho_pi_unrolled {
-    ($state:expr, $b:expr) => {
-        {
-            // Rho-Pi unrolled with explicit rotation offsets (corrected mapping)
-            $b[0] = $state[0];  // No rotation for position 0
-            $b[10] = $state[1].rotate_left(1);
-            $b[7] = $state[10].rotate_left(3);
-            $b[11] = $state[7].rotate_left(6);
-            $b[17] = $state[11].rotate_left(10);
-            $b[18] = $state[17].rotate_left(15);
-            $b[3] = $state[18].rotate_left(21);
-            $b[5] = $state[3].rotate_left(28);
-            $b[16] = $state[5].rotate_left(36);
-            $b[8] = $state[16].rotate_left(45);
-            $b[21] = $state[8].rotate_left(55);
-            $b[24] = $state[21].rotate_left(2);
-            $b[4] = $state[24].rotate_left(14);
-            $b[15] = $state[4].rotate_left(27);
-            $b[23] = $state[15].rotate_left(41);
-            $b[19] = $state[23].rotate_left(56);
-            $b[13] = $state[19].rotate_left(8);
-            $b[12] = $state[13].rotate_left(25);
-            $b[2] = $state[12].rotate_left(43);
-            $b[20] = $state[2].rotate_left(62);
-            $b[14] = $state[20].rotate_left(18);
-            $b[22] = $state[14].rotate_left(39);
-            $b[9] = $state[22].rotate_left(61);
-            $b[6] = $state[9].rotate_left(20);
-            $b[1] = $state[6].rotate_left(44);
-        }
-    };
+    ($state:expr, $b:expr) => {{
+        // Rho-Pi unrolled with explicit rotation offsets (corrected mapping)
+        $b[0] = $state[0]; // No rotation for position 0
+        $b[10] = $state[1].rotate_left(1);
+        $b[7] = $state[10].rotate_left(3);
+        $b[11] = $state[7].rotate_left(6);
+        $b[17] = $state[11].rotate_left(10);
+        $b[18] = $state[17].rotate_left(15);
+        $b[3] = $state[18].rotate_left(21);
+        $b[5] = $state[3].rotate_left(28);
+        $b[16] = $state[5].rotate_left(36);
+        $b[8] = $state[16].rotate_left(45);
+        $b[21] = $state[8].rotate_left(55);
+        $b[24] = $state[21].rotate_left(2);
+        $b[4] = $state[24].rotate_left(14);
+        $b[15] = $state[4].rotate_left(27);
+        $b[23] = $state[15].rotate_left(41);
+        $b[19] = $state[23].rotate_left(56);
+        $b[13] = $state[19].rotate_left(8);
+        $b[12] = $state[13].rotate_left(25);
+        $b[2] = $state[12].rotate_left(43);
+        $b[20] = $state[2].rotate_left(62);
+        $b[14] = $state[20].rotate_left(18);
+        $b[22] = $state[14].rotate_left(39);
+        $b[9] = $state[22].rotate_left(61);
+        $b[6] = $state[9].rotate_left(20);
+        $b[1] = $state[6].rotate_left(44);
+    }};
 }
 
 // ===== End of Phase 2 Optimization Macros =====
@@ -897,12 +889,7 @@ impl<const RATE: usize, const ROUNDS: usize> ShakeCore<RATE, ROUNDS> {
         while offset < output.len() {
             let to_copy = core::cmp::min(RATE, output.len() - offset);
 
-            squeeze_words_no_complement!(
-                self.state,
-                output,
-                offset,
-                to_copy
-            );
+            squeeze_words_no_complement!(self.state, output, offset, to_copy);
 
             offset += to_copy;
 
@@ -1287,9 +1274,8 @@ mod tests {
         // RFC 9861 test vector: TurboSHAKE128(M=empty, 32-byte output, D=0x1F)
         // 1E 41 5F 1C 59 83 AF F2 16 92 17 27 7D 17 BB 53
         // 8C D9 45 A3 97 DD EC 54 1F 1C E4 1A F2 C1 B7 4C
-        let _expected = hex_literal::hex!(
-            "1e415f1c5983aff216921727273d17bb538cd945a397ddec541f1ce41af2c1b7"
-        );
+        let _expected =
+            hex_literal::hex!("1e415f1c5983aff216921727273d17bb538cd945a397ddec541f1ce41af2c1b7");
         // Note: Our output is close but not exact - may need to verify padding/domain sep
         // For now, let's just test that it computes something
         assert_eq!(output.len(), 32);
@@ -1303,9 +1289,8 @@ mod tests {
         let mut output = [0u8; 64];
         hasher.finalize(&mut output);
 
-        let expected = hex_literal::hex!(
-            "367a329dafea871c7802ec67f905ae13c57695dc2c6663c61035f59a18f8e7db"
-        );
+        let expected =
+            hex_literal::hex!("367a329dafea871c7802ec67f905ae13c57695dc2c6663c61035f59a18f8e7db");
         // Note: Checking first 32 bytes of 64-byte output
         assert_eq!(&output[..32], &expected[..]);
     }

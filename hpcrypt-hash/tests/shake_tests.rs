@@ -15,7 +15,8 @@ fn test_shake128_empty_32bytes() {
     shake.finalize(&mut output);
 
     // First 32 bytes of SHAKE128("")
-    let expected = hex_literal::hex!("7f9c2ba4e88f827d616045507605853ed73b8093f6efbc88eb1a6eacfa66ef26");
+    let expected =
+        hex_literal::hex!("7f9c2ba4e88f827d616045507605853ed73b8093f6efbc88eb1a6eacfa66ef26");
     assert_eq!(
         output, expected,
         "SHAKE128 empty message (32 bytes) test failed"
@@ -56,7 +57,8 @@ fn test_shake128_abc_32bytes() {
     shake.update(b"abc");
     shake.finalize(&mut output);
 
-    let expected = hex_literal::hex!("5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc8");
+    let expected =
+        hex_literal::hex!("5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc8");
     assert_eq!(output, expected, "SHAKE128 'abc' (32 bytes) test failed");
 }
 
@@ -142,7 +144,8 @@ fn test_shake256_empty_32bytes() {
     shake.update(b"");
     shake.finalize(&mut output);
 
-    let expected = hex_literal::hex!("46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762f");
+    let expected =
+        hex_literal::hex!("46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762f");
     assert_eq!(
         output, expected,
         "SHAKE256 empty message (32 bytes) test failed"
@@ -172,7 +175,8 @@ fn test_shake256_abc_32bytes() {
     shake.update(b"abc");
     shake.finalize(&mut output);
 
-    let expected = hex_literal::hex!("483366601360a8771c6863080cc4114d8db44530f8f1e1ee4f94ea37e78b5739");
+    let expected =
+        hex_literal::hex!("483366601360a8771c6863080cc4114d8db44530f8f1e1ee4f94ea37e78b5739");
     assert_eq!(output, expected, "SHAKE256 'abc' (32 bytes) test failed");
 }
 
