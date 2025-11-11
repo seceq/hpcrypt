@@ -930,7 +930,7 @@ impl<const RATE: usize, const ROUNDS: usize> ShakeCore<RATE, ROUNDS> {
 /// SHAKE128 - Extendable Output Function (XOF) with 128-bit security
 ///
 /// SHAKE128 is a variable-length hash function that can produce output of any desired length.
-/// It uses the 24-round Keccak-f[1600] permutation with a rate of 168 bytes (1344 bits).
+/// It uses the 24-round Keccak-f\[1600\] permutation with a rate of 168 bytes (1344 bits).
 ///
 /// Standardized in FIPS 202.
 ///
@@ -955,7 +955,7 @@ pub type Shake128 = ShakeCore<168, 24>;
 /// SHAKE256 - Extendable Output Function (XOF) with 256-bit security
 ///
 /// SHAKE256 is a variable-length hash function that can produce output of any desired length.
-/// It uses the 24-round Keccak-f[1600] permutation with a rate of 136 bytes (1088 bits).
+/// It uses the 24-round Keccak-f\[1600\] permutation with a rate of 136 bytes (1088 bits).
 ///
 /// Standardized in FIPS 202.
 ///
@@ -980,7 +980,7 @@ pub type Shake256 = ShakeCore<136, 24>;
 /// TurboSHAKE128 - Fast Extendable Output Function with 128-bit security
 ///
 /// TurboSHAKE128 is approximately 2× faster than SHAKE128 by using only 12 rounds
-/// instead of 24. It uses the Keccak-p[1600,12] permutation with a rate of 168 bytes.
+/// instead of 24. It uses the Keccak-p\[1600,12\] permutation with a rate of 168 bytes.
 ///
 /// Defined in RFC 9861.
 ///
@@ -1004,7 +1004,7 @@ pub type TurboShake128 = ShakeCore<168, 12>;
 /// TurboSHAKE256 - Fast Extendable Output Function with 256-bit security
 ///
 /// TurboSHAKE256 is approximately 2× faster than SHAKE256 by using only 12 rounds
-/// instead of 24. It uses the Keccak-p[1600,12] permutation with a rate of 136 bytes.
+/// instead of 24. It uses the Keccak-p\[1600,12\] permutation with a rate of 136 bytes.
 ///
 /// Defined in RFC 9861.
 ///
