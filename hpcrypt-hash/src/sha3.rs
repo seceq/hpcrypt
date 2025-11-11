@@ -3,6 +3,15 @@
 //! Based on the Keccak sponge construction, standardized in FIPS 202.
 //! Supports SHA3-224, SHA3-256, SHA3-384, and SHA3-512.
 
+// The lane-complement feature is currently broken and produces incorrect results.
+// It needs to be fixed before it can be used. Disable it at compile time.
+#[cfg(feature = "lane-complement")]
+compile_error!(
+    "The 'lane-complement' feature is currently broken and produces incorrect cryptographic output. \
+     Please do not use this feature until it is fixed. \
+     See issue: https://github.com/user/repo/issues/XXX"
+);
+
 // ===== Optimization Macros for Phase 1 =====
 
 /// Macro to extract squeezing logic by u64 words (without lane-complement)
