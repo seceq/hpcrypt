@@ -22,3 +22,11 @@ hex-literal = { workspace = true }
 default = ["std", "alloc"]
 std = ["hpcrypt-core/std"]
 alloc = ["hpcrypt-core/alloc"]
+
+[[example]]
+name = "kmac_basic"
+required-features = ["alloc"]
+
+[[example]]
+name = "xof_reader"
+required-features = ["alloc"]
