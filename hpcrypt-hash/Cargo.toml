@@ -22,4 +22,3 @@ hex-literal = { workspace = true }
 default = ["std", "alloc"]
 std = ["hpcrypt-core/std"]
 alloc = ["hpcrypt-core/alloc"]
-lane-complement = []
