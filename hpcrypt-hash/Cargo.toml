@@ -15,6 +15,7 @@ hpcrypt-core = { workspace = true }
 
 [dev-dependencies]
 blake3 = "1.8.2"
+hex = { workspace = true }
 hex-literal = { workspace = true }
 
 [features]
