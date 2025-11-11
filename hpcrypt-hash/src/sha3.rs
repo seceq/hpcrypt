@@ -276,6 +276,7 @@ const ROUND_CONSTANTS: [u64; 24] = [
 ];
 
 /// Rotation offsets for Keccak-f[1600]
+#[cfg(feature = "lane-complement")]
 const ROTATION_OFFSETS: [u32; 24] = [
     1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14, 27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44,
 ];
@@ -1289,7 +1290,7 @@ impl TurboShake256 {
 #[cfg(not(feature = "lane-complement"))]
 fn keccak_p_12(state: &mut [u64; 25]) {
     // TurboSHAKE uses rounds 12-23 (the last 12 rounds)
-    for round in 12..24 {
+    for round_constant in ROUND_CONSTANTS.iter().skip(12) {
         // Theta step (unrolled via macro)
         let mut c = [0u64; 5];
         let mut d = [0u64; 5];
@@ -1303,7 +1304,7 @@ fn keccak_p_12(state: &mut [u64; 25]) {
         chi_unrolled!(state, b);
 
         // Iota step
-        state[0] ^= ROUND_CONSTANTS[round];
+        state[0] ^= round_constant;
     }
 }
 
@@ -1312,7 +1313,7 @@ fn keccak_p_12(state: &mut [u64; 25]) {
 #[cfg(feature = "lane-complement")]
 fn keccak_p_12(state: &mut [u64; 25]) {
     // Lane complementing implementation - 12 rounds (12-23)
-    for round in 12..24 {
+    for round_constant in ROUND_CONSTANTS.iter().skip(12) {
         // Theta step
         let mut c = [0u64; 5];
         for x in 0..5 {
@@ -1336,8 +1337,8 @@ fn keccak_p_12(state: &mut [u64; 25]) {
 
         let mut x = 1;
         let mut y = 0;
-        for i in 0..24 {
-            b[y + 5 * ((2 * x + 3 * y) % 5)] = state[x + 5 * y].rotate_left(ROTATION_OFFSETS[i]);
+        for rotation in &ROTATION_OFFSETS {
+            b[y + 5 * ((2 * x + 3 * y) % 5)] = state[x + 5 * y].rotate_left(*rotation);
             let temp = y;
             y = (2 * x + 3 * y) % 5;
             x = temp;
@@ -1355,7 +1356,7 @@ fn keccak_p_12(state: &mut [u64; 25]) {
         }
 
         // Iota
-        state[0] ^= ROUND_CONSTANTS[round];
+        state[0] ^= *round_constant;
     }
 }
 
@@ -1366,7 +1367,7 @@ fn keccak_p_12(state: &mut [u64; 25]) {
 #[inline(always)]
 #[cfg(not(feature = "lane-complement"))]
 fn keccak_f(state: &mut [u64; 25]) {
-    for round in 0..24 {
+    for round_constant in &ROUND_CONSTANTS {
         let mut c = [0u64; 5];
         let mut d = [0u64; 5];
         theta_unrolled!(state, c, d);
@@ -1376,7 +1377,7 @@ fn keccak_f(state: &mut [u64; 25]) {
 
         chi_unrolled!(state, b);
 
-        state[0] ^= ROUND_CONSTANTS[round];
+        state[0] ^= round_constant;
     }
 }
 
@@ -1397,7 +1398,7 @@ fn keccak_f(state: &mut [u64; 25]) {
     // Lane complementing implementation based on XKCP's "bebigokimisa" pattern
     // Lanes stored complemented: 1, 2, 8, 12, 17, 20
 
-    for round in 0..24 {
+    for round_constant in &ROUND_CONSTANTS {
         // Theta step - works identically with or without lane complementing
         let mut c = [0u64; 5];
         for x in 0..5 {
@@ -1421,8 +1422,8 @@ fn keccak_f(state: &mut [u64; 25]) {
 
         let mut x = 1;
         let mut y = 0;
-        for i in 0..24 {
-            b[y + 5 * ((2 * x + 3 * y) % 5)] = state[x + 5 * y].rotate_left(ROTATION_OFFSETS[i]);
+        for rotation in &ROTATION_OFFSETS {
+            b[y + 5 * ((2 * x + 3 * y) % 5)] = state[x + 5 * y].rotate_left(*rotation);
             let temp = y;
             y = (2 * x + 3 * y) % 5;
             x = temp;
@@ -1468,7 +1469,7 @@ fn keccak_f(state: &mut [u64; 25]) {
         state[24] = b[24] ^ (b[20] & b[21]);
 
         // Iota step
-        state[0] ^= ROUND_CONSTANTS[round];
+        state[0] ^= *round_constant;
     }
 }
 
