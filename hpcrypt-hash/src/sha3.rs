@@ -1,53 +1,7 @@
 //! SHA-3 (Keccak) - Secure Hash Algorithm 3
 //!
-//! This module provides implementations of the SHA-3 family of cryptographic hash functions
-//! and the SHAKE extendable-output functions (XOFs), as standardized in FIPS 202 and NIST SP 800-185.
-//!
-//! # Supported Algorithms
-//!
-//! ## Fixed-Length Hash Functions
-//! - **SHA3-224**: 224-bit output (28 bytes)
-//! - **SHA3-256**: 256-bit output (32 bytes)
-//! - **SHA3-384**: 384-bit output (48 bytes)
-//! - **SHA3-512**: 512-bit output (64 bytes)
-//!
-//! ## Extendable-Output Functions (XOFs)
-//! - **SHAKE128**: Variable-length output, 128-bit security
-//! - **SHAKE256**: Variable-length output, 256-bit security
-//! - **TurboSHAKE128**: Fast variant with 12 rounds (RFC 9861)
-//! - **TurboSHAKE256**: Fast variant with 12 rounds (RFC 9861)
-//!
-//! # Examples
-//!
-//! ## SHA3-256
-//! ```
-//! use hpcrypt_hash::sha3::Sha3_256;
-//!
-//! let mut hasher = Sha3_256::new();
-//! hasher.update(b"hello world");
-//! let digest = hasher.finalize();
-//!
-//! // Or use the convenience function
-//! let digest = Sha3_256::digest(b"hello world");
-//! ```
-//!
-//! ## SHAKE128 (Extendable Output)
-//! ```
-//! use hpcrypt_hash::sha3::Shake128;
-//!
-//! let mut shake = Shake128::new();
-//! shake.update(b"hello world");
-//! let mut output = vec![0u8; 64]; // Request 64 bytes
-//! shake.finalize(&mut output);
-//! ```
-//!
-//! # Performance Optimizations
-//!
-//! This implementation includes several optimizations:
-//! - **Loop unrolling**: Theta, Chi, and Rho-Pi steps fully unrolled (~15-20% speedup)
-//! - **Word-at-a-time squeezing**: Extract output by u64 words (~40-50% speedup for small outputs)
-//! - **Fast path for large inputs**: Direct block processing for streaming data
-//! - **Cache alignment**: 64-byte alignment for better cache performance
+//! Based on the Keccak sponge construction, standardized in FIPS 202.
+//! Supports SHA3-224, SHA3-256, SHA3-384, and SHA3-512.
 
 // ===== Optimization Macros for Phase 1 =====
 
@@ -56,23 +10,60 @@
 /// This replaces the slow byte-at-a-time extraction with word-at-a-time extraction.
 /// Expected improvement: 40-50% for small outputs
 macro_rules! squeeze_words_no_complement {
-    ($state:expr, $output:expr, $offset:expr, $to_copy:expr) => {{
-        // Extract complete u64 words
-        let complete_words = $to_copy / 8;
-        for i in 0..complete_words {
-            let bytes = $state[i].to_le_bytes();
-            $output[$offset + i * 8..$offset + (i + 1) * 8].copy_from_slice(&bytes);
-        }
+    ($state:expr, $output:expr, $offset:expr, $to_copy:expr) => {
+        {
+            // Extract complete u64 words
+            let complete_words = $to_copy / 8;
+            for i in 0..complete_words {
+                let bytes = $state[i].to_le_bytes();
+                $output[$offset + i * 8..$offset + (i + 1) * 8].copy_from_slice(&bytes);
+            }
 
-        // Handle remaining 0-7 bytes
-        let remainder_offset = complete_words * 8;
-        if $to_copy > remainder_offset {
-            let bytes = $state[complete_words].to_le_bytes();
-            let remainder = $to_copy - remainder_offset;
-            $output[$offset + remainder_offset..$offset + $to_copy]
-                .copy_from_slice(&bytes[..remainder]);
+            // Handle remaining 0-7 bytes
+            let remainder_offset = complete_words * 8;
+            if $to_copy > remainder_offset {
+                let bytes = $state[complete_words].to_le_bytes();
+                let remainder = $to_copy - remainder_offset;
+                $output[$offset + remainder_offset..$offset + $to_copy]
+                    .copy_from_slice(&bytes[..remainder]);
+            }
         }
-    }};
+    };
+}
+
+/// Macro to extract squeezing logic by u64 words (with lane-complement)
+///
+/// Same as above but handles complemented lanes correctly
+macro_rules! squeeze_words_with_complement {
+    ($state:expr, $output:expr, $offset:expr, $to_copy:expr, $complemented:expr) => {
+        {
+            // Extract complete u64 words
+            let complete_words = $to_copy / 8;
+            for i in 0..complete_words {
+                let lane = if $complemented[i] {
+                    !$state[i]
+                } else {
+                    $state[i]
+                };
+                let bytes = lane.to_le_bytes();
+                $output[$offset + i * 8..$offset + (i + 1) * 8].copy_from_slice(&bytes);
+            }
+
+            // Handle remaining bytes
+            let remainder_offset = complete_words * 8;
+            if $to_copy > remainder_offset {
+                let lane = if $complemented[complete_words] {
+                    !$state[complete_words]
+                } else {
+                    $state[complete_words]
+                };
+                let bytes = lane.to_le_bytes();
+                let remainder = $to_copy - remainder_offset;
+                $output[$offset + remainder_offset..$offset + $to_copy]
+                    .copy_from_slice(&bytes[..remainder]);
+            }
+        }
+    };
 }
 
 // ===== End of Phase 1 Optimization Macros =====
@@ -84,48 +75,50 @@ macro_rules! squeeze_words_no_complement {
 /// Unrolls the Theta column parity computation and D array calculation
 /// Expected improvement: Part of 15-20% cumulative gain
 macro_rules! theta_unrolled {
-    ($state:expr, $c:ident, $d:ident) => {{
-        // Compute column parities (unrolled)
-        $c[0] = $state[0] ^ $state[5] ^ $state[10] ^ $state[15] ^ $state[20];
-        $c[1] = $state[1] ^ $state[6] ^ $state[11] ^ $state[16] ^ $state[21];
-        $c[2] = $state[2] ^ $state[7] ^ $state[12] ^ $state[17] ^ $state[22];
-        $c[3] = $state[3] ^ $state[8] ^ $state[13] ^ $state[18] ^ $state[23];
-        $c[4] = $state[4] ^ $state[9] ^ $state[14] ^ $state[19] ^ $state[24];
+    ($state:expr, $c:ident, $d:ident) => {
+        {
+            // Compute column parities (unrolled)
+            $c[0] = $state[0] ^ $state[5] ^ $state[10] ^ $state[15] ^ $state[20];
+            $c[1] = $state[1] ^ $state[6] ^ $state[11] ^ $state[16] ^ $state[21];
+            $c[2] = $state[2] ^ $state[7] ^ $state[12] ^ $state[17] ^ $state[22];
+            $c[3] = $state[3] ^ $state[8] ^ $state[13] ^ $state[18] ^ $state[23];
+            $c[4] = $state[4] ^ $state[9] ^ $state[14] ^ $state[19] ^ $state[24];
 
-        // Compute D values (unrolled)
-        $d[0] = $c[4] ^ $c[1].rotate_left(1);
-        $d[1] = $c[0] ^ $c[2].rotate_left(1);
-        $d[2] = $c[1] ^ $c[3].rotate_left(1);
-        $d[3] = $c[2] ^ $c[4].rotate_left(1);
-        $d[4] = $c[3] ^ $c[0].rotate_left(1);
+            // Compute D values (unrolled)
+            $d[0] = $c[4] ^ $c[1].rotate_left(1);
+            $d[1] = $c[0] ^ $c[2].rotate_left(1);
+            $d[2] = $c[1] ^ $c[3].rotate_left(1);
+            $d[3] = $c[2] ^ $c[4].rotate_left(1);
+            $d[4] = $c[3] ^ $c[0].rotate_left(1);
 
-        // Apply D to all lanes (fully unrolled)
-        $state[0] ^= $d[0];
-        $state[1] ^= $d[1];
-        $state[2] ^= $d[2];
-        $state[3] ^= $d[3];
-        $state[4] ^= $d[4];
-        $state[5] ^= $d[0];
-        $state[6] ^= $d[1];
-        $state[7] ^= $d[2];
-        $state[8] ^= $d[3];
-        $state[9] ^= $d[4];
-        $state[10] ^= $d[0];
-        $state[11] ^= $d[1];
-        $state[12] ^= $d[2];
-        $state[13] ^= $d[3];
-        $state[14] ^= $d[4];
-        $state[15] ^= $d[0];
-        $state[16] ^= $d[1];
-        $state[17] ^= $d[2];
-        $state[18] ^= $d[3];
-        $state[19] ^= $d[4];
-        $state[20] ^= $d[0];
-        $state[21] ^= $d[1];
-        $state[22] ^= $d[2];
-        $state[23] ^= $d[3];
-        $state[24] ^= $d[4];
-    }};
+            // Apply D to all lanes (fully unrolled)
+            $state[0] ^= $d[0];
+            $state[1] ^= $d[1];
+            $state[2] ^= $d[2];
+            $state[3] ^= $d[3];
+            $state[4] ^= $d[4];
+            $state[5] ^= $d[0];
+            $state[6] ^= $d[1];
+            $state[7] ^= $d[2];
+            $state[8] ^= $d[3];
+            $state[9] ^= $d[4];
+            $state[10] ^= $d[0];
+            $state[11] ^= $d[1];
+            $state[12] ^= $d[2];
+            $state[13] ^= $d[3];
+            $state[14] ^= $d[4];
+            $state[15] ^= $d[0];
+            $state[16] ^= $d[1];
+            $state[17] ^= $d[2];
+            $state[18] ^= $d[3];
+            $state[19] ^= $d[4];
+            $state[20] ^= $d[0];
+            $state[21] ^= $d[1];
+            $state[22] ^= $d[2];
+            $state[23] ^= $d[3];
+            $state[24] ^= $d[4];
+        }
+    };
 }
 
 /// Macro for unrolled Chi step (standard version without lane complement)
@@ -133,67 +126,69 @@ macro_rules! theta_unrolled {
 /// Unrolls the 5 rows of Chi step completely
 /// Expected improvement: Part of 15-20% cumulative gain
 macro_rules! chi_unrolled {
-    ($state:expr, $b:expr) => {{
-        // Row 0 (unrolled)
-        let t0 = $b[0];
-        let t1 = $b[1];
-        let t2 = $b[2];
-        let t3 = $b[3];
-        let t4 = $b[4];
-        $state[0] = t0 ^ ((!t1) & t2);
-        $state[1] = t1 ^ ((!t2) & t3);
-        $state[2] = t2 ^ ((!t3) & t4);
-        $state[3] = t3 ^ ((!t4) & t0);
-        $state[4] = t4 ^ ((!t0) & t1);
+    ($state:expr, $b:expr) => {
+        {
+            // Row 0 (unrolled)
+            let t0 = $b[0];
+            let t1 = $b[1];
+            let t2 = $b[2];
+            let t3 = $b[3];
+            let t4 = $b[4];
+            $state[0] = t0 ^ ((!t1) & t2);
+            $state[1] = t1 ^ ((!t2) & t3);
+            $state[2] = t2 ^ ((!t3) & t4);
+            $state[3] = t3 ^ ((!t4) & t0);
+            $state[4] = t4 ^ ((!t0) & t1);
 
-        // Row 1 (unrolled)
-        let t0 = $b[5];
-        let t1 = $b[6];
-        let t2 = $b[7];
-        let t3 = $b[8];
-        let t4 = $b[9];
-        $state[5] = t0 ^ ((!t1) & t2);
-        $state[6] = t1 ^ ((!t2) & t3);
-        $state[7] = t2 ^ ((!t3) & t4);
-        $state[8] = t3 ^ ((!t4) & t0);
-        $state[9] = t4 ^ ((!t0) & t1);
+            // Row 1 (unrolled)
+            let t0 = $b[5];
+            let t1 = $b[6];
+            let t2 = $b[7];
+            let t3 = $b[8];
+            let t4 = $b[9];
+            $state[5] = t0 ^ ((!t1) & t2);
+            $state[6] = t1 ^ ((!t2) & t3);
+            $state[7] = t2 ^ ((!t3) & t4);
+            $state[8] = t3 ^ ((!t4) & t0);
+            $state[9] = t4 ^ ((!t0) & t1);
 
-        // Row 2 (unrolled)
-        let t0 = $b[10];
-        let t1 = $b[11];
-        let t2 = $b[12];
-        let t3 = $b[13];
-        let t4 = $b[14];
-        $state[10] = t0 ^ ((!t1) & t2);
-        $state[11] = t1 ^ ((!t2) & t3);
-        $state[12] = t2 ^ ((!t3) & t4);
-        $state[13] = t3 ^ ((!t4) & t0);
-        $state[14] = t4 ^ ((!t0) & t1);
+            // Row 2 (unrolled)
+            let t0 = $b[10];
+            let t1 = $b[11];
+            let t2 = $b[12];
+            let t3 = $b[13];
+            let t4 = $b[14];
+            $state[10] = t0 ^ ((!t1) & t2);
+            $state[11] = t1 ^ ((!t2) & t3);
+            $state[12] = t2 ^ ((!t3) & t4);
+            $state[13] = t3 ^ ((!t4) & t0);
+            $state[14] = t4 ^ ((!t0) & t1);
 
-        // Row 3 (unrolled)
-        let t0 = $b[15];
-        let t1 = $b[16];
-        let t2 = $b[17];
-        let t3 = $b[18];
-        let t4 = $b[19];
-        $state[15] = t0 ^ ((!t1) & t2);
-        $state[16] = t1 ^ ((!t2) & t3);
-        $state[17] = t2 ^ ((!t3) & t4);
-        $state[18] = t3 ^ ((!t4) & t0);
-        $state[19] = t4 ^ ((!t0) & t1);
+            // Row 3 (unrolled)
+            let t0 = $b[15];
+            let t1 = $b[16];
+            let t2 = $b[17];
+            let t3 = $b[18];
+            let t4 = $b[19];
+            $state[15] = t0 ^ ((!t1) & t2);
+            $state[16] = t1 ^ ((!t2) & t3);
+            $state[17] = t2 ^ ((!t3) & t4);
+            $state[18] = t3 ^ ((!t4) & t0);
+            $state[19] = t4 ^ ((!t0) & t1);
 
-        // Row 4 (unrolled)
-        let t0 = $b[20];
-        let t1 = $b[21];
-        let t2 = $b[22];
-        let t3 = $b[23];
-        let t4 = $b[24];
-        $state[20] = t0 ^ ((!t1) & t2);
-        $state[21] = t1 ^ ((!t2) & t3);
-        $state[22] = t2 ^ ((!t3) & t4);
-        $state[23] = t3 ^ ((!t4) & t0);
-        $state[24] = t4 ^ ((!t0) & t1);
-    }};
+            // Row 4 (unrolled)
+            let t0 = $b[20];
+            let t1 = $b[21];
+            let t2 = $b[22];
+            let t3 = $b[23];
+            let t4 = $b[24];
+            $state[20] = t0 ^ ((!t1) & t2);
+            $state[21] = t1 ^ ((!t2) & t3);
+            $state[22] = t2 ^ ((!t3) & t4);
+            $state[23] = t3 ^ ((!t4) & t0);
+            $state[24] = t4 ^ ((!t0) & t1);
+        }
+    };
 }
 
 /// Macro for unrolled Rho-Pi step
@@ -201,34 +196,36 @@ macro_rules! chi_unrolled {
 /// Unrolls the Rho-Pi permutation completely with hardcoded rotation offsets
 /// Expected improvement: 5-8%
 macro_rules! rho_pi_unrolled {
-    ($state:expr, $b:expr) => {{
-        // Rho-Pi unrolled with explicit rotation offsets (corrected mapping)
-        $b[0] = $state[0]; // No rotation for position 0
-        $b[10] = $state[1].rotate_left(1);
-        $b[7] = $state[10].rotate_left(3);
-        $b[11] = $state[7].rotate_left(6);
-        $b[17] = $state[11].rotate_left(10);
-        $b[18] = $state[17].rotate_left(15);
-        $b[3] = $state[18].rotate_left(21);
-        $b[5] = $state[3].rotate_left(28);
-        $b[16] = $state[5].rotate_left(36);
-        $b[8] = $state[16].rotate_left(45);
-        $b[21] = $state[8].rotate_left(55);
-        $b[24] = $state[21].rotate_left(2);
-        $b[4] = $state[24].rotate_left(14);
-        $b[15] = $state[4].rotate_left(27);
-        $b[23] = $state[15].rotate_left(41);
-        $b[19] = $state[23].rotate_left(56);
-        $b[13] = $state[19].rotate_left(8);
-        $b[12] = $state[13].rotate_left(25);
-        $b[2] = $state[12].rotate_left(43);
-        $b[20] = $state[2].rotate_left(62);
-        $b[14] = $state[20].rotate_left(18);
-        $b[22] = $state[14].rotate_left(39);
-        $b[9] = $state[22].rotate_left(61);
-        $b[6] = $state[9].rotate_left(20);
-        $b[1] = $state[6].rotate_left(44);
-    }};
+    ($state:expr, $b:expr) => {
+        {
+            // Rho-Pi unrolled with explicit rotation offsets (corrected mapping)
+            $b[0] = $state[0];  // No rotation for position 0
+            $b[10] = $state[1].rotate_left(1);
+            $b[7] = $state[10].rotate_left(3);
+            $b[11] = $state[7].rotate_left(6);
+            $b[17] = $state[11].rotate_left(10);
+            $b[18] = $state[17].rotate_left(15);
+            $b[3] = $state[18].rotate_left(21);
+            $b[5] = $state[3].rotate_left(28);
+            $b[16] = $state[5].rotate_left(36);
+            $b[8] = $state[16].rotate_left(45);
+            $b[21] = $state[8].rotate_left(55);
+            $b[24] = $state[21].rotate_left(2);
+            $b[4] = $state[24].rotate_left(14);
+            $b[15] = $state[4].rotate_left(27);
+            $b[23] = $state[15].rotate_left(41);
+            $b[19] = $state[23].rotate_left(56);
+            $b[13] = $state[19].rotate_left(8);
+            $b[12] = $state[13].rotate_left(25);
+            $b[2] = $state[12].rotate_left(43);
+            $b[20] = $state[2].rotate_left(62);
+            $b[14] = $state[20].rotate_left(18);
+            $b[22] = $state[14].rotate_left(39);
+            $b[9] = $state[22].rotate_left(61);
+            $b[6] = $state[9].rotate_left(20);
+            $b[1] = $state[6].rotate_left(44);
+        }
+    };
 }
 
 // ===== End of Phase 2 Optimization Macros =====
@@ -243,7 +240,7 @@ pub const SHA3_384_OUTPUT_SIZE: usize = 48;
 pub const SHA3_512_OUTPUT_SIZE: usize = 64;
 
 /// Keccak state size in 64-bit words
-const STATE_SIZE: usize = 25;
+pub(crate) const STATE_SIZE: usize = 25;
 
 /// Round constants for Keccak-f[1600]
 const ROUND_CONSTANTS: [u64; 24] = [
@@ -273,22 +270,12 @@ const ROUND_CONSTANTS: [u64; 24] = [
     0x8000000080008008,
 ];
 
-/// SHA3-256 cryptographic hash function
-///
-/// Produces a 256-bit (32-byte) hash digest. Part of the SHA-3 family standardized in FIPS 202.
-///
-/// # Security
-/// - **Output size**: 256 bits (32 bytes)
-/// - **Collision resistance**: 128 bits
-/// - **Preimage resistance**: 256 bits
-///
-/// # Example
-/// ```
-/// use hpcrypt_hash::sha3::Sha3_256;
-///
-/// let digest = Sha3_256::digest(b"hello world");
-/// assert_eq!(digest.len(), 32);
-/// ```
+/// Rotation offsets for Keccak-f[1600]
+const ROTATION_OFFSETS: [u32; 24] = [
+    1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14, 27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44,
+];
+
+/// SHA3-256 hasher
 #[derive(Clone)]
 pub struct Sha3_256 {
     state: [u64; STATE_SIZE],
@@ -304,19 +291,29 @@ impl Default for Sha3_256 {
 }
 
 impl Sha3_256 {
-    /// Creates a new SHA3-256 hasher instance
-    ///
-    /// # Example
-    /// ```
-    /// use hpcrypt_hash::sha3::Sha3_256;
-    ///
-    /// let mut hasher = Sha3_256::new();
-    /// hasher.update(b"hello");
-    /// hasher.update(b" world");
-    /// let digest = hasher.finalize();
-    /// ```
+    /// Create a new SHA3-256 hasher
     pub fn new() -> Self {
+        #[cfg(not(feature = "lane-complement"))]
         let state = [0u64; STATE_SIZE];
+
+        #[cfg(feature = "lane-complement")]
+        let state = {
+            let mut s = [0u64; STATE_SIZE];
+            // Initialize complemented lanes to all 1s (~0)
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false,
+                false, false, false, true, false,
+                false, false, true, false, false,
+                false, false, true, false, false,
+                true, false, false, false, false,
+            ];
+            for i in 0..STATE_SIZE {
+                if COMPLEMENTED[i] {
+                    s[i] = !0u64;
+                }
+            }
+            s
+        };
 
         Self {
             state,
@@ -326,23 +323,7 @@ impl Sha3_256 {
         }
     }
 
-    /// Absorbs input data into the hasher
-    ///
-    /// This method can be called multiple times to hash data incrementally.
-    ///
-    /// # Arguments
-    /// * `data` - Input data to hash
-    ///
-    /// # Example
-    /// ```
-    /// use hpcrypt_hash::sha3::Sha3_256;
-    ///
-    /// let mut hasher = Sha3_256::new();
-    /// hasher.update(b"hello");
-    /// hasher.update(b" ");
-    /// hasher.update(b"world");
-    /// let digest = hasher.finalize();
-    /// ```
+    /// Update the hasher with input data
     pub fn update(&mut self, data: &[u8]) {
         let mut offset = 0;
 
@@ -376,22 +357,7 @@ impl Sha3_256 {
         }
     }
 
-    /// Finalizes the hash computation and returns the 256-bit digest
-    ///
-    /// This consumes the hasher. Call this after all data has been processed with `update()`.
-    ///
-    /// # Returns
-    /// A 32-byte array containing the SHA3-256 hash digest
-    ///
-    /// # Example
-    /// ```
-    /// use hpcrypt_hash::sha3::Sha3_256;
-    ///
-    /// let mut hasher = Sha3_256::new();
-    /// hasher.update(b"hello world");
-    /// let digest = hasher.finalize();
-    /// assert_eq!(digest.len(), 32);
-    /// ```
+    /// Finalize and return the digest
     pub fn finalize(mut self) -> [u8; SHA3_256_OUTPUT_SIZE] {
         // SHA-3 padding: append 0x06, pad with zeros, final byte is 0x80
         self.buffer[self.buffer_len] = 0x06;
@@ -405,8 +371,25 @@ impl Sha3_256 {
         // Squeeze
         let mut output = [0u8; SHA3_256_OUTPUT_SIZE];
 
-        for i in 0..4 {
-            output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
+        #[cfg(not(feature = "lane-complement"))]
+        {
+            for i in 0..4 {
+                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
+            }
+        }
+
+        #[cfg(feature = "lane-complement")]
+        {
+            // Lanes 1 and 2 are stored complemented, need to un-complement when reading
+            const COMPLEMENTED: [bool; 4] = [false, true, true, false];
+            for i in 0..4 {
+                let lane = if COMPLEMENTED[i] {
+                    !self.state[i]
+                } else {
+                    self.state[i]
+                };
+                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
+            }
         }
 
         output
@@ -416,31 +399,43 @@ impl Sha3_256 {
     #[inline(always)]
     fn absorb_block(&mut self, block: &[u8]) {
         // XOR block into state
-        for (i, chunk) in block.chunks_exact(8).enumerate() {
-            let word = u64::from_le_bytes(chunk.try_into().unwrap());
-            self.state[i] ^= word;
+        #[cfg(not(feature = "lane-complement"))]
+        {
+            for (i, chunk) in block.chunks_exact(8).enumerate() {
+                let word = u64::from_le_bytes(chunk.try_into().unwrap());
+                self.state[i] ^= word;
+            }
+        }
+
+        #[cfg(feature = "lane-complement")]
+        {
+            // Lanes that are stored complemented
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false,  // y=0: lanes 1,2
+                false, false, false, true, false,  // y=1: lane 8
+                false, false, true, false, false,  // y=2: lane 12
+                false, false, true, false, false,  // y=3: lane 17
+                true, false, false, false, false,  // y=4: lane 20
+            ];
+
+            for (i, chunk) in block.chunks_exact(8).enumerate() {
+                let word = u64::from_le_bytes(chunk.try_into().unwrap());
+                if COMPLEMENTED[i] {
+                    // Un-complement, XOR, re-complement
+                    let logical = !self.state[i];
+                    let new_logical = logical ^ word;
+                    self.state[i] = !new_logical;
+                } else {
+                    self.state[i] ^= word;
+                }
+            }
         }
 
         // Apply Keccak-f permutation
         keccak_f(&mut self.state);
     }
 
-    /// Computes the SHA3-256 hash of data in a single call
-    ///
-    /// This is a convenience function equivalent to calling `new()`, `update()`, and `finalize()`.
-    ///
-    /// # Arguments
-    /// * `data` - The data to hash
-    ///
-    /// # Returns
-    /// A 32-byte array containing the hash digest
-    ///
-    /// # Example
-    /// ```
-    /// use hpcrypt_hash::sha3::Sha3_256;
-    ///
-    /// let digest = Sha3_256::digest(b"hello world");
-    /// ```
+    /// Compute SHA3-256 of data in one call
     pub fn digest(data: &[u8]) -> [u8; SHA3_256_OUTPUT_SIZE] {
         let mut hasher = Self::new();
         hasher.update(data);
@@ -448,22 +443,7 @@ impl Sha3_256 {
     }
 }
 
-/// SHA3-512 cryptographic hash function
-///
-/// Produces a 512-bit (64-byte) hash digest. Part of the SHA-3 family standardized in FIPS 202.
-///
-/// # Security
-/// - **Output size**: 512 bits (64 bytes)
-/// - **Collision resistance**: 256 bits
-/// - **Preimage resistance**: 512 bits
-///
-/// # Example
-/// ```
-/// use hpcrypt_hash::sha3::Sha3_512;
-///
-/// let digest = Sha3_512::digest(b"hello world");
-/// assert_eq!(digest.len(), 64);
-/// ```
+/// SHA3-512 hasher
 #[derive(Clone)]
 pub struct Sha3_512 {
     state: [u64; STATE_SIZE],
@@ -481,7 +461,27 @@ impl Default for Sha3_512 {
 impl Sha3_512 {
     /// Create a new SHA3-512 hasher
     pub fn new() -> Self {
+        #[cfg(not(feature = "lane-complement"))]
         let state = [0u64; STATE_SIZE];
+
+        #[cfg(feature = "lane-complement")]
+        let state = {
+            let mut s = [0u64; STATE_SIZE];
+            // Initialize complemented lanes to all 1s (~0)
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false,
+                false, false, false, true, false,
+                false, false, true, false, false,
+                false, false, true, false, false,
+                true, false, false, false, false,
+            ];
+            for i in 0..STATE_SIZE {
+                if COMPLEMENTED[i] {
+                    s[i] = !0u64;
+                }
+            }
+            s
+        };
 
         Self {
             state,
@@ -534,8 +534,21 @@ impl Sha3_512 {
 
         let mut output = [0u8; SHA3_512_OUTPUT_SIZE];
 
-        for i in 0..8 {
-            output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
+        #[cfg(not(feature = "lane-complement"))]
+        {
+            for i in 0..8 {
+                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
+            }
+        }
+
+        #[cfg(feature = "lane-complement")]
+        {
+            // Lanes 1 and 2 are stored complemented
+            const COMPLEMENTED: [bool; 8] = [false, true, true, false, false, false, false, false];
+            for i in 0..8 {
+                let lane = if COMPLEMENTED[i] { !self.state[i] } else { self.state[i] };
+                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
+            }
         }
 
         output
@@ -544,9 +557,34 @@ impl Sha3_512 {
     /// Absorb a block into the state
     #[inline(always)]
     fn absorb_block(&mut self, block: &[u8]) {
-        for (i, chunk) in block.chunks_exact(8).enumerate() {
-            let word = u64::from_le_bytes(chunk.try_into().unwrap());
-            self.state[i] ^= word;
+        #[cfg(not(feature = "lane-complement"))]
+        {
+            for (i, chunk) in block.chunks_exact(8).enumerate() {
+                let word = u64::from_le_bytes(chunk.try_into().unwrap());
+                self.state[i] ^= word;
+            }
+        }
+
+        #[cfg(feature = "lane-complement")]
+        {
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false,
+                false, false, false, true, false,
+                false, false, true, false, false,
+                false, false, true, false, false,
+                true, false, false, false, false,
+            ];
+            for (i, chunk) in block.chunks_exact(8).enumerate() {
+                let word = u64::from_le_bytes(chunk.try_into().unwrap());
+                if COMPLEMENTED[i] {
+                    // Un-complement, XOR, re-complement
+                    let logical = !self.state[i];
+                    let new_logical = logical ^ word;
+                    self.state[i] = !new_logical;
+                } else {
+                    self.state[i] ^= word;
+                }
+            }
         }
 
         keccak_f(&mut self.state);
@@ -560,22 +598,7 @@ impl Sha3_512 {
     }
 }
 
-/// SHA3-224 cryptographic hash function
-///
-/// Produces a 224-bit (28-byte) hash digest. Part of the SHA-3 family standardized in FIPS 202.
-///
-/// # Security
-/// - **Output size**: 224 bits (28 bytes)
-/// - **Collision resistance**: 112 bits
-/// - **Preimage resistance**: 224 bits
-///
-/// # Example
-/// ```
-/// use hpcrypt_hash::sha3::Sha3_224;
-///
-/// let digest = Sha3_224::digest(b"hello world");
-/// assert_eq!(digest.len(), 28);
-/// ```
+/// SHA3-224 hasher
 #[derive(Clone)]
 pub struct Sha3_224 {
     state: [u64; STATE_SIZE],
@@ -593,7 +616,27 @@ impl Default for Sha3_224 {
 impl Sha3_224 {
     /// Create a new SHA3-224 hasher
     pub fn new() -> Self {
+        #[cfg(not(feature = "lane-complement"))]
         let state = [0u64; STATE_SIZE];
+
+        #[cfg(feature = "lane-complement")]
+        let state = {
+            let mut s = [0u64; STATE_SIZE];
+            // Initialize complemented lanes to all 1s (~0)
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false,
+                false, false, false, true, false,
+                false, false, true, false, false,
+                false, false, true, false, false,
+                true, false, false, false, false,
+            ];
+            for i in 0..STATE_SIZE {
+                if COMPLEMENTED[i] {
+                    s[i] = !0u64;
+                }
+            }
+            s
+        };
 
         Self {
             state,
@@ -640,10 +683,24 @@ impl Sha3_224 {
         self.absorb_block(&buffer[..rate]);
         let mut output = [0u8; SHA3_224_OUTPUT_SIZE];
 
-        for i in 0..3 {
-            output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
+        #[cfg(not(feature = "lane-complement"))]
+        {
+            for i in 0..3 {
+                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
+            }
+            output[24..28].copy_from_slice(&self.state[3].to_le_bytes()[..4]);
         }
-        output[24..28].copy_from_slice(&self.state[3].to_le_bytes()[..4]);
+
+        #[cfg(feature = "lane-complement")]
+        {
+            const COMPLEMENTED: [bool; 4] = [false, true, true, false];
+            for i in 0..3 {
+                let lane = if COMPLEMENTED[i] { !self.state[i] } else { self.state[i] };
+                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
+            }
+            let lane3 = if COMPLEMENTED[3] { !self.state[3] } else { self.state[3] };
+            output[24..28].copy_from_slice(&lane3.to_le_bytes()[..4]);
+        }
 
         output
     }
@@ -651,9 +708,34 @@ impl Sha3_224 {
     /// Absorb a block into the state
     #[inline(always)]
     fn absorb_block(&mut self, block: &[u8]) {
-        for (i, chunk) in block.chunks_exact(8).enumerate() {
-            let word = u64::from_le_bytes(chunk.try_into().unwrap());
-            self.state[i] ^= word;
+        #[cfg(not(feature = "lane-complement"))]
+        {
+            for (i, chunk) in block.chunks_exact(8).enumerate() {
+                let word = u64::from_le_bytes(chunk.try_into().unwrap());
+                self.state[i] ^= word;
+            }
+        }
+
+        #[cfg(feature = "lane-complement")]
+        {
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false,
+                false, false, false, true, false,
+                false, false, true, false, false,
+                false, false, true, false, false,
+                true, false, false, false, false,
+            ];
+            for (i, chunk) in block.chunks_exact(8).enumerate() {
+                let word = u64::from_le_bytes(chunk.try_into().unwrap());
+                if COMPLEMENTED[i] {
+                    // Un-complement, XOR, re-complement
+                    let logical = !self.state[i];
+                    let new_logical = logical ^ word;
+                    self.state[i] = !new_logical;
+                } else {
+                    self.state[i] ^= word;
+                }
+            }
         }
 
         keccak_f(&mut self.state);
@@ -667,22 +749,7 @@ impl Sha3_224 {
     }
 }
 
-/// SHA3-384 cryptographic hash function
-///
-/// Produces a 384-bit (48-byte) hash digest. Part of the SHA-3 family standardized in FIPS 202.
-///
-/// # Security
-/// - **Output size**: 384 bits (48 bytes)
-/// - **Collision resistance**: 192 bits
-/// - **Preimage resistance**: 384 bits
-///
-/// # Example
-/// ```
-/// use hpcrypt_hash::sha3::Sha3_384;
-///
-/// let digest = Sha3_384::digest(b"hello world");
-/// assert_eq!(digest.len(), 48);
-/// ```
+/// SHA3-384 hasher
 #[derive(Clone)]
 pub struct Sha3_384 {
     state: [u64; STATE_SIZE],
@@ -700,7 +767,27 @@ impl Default for Sha3_384 {
 impl Sha3_384 {
     /// Create a new SHA3-384 hasher
     pub fn new() -> Self {
+        #[cfg(not(feature = "lane-complement"))]
         let state = [0u64; STATE_SIZE];
+
+        #[cfg(feature = "lane-complement")]
+        let state = {
+            let mut s = [0u64; STATE_SIZE];
+            // Initialize complemented lanes to all 1s (~0)
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false,
+                false, false, false, true, false,
+                false, false, true, false, false,
+                false, false, true, false, false,
+                true, false, false, false, false,
+            ];
+            for i in 0..STATE_SIZE {
+                if COMPLEMENTED[i] {
+                    s[i] = !0u64;
+                }
+            }
+            s
+        };
 
         Self {
             state,
@@ -747,8 +834,20 @@ impl Sha3_384 {
         self.absorb_block(&buffer[..rate]);
         let mut output = [0u8; SHA3_384_OUTPUT_SIZE];
 
-        for i in 0..6 {
-            output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
+        #[cfg(not(feature = "lane-complement"))]
+        {
+            for i in 0..6 {
+                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
+            }
+        }
+
+        #[cfg(feature = "lane-complement")]
+        {
+            const COMPLEMENTED: [bool; 6] = [false, true, true, false, false, false];
+            for i in 0..6 {
+                let lane = if COMPLEMENTED[i] { !self.state[i] } else { self.state[i] };
+                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
+            }
         }
 
         output
@@ -757,9 +856,34 @@ impl Sha3_384 {
     /// Absorb a block into the state
     #[inline(always)]
     fn absorb_block(&mut self, block: &[u8]) {
-        for (i, chunk) in block.chunks_exact(8).enumerate() {
-            let word = u64::from_le_bytes(chunk.try_into().unwrap());
-            self.state[i] ^= word;
+        #[cfg(not(feature = "lane-complement"))]
+        {
+            for (i, chunk) in block.chunks_exact(8).enumerate() {
+                let word = u64::from_le_bytes(chunk.try_into().unwrap());
+                self.state[i] ^= word;
+            }
+        }
+
+        #[cfg(feature = "lane-complement")]
+        {
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false,
+                false, false, false, true, false,
+                false, false, true, false, false,
+                false, false, true, false, false,
+                true, false, false, false, false,
+            ];
+            for (i, chunk) in block.chunks_exact(8).enumerate() {
+                let word = u64::from_le_bytes(chunk.try_into().unwrap());
+                if COMPLEMENTED[i] {
+                    // Un-complement, XOR, re-complement
+                    let logical = !self.state[i];
+                    let new_logical = logical ^ word;
+                    self.state[i] = !new_logical;
+                } else {
+                    self.state[i] ^= word;
+                }
+            }
         }
 
         keccak_f(&mut self.state);
@@ -788,17 +912,36 @@ impl Sha3_384 {
 #[derive(Clone)]
 #[repr(C, align(64))]
 pub struct ShakeCore<const RATE: usize, const ROUNDS: usize> {
-    state: [u64; STATE_SIZE],
+    pub(crate) state: [u64; STATE_SIZE],
     buffer: [u8; RATE],
-    buffer_len: usize,
-    domain_sep: u8,
+    pub(crate) buffer_len: usize,
+    pub(crate) domain_sep: u8,
 }
 
 impl<const RATE: usize, const ROUNDS: usize> ShakeCore<RATE, ROUNDS> {
     /// Create a new XOF instance with specified domain separation
     #[inline(always)]
     fn new_with_domain_sep(domain_sep: u8) -> Self {
+        #[cfg(not(feature = "lane-complement"))]
         let state = [0u64; STATE_SIZE];
+
+        #[cfg(feature = "lane-complement")]
+        let state = {
+            let mut s = [0u64; STATE_SIZE];
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false,
+                false, false, false, true, false,
+                false, false, true, false, false,
+                false, false, true, false, false,
+                true, false, false, false, false,
+            ];
+            for (i, &is_complemented) in COMPLEMENTED.iter().enumerate() {
+                if is_complemented {
+                    s[i] = !0u64;
+                }
+            }
+            s
+        };
 
         Self {
             state,
@@ -889,7 +1032,33 @@ impl<const RATE: usize, const ROUNDS: usize> ShakeCore<RATE, ROUNDS> {
         while offset < output.len() {
             let to_copy = core::cmp::min(RATE, output.len() - offset);
 
-            squeeze_words_no_complement!(self.state, output, offset, to_copy);
+            #[cfg(not(feature = "lane-complement"))]
+            {
+                squeeze_words_no_complement!(
+                    self.state,
+                    output,
+                    offset,
+                    to_copy
+                );
+            }
+
+            #[cfg(feature = "lane-complement")]
+            {
+                const COMPLEMENTED: [bool; 25] = [
+                    false, true, true, false, false,
+                    false, false, false, true, false,
+                    false, false, true, false, false,
+                    false, false, true, false, false,
+                    true, false, false, false, false,
+                ];
+                squeeze_words_with_complement!(
+                    self.state,
+                    output,
+                    offset,
+                    to_copy,
+                    COMPLEMENTED
+                );
+            }
 
             offset += to_copy;
 
@@ -901,10 +1070,33 @@ impl<const RATE: usize, const ROUNDS: usize> ShakeCore<RATE, ROUNDS> {
 
     /// Absorb a block into the state
     #[inline(always)]
-    fn absorb_block(&mut self, block: &[u8]) {
-        for (i, chunk) in block.chunks_exact(8).enumerate() {
-            let word = u64::from_le_bytes(chunk.try_into().unwrap());
-            self.state[i] ^= word;
+    pub(crate) fn absorb_block(&mut self, block: &[u8]) {
+        #[cfg(not(feature = "lane-complement"))]
+        {
+            for (i, chunk) in block.chunks_exact(8).enumerate() {
+                let word = u64::from_le_bytes(chunk.try_into().unwrap());
+                self.state[i] ^= word;
+            }
+        }
+
+        #[cfg(feature = "lane-complement")]
+        {
+            // Lane-complement aware absorption
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false,
+                false, false, false, true, false,
+                false, false, true, false, false,
+                false, false, true, false, false,
+                true, false, false, false, false,
+            ];
+
+            for (i, chunk) in block.chunks_exact(8).enumerate() {
+                let mut word = u64::from_le_bytes(chunk.try_into().unwrap());
+                if COMPLEMENTED[i] {
+                    word = !word;
+                }
+                self.state[i] ^= word;
+            }
         }
 
         Self::permute(&mut self.state);
@@ -912,7 +1104,7 @@ impl<const RATE: usize, const ROUNDS: usize> ShakeCore<RATE, ROUNDS> {
 
     /// Apply Keccak permutation based on ROUNDS constant
     #[inline(always)]
-    fn permute(state: &mut [u64; 25]) {
+    pub(crate) fn permute(state: &mut [u64; 25]) {
         // Const generics with compile-time branch elimination
         if ROUNDS == 24 {
             keccak_f(state);
@@ -923,106 +1115,48 @@ impl<const RATE: usize, const ROUNDS: usize> ShakeCore<RATE, ROUNDS> {
             unreachable!("Invalid ROUNDS parameter: must be 12 or 24");
         }
     }
+
+    /// Finalize into state without squeezing (for XOF reader)
+    ///
+    /// This method applies padding and performs the final permutation,
+    /// leaving the state ready for squeezing operations.
+    #[inline]
+    pub(crate) fn finalize_into_state(&mut self) {
+        // Padding: domain_sep || 0* || 0x80
+        self.buffer[self.buffer_len] = self.domain_sep;
+        for i in self.buffer_len + 1..RATE {
+            self.buffer[i] = 0;
+        }
+        self.buffer[RATE - 1] |= 0x80;
+
+        // Final absorption
+        let buffer = self.buffer;
+        self.absorb_block(&buffer);
+    }
 }
 
 // ===== Type Aliases =====
 
-/// SHAKE128 - Extendable Output Function (XOF) with 128-bit security
+/// SHAKE128 - Extendable Output Function with 128-bit security
 ///
-/// SHAKE128 is a variable-length hash function that can produce output of any desired length.
-/// It uses the 24-round Keccak-f\[1600\] permutation with a rate of 168 bytes (1344 bits).
-///
-/// Standardized in FIPS 202.
-///
-/// # Security
-/// - **Security level**: 128 bits
-/// - **Collision resistance**: min(d/2, 128) bits for d-bit output
-/// - **Preimage resistance**: min(d, 128) bits for d-bit output
-///
-/// # Example
-/// ```
-/// use hpcrypt_hash::sha3::Shake128;
-///
-/// let mut shake = Shake128::new();
-/// shake.update(b"hello world");
-///
-/// // Request 32 bytes of output
-/// let mut output = vec![0u8; 32];
-/// shake.finalize(&mut output);
-/// ```
+/// Uses 24-round Keccak-f[1600] permutation with rate=168 bytes (1344 bits).
 pub type Shake128 = ShakeCore<168, 24>;
 
-/// SHAKE256 - Extendable Output Function (XOF) with 256-bit security
+/// SHAKE256 - Extendable Output Function with 256-bit security
 ///
-/// SHAKE256 is a variable-length hash function that can produce output of any desired length.
-/// It uses the 24-round Keccak-f\[1600\] permutation with a rate of 136 bytes (1088 bits).
-///
-/// Standardized in FIPS 202.
-///
-/// # Security
-/// - **Security level**: 256 bits
-/// - **Collision resistance**: min(d/2, 256) bits for d-bit output
-/// - **Preimage resistance**: min(d, 256) bits for d-bit output
-///
-/// # Example
-/// ```
-/// use hpcrypt_hash::sha3::Shake256;
-///
-/// let mut shake = Shake256::new();
-/// shake.update(b"hello world");
-///
-/// // Request 64 bytes of output
-/// let mut output = vec![0u8; 64];
-/// shake.finalize(&mut output);
-/// ```
+/// Uses 24-round Keccak-f[1600] permutation with rate=136 bytes (1088 bits).
 pub type Shake256 = ShakeCore<136, 24>;
 
-/// TurboSHAKE128 - Fast Extendable Output Function with 128-bit security
+/// TurboSHAKE128 - Fast XOF with 128-bit security (~2x faster than SHAKE128)
 ///
-/// TurboSHAKE128 is approximately 2× faster than SHAKE128 by using only 12 rounds
-/// instead of 24. It uses the Keccak-p\[1600,12\] permutation with a rate of 168 bytes.
-///
+/// Uses 12-round Keccak-p[1600,12] permutation with rate=168 bytes (1344 bits).
 /// Defined in RFC 9861.
-///
-/// # Performance vs Security
-/// - **Speed**: ~2× faster than SHAKE128
-/// - **Security level**: 128 bits (same as SHAKE128)
-/// - **Rounds**: 12 (vs 24 for SHAKE128)
-///
-/// # Example
-/// ```
-/// use hpcrypt_hash::sha3::TurboShake128;
-///
-/// let mut shake = TurboShake128::new();
-/// shake.update(b"hello world");
-///
-/// let mut output = vec![0u8; 32];
-/// shake.finalize(&mut output);
-/// ```
 pub type TurboShake128 = ShakeCore<168, 12>;
 
-/// TurboSHAKE256 - Fast Extendable Output Function with 256-bit security
+/// TurboSHAKE256 - Fast XOF with 256-bit security (~2x faster than SHAKE256)
 ///
-/// TurboSHAKE256 is approximately 2× faster than SHAKE256 by using only 12 rounds
-/// instead of 24. It uses the Keccak-p\[1600,12\] permutation with a rate of 136 bytes.
-///
+/// Uses 12-round Keccak-p[1600,12] permutation with rate=136 bytes (1088 bits).
 /// Defined in RFC 9861.
-///
-/// # Performance vs Security
-/// - **Speed**: ~2× faster than SHAKE256
-/// - **Security level**: 256 bits (same as SHAKE256)
-/// - **Rounds**: 12 (vs 24 for SHAKE256)
-///
-/// # Example
-/// ```
-/// use hpcrypt_hash::sha3::TurboShake256;
-///
-/// let mut shake = TurboShake256::new();
-/// shake.update(b"hello world");
-///
-/// let mut output = vec![0u8; 64];
-/// shake.finalize(&mut output);
-/// ```
 pub type TurboShake256 = ShakeCore<136, 12>;
 
 // ===== Default Implementations =====
@@ -1063,6 +1197,29 @@ impl Shake128 {
     pub fn finalize(mut self, output: &mut [u8]) {
         self.finalize_internal(output);
     }
+
+    /// Finalize and return an XOF reader for incremental squeezing
+    ///
+    /// This allows reading arbitrary amounts of output data without re-finalization.
+    ///
+    /// # Example
+    /// ```
+    /// use hpcrypt_hash::Shake128;
+    ///
+    /// let mut shake = Shake128::new();
+    /// shake.update(b"input data");
+    /// let mut reader = shake.finalize_xof();
+    ///
+    /// // Read output incrementally
+    /// let mut buf1 = [0u8; 32];
+    /// reader.read(&mut buf1);
+    ///
+    /// let mut buf2 = [0u8; 64];
+    /// reader.read(&mut buf2);
+    /// ```
+    pub fn finalize_xof(self) -> crate::xof_reader::XofReader<168, 24> {
+        crate::xof_reader::XofReader::new(self)
+    }
 }
 
 impl Shake256 {
@@ -1074,6 +1231,11 @@ impl Shake256 {
     /// Finalize and squeeze output of arbitrary length
     pub fn finalize(mut self, output: &mut [u8]) {
         self.finalize_internal(output);
+    }
+
+    /// Finalize and return an XOF reader for incremental squeezing
+    pub fn finalize_xof(self) -> crate::xof_reader::XofReader<136, 24> {
+        crate::xof_reader::XofReader::new(self)
     }
 }
 
@@ -1119,9 +1281,10 @@ impl TurboShake256 {
 /// This is approximately 2x faster than the full 24-round Keccak-f[1600]
 /// Used by TurboSHAKE128 and TurboSHAKE256 (RFC 9861)
 #[inline(always)]
+#[cfg(not(feature = "lane-complement"))]
 fn keccak_p_12(state: &mut [u64; 25]) {
     // TurboSHAKE uses rounds 12-23 (the last 12 rounds)
-    for &round_constant in ROUND_CONSTANTS.iter().skip(12) {
+    for round in 12..24 {
         // Theta step (unrolled via macro)
         let mut c = [0u64; 5];
         let mut d = [0u64; 5];
@@ -1135,7 +1298,59 @@ fn keccak_p_12(state: &mut [u64; 25]) {
         chi_unrolled!(state, b);
 
         // Iota step
-        state[0] ^= round_constant;
+        state[0] ^= ROUND_CONSTANTS[round];
+    }
+}
+
+/// Keccak-p[1600, 12] permutation with lane complementing (12-round variant)
+#[inline(always)]
+#[cfg(feature = "lane-complement")]
+fn keccak_p_12(state: &mut [u64; 25]) {
+    // Lane complementing implementation - 12 rounds (12-23)
+    for round in 12..24 {
+        // Theta step
+        let mut c = [0u64; 5];
+        for x in 0..5 {
+            c[x] = state[x] ^ state[x + 5] ^ state[x + 10] ^ state[x + 15] ^ state[x + 20];
+        }
+
+        let mut d = [0u64; 5];
+        for x in 0..5 {
+            d[x] = c[(x + 4) % 5] ^ c[(x + 1) % 5].rotate_left(1);
+        }
+
+        for x in 0..5 {
+            for y in 0..5 {
+                state[x + 5 * y] ^= d[x];
+            }
+        }
+
+        // Rho and Pi
+        let mut b = [0u64; 25];
+        b[0] = state[0];
+
+        let mut x = 1;
+        let mut y = 0;
+        for i in 0..24 {
+            b[y + 5 * ((2 * x + 3 * y) % 5)] = state[x + 5 * y].rotate_left(ROTATION_OFFSETS[i]);
+            let temp = y;
+            y = (2 * x + 3 * y) % 5;
+            x = temp;
+        }
+
+        // Chi with lane complementing optimization
+        for y in 0..5 {
+            let mut t = [0u64; 5];
+            for x in 0..5 {
+                t[x] = b[x + 5 * y];
+            }
+            for x in 0..5 {
+                state[x + 5 * y] = t[x] ^ ((!t[(x + 1) % 5]) & t[(x + 2) % 5]);
+            }
+        }
+
+        // Iota
+        state[0] ^= ROUND_CONSTANTS[round];
     }
 }
 
@@ -1144,8 +1359,9 @@ fn keccak_p_12(state: &mut [u64; 25]) {
 /// Keccak-f[1600] permutation
 /// Phase 2 optimizations: Theta/Chi/Rho-Pi step unrolling
 #[inline(always)]
+#[cfg(not(feature = "lane-complement"))]
 fn keccak_f(state: &mut [u64; 25]) {
-    for &round_constant in &ROUND_CONSTANTS {
+    for round in 0..24 {
         let mut c = [0u64; 5];
         let mut d = [0u64; 5];
         theta_unrolled!(state, c, d);
@@ -1155,7 +1371,99 @@ fn keccak_f(state: &mut [u64; 25]) {
 
         chi_unrolled!(state, b);
 
-        state[0] ^= round_constant;
+        state[0] ^= ROUND_CONSTANTS[round];
+    }
+}
+
+/// Keccak-f[1600] permutation with lane complementing optimization
+///
+/// This variant stores lanes 1, 2, 8, 12, 17, and 20 in complemented form to reduce
+/// NOT operations in the chi step from 25 per round to 8 per round.
+///
+/// Beneficial for platforms without efficient AND-NOT instruction:
+/// - ARM Cortex-M series
+/// - Older x86 CPUs without BMI1 extension
+/// - RISC-V without B extension
+///
+/// Based on XKCP's generic64lc implementation.
+#[inline(always)]
+#[cfg(feature = "lane-complement")]
+fn keccak_f(state: &mut [u64; 25]) {
+    // Lane complementing implementation based on XKCP's "bebigokimisa" pattern
+    // Lanes stored complemented: 1, 2, 8, 12, 17, 20
+
+    for round in 0..24 {
+        // Theta step - works identically with or without lane complementing
+        let mut c = [0u64; 5];
+        for x in 0..5 {
+            c[x] = state[x] ^ state[x + 5] ^ state[x + 10] ^ state[x + 15] ^ state[x + 20];
+        }
+
+        let mut d = [0u64; 5];
+        for x in 0..5 {
+            d[x] = c[(x + 4) % 5] ^ c[(x + 1) % 5].rotate_left(1);
+        }
+
+        for x in 0..5 {
+            for y in 0..5 {
+                state[x + 5 * y] ^= d[x];
+            }
+        }
+
+        // Rho and Pi steps combined
+        let mut b = [0u64; 25];
+        b[0] = state[0];
+
+        let mut x = 1;
+        let mut y = 0;
+        for i in 0..24 {
+            b[y + 5 * ((2 * x + 3 * y) % 5)] = state[x + 5 * y].rotate_left(ROTATION_OFFSETS[i]);
+            let temp = y;
+            y = (2 * x + 3 * y) % 5;
+            x = temp;
+        }
+
+        // Chi step - hardcoded formulas based on bebigokimisa pattern
+        // These formulas are derived from standard chi using De Morgan's laws
+        // to eliminate NOT operations where the complementing pattern allows
+
+        // Row 0 (y=0): state[0..5]
+        state[0] = b[0] ^ (b[1] | b[2]);
+        state[1] = b[1] ^ ((!b[2]) | b[3]);
+        state[2] = b[2] ^ (b[3] & b[4]);
+        state[3] = b[3] ^ (b[4] | b[0]);
+        state[4] = b[4] ^ (b[0] & b[1]);
+
+        // Row 1 (y=1): state[5..10]
+        state[5] = b[5] ^ (b[6] | b[7]);
+        state[6] = b[6] ^ (b[7] & b[8]);
+        state[7] = b[7] ^ (b[8] | (!b[9]));
+        state[8] = b[8] ^ (b[9] | b[5]);
+        state[9] = b[9] ^ (b[5] & b[6]);
+
+        // Row 2 (y=2): state[10..15]
+        state[10] = b[10] ^ (b[11] | b[12]);
+        state[11] = b[11] ^ (b[12] & b[13]);
+        state[12] = b[12] ^ ((!b[13]) & b[14]);
+        state[13] = (!b[13]) ^ (b[14] | b[10]);
+        state[14] = b[14] ^ (b[10] & b[11]);
+
+        // Row 3 (y=3): state[15..20]
+        state[15] = b[15] ^ (b[16] & b[17]);
+        state[16] = b[16] ^ (b[17] | b[18]);
+        state[17] = b[17] ^ ((!b[18]) | b[19]);
+        state[18] = (!b[18]) ^ (b[19] & b[15]);
+        state[19] = b[19] ^ (b[15] | b[16]);
+
+        // Row 4 (y=4): state[20..25]
+        state[20] = b[20] ^ ((!b[21]) & b[22]);
+        state[21] = (!b[21]) ^ (b[22] | b[23]);
+        state[22] = b[22] ^ (b[23] & b[24]);
+        state[23] = b[23] ^ (b[24] | b[20]);
+        state[24] = b[24] ^ (b[20] & b[21]);
+
+        // Iota step
+        state[0] ^= ROUND_CONSTANTS[round];
     }
 }
 
@@ -1274,8 +1582,9 @@ mod tests {
         // RFC 9861 test vector: TurboSHAKE128(M=empty, 32-byte output, D=0x1F)
         // 1E 41 5F 1C 59 83 AF F2 16 92 17 27 7D 17 BB 53
         // 8C D9 45 A3 97 DD EC 54 1F 1C E4 1A F2 C1 B7 4C
-        let _expected =
-            hex_literal::hex!("1e415f1c5983aff216921727273d17bb538cd945a397ddec541f1ce41af2c1b7");
+        let expected = hex_literal::hex!(
+            "1e415f1c5983aff216921727273d17bb538cd945a397ddec541f1ce41af2c1b7"
+        );
         // Note: Our output is close but not exact - may need to verify padding/domain sep
         // For now, let's just test that it computes something
         assert_eq!(output.len(), 32);
@@ -1289,8 +1598,9 @@ mod tests {
         let mut output = [0u8; 64];
         hasher.finalize(&mut output);
 
-        let expected =
-            hex_literal::hex!("367a329dafea871c7802ec67f905ae13c57695dc2c6663c61035f59a18f8e7db");
+        let expected = hex_literal::hex!(
+            "367a329dafea871c7802ec67f905ae13c57695dc2c6663c61035f59a18f8e7db"
+        );
         // Note: Checking first 32 bytes of 64-byte output
         assert_eq!(&output[..32], &expected[..]);
     }
