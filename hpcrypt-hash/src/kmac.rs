@@ -700,6 +700,8 @@ impl CShake256 {
 ///
 /// # Example
 /// ```
+/// # #[cfg(feature = "alloc")]
+/// # {
 /// use hpcrypt_hash::Kmac128;
 ///
 /// let key = b"my secret key";
@@ -708,6 +710,7 @@ impl CShake256 {
 ///
 /// // Generate 32-byte MAC
 /// let mac = Kmac128::mac(key, message, customization, 32);
+/// # }
 /// ```
 #[derive(Clone)]
 pub struct Kmac128 {
@@ -800,6 +803,8 @@ impl Kmac128 {
     ///
     /// # Example
     /// ```
+    /// # #[cfg(feature = "alloc")]
+    /// # {
     /// use hpcrypt_hash::Kmac128;
     ///
     /// let key = b"secret key";
@@ -811,6 +816,7 @@ impl Kmac128 {
     /// // Verify MAC (constant-time)
     /// assert!(Kmac128::verify(key, message, b"", &mac));
     /// assert!(!Kmac128::verify(key, b"wrong message", b"", &mac));
+    /// # }
     /// ```
     #[cfg(feature = "alloc")]
     pub fn verify(key: &[u8], message: &[u8], customization: &[u8], tag: &[u8]) -> bool {
@@ -844,6 +850,8 @@ impl Kmac128 {
 ///
 /// # Example
 /// ```
+/// # #[cfg(feature = "alloc")]
+/// # {
 /// use hpcrypt_hash::Kmac256;
 ///
 /// let key = b"my secret key";
@@ -852,6 +860,7 @@ impl Kmac128 {
 ///
 /// // Generate 64-byte MAC
 /// let mac = Kmac256::mac(key, message, customization, 64);
+/// # }
 /// ```
 #[derive(Clone)]
 pub struct Kmac256 {
@@ -944,6 +953,8 @@ impl Kmac256 {
     ///
     /// # Example
     /// ```
+    /// # #[cfg(feature = "alloc")]
+    /// # {
     /// use hpcrypt_hash::Kmac256;
     ///
     /// let key = b"secret key";
@@ -955,6 +966,7 @@ impl Kmac256 {
     /// // Verify MAC (constant-time)
     /// assert!(Kmac256::verify(key, message, b"", &mac));
     /// assert!(!Kmac256::verify(key, b"wrong message", b"", &mac));
+    /// # }
     /// ```
     #[cfg(feature = "alloc")]
     pub fn verify(key: &[u8], message: &[u8], customization: &[u8], tag: &[u8]) -> bool {
@@ -979,11 +991,14 @@ impl Kmac256 {
 ///
 /// # Example
 /// ```
+/// # #[cfg(feature = "alloc")]
+/// # {
 /// use hpcrypt_hash::kmac128;
 ///
 /// let key = b"secret key";
 /// let message = b"hello world";
 /// let mac = kmac128(key, message, b"", 32);
+/// # }
 /// ```
 #[cfg(feature = "alloc")]
 pub fn kmac128(key: &[u8], message: &[u8], customization: &[u8], output_len: usize) -> Vec<u8> {
@@ -1005,11 +1020,14 @@ pub fn kmac128(key: &[u8], message: &[u8], customization: &[u8], output_len: usi
 ///
 /// # Example
 /// ```
+/// # #[cfg(feature = "alloc")]
+/// # {
 /// use hpcrypt_hash::kmac256;
 ///
 /// let key = b"secret key";
 /// let message = b"hello world";
 /// let mac = kmac256(key, message, b"", 64);
+/// # }
 /// ```
 #[cfg(feature = "alloc")]
 pub fn kmac256(key: &[u8], message: &[u8], customization: &[u8], output_len: usize) -> Vec<u8> {
