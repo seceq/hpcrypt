@@ -34,6 +34,7 @@ macro_rules! squeeze_words_no_complement {
 /// Macro to extract squeezing logic by u64 words (with lane-complement)
 ///
 /// Same as above but handles complemented lanes correctly
+#[allow(unused_macros)]
 macro_rules! squeeze_words_with_complement {
     ($state:expr, $output:expr, $offset:expr, $to_copy:expr, $complemented:expr) => {
         {
@@ -271,6 +272,7 @@ const ROUND_CONSTANTS: [u64; 24] = [
 ];
 
 /// Rotation offsets for Keccak-f[1600]
+#[allow(dead_code)]
 const ROTATION_OFFSETS: [u32; 24] = [
     1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14, 27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44,
 ];
