@@ -296,7 +296,11 @@ fn test_kmac_convenience_vs_direct() {
     kmac.update(message);
     let mac2 = kmac.finalize(32);
 
-    assert_eq!(&mac1[..], &mac2[..], "Convenience function should match direct API");
+    assert_eq!(
+        &mac1[..],
+        &mac2[..],
+        "Convenience function should match direct API"
+    );
 }
 
 #[test]
@@ -327,7 +331,9 @@ fn test_kmac_boundary_output_sizes() {
     let message = b"test";
 
     // Test various output sizes including edge cases
-    for size in [1, 15, 16, 17, 31, 32, 33, 63, 64, 65, 127, 128, 129, 255, 256] {
+    for size in [
+        1, 15, 16, 17, 31, 32, 33, 63, 64, 65, 127, 128, 129, 255, 256,
+    ] {
         let mac = kmac128(key, message, b"", size);
         assert_eq!(mac.len(), size, "Output size should match requested");
     }
