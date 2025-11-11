@@ -31,42 +31,6 @@ macro_rules! squeeze_words_no_complement {
     };
 }
 
-/// Macro to extract squeezing logic by u64 words (with lane-complement)
-///
-/// Same as above but handles complemented lanes correctly
-#[allow(unused_macros)]
-macro_rules! squeeze_words_with_complement {
-    ($state:expr, $output:expr, $offset:expr, $to_copy:expr, $complemented:expr) => {
-        {
-            // Extract complete u64 words
-            let complete_words = $to_copy / 8;
-            for i in 0..complete_words {
-                let lane = if $complemented[i] {
-                    !$state[i]
-                } else {
-                    $state[i]
-                };
-                let bytes = lane.to_le_bytes();
-                $output[$offset + i * 8..$offset + (i + 1) * 8].copy_from_slice(&bytes);
-            }
-
-            // Handle remaining bytes
-            let remainder_offset = complete_words * 8;
-            if $to_copy > remainder_offset {
-                let lane = if $complemented[complete_words] {
-                    !$state[complete_words]
-                } else {
-                    $state[complete_words]
-                };
-                let bytes = lane.to_le_bytes();
-                let remainder = $to_copy - remainder_offset;
-                $output[$offset + remainder_offset..$offset + $to_copy]
-                    .copy_from_slice(&bytes[..remainder]);
-            }
-        }
-    };
-}
-
 // ===== End of Phase 1 Optimization Macros =====
 
 // ===== Phase 2 Optimization Macros =====
@@ -271,12 +235,6 @@ const ROUND_CONSTANTS: [u64; 24] = [
     0x8000000080008008,
 ];
 
-/// Rotation offsets for Keccak-f[1600]
-#[allow(dead_code)]
-const ROTATION_OFFSETS: [u32; 24] = [
-    1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14, 27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44,
-];
-
 /// SHA3-256 hasher
 #[derive(Clone)]
 pub struct Sha3_256 {
@@ -295,27 +253,7 @@ impl Default for Sha3_256 {
 impl Sha3_256 {
     /// Create a new SHA3-256 hasher
     pub fn new() -> Self {
-        #[cfg(not(feature = "lane-complement"))]
         let state = [0u64; STATE_SIZE];
-
-        #[cfg(feature = "lane-complement")]
-        let state = {
-            let mut s = [0u64; STATE_SIZE];
-            // Initialize complemented lanes to all 1s (~0)
-            const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false,
-                false, false, false, true, false,
-                false, false, true, false, false,
-                false, false, true, false, false,
-                true, false, false, false, false,
-            ];
-            for i in 0..STATE_SIZE {
-                if COMPLEMENTED[i] {
-                    s[i] = !0u64;
-                }
-            }
-            s
-        };
 
         Self {
             state,
@@ -373,25 +311,8 @@ impl Sha3_256 {
         // Squeeze
         let mut output = [0u8; SHA3_256_OUTPUT_SIZE];
 
-        #[cfg(not(feature = "lane-complement"))]
-        {
-            for i in 0..4 {
-                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
-            }
-        }
-
-        #[cfg(feature = "lane-complement")]
-        {
-            // Lanes 1 and 2 are stored complemented, need to un-complement when reading
-            const COMPLEMENTED: [bool; 4] = [false, true, true, false];
-            for i in 0..4 {
-                let lane = if COMPLEMENTED[i] {
-                    !self.state[i]
-                } else {
-                    self.state[i]
-                };
-                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
-            }
+        for i in 0..4 {
+            output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
         }
 
         output
@@ -401,36 +322,9 @@ impl Sha3_256 {
     #[inline(always)]
     fn absorb_block(&mut self, block: &[u8]) {
         // XOR block into state
-        #[cfg(not(feature = "lane-complement"))]
-        {
-            for (i, chunk) in block.chunks_exact(8).enumerate() {
-                let word = u64::from_le_bytes(chunk.try_into().unwrap());
-                self.state[i] ^= word;
-            }
-        }
-
-        #[cfg(feature = "lane-complement")]
-        {
-            // Lanes that are stored complemented
-            const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false,  // y=0: lanes 1,2
-                false, false, false, true, false,  // y=1: lane 8
-                false, false, true, false, false,  // y=2: lane 12
-                false, false, true, false, false,  // y=3: lane 17
-                true, false, false, false, false,  // y=4: lane 20
-            ];
-
-            for (i, chunk) in block.chunks_exact(8).enumerate() {
-                let word = u64::from_le_bytes(chunk.try_into().unwrap());
-                if COMPLEMENTED[i] {
-                    // Un-complement, XOR, re-complement
-                    let logical = !self.state[i];
-                    let new_logical = logical ^ word;
-                    self.state[i] = !new_logical;
-                } else {
-                    self.state[i] ^= word;
-                }
-            }
+        for (i, chunk) in block.chunks_exact(8).enumerate() {
+            let word = u64::from_le_bytes(chunk.try_into().unwrap());
+            self.state[i] ^= word;
         }
 
         // Apply Keccak-f permutation
@@ -463,27 +357,7 @@ impl Default for Sha3_512 {
 impl Sha3_512 {
     /// Create a new SHA3-512 hasher
     pub fn new() -> Self {
-        #[cfg(not(feature = "lane-complement"))]
         let state = [0u64; STATE_SIZE];
-
-        #[cfg(feature = "lane-complement")]
-        let state = {
-            let mut s = [0u64; STATE_SIZE];
-            // Initialize complemented lanes to all 1s (~0)
-            const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false,
-                false, false, false, true, false,
-                false, false, true, false, false,
-                false, false, true, false, false,
-                true, false, false, false, false,
-            ];
-            for i in 0..STATE_SIZE {
-                if COMPLEMENTED[i] {
-                    s[i] = !0u64;
-                }
-            }
-            s
-        };
 
         Self {
             state,
@@ -536,21 +410,8 @@ impl Sha3_512 {
 
         let mut output = [0u8; SHA3_512_OUTPUT_SIZE];
 
-        #[cfg(not(feature = "lane-complement"))]
-        {
-            for i in 0..8 {
-                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
-            }
-        }
-
-        #[cfg(feature = "lane-complement")]
-        {
-            // Lanes 1 and 2 are stored complemented
-            const COMPLEMENTED: [bool; 8] = [false, true, true, false, false, false, false, false];
-            for i in 0..8 {
-                let lane = if COMPLEMENTED[i] { !self.state[i] } else { self.state[i] };
-                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
-            }
+        for i in 0..8 {
+            output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
         }
 
         output
@@ -559,34 +420,9 @@ impl Sha3_512 {
     /// Absorb a block into the state
     #[inline(always)]
     fn absorb_block(&mut self, block: &[u8]) {
-        #[cfg(not(feature = "lane-complement"))]
-        {
-            for (i, chunk) in block.chunks_exact(8).enumerate() {
-                let word = u64::from_le_bytes(chunk.try_into().unwrap());
-                self.state[i] ^= word;
-            }
-        }
-
-        #[cfg(feature = "lane-complement")]
-        {
-            const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false,
-                false, false, false, true, false,
-                false, false, true, false, false,
-                false, false, true, false, false,
-                true, false, false, false, false,
-            ];
-            for (i, chunk) in block.chunks_exact(8).enumerate() {
-                let word = u64::from_le_bytes(chunk.try_into().unwrap());
-                if COMPLEMENTED[i] {
-                    // Un-complement, XOR, re-complement
-                    let logical = !self.state[i];
-                    let new_logical = logical ^ word;
-                    self.state[i] = !new_logical;
-                } else {
-                    self.state[i] ^= word;
-                }
-            }
+        for (i, chunk) in block.chunks_exact(8).enumerate() {
+            let word = u64::from_le_bytes(chunk.try_into().unwrap());
+            self.state[i] ^= word;
         }
 
         keccak_f(&mut self.state);
@@ -618,27 +454,7 @@ impl Default for Sha3_224 {
 impl Sha3_224 {
     /// Create a new SHA3-224 hasher
     pub fn new() -> Self {
-        #[cfg(not(feature = "lane-complement"))]
         let state = [0u64; STATE_SIZE];
-
-        #[cfg(feature = "lane-complement")]
-        let state = {
-            let mut s = [0u64; STATE_SIZE];
-            // Initialize complemented lanes to all 1s (~0)
-            const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false,
-                false, false, false, true, false,
-                false, false, true, false, false,
-                false, false, true, false, false,
-                true, false, false, false, false,
-            ];
-            for i in 0..STATE_SIZE {
-                if COMPLEMENTED[i] {
-                    s[i] = !0u64;
-                }
-            }
-            s
-        };
 
         Self {
             state,
@@ -685,24 +501,10 @@ impl Sha3_224 {
         self.absorb_block(&buffer[..rate]);
         let mut output = [0u8; SHA3_224_OUTPUT_SIZE];
 
-        #[cfg(not(feature = "lane-complement"))]
-        {
-            for i in 0..3 {
-                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
-            }
-            output[24..28].copy_from_slice(&self.state[3].to_le_bytes()[..4]);
+        for i in 0..3 {
+            output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
         }
-
-        #[cfg(feature = "lane-complement")]
-        {
-            const COMPLEMENTED: [bool; 4] = [false, true, true, false];
-            for i in 0..3 {
-                let lane = if COMPLEMENTED[i] { !self.state[i] } else { self.state[i] };
-                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
-            }
-            let lane3 = if COMPLEMENTED[3] { !self.state[3] } else { self.state[3] };
-            output[24..28].copy_from_slice(&lane3.to_le_bytes()[..4]);
-        }
+        output[24..28].copy_from_slice(&self.state[3].to_le_bytes()[..4]);
 
         output
     }
@@ -710,34 +512,9 @@ impl Sha3_224 {
     /// Absorb a block into the state
     #[inline(always)]
     fn absorb_block(&mut self, block: &[u8]) {
-        #[cfg(not(feature = "lane-complement"))]
-        {
-            for (i, chunk) in block.chunks_exact(8).enumerate() {
-                let word = u64::from_le_bytes(chunk.try_into().unwrap());
-                self.state[i] ^= word;
-            }
-        }
-
-        #[cfg(feature = "lane-complement")]
-        {
-            const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false,
-                false, false, false, true, false,
-                false, false, true, false, false,
-                false, false, true, false, false,
-                true, false, false, false, false,
-            ];
-            for (i, chunk) in block.chunks_exact(8).enumerate() {
-                let word = u64::from_le_bytes(chunk.try_into().unwrap());
-                if COMPLEMENTED[i] {
-                    // Un-complement, XOR, re-complement
-                    let logical = !self.state[i];
-                    let new_logical = logical ^ word;
-                    self.state[i] = !new_logical;
-                } else {
-                    self.state[i] ^= word;
-                }
-            }
+        for (i, chunk) in block.chunks_exact(8).enumerate() {
+            let word = u64::from_le_bytes(chunk.try_into().unwrap());
+            self.state[i] ^= word;
         }
 
         keccak_f(&mut self.state);
@@ -769,27 +546,7 @@ impl Default for Sha3_384 {
 impl Sha3_384 {
     /// Create a new SHA3-384 hasher
     pub fn new() -> Self {
-        #[cfg(not(feature = "lane-complement"))]
         let state = [0u64; STATE_SIZE];
-
-        #[cfg(feature = "lane-complement")]
-        let state = {
-            let mut s = [0u64; STATE_SIZE];
-            // Initialize complemented lanes to all 1s (~0)
-            const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false,
-                false, false, false, true, false,
-                false, false, true, false, false,
-                false, false, true, false, false,
-                true, false, false, false, false,
-            ];
-            for i in 0..STATE_SIZE {
-                if COMPLEMENTED[i] {
-                    s[i] = !0u64;
-                }
-            }
-            s
-        };
 
         Self {
             state,
@@ -836,20 +593,8 @@ impl Sha3_384 {
         self.absorb_block(&buffer[..rate]);
         let mut output = [0u8; SHA3_384_OUTPUT_SIZE];
 
-        #[cfg(not(feature = "lane-complement"))]
-        {
-            for i in 0..6 {
-                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
-            }
-        }
-
-        #[cfg(feature = "lane-complement")]
-        {
-            const COMPLEMENTED: [bool; 6] = [false, true, true, false, false, false];
-            for i in 0..6 {
-                let lane = if COMPLEMENTED[i] { !self.state[i] } else { self.state[i] };
-                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
-            }
+        for i in 0..6 {
+            output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
         }
 
         output
@@ -858,34 +603,9 @@ impl Sha3_384 {
     /// Absorb a block into the state
     #[inline(always)]
     fn absorb_block(&mut self, block: &[u8]) {
-        #[cfg(not(feature = "lane-complement"))]
-        {
-            for (i, chunk) in block.chunks_exact(8).enumerate() {
-                let word = u64::from_le_bytes(chunk.try_into().unwrap());
-                self.state[i] ^= word;
-            }
-        }
-
-        #[cfg(feature = "lane-complement")]
-        {
-            const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false,
-                false, false, false, true, false,
-                false, false, true, false, false,
-                false, false, true, false, false,
-                true, false, false, false, false,
-            ];
-            for (i, chunk) in block.chunks_exact(8).enumerate() {
-                let word = u64::from_le_bytes(chunk.try_into().unwrap());
-                if COMPLEMENTED[i] {
-                    // Un-complement, XOR, re-complement
-                    let logical = !self.state[i];
-                    let new_logical = logical ^ word;
-                    self.state[i] = !new_logical;
-                } else {
-                    self.state[i] ^= word;
-                }
-            }
+        for (i, chunk) in block.chunks_exact(8).enumerate() {
+            let word = u64::from_le_bytes(chunk.try_into().unwrap());
+            self.state[i] ^= word;
         }
 
         keccak_f(&mut self.state);
@@ -924,26 +644,7 @@ impl<const RATE: usize, const ROUNDS: usize> ShakeCore<RATE, ROUNDS> {
     /// Create a new XOF instance with specified domain separation
     #[inline(always)]
     fn new_with_domain_sep(domain_sep: u8) -> Self {
-        #[cfg(not(feature = "lane-complement"))]
         let state = [0u64; STATE_SIZE];
-
-        #[cfg(feature = "lane-complement")]
-        let state = {
-            let mut s = [0u64; STATE_SIZE];
-            const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false,
-                false, false, false, true, false,
-                false, false, true, false, false,
-                false, false, true, false, false,
-                true, false, false, false, false,
-            ];
-            for (i, &is_complemented) in COMPLEMENTED.iter().enumerate() {
-                if is_complemented {
-                    s[i] = !0u64;
-                }
-            }
-            s
-        };
 
         Self {
             state,
@@ -1034,33 +735,12 @@ impl<const RATE: usize, const ROUNDS: usize> ShakeCore<RATE, ROUNDS> {
         while offset < output.len() {
             let to_copy = core::cmp::min(RATE, output.len() - offset);
 
-            #[cfg(not(feature = "lane-complement"))]
-            {
-                squeeze_words_no_complement!(
-                    self.state,
-                    output,
-                    offset,
-                    to_copy
-                );
-            }
-
-            #[cfg(feature = "lane-complement")]
-            {
-                const COMPLEMENTED: [bool; 25] = [
-                    false, true, true, false, false,
-                    false, false, false, true, false,
-                    false, false, true, false, false,
-                    false, false, true, false, false,
-                    true, false, false, false, false,
-                ];
-                squeeze_words_with_complement!(
-                    self.state,
-                    output,
-                    offset,
-                    to_copy,
-                    COMPLEMENTED
-                );
-            }
+            squeeze_words_no_complement!(
+                self.state,
+                output,
+                offset,
+                to_copy
+            );
 
             offset += to_copy;
 
@@ -1073,32 +753,9 @@ impl<const RATE: usize, const ROUNDS: usize> ShakeCore<RATE, ROUNDS> {
     /// Absorb a block into the state
     #[inline(always)]
     fn absorb_block(&mut self, block: &[u8]) {
-        #[cfg(not(feature = "lane-complement"))]
-        {
-            for (i, chunk) in block.chunks_exact(8).enumerate() {
-                let word = u64::from_le_bytes(chunk.try_into().unwrap());
-                self.state[i] ^= word;
-            }
-        }
-
-        #[cfg(feature = "lane-complement")]
-        {
-            // Lane-complement aware absorption
-            const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false,
-                false, false, false, true, false,
-                false, false, true, false, false,
-                false, false, true, false, false,
-                true, false, false, false, false,
-            ];
-
-            for (i, chunk) in block.chunks_exact(8).enumerate() {
-                let mut word = u64::from_le_bytes(chunk.try_into().unwrap());
-                if COMPLEMENTED[i] {
-                    word = !word;
-                }
-                self.state[i] ^= word;
-            }
+        for (i, chunk) in block.chunks_exact(8).enumerate() {
+            let word = u64::from_le_bytes(chunk.try_into().unwrap());
+            self.state[i] ^= word;
         }
 
         Self::permute(&mut self.state);
@@ -1237,7 +894,6 @@ impl TurboShake256 {
 /// This is approximately 2x faster than the full 24-round Keccak-f[1600]
 /// Used by TurboSHAKE128 and TurboSHAKE256 (RFC 9861)
 #[inline(always)]
-#[cfg(not(feature = "lane-complement"))]
 fn keccak_p_12(state: &mut [u64; 25]) {
     // TurboSHAKE uses rounds 12-23 (the last 12 rounds)
     for round in 12..24 {
@@ -1258,64 +914,11 @@ fn keccak_p_12(state: &mut [u64; 25]) {
     }
 }
 
-/// Keccak-p[1600, 12] permutation with lane complementing (12-round variant)
-#[inline(always)]
-#[cfg(feature = "lane-complement")]
-fn keccak_p_12(state: &mut [u64; 25]) {
-    // Lane complementing implementation - 12 rounds (12-23)
-    for round in 12..24 {
-        // Theta step
-        let mut c = [0u64; 5];
-        for x in 0..5 {
-            c[x] = state[x] ^ state[x + 5] ^ state[x + 10] ^ state[x + 15] ^ state[x + 20];
-        }
-
-        let mut d = [0u64; 5];
-        for x in 0..5 {
-            d[x] = c[(x + 4) % 5] ^ c[(x + 1) % 5].rotate_left(1);
-        }
-
-        for x in 0..5 {
-            for y in 0..5 {
-                state[x + 5 * y] ^= d[x];
-            }
-        }
-
-        // Rho and Pi
-        let mut b = [0u64; 25];
-        b[0] = state[0];
-
-        let mut x = 1;
-        let mut y = 0;
-        for i in 0..24 {
-            b[y + 5 * ((2 * x + 3 * y) % 5)] = state[x + 5 * y].rotate_left(ROTATION_OFFSETS[i]);
-            let temp = y;
-            y = (2 * x + 3 * y) % 5;
-            x = temp;
-        }
-
-        // Chi with lane complementing optimization
-        for y in 0..5 {
-            let mut t = [0u64; 5];
-            for x in 0..5 {
-                t[x] = b[x + 5 * y];
-            }
-            for x in 0..5 {
-                state[x + 5 * y] = t[x] ^ ((!t[(x + 1) % 5]) & t[(x + 2) % 5]);
-            }
-        }
-
-        // Iota
-        state[0] ^= ROUND_CONSTANTS[round];
-    }
-}
-
 // ===== End of Phase 3: Keccak-p[1600,12] =====
 
 /// Keccak-f[1600] permutation
 /// Phase 2 optimizations: Theta/Chi/Rho-Pi step unrolling
 #[inline(always)]
-#[cfg(not(feature = "lane-complement"))]
 fn keccak_f(state: &mut [u64; 25]) {
     for round in 0..24 {
         let mut c = [0u64; 5];
@@ -1327,98 +930,6 @@ fn keccak_f(state: &mut [u64; 25]) {
 
         chi_unrolled!(state, b);
 
-        state[0] ^= ROUND_CONSTANTS[round];
-    }
-}
-
-/// Keccak-f[1600] permutation with lane complementing optimization
-///
-/// This variant stores lanes 1, 2, 8, 12, 17, and 20 in complemented form to reduce
-/// NOT operations in the chi step from 25 per round to 8 per round.
-///
-/// Beneficial for platforms without efficient AND-NOT instruction:
-/// - ARM Cortex-M series
-/// - Older x86 CPUs without BMI1 extension
-/// - RISC-V without B extension
-///
-/// Based on XKCP's generic64lc implementation.
-#[inline(always)]
-#[cfg(feature = "lane-complement")]
-fn keccak_f(state: &mut [u64; 25]) {
-    // Lane complementing implementation based on XKCP's "bebigokimisa" pattern
-    // Lanes stored complemented: 1, 2, 8, 12, 17, 20
-
-    for round in 0..24 {
-        // Theta step - works identically with or without lane complementing
-        let mut c = [0u64; 5];
-        for x in 0..5 {
-            c[x] = state[x] ^ state[x + 5] ^ state[x + 10] ^ state[x + 15] ^ state[x + 20];
-        }
-
-        let mut d = [0u64; 5];
-        for x in 0..5 {
-            d[x] = c[(x + 4) % 5] ^ c[(x + 1) % 5].rotate_left(1);
-        }
-
-        for x in 0..5 {
-            for y in 0..5 {
-                state[x + 5 * y] ^= d[x];
-            }
-        }
-
-        // Rho and Pi steps combined
-        let mut b = [0u64; 25];
-        b[0] = state[0];
-
-        let mut x = 1;
-        let mut y = 0;
-        for i in 0..24 {
-            b[y + 5 * ((2 * x + 3 * y) % 5)] = state[x + 5 * y].rotate_left(ROTATION_OFFSETS[i]);
-            let temp = y;
-            y = (2 * x + 3 * y) % 5;
-            x = temp;
-        }
-
-        // Chi step - hardcoded formulas based on bebigokimisa pattern
-        // These formulas are derived from standard chi using De Morgan's laws
-        // to eliminate NOT operations where the complementing pattern allows
-
-        // Row 0 (y=0): state[0..5]
-        state[0] = b[0] ^ (b[1] | b[2]);
-        state[1] = b[1] ^ ((!b[2]) | b[3]);
-        state[2] = b[2] ^ (b[3] & b[4]);
-        state[3] = b[3] ^ (b[4] | b[0]);
-        state[4] = b[4] ^ (b[0] & b[1]);
-
-        // Row 1 (y=1): state[5..10]
-        state[5] = b[5] ^ (b[6] | b[7]);
-        state[6] = b[6] ^ (b[7] & b[8]);
-        state[7] = b[7] ^ (b[8] | (!b[9]));
-        state[8] = b[8] ^ (b[9] | b[5]);
-        state[9] = b[9] ^ (b[5] & b[6]);
-
-        // Row 2 (y=2): state[10..15]
-        state[10] = b[10] ^ (b[11] | b[12]);
-        state[11] = b[11] ^ (b[12] & b[13]);
-        state[12] = b[12] ^ ((!b[13]) & b[14]);
-        state[13] = (!b[13]) ^ (b[14] | b[10]);
-        state[14] = b[14] ^ (b[10] & b[11]);
-
-        // Row 3 (y=3): state[15..20]
-        state[15] = b[15] ^ (b[16] & b[17]);
-        state[16] = b[16] ^ (b[17] | b[18]);
-        state[17] = b[17] ^ ((!b[18]) | b[19]);
-        state[18] = (!b[18]) ^ (b[19] & b[15]);
-        state[19] = b[19] ^ (b[15] | b[16]);
-
-        // Row 4 (y=4): state[20..25]
-        state[20] = b[20] ^ ((!b[21]) & b[22]);
-        state[21] = (!b[21]) ^ (b[22] | b[23]);
-        state[22] = b[22] ^ (b[23] & b[24]);
-        state[23] = b[23] ^ (b[24] | b[20]);
-        state[24] = b[24] ^ (b[20] & b[21]);
-
-        // Iota step
         state[0] ^= ROUND_CONSTANTS[round];
     }
 }
