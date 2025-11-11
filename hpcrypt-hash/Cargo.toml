@@ -30,3 +30,11 @@ required-features = ["alloc"]
 [[example]]
 name = "xof_reader"
 required-features = ["alloc"]
+
+[[test]]
+name = "kmac_tests"
+required-features = ["alloc"]
+
+[[test]]
+name = "xof_reader_tests"
+required-features = ["alloc"]
