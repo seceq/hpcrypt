@@ -17,9 +17,7 @@ fn test_kmac128_sample_1() {
     // S = ""
     let key = hex!("404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F");
     let data = hex!("00010203");
-    let expected = hex!(
-        "E5780B0D3EA6F7D3A429C5706AA43A00FADBD7D49628839E3187243F456EE14E"
-    );
+    let expected = hex!("E5780B0D3EA6F7D3A429C5706AA43A00FADBD7D49628839E3187243F456EE14E");
 
     let output = kmac128(&key, &data, b"", 32);
     assert_eq!(&output[..], &expected[..], "KMAC128 Sample #1 failed");
@@ -36,9 +34,7 @@ fn test_kmac128_sample_4() {
     let key = hex!("404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F");
     let data = hex!("00010203");
     let customization = b"My Tagged Application";
-    let expected = hex!(
-        "3B1FBA963CD8B0B59E8C1A6D71888B7143651AF8BA0A7070C0979E2811324AA5"
-    );
+    let expected = hex!("3B1FBA963CD8B0B59E8C1A6D71888B7143651AF8BA0A7070C0979E2811324AA5");
 
     let output = kmac128(&key, &data, customization, 32);
     assert_eq!(&output[..], &expected[..], "KMAC128 Sample #4 failed");
@@ -140,7 +136,10 @@ fn test_kmac_different_messages() {
     let mac1 = kmac128(key, b"message1", b"", 32);
     let mac2 = kmac128(key, b"message2", b"", 32);
 
-    assert_ne!(mac1, mac2, "Different messages should produce different MACs");
+    assert_ne!(
+        mac1, mac2,
+        "Different messages should produce different MACs"
+    );
 }
 
 #[test]
@@ -173,8 +172,16 @@ fn test_kmac128_variable_output() {
 
     // Different output lengths produce independent outputs (not prefixes)
     // because KMAC encodes the output length in the input
-    assert_ne!(&mac_32[..16], &mac_16[..], "Different lengths produce different outputs");
-    assert_ne!(&mac_64[..32], &mac_32[..], "Different lengths produce different outputs");
+    assert_ne!(
+        &mac_32[..16],
+        &mac_16[..],
+        "Different lengths produce different outputs"
+    );
+    assert_ne!(
+        &mac_64[..32],
+        &mac_32[..],
+        "Different lengths produce different outputs"
+    );
 }
 
 #[test]
@@ -204,18 +211,30 @@ fn test_kmac128_verification() {
     let mac = kmac128(key, message, b"", 32);
 
     // Verify correct MAC
-    assert!(Kmac128::verify(key, message, b"", &mac), "Correct MAC should verify");
+    assert!(
+        Kmac128::verify(key, message, b"", &mac),
+        "Correct MAC should verify"
+    );
 
     // Verify tampered MAC
     let mut tampered_mac = mac.clone();
     tampered_mac[0] ^= 0x01;
-    assert!(!Kmac128::verify(key, message, b"", &tampered_mac), "Tampered MAC should not verify");
+    assert!(
+        !Kmac128::verify(key, message, b"", &tampered_mac),
+        "Tampered MAC should not verify"
+    );
 
     // Verify with wrong key
-    assert!(!Kmac128::verify(b"wrong-key", message, b"", &mac), "Wrong key should not verify");
+    assert!(
+        !Kmac128::verify(b"wrong-key", message, b"", &mac),
+        "Wrong key should not verify"
+    );
 
     // Verify with wrong message
-    assert!(!Kmac128::verify(key, b"wrong message", b"", &mac), "Wrong message should not verify");
+    assert!(
+        !Kmac128::verify(key, b"wrong message", b"", &mac),
+        "Wrong message should not verify"
+    );
 }
 
 #[test]

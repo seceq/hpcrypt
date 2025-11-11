@@ -34,8 +34,8 @@ use crate::sha3::{ShakeCore, STATE_SIZE};
 pub struct XofReader<const RATE: usize, const ROUNDS: usize> {
     state: [u64; STATE_SIZE],
     buffer: [u8; RATE],
-    buffer_offset: usize,  // Current position in buffer (how much we've already read)
-    squeezed: bool,        // Whether we've squeezed the first block
+    buffer_offset: usize, // Current position in buffer (how much we've already read)
+    squeezed: bool,       // Whether we've squeezed the first block
 }
 
 impl<const RATE: usize, const ROUNDS: usize> XofReader<RATE, ROUNDS> {
@@ -214,7 +214,10 @@ mod tests {
         let mut actual = vec![0u8; 128];
         reader.read(&mut actual);
 
-        assert_eq!(expected, actual, "XOF reader should match one-shot finalize");
+        assert_eq!(
+            expected, actual,
+            "XOF reader should match one-shot finalize"
+        );
     }
 
     #[test]
@@ -240,7 +243,10 @@ mod tests {
         reader2.read(&mut incremental[100..150]);
         reader2.read(&mut incremental[150..200]);
 
-        assert_eq!(all_at_once, incremental, "Incremental reads should match all-at-once");
+        assert_eq!(
+            all_at_once, incremental,
+            "Incremental reads should match all-at-once"
+        );
     }
 
     #[test]

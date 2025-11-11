@@ -59,9 +59,9 @@ fn incremental_reading() {
     let mut reader2 = shake2.finalize_xof();
     let mut incremental = vec![0u8; 200];
 
-    reader2.read(&mut incremental[0..10]);    // 10 bytes
-    reader2.read(&mut incremental[10..50]);   // 40 bytes
-    reader2.read(&mut incremental[50..100]);  // 50 bytes
+    reader2.read(&mut incremental[0..10]); // 10 bytes
+    reader2.read(&mut incremental[10..50]); // 40 bytes
+    reader2.read(&mut incremental[50..100]); // 50 bytes
     reader2.read(&mut incremental[100..200]); // 100 bytes
 
     println!("   All-at-once:  {}...", hex::encode(&all_at_once[..16]));

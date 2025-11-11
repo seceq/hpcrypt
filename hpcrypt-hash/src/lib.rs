@@ -32,6 +32,8 @@ pub use kmac::{kmac128, kmac256};
 pub use kmac::{CShake128, CShake256, Kmac128, Kmac256};
 pub use sha1::{sha1, Sha1};
 pub use sha256::{sha256, Sha256};
-pub use sha3::{Sha3_224, Sha3_256, Sha3_384, Sha3_512, Shake128, Shake256, TurboShake128, TurboShake256};
+pub use sha3::{
+    Sha3_224, Sha3_256, Sha3_384, Sha3_512, Shake128, Shake256, TurboShake128, TurboShake256,
+};
 pub use sha384::Sha384;
 pub use sha512::{sha512, Sha512};

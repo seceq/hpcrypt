@@ -82,10 +82,25 @@ fn customization_string_usage() {
     let mac3 = kmac128(key, message, custom3, 32);
 
     println!("   Same key and message, different customization:");
-    println!("     '{}': {}", std::str::from_utf8(custom1).unwrap(), hex::encode(&mac1[..8]));
-    println!("     '{}': {}", std::str::from_utf8(custom2).unwrap(), hex::encode(&mac2[..8]));
-    println!("     '{}': {}", std::str::from_utf8(custom3).unwrap(), hex::encode(&mac3[..8]));
-    println!("     All different: {}", mac1 != mac2 && mac2 != mac3 && mac1 != mac3);
+    println!(
+        "     '{}': {}",
+        std::str::from_utf8(custom1).unwrap(),
+        hex::encode(&mac1[..8])
+    );
+    println!(
+        "     '{}': {}",
+        std::str::from_utf8(custom2).unwrap(),
+        hex::encode(&mac2[..8])
+    );
+    println!(
+        "     '{}': {}",
+        std::str::from_utf8(custom3).unwrap(),
+        hex::encode(&mac3[..8])
+    );
+    println!(
+        "     All different: {}",
+        mac1 != mac2 && mac2 != mac3 && mac1 != mac3
+    );
 }
 
 fn mac_verification() {
@@ -151,9 +166,8 @@ fn domain_separation_example() {
     println!("   Session token:  {}", hex::encode(&session_token[..8]));
     println!("   API token:      {}", hex::encode(&api_token[..8]));
     println!("   Refresh token:  {}", hex::encode(&refresh_token[..8]));
-    println!("   All unique: {}",
-        session_token != api_token &&
-        api_token != refresh_token &&
-        session_token != refresh_token
+    println!(
+        "   All unique: {}",
+        session_token != api_token && api_token != refresh_token && session_token != refresh_token
     );
 }
