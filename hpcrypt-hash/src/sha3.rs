@@ -1121,7 +1121,7 @@ impl TurboShake256 {
 #[inline(always)]
 fn keccak_p_12(state: &mut [u64; 25]) {
     // TurboSHAKE uses rounds 12-23 (the last 12 rounds)
-    for round in 12..24 {
+    for &round_constant in ROUND_CONSTANTS.iter().skip(12) {
         // Theta step (unrolled via macro)
         let mut c = [0u64; 5];
         let mut d = [0u64; 5];
@@ -1135,7 +1135,7 @@ fn keccak_p_12(state: &mut [u64; 25]) {
         chi_unrolled!(state, b);
 
         // Iota step
-        state[0] ^= ROUND_CONSTANTS[round];
+        state[0] ^= round_constant;
     }
 }
 
@@ -1145,7 +1145,7 @@ fn keccak_p_12(state: &mut [u64; 25]) {
 /// Phase 2 optimizations: Theta/Chi/Rho-Pi step unrolling
 #[inline(always)]
 fn keccak_f(state: &mut [u64; 25]) {
-    for round in 0..24 {
+    for &round_constant in &ROUND_CONSTANTS {
         let mut c = [0u64; 5];
         let mut d = [0u64; 5];
         theta_unrolled!(state, c, d);
@@ -1155,7 +1155,7 @@ fn keccak_f(state: &mut [u64; 25]) {
 
         chi_unrolled!(state, b);
 
-        state[0] ^= ROUND_CONSTANTS[round];
+        state[0] ^= round_constant;
     }
 }
 
