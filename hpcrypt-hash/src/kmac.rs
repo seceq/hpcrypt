@@ -18,7 +18,7 @@ use alloc::vec::Vec;
 /// Keccak state size in 64-bit words
 const STATE_SIZE: usize = 25;
 
-/// Round constants for Keccak-f[1600] (from sha3.rs)
+/// Round constants for Keccak-f\[1600\] (from sha3.rs)
 pub const ROUND_CONSTANTS: [u64; 24] = [
     0x0000000000000001,
     0x0000000000008082,
@@ -56,7 +56,7 @@ const PI_LANE: [usize; 24] = [
     10, 7, 11, 17, 18, 3, 5, 16, 8, 21, 24, 4, 15, 23, 19, 13, 12, 2, 20, 14, 22, 9, 6, 1,
 ];
 
-/// Keccak-f[1600] permutation function
+/// Keccak-f\[1600\] permutation function
 ///
 /// Applies the 24-round Keccak permutation to the 1600-bit state.
 /// This is the core cryptographic transformation used in SHA-3, SHAKE, and KMAC.
@@ -124,7 +124,7 @@ fn keccak_f(state: &mut [u64; 25]) {
 /// - 8 bytes for the value (maximum usize on 64-bit platforms)
 ///
 /// Using stack allocation provides significant performance improvements (3-6x speedup)
-/// compared to heap-allocated Vec<u8> for these small, fixed-size encodings.
+/// compared to heap-allocated `Vec<u8>` for these small, fixed-size encodings.
 #[derive(Clone, Copy)]
 pub struct EncodedValue {
     /// Stack-allocated buffer (max 9 bytes: 1 length + 8 data bytes for usize on 64-bit)
@@ -752,7 +752,7 @@ impl Kmac128 {
     /// * `output_len` - Desired MAC length in bytes (recommended: >= 16 bytes)
     ///
     /// # Returns
-    /// The computed MAC as a Vec<u8>
+    /// The computed MAC as a `Vec<u8>`
     #[cfg(feature = "alloc")]
     pub fn finalize(mut self, output_len: usize) -> Vec<u8> {
         // Append right_encode(output_len in bits)
@@ -896,7 +896,7 @@ impl Kmac256 {
     /// * `output_len` - Desired MAC length in bytes (recommended: >= 16 bytes)
     ///
     /// # Returns
-    /// The computed MAC as a Vec<u8>
+    /// The computed MAC as a `Vec<u8>`
     #[cfg(feature = "alloc")]
     pub fn finalize(mut self, output_len: usize) -> Vec<u8> {
         // Append right_encode(output_len in bits)

@@ -9,6 +9,7 @@
 ///
 /// This replaces the slow byte-at-a-time extraction with word-at-a-time extraction.
 /// Expected improvement: 40-50% for small outputs
+#[allow(unused_macros)]
 macro_rules! squeeze_words_no_complement {
     ($state:expr, $output:expr, $offset:expr, $to_copy:expr) => {
         {
@@ -34,6 +35,7 @@ macro_rules! squeeze_words_no_complement {
 /// Macro to extract squeezing logic by u64 words (with lane-complement)
 ///
 /// Same as above but handles complemented lanes correctly
+#[allow(unused_macros)]
 macro_rules! squeeze_words_with_complement {
     ($state:expr, $output:expr, $offset:expr, $to_copy:expr, $complemented:expr) => {
         {
@@ -74,6 +76,7 @@ macro_rules! squeeze_words_with_complement {
 ///
 /// Unrolls the Theta column parity computation and D array calculation
 /// Expected improvement: Part of 15-20% cumulative gain
+#[allow(unused_macros)]
 macro_rules! theta_unrolled {
     ($state:expr, $c:ident, $d:ident) => {
         {
@@ -125,6 +128,7 @@ macro_rules! theta_unrolled {
 ///
 /// Unrolls the 5 rows of Chi step completely
 /// Expected improvement: Part of 15-20% cumulative gain
+#[allow(unused_macros)]
 macro_rules! chi_unrolled {
     ($state:expr, $b:expr) => {
         {
@@ -195,6 +199,7 @@ macro_rules! chi_unrolled {
 ///
 /// Unrolls the Rho-Pi permutation completely with hardcoded rotation offsets
 /// Expected improvement: 5-8%
+#[allow(unused_macros)]
 macro_rules! rho_pi_unrolled {
     ($state:expr, $b:expr) => {
         {
@@ -1139,23 +1144,23 @@ impl<const RATE: usize, const ROUNDS: usize> ShakeCore<RATE, ROUNDS> {
 
 /// SHAKE128 - Extendable Output Function with 128-bit security
 ///
-/// Uses 24-round Keccak-f[1600] permutation with rate=168 bytes (1344 bits).
+/// Uses 24-round Keccak-f\[1600\] permutation with rate=168 bytes (1344 bits).
 pub type Shake128 = ShakeCore<168, 24>;
 
 /// SHAKE256 - Extendable Output Function with 256-bit security
 ///
-/// Uses 24-round Keccak-f[1600] permutation with rate=136 bytes (1088 bits).
+/// Uses 24-round Keccak-f\[1600\] permutation with rate=136 bytes (1088 bits).
 pub type Shake256 = ShakeCore<136, 24>;
 
 /// TurboSHAKE128 - Fast XOF with 128-bit security (~2x faster than SHAKE128)
 ///
-/// Uses 12-round Keccak-p[1600,12] permutation with rate=168 bytes (1344 bits).
+/// Uses 12-round Keccak-p\[1600,12\] permutation with rate=168 bytes (1344 bits).
 /// Defined in RFC 9861.
 pub type TurboShake128 = ShakeCore<168, 12>;
 
 /// TurboSHAKE256 - Fast XOF with 256-bit security (~2x faster than SHAKE256)
 ///
-/// Uses 12-round Keccak-p[1600,12] permutation with rate=136 bytes (1088 bits).
+/// Uses 12-round Keccak-p\[1600,12\] permutation with rate=136 bytes (1088 bits).
 /// Defined in RFC 9861.
 pub type TurboShake256 = ShakeCore<136, 12>;
 
