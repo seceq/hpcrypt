@@ -1,7 +1,53 @@
 //! SHA-3 (Keccak) - Secure Hash Algorithm 3
 //!
-//! Based on the Keccak sponge construction, standardized in FIPS 202.
-//! Supports SHA3-224, SHA3-256, SHA3-384, and SHA3-512.
+//! This module provides implementations of the SHA-3 family of cryptographic hash functions
+//! and the SHAKE extendable-output functions (XOFs), as standardized in FIPS 202 and NIST SP 800-185.
+//!
+//! # Supported Algorithms
+//!
+//! ## Fixed-Length Hash Functions
+//! - **SHA3-224**: 224-bit output (28 bytes)
+//! - **SHA3-256**: 256-bit output (32 bytes)
+//! - **SHA3-384**: 384-bit output (48 bytes)
+//! - **SHA3-512**: 512-bit output (64 bytes)
+//!
+//! ## Extendable-Output Functions (XOFs)
+//! - **SHAKE128**: Variable-length output, 128-bit security
+//! - **SHAKE256**: Variable-length output, 256-bit security
+//! - **TurboSHAKE128**: Fast variant with 12 rounds (RFC 9861)
+//! - **TurboSHAKE256**: Fast variant with 12 rounds (RFC 9861)
+//!
+//! # Examples
+//!
+//! ## SHA3-256
+//! ```
+//! use hpcrypt_hash::sha3::Sha3_256;
+//!
+//! let mut hasher = Sha3_256::new();
+//! hasher.update(b"hello world");
+//! let digest = hasher.finalize();
+//!
+//! // Or use the convenience function
+//! let digest = Sha3_256::digest(b"hello world");
+//! ```
+//!
+//! ## SHAKE128 (Extendable Output)
+//! ```
+//! use hpcrypt_hash::sha3::Shake128;
+//!
+//! let mut shake = Shake128::new();
+//! shake.update(b"hello world");
+//! let mut output = vec![0u8; 64]; // Request 64 bytes
+//! shake.finalize(&mut output);
+//! ```
+//!
+//! # Performance Optimizations
+//!
+//! This implementation includes several optimizations:
+//! - **Loop unrolling**: Theta, Chi, and Rho-Pi steps fully unrolled (~15-20% speedup)
+//! - **Word-at-a-time squeezing**: Extract output by u64 words (~40-50% speedup for small outputs)
+//! - **Fast path for large inputs**: Direct block processing for streaming data
+//! - **Cache alignment**: 64-byte alignment for better cache performance
 
 // ===== Optimization Macros for Phase 1 =====
 
@@ -235,7 +281,22 @@ const ROUND_CONSTANTS: [u64; 24] = [
     0x8000000080008008,
 ];
 
-/// SHA3-256 hasher
+/// SHA3-256 cryptographic hash function
+///
+/// Produces a 256-bit (32-byte) hash digest. Part of the SHA-3 family standardized in FIPS 202.
+///
+/// # Security
+/// - **Output size**: 256 bits (32 bytes)
+/// - **Collision resistance**: 128 bits
+/// - **Preimage resistance**: 256 bits
+///
+/// # Example
+/// ```
+/// use hpcrypt_hash::sha3::Sha3_256;
+///
+/// let digest = Sha3_256::digest(b"hello world");
+/// assert_eq!(digest.len(), 32);
+/// ```
 #[derive(Clone)]
 pub struct Sha3_256 {
     state: [u64; STATE_SIZE],
@@ -251,7 +312,17 @@ impl Default for Sha3_256 {
 }
 
 impl Sha3_256 {
-    /// Create a new SHA3-256 hasher
+    /// Creates a new SHA3-256 hasher instance
+    ///
+    /// # Example
+    /// ```
+    /// use hpcrypt_hash::sha3::Sha3_256;
+    ///
+    /// let mut hasher = Sha3_256::new();
+    /// hasher.update(b"hello");
+    /// hasher.update(b" world");
+    /// let digest = hasher.finalize();
+    /// ```
     pub fn new() -> Self {
         let state = [0u64; STATE_SIZE];
 
@@ -263,7 +334,23 @@ impl Sha3_256 {
         }
     }
 
-    /// Update the hasher with input data
+    /// Absorbs input data into the hasher
+    ///
+    /// This method can be called multiple times to hash data incrementally.
+    ///
+    /// # Arguments
+    /// * `data` - Input data to hash
+    ///
+    /// # Example
+    /// ```
+    /// use hpcrypt_hash::sha3::Sha3_256;
+    ///
+    /// let mut hasher = Sha3_256::new();
+    /// hasher.update(b"hello");
+    /// hasher.update(b" ");
+    /// hasher.update(b"world");
+    /// let digest = hasher.finalize();
+    /// ```
     pub fn update(&mut self, data: &[u8]) {
         let mut offset = 0;
 
@@ -297,7 +384,22 @@ impl Sha3_256 {
         }
     }
 
-    /// Finalize and return the digest
+    /// Finalizes the hash computation and returns the 256-bit digest
+    ///
+    /// This consumes the hasher. Call this after all data has been processed with `update()`.
+    ///
+    /// # Returns
+    /// A 32-byte array containing the SHA3-256 hash digest
+    ///
+    /// # Example
+    /// ```
+    /// use hpcrypt_hash::sha3::Sha3_256;
+    ///
+    /// let mut hasher = Sha3_256::new();
+    /// hasher.update(b"hello world");
+    /// let digest = hasher.finalize();
+    /// assert_eq!(digest.len(), 32);
+    /// ```
     pub fn finalize(mut self) -> [u8; SHA3_256_OUTPUT_SIZE] {
         // SHA-3 padding: append 0x06, pad with zeros, final byte is 0x80
         self.buffer[self.buffer_len] = 0x06;
@@ -331,7 +433,22 @@ impl Sha3_256 {
         keccak_f(&mut self.state);
     }
 
-    /// Compute SHA3-256 of data in one call
+    /// Computes the SHA3-256 hash of data in a single call
+    ///
+    /// This is a convenience function equivalent to calling `new()`, `update()`, and `finalize()`.
+    ///
+    /// # Arguments
+    /// * `data` - The data to hash
+    ///
+    /// # Returns
+    /// A 32-byte array containing the hash digest
+    ///
+    /// # Example
+    /// ```
+    /// use hpcrypt_hash::sha3::Sha3_256;
+    ///
+    /// let digest = Sha3_256::digest(b"hello world");
+    /// ```
     pub fn digest(data: &[u8]) -> [u8; SHA3_256_OUTPUT_SIZE] {
         let mut hasher = Self::new();
         hasher.update(data);
@@ -339,7 +456,22 @@ impl Sha3_256 {
     }
 }
 
-/// SHA3-512 hasher
+/// SHA3-512 cryptographic hash function
+///
+/// Produces a 512-bit (64-byte) hash digest. Part of the SHA-3 family standardized in FIPS 202.
+///
+/// # Security
+/// - **Output size**: 512 bits (64 bytes)
+/// - **Collision resistance**: 256 bits
+/// - **Preimage resistance**: 512 bits
+///
+/// # Example
+/// ```
+/// use hpcrypt_hash::sha3::Sha3_512;
+///
+/// let digest = Sha3_512::digest(b"hello world");
+/// assert_eq!(digest.len(), 64);
+/// ```
 #[derive(Clone)]
 pub struct Sha3_512 {
     state: [u64; STATE_SIZE],
@@ -436,7 +568,22 @@ impl Sha3_512 {
     }
 }
 
-/// SHA3-224 hasher
+/// SHA3-224 cryptographic hash function
+///
+/// Produces a 224-bit (28-byte) hash digest. Part of the SHA-3 family standardized in FIPS 202.
+///
+/// # Security
+/// - **Output size**: 224 bits (28 bytes)
+/// - **Collision resistance**: 112 bits
+/// - **Preimage resistance**: 224 bits
+///
+/// # Example
+/// ```
+/// use hpcrypt_hash::sha3::Sha3_224;
+///
+/// let digest = Sha3_224::digest(b"hello world");
+/// assert_eq!(digest.len(), 28);
+/// ```
 #[derive(Clone)]
 pub struct Sha3_224 {
     state: [u64; STATE_SIZE],
@@ -528,7 +675,22 @@ impl Sha3_224 {
     }
 }
 
-/// SHA3-384 hasher
+/// SHA3-384 cryptographic hash function
+///
+/// Produces a 384-bit (48-byte) hash digest. Part of the SHA-3 family standardized in FIPS 202.
+///
+/// # Security
+/// - **Output size**: 384 bits (48 bytes)
+/// - **Collision resistance**: 192 bits
+/// - **Preimage resistance**: 384 bits
+///
+/// # Example
+/// ```
+/// use hpcrypt_hash::sha3::Sha3_384;
+///
+/// let digest = Sha3_384::digest(b"hello world");
+/// assert_eq!(digest.len(), 48);
+/// ```
 #[derive(Clone)]
 pub struct Sha3_384 {
     state: [u64; STATE_SIZE],
@@ -778,26 +940,102 @@ impl<const RATE: usize, const ROUNDS: usize> ShakeCore<RATE, ROUNDS> {
 
 // ===== Type Aliases =====
 
-/// SHAKE128 - Extendable Output Function with 128-bit security
+/// SHAKE128 - Extendable Output Function (XOF) with 128-bit security
 ///
-/// Uses 24-round Keccak-f[1600] permutation with rate=168 bytes (1344 bits).
+/// SHAKE128 is a variable-length hash function that can produce output of any desired length.
+/// It uses the 24-round Keccak-f[1600] permutation with a rate of 168 bytes (1344 bits).
+///
+/// Standardized in FIPS 202.
+///
+/// # Security
+/// - **Security level**: 128 bits
+/// - **Collision resistance**: min(d/2, 128) bits for d-bit output
+/// - **Preimage resistance**: min(d, 128) bits for d-bit output
+///
+/// # Example
+/// ```
+/// use hpcrypt_hash::sha3::Shake128;
+///
+/// let mut shake = Shake128::new();
+/// shake.update(b"hello world");
+///
+/// // Request 32 bytes of output
+/// let mut output = vec![0u8; 32];
+/// shake.finalize(&mut output);
+/// ```
 pub type Shake128 = ShakeCore<168, 24>;
 
-/// SHAKE256 - Extendable Output Function with 256-bit security
+/// SHAKE256 - Extendable Output Function (XOF) with 256-bit security
 ///
-/// Uses 24-round Keccak-f[1600] permutation with rate=136 bytes (1088 bits).
+/// SHAKE256 is a variable-length hash function that can produce output of any desired length.
+/// It uses the 24-round Keccak-f[1600] permutation with a rate of 136 bytes (1088 bits).
+///
+/// Standardized in FIPS 202.
+///
+/// # Security
+/// - **Security level**: 256 bits
+/// - **Collision resistance**: min(d/2, 256) bits for d-bit output
+/// - **Preimage resistance**: min(d, 256) bits for d-bit output
+///
+/// # Example
+/// ```
+/// use hpcrypt_hash::sha3::Shake256;
+///
+/// let mut shake = Shake256::new();
+/// shake.update(b"hello world");
+///
+/// // Request 64 bytes of output
+/// let mut output = vec![0u8; 64];
+/// shake.finalize(&mut output);
+/// ```
 pub type Shake256 = ShakeCore<136, 24>;
 
-/// TurboSHAKE128 - Fast XOF with 128-bit security (~2x faster than SHAKE128)
+/// TurboSHAKE128 - Fast Extendable Output Function with 128-bit security
 ///
-/// Uses 12-round Keccak-p[1600,12] permutation with rate=168 bytes (1344 bits).
+/// TurboSHAKE128 is approximately 2× faster than SHAKE128 by using only 12 rounds
+/// instead of 24. It uses the Keccak-p[1600,12] permutation with a rate of 168 bytes.
+///
 /// Defined in RFC 9861.
+///
+/// # Performance vs Security
+/// - **Speed**: ~2× faster than SHAKE128
+/// - **Security level**: 128 bits (same as SHAKE128)
+/// - **Rounds**: 12 (vs 24 for SHAKE128)
+///
+/// # Example
+/// ```
+/// use hpcrypt_hash::sha3::TurboShake128;
+///
+/// let mut shake = TurboShake128::new();
+/// shake.update(b"hello world");
+///
+/// let mut output = vec![0u8; 32];
+/// shake.finalize(&mut output);
+/// ```
 pub type TurboShake128 = ShakeCore<168, 12>;
 
-/// TurboSHAKE256 - Fast XOF with 256-bit security (~2x faster than SHAKE256)
+/// TurboSHAKE256 - Fast Extendable Output Function with 256-bit security
 ///
-/// Uses 12-round Keccak-p[1600,12] permutation with rate=136 bytes (1088 bits).
+/// TurboSHAKE256 is approximately 2× faster than SHAKE256 by using only 12 rounds
+/// instead of 24. It uses the Keccak-p[1600,12] permutation with a rate of 136 bytes.
+///
 /// Defined in RFC 9861.
+///
+/// # Performance vs Security
+/// - **Speed**: ~2× faster than SHAKE256
+/// - **Security level**: 256 bits (same as SHAKE256)
+/// - **Rounds**: 12 (vs 24 for SHAKE256)
+///
+/// # Example
+/// ```
+/// use hpcrypt_hash::sha3::TurboShake256;
+///
+/// let mut shake = TurboShake256::new();
+/// shake.update(b"hello world");
+///
+/// let mut output = vec![0u8; 64];
+/// shake.finalize(&mut output);
+/// ```
 pub type TurboShake256 = ShakeCore<136, 12>;
 
 // ===== Default Implementations =====
