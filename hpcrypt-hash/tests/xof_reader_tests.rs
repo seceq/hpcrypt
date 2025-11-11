@@ -70,7 +70,10 @@ fn test_xof_vs_finalize_consistency() {
     let mut actual = vec![0u8; 256];
     reader.read(&mut actual);
 
-    assert_eq!(expected, actual, "XOF reader should match one-shot finalize");
+    assert_eq!(
+        expected, actual,
+        "XOF reader should match one-shot finalize"
+    );
 }
 
 #[test]
@@ -95,7 +98,10 @@ fn test_incremental_consistency() {
     reader2.read(&mut incremental[200..350]);
     reader2.read(&mut incremental[350..500]);
 
-    assert_eq!(all_at_once, incremental, "Incremental reads should match all-at-once");
+    assert_eq!(
+        all_at_once, incremental,
+        "Incremental reads should match all-at-once"
+    );
 }
 
 #[test]
@@ -119,7 +125,10 @@ fn test_single_byte_reads() {
         reader2.read(core::slice::from_mut(byte));
     }
 
-    assert_eq!(normal, byte_by_byte, "Byte-by-byte reading should match normal read");
+    assert_eq!(
+        normal, byte_by_byte,
+        "Byte-by-byte reading should match normal read"
+    );
 }
 
 // ===== Fork Tests =====
@@ -405,7 +414,10 @@ fn test_different_input_different_output() {
     let mut reader2 = shake2.finalize_xof();
     let out2: [u8; 64] = reader2.read_array();
 
-    assert_ne!(out1, out2, "Different inputs should produce different outputs");
+    assert_ne!(
+        out1, out2,
+        "Different inputs should produce different outputs"
+    );
 }
 
 // ===== Use Case Tests =====
