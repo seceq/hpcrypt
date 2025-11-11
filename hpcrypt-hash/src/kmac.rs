@@ -1020,7 +1020,13 @@ pub fn kmac256(key: &[u8], message: &[u8], customization: &[u8], output_len: usi
 mod tests {
     use super::*;
 
+    #[cfg(feature = "alloc")]
+    extern crate alloc;
+    #[cfg(feature = "alloc")]
+    use alloc::vec;
+
     #[test]
+    #[cfg(feature = "alloc")]
     fn test_left_encode() {
         assert_eq!(left_encode(0), vec![1, 0]);
         assert_eq!(left_encode(255), vec![1, 255]);
@@ -1029,6 +1035,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn test_right_encode() {
         assert_eq!(right_encode(0), vec![0, 1]);
         assert_eq!(right_encode(255), vec![255, 1]);
