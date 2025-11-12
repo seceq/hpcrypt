@@ -27,8 +27,8 @@
 
 extern crate alloc;
 
-use super::ed25519::EdwardsPoint;
 use alloc::vec::Vec;
+use super::ed25519::EdwardsPoint;
 
 /// Sliding window scalar multiplication with configurable window width
 ///
@@ -49,7 +49,7 @@ use alloc::vec::Vec;
 /// 2. Initialize result = O (identity)
 /// 3. i = 255 (start from MSB)
 /// 4. while i >= 0:
-///    if scalar\[i\] == 0:
+///    if scalar[i] == 0:
 ///        result = double(result)
 ///        i = i - 1
 ///    else:
@@ -65,28 +65,21 @@ use alloc::vec::Vec;
 ///        for _ in 0..(i - j):
 ///            result = double(result)
 ///        // Add the odd multiple
-///        result = result + odd_multiple\[window_value\]
+///        result = result + odd_multiple[window_value]
 ///        i = j - 1
 /// 5. Return result
 /// ```
-pub fn sliding_window_scalar_mul(
-    point: &EdwardsPoint,
-    scalar: &[u8; 32],
-    width: usize,
-) -> EdwardsPoint {
-    debug_assert!(
-        width >= 2 && width <= 5,
-        "Window width must be in range [2, 5]"
-    );
+pub fn sliding_window_scalar_mul(point: &EdwardsPoint, scalar: &[u8; 32], width: usize) -> EdwardsPoint {
+    debug_assert!(width >= 2 && width <= 5, "Window width must be in range [2, 5]");
 
     // Step 1: Precompute odd multiples: P, 3P, 5P, ..., (2^w - 1)P
-    let num_odd = 1 << (width - 1); // 2^(w-1) odd multiples
+    let num_odd = 1 << (width - 1);  // 2^(w-1) odd multiples
     let mut odd_multiples = Vec::with_capacity(num_odd);
 
-    odd_multiples.push(*point); // 1P
+    odd_multiples.push(*point);  // 1P
 
     if num_odd > 1 {
-        let double_p = point.double(); // 2P
+        let double_p = point.double();  // 2P
         for i in 1..num_odd {
             // (2i+1)P = (2i-1)P + 2P
             odd_multiples.push(odd_multiples[i - 1].add(&double_p));
@@ -103,7 +96,7 @@ pub fn sliding_window_scalar_mul(
 
     // Step 3: Sliding window algorithm
     let mut result = EdwardsPoint::IDENTITY;
-    let mut i = 255; // Start from MSB
+    let mut i = 255;  // Start from MSB
 
     while i >= 0 {
         if !bits[i as usize] {
@@ -173,11 +166,7 @@ mod tests {
         let expected = point.scalar_mul(&scalar);
         let result = sliding_window_scalar_mul(&point, &scalar, 4);
 
-        assert_eq!(
-            result.encode(),
-            expected.encode(),
-            "Sliding window must produce same result as standard method"
-        );
+        assert_eq!(result.encode(), expected.encode(), "Sliding window must produce same result as standard method");
     }
 
     #[test]

@@ -61,17 +61,13 @@ impl LazyFieldElement {
     /// The zero element
     #[inline(always)]
     pub const fn zero() -> Self {
-        Self {
-            limbs: [0, 0, 0, 0, 0],
-        }
+        Self { limbs: [0, 0, 0, 0, 0] }
     }
 
     /// The one element
     #[inline(always)]
     pub const fn one() -> Self {
-        Self {
-            limbs: [1, 0, 0, 0, 0],
-        }
+        Self { limbs: [1, 0, 0, 0, 0] }
     }
 
     /// Get the raw limbs
@@ -105,8 +101,8 @@ impl LazyFieldElement {
     pub fn sub_lazy(&self, rhs: &Self) -> Self {
         // Add 2p to ensure non-negative
         const TWO_P: [i64; 5] = [
-            0x000f_ffff_ffff_ffda, // 2*(2^51 - 19)
-            0x000f_ffff_ffff_fffe, // 2*(2^51 - 1)
+            0x000f_ffff_ffff_ffda,  // 2*(2^51 - 19)
+            0x000f_ffff_ffff_fffe,  // 2*(2^51 - 1)
             0x000f_ffff_ffff_fffe,
             0x000f_ffff_ffff_fffe,
             0x000f_ffff_ffff_fffe,
@@ -294,11 +290,11 @@ impl LazyFieldElement {
         let b4_19 = 19 * b4;
 
         // Schoolbook multiplication with reduction modulo 2^255-19
-        let r0 = (a0 * b0) + (a1 * b4_19) + (a2 * b3_19) + (a3 * b2_19) + (a4 * b1_19);
-        let mut r1 = (a0 * b1) + (a1 * b0) + (a2 * b4_19) + (a3 * b3_19) + (a4 * b2_19);
-        let mut r2 = (a0 * b2) + (a1 * b1) + (a2 * b0) + (a3 * b4_19) + (a4 * b3_19);
-        let mut r3 = (a0 * b3) + (a1 * b2) + (a2 * b1) + (a3 * b0) + (a4 * b4_19);
-        let mut r4 = (a0 * b4) + (a1 * b3) + (a2 * b2) + (a3 * b1) + (a4 * b0);
+        let     r0 = (a0 * b0) + (a1 * b4_19) + (a2 * b3_19) + (a3 * b2_19) + (a4 * b1_19);
+        let mut r1 = (a0 * b1) + (a1 * b0)    + (a2 * b4_19) + (a3 * b3_19) + (a4 * b2_19);
+        let mut r2 = (a0 * b2) + (a1 * b1)    + (a2 * b0)    + (a3 * b4_19) + (a4 * b3_19);
+        let mut r3 = (a0 * b3) + (a1 * b2)    + (a2 * b1)    + (a3 * b0)    + (a4 * b4_19);
+        let mut r4 = (a0 * b4) + (a1 * b3)    + (a2 * b2)    + (a3 * b1)    + (a4 * b0);
 
         const MASK_51: i128 = 0x0007_ffff_ffff_ffff;
         let mut out = [0i64; 5];
@@ -349,7 +345,7 @@ impl LazyFieldElement {
         let a3_38 = 38 * a3;
         let a4_19 = 19 * a4;
 
-        let r0 = (a0 * a0) + (a1_38 * a4) + (a2_38 * a3);
+        let     r0 = (a0 * a0) + (a1_38 * a4) + (a2_38 * a3);
         let mut r1 = (a0_2 * a1) + (a2_38 * a4) + (a3_19 * a3);
         let mut r2 = (a0_2 * a2) + (a1 * a1) + (a3_38 * a4);
         let mut r3 = (a0_2 * a3) + (a1_2 * a2) + (a4_19 * a4);

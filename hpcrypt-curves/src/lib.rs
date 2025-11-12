@@ -2,20 +2,6 @@
 //!
 //! This crate provides production-ready implementations of modern elliptic curves
 //! with a focus on security, performance, and usability.
-
-// Allow pedantic clippy lints for cryptographic code where performance and clarity matter
-#![allow(clippy::comparison_chain)]
-#![allow(clippy::manual_range_contains)]
-#![allow(clippy::cast_abs_to_unsigned)]
-#![allow(clippy::assign_op_pattern)]
-#![allow(clippy::redundant_closure)]
-#![allow(clippy::useless_conversion)]
-#![allow(clippy::manual_div_ceil)]
-#![allow(clippy::vec_init_then_push)]
-#![allow(clippy::manual_memcpy)]
-#![allow(clippy::unnecessary_cast)]
-#![allow(clippy::wrong_self_convention)]
-#![allow(clippy::duplicated_attributes)]
 //!
 //! # Supported Curves
 //!
@@ -86,7 +72,7 @@
 //! ```rust
 //! use hpcrypt_curves::X25519;
 //!
-//! # fn main() {
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Alice generates her keypair
 //! let alice_private = [1u8; 32]; // Use secure random in production
 //! let alice_public = X25519::public_key(&alice_private);
@@ -96,10 +82,11 @@
 //! let bob_public = X25519::public_key(&bob_private);
 //!
 //! // Both compute the same shared secret
-//! let alice_shared = X25519::shared_secret(&alice_private, &bob_public).unwrap();
-//! let bob_shared = X25519::shared_secret(&bob_private, &alice_public).unwrap();
+//! let alice_shared = X25519::shared_secret(&alice_private, &bob_public)?;
+//! let bob_shared = X25519::shared_secret(&bob_private, &alice_public)?;
 //!
 //! assert_eq!(alice_shared, bob_shared);
+//! # Ok(())
 //! # }
 //! ```
 //!
@@ -110,7 +97,7 @@
 //! ```rust
 //! use hpcrypt_curves::X448;
 //!
-//! # fn main() {
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Alice generates her keypair
 //! let alice_private = [1u8; 56]; // Use secure random in production
 //! let alice_public = X448::public_key(&alice_private);
@@ -120,16 +107,17 @@
 //! let bob_public = X448::public_key(&bob_private);
 //!
 //! // Both compute the same shared secret
-//! let alice_shared = X448::shared_secret(&alice_private, &bob_public).unwrap();
-//! let bob_shared = X448::shared_secret(&bob_private, &alice_public).unwrap();
+//! let alice_shared = X448::shared_secret(&alice_private, &bob_public)?;
+//! let bob_shared = X448::shared_secret(&bob_private, &alice_public)?;
 //!
 //! assert_eq!(alice_shared, bob_shared);
+//! # Ok(())
 //! # }
 //! ```
 //!
 //! ## P-256 ECDSA Signatures
 //!
-//! ```ignore
+//! ```rust
 //! use hpcrypt_curves::p256::{Scalar, Point};
 //! use hpcrypt_signatures::ecdsa::Ecdsa;
 //!
@@ -196,20 +184,20 @@ pub use hpcrypt_core::ct_utils;
 // Status: Phase 1 - Basic implementation in progress
 pub mod safegcd;
 
-pub mod ed25519;
-pub mod ed25519_sliding;
-pub mod ed25519_wnaf;
-pub mod ed448;
 pub mod field25519;
 pub mod field25519_lazy;
+pub mod x25519;
+pub mod ed25519;
+pub mod ed25519_wnaf;
+pub mod ed25519_sliding;
+pub mod ed448;
+pub mod x448;
 pub mod p256;
 pub mod p384;
 pub mod p521;
 pub mod secp256k1;
-pub mod x25519;
-pub mod x448;
 
-pub use ed25519::Ed25519;
 pub use field25519::FieldElement;
 pub use x25519::X25519;
 pub use x448::X448;
+pub use ed25519::Ed25519;

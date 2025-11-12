@@ -18,8 +18,9 @@
 
 extern crate alloc;
 
-use super::ed25519::EdwardsPoint;
 use alloc::vec::Vec;
+use super::ed25519::{EdwardsPoint, Scalar};
+use super::field25519::FieldElement;
 
 /// Window width for wNAF scalar multiplication
 ///
@@ -31,11 +32,10 @@ pub const WINDOW_WIDTH: usize = 4;
 /// Maximum value in wNAF representation for window width w
 /// - w=4: values in range [-15, 15], 8 odd multiples
 /// - w=5: values in range [-31, 31], 16 odd multiples
-#[allow(dead_code)]
 const MAX_WNAF_VALUE: usize = (1 << WINDOW_WIDTH) - 1;
 
 /// Maximum table size (for w=5 which needs most entries)
-const MAX_TABLE_SIZE: usize = 16; // 2^5 / 2 = 16 odd multiples
+const MAX_TABLE_SIZE: usize = 16;  // 2^5 / 2 = 16 odd multiples
 
 /// Precomputed table of odd multiples for wNAF scalar multiplication
 ///
@@ -77,12 +77,9 @@ impl WNafTable {
     pub fn new(point: &EdwardsPoint, width: usize) -> Self {
         use super::ed25519::NielsPoint;
 
-        debug_assert!(
-            width >= 2 && width <= 5,
-            "Window width must be in range [2, 5]"
-        );
+        debug_assert!(width >= 2 && width <= 5, "Window width must be in range [2, 5]");
 
-        let num_entries = 1 << (width - 1); // 2^(w-1) = number of odd multiples
+        let num_entries = 1 << (width - 1);  // 2^(w-1) = number of odd multiples
 
         // Step 1: Compute odd multiples in extended coordinates
         let mut extended_table = [EdwardsPoint::IDENTITY; MAX_TABLE_SIZE];
@@ -132,12 +129,7 @@ impl WNafTable {
         // Convert odd digit to table index
         // 1 -> 0, 3 -> 1, 5 -> 2, ..., 15 -> 7, ..., 31 -> 15
         let index = (digit - 1) / 2;
-        debug_assert!(
-            index < self.len,
-            "wNAF digit {} out of range for table size {}",
-            digit,
-            self.len * 2 + 1
-        );
+        debug_assert!(index < self.len, "wNAF digit {} out of range for table size {}", digit, self.len * 2 + 1);
         &self.table[index]
     }
 }
@@ -167,20 +159,17 @@ impl WNafTable {
 ///    if k is odd:
 ///        digit = k mod 2^w (signed)
 ///        k = k - digit
-///        wnaf\[i\] = digit
+///        wnaf[i] = digit
 ///    else:
-///        wnaf\[i\] = 0
+///        wnaf[i] = 0
 ///    k = k / 2
 ///    i = i + 1
 /// ```
 pub fn compute_wnaf(scalar: &[u8; 32], width: usize) -> Vec<i8> {
-    debug_assert!(
-        width >= 2 && width <= 8,
-        "Window width must be in range [2, 8]"
-    );
+    debug_assert!(width >= 2 && width <= 8, "Window width must be in range [2, 8]");
 
-    let window_size = 1usize << width; // 2^w
-    let window_mask = window_size - 1; // 2^w - 1
+    let window_size = 1usize << width;  // 2^w
+    let window_mask = window_size - 1;  // 2^w - 1
 
     // Use stack-allocated array instead of Vec for better performance
     // Maximum length is 257 (256 bits + 1 potential carry bit)
@@ -374,7 +363,7 @@ mod tests {
     fn test_wnaf_simple() {
         // Test wNAF computation for small values
         let mut scalar = [0u8; 32];
-        scalar[0] = 1; // Value 1 in little-endian (LSB is at byte[0])
+        scalar[0] = 1;  // Value 1 in little-endian (LSB is at byte[0])
         let wnaf = compute_wnaf(&scalar, 4);
 
         // wNAF of 1 should be just [1]
@@ -398,13 +387,9 @@ mod tests {
         }
 
         // Property 2: No two adjacent non-zero digits
-        for i in 0..wnaf.len() - 1 {
+        for i in 0..wnaf.len()-1 {
             if wnaf[i] != 0 {
-                assert_eq!(
-                    wnaf[i + 1],
-                    0,
-                    "Adjacent wNAF digits cannot both be non-zero"
-                );
+                assert_eq!(wnaf[i+1], 0, "Adjacent wNAF digits cannot both be non-zero");
             }
         }
     }
@@ -461,7 +446,7 @@ mod tests {
         // Test with a known test vector
         let g = base_point();
         let mut scalar = [0u8; 32];
-        scalar[0] = 1; // 1 in little-endian
+        scalar[0] = 1;  // 1 in little-endian
 
         let result = wnaf_scalar_mul(&g, &scalar, 4);
 
