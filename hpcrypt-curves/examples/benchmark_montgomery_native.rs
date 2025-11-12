@@ -7,11 +7,11 @@
 //!
 //! Run with: cargo run --release --example benchmark_montgomery_native
 
-use std::hint::black_box;
 use std::time::Instant;
+use std::hint::black_box;
 
-use hpcrypt_curves::p256::field_montgomery_native::MontgomeryFieldElement as NativeMontgomery;
 use hpcrypt_curves::p256::{FieldElement, MontgomeryFieldElement};
+use hpcrypt_curves::p256::field_montgomery_native::MontgomeryFieldElement as NativeMontgomery;
 
 const ITERATIONS: usize = 100_000;
 
@@ -182,10 +182,7 @@ fn benchmark_addition() {
 fn main() {
     println!("╔════════════════════════════════════════════════════════════════╗");
     println!("║  P-256 Montgomery Performance Comparison                       ║");
-    println!(
-        "║  Iterations: {:>6}                                           ║",
-        ITERATIONS
-    );
+    println!("║  Iterations: {:>6}                                           ║", ITERATIONS);
     println!("╚════════════════════════════════════════════════════════════════╝");
 
     println!("\n┌─ MULTIPLICATION ─────────────────────────────────────────────┐");

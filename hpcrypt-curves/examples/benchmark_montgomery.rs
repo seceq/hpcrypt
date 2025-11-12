@@ -24,10 +24,7 @@ fn benchmark_p256_addition() {
     let duration_standard = start.elapsed();
     let ns_per_op_standard = duration_standard.as_nanos() / ITERATIONS as u128;
 
-    println!(
-        "Standard:  {:?} ({} ns/op)",
-        duration_standard, ns_per_op_standard
-    );
+    println!("Standard:  {:?} ({} ns/op)", duration_standard, ns_per_op_standard);
 
     // Montgomery implementation
     let a_mont = MontgomeryFieldElement::one();
@@ -41,14 +38,9 @@ fn benchmark_p256_addition() {
     let duration_montgomery = start.elapsed();
     let ns_per_op_montgomery = duration_montgomery.as_nanos() / ITERATIONS as u128;
 
-    println!(
-        "Montgomery: {:?} ({} ns/op)",
-        duration_montgomery, ns_per_op_montgomery
-    );
+    println!("Montgomery: {:?} ({} ns/op)", duration_montgomery, ns_per_op_montgomery);
 
-    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64)
-        / ns_per_op_standard as f64)
-        * 100.0;
+    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64) / ns_per_op_standard as f64) * 100.0;
     println!("Improvement: {:.1}%", improvement);
 }
 
@@ -67,10 +59,7 @@ fn benchmark_p256_multiplication() {
     let duration_standard = start.elapsed();
     let ns_per_op_standard = duration_standard.as_nanos() / ITERATIONS as u128;
 
-    println!(
-        "Standard:  {:?} ({} ns/op)",
-        duration_standard, ns_per_op_standard
-    );
+    println!("Standard:  {:?} ({} ns/op)", duration_standard, ns_per_op_standard);
 
     // Montgomery implementation
     let a_mont = MontgomeryFieldElement::one();
@@ -84,14 +73,9 @@ fn benchmark_p256_multiplication() {
     let duration_montgomery = start.elapsed();
     let ns_per_op_montgomery = duration_montgomery.as_nanos() / ITERATIONS as u128;
 
-    println!(
-        "Montgomery: {:?} ({} ns/op)",
-        duration_montgomery, ns_per_op_montgomery
-    );
+    println!("Montgomery: {:?} ({} ns/op)", duration_montgomery, ns_per_op_montgomery);
 
-    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64)
-        / ns_per_op_standard as f64)
-        * 100.0;
+    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64) / ns_per_op_standard as f64) * 100.0;
     println!("Improvement: {:.1}%", improvement);
 }
 
@@ -109,10 +93,7 @@ fn benchmark_p256_squaring() {
     let duration_standard = start.elapsed();
     let ns_per_op_standard = duration_standard.as_nanos() / ITERATIONS as u128;
 
-    println!(
-        "Standard:  {:?} ({} ns/op)",
-        duration_standard, ns_per_op_standard
-    );
+    println!("Standard:  {:?} ({} ns/op)", duration_standard, ns_per_op_standard);
 
     // Montgomery implementation
     let a_mont = MontgomeryFieldElement::one();
@@ -125,14 +106,9 @@ fn benchmark_p256_squaring() {
     let duration_montgomery = start.elapsed();
     let ns_per_op_montgomery = duration_montgomery.as_nanos() / ITERATIONS as u128;
 
-    println!(
-        "Montgomery: {:?} ({} ns/op)",
-        duration_montgomery, ns_per_op_montgomery
-    );
+    println!("Montgomery: {:?} ({} ns/op)", duration_montgomery, ns_per_op_montgomery);
 
-    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64)
-        / ns_per_op_standard as f64)
-        * 100.0;
+    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64) / ns_per_op_standard as f64) * 100.0;
     println!("Improvement: {:.1}%", improvement);
 }
 
@@ -151,28 +127,22 @@ fn benchmark_p256_inversion() {
     let duration_standard = start.elapsed();
     let us_per_op_standard = duration_standard.as_micros() / INV_ITERATIONS as u128;
 
-    println!(
-        "Standard:  {:?} ({} μs/op)",
-        duration_standard, us_per_op_standard
-    );
+    println!("Standard:  {:?} ({} μs/op)", duration_standard, us_per_op_standard);
 
-    // Montgomery implementation - invert method not available
-    // TODO: Implement invert for MontgomeryFieldElement
-    // let a_mont = MontgomeryFieldElement::one();
-    //
-    // let start = Instant::now();
-    // for _ in 0..INV_ITERATIONS {
-    //     let _ = a_mont.invert();
-    // }
-    // let duration_montgomery = start.elapsed();
-    // let us_per_op_montgomery = duration_montgomery.as_micros() / INV_ITERATIONS as u128;
-    //
-    // println!("Montgomery: {:?} ({} μs/op)", duration_montgomery, us_per_op_montgomery);
-    //
-    // let improvement = ((us_per_op_standard as f64 - us_per_op_montgomery as f64) / us_per_op_standard as f64) * 100.0;
-    // println!("Improvement: {:.1}%", improvement);
+    // Montgomery implementation
+    let a_mont = MontgomeryFieldElement::one();
 
-    println!("Montgomery: invert() method not yet implemented");
+    let start = Instant::now();
+    for _ in 0..INV_ITERATIONS {
+        let _ = a_mont.invert();
+    }
+    let duration_montgomery = start.elapsed();
+    let us_per_op_montgomery = duration_montgomery.as_micros() / INV_ITERATIONS as u128;
+
+    println!("Montgomery: {:?} ({} μs/op)", duration_montgomery, us_per_op_montgomery);
+
+    let improvement = ((us_per_op_standard as f64 - us_per_op_montgomery as f64) / us_per_op_standard as f64) * 100.0;
+    println!("Improvement: {:.1}%", improvement);
 }
 
 fn benchmark_p384_multiplication() {
@@ -190,10 +160,7 @@ fn benchmark_p384_multiplication() {
     let duration_standard = start.elapsed();
     let ns_per_op_standard = duration_standard.as_nanos() / ITERATIONS as u128;
 
-    println!(
-        "Standard:  {:?} ({} ns/op)",
-        duration_standard, ns_per_op_standard
-    );
+    println!("Standard:  {:?} ({} ns/op)", duration_standard, ns_per_op_standard);
 
     // Montgomery implementation
     let a_mont = p384::MontgomeryFieldElement::one();
@@ -207,14 +174,9 @@ fn benchmark_p384_multiplication() {
     let duration_montgomery = start.elapsed();
     let ns_per_op_montgomery = duration_montgomery.as_nanos() / ITERATIONS as u128;
 
-    println!(
-        "Montgomery: {:?} ({} ns/op)",
-        duration_montgomery, ns_per_op_montgomery
-    );
+    println!("Montgomery: {:?} ({} ns/op)", duration_montgomery, ns_per_op_montgomery);
 
-    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64)
-        / ns_per_op_standard as f64)
-        * 100.0;
+    let improvement = ((ns_per_op_standard as f64 - ns_per_op_montgomery as f64) / ns_per_op_standard as f64) * 100.0;
     println!("Improvement: {:.1}%", improvement);
 }
 
@@ -224,9 +186,10 @@ fn benchmark_byte_conversion() {
     const CONV_ITERATIONS: usize = 10_000;
 
     let bytes = [
-        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-        0x18, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36,
-        0x37, 0x38,
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+        0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
+        0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38,
     ];
 
     // Standard implementation
@@ -238,10 +201,7 @@ fn benchmark_byte_conversion() {
     let duration_standard = start.elapsed();
     let ns_per_op_standard = duration_standard.as_nanos() / CONV_ITERATIONS as u128;
 
-    println!(
-        "Standard:  {:?} ({} ns/op)",
-        duration_standard, ns_per_op_standard
-    );
+    println!("Standard:  {:?} ({} ns/op)", duration_standard, ns_per_op_standard);
 
     // Montgomery implementation (includes domain conversion overhead)
     let start = Instant::now();
@@ -252,14 +212,9 @@ fn benchmark_byte_conversion() {
     let duration_montgomery = start.elapsed();
     let ns_per_op_montgomery = duration_montgomery.as_nanos() / CONV_ITERATIONS as u128;
 
-    println!(
-        "Montgomery: {:?} ({} ns/op)",
-        duration_montgomery, ns_per_op_montgomery
-    );
+    println!("Montgomery: {:?} ({} ns/op)", duration_montgomery, ns_per_op_montgomery);
 
-    let overhead = ((ns_per_op_montgomery as f64 - ns_per_op_standard as f64)
-        / ns_per_op_standard as f64)
-        * 100.0;
+    let overhead = ((ns_per_op_montgomery as f64 - ns_per_op_standard as f64) / ns_per_op_standard as f64) * 100.0;
     println!("Overhead: {:.1}%", overhead);
 }
 

@@ -91,10 +91,7 @@ fn main() {
     let expected = FieldElement::from_u64(expected_product);
 
     if product == expected {
-        println!(
-            "✓ 64-bit Karatsuba: 123456789 × 987654321 = {}",
-            expected_product
-        );
+        println!("✓ 64-bit Karatsuba: 123456789 × 987654321 = {}", expected_product);
     } else {
         println!("✗ 64-bit Karatsuba INCORRECT!");
     }
@@ -116,10 +113,7 @@ fn main() {
     let expected_52 = FieldElement52::from_u64(expected_product);
 
     if product_52 == expected_52 {
-        println!(
-            "✓ 52-bit Karatsuba: 123456789 × 987654321 = {}",
-            expected_product
-        );
+        println!("✓ 52-bit Karatsuba: 123456789 × 987654321 = {}", expected_product);
     } else {
         println!("✗ 52-bit Karatsuba INCORRECT!");
     }

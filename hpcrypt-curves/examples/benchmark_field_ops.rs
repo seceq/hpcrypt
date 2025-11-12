@@ -2,10 +2,10 @@
 //!
 //! Run with: cargo run --release --example benchmark_field_ops
 
+use std::time::Instant;
 use hpcrypt_curves::p256::FieldElement as P256FieldElement;
 use hpcrypt_curves::p384::FieldElement as P384FieldElement;
 use hpcrypt_curves::p521::FieldElement as P521FieldElement;
-use std::time::Instant;
 
 const ITERATIONS: usize = 10_000_000;
 
@@ -41,11 +41,8 @@ fn benchmark_p256() {
     }
     let duration = start.elapsed();
     let ns_per_op = duration.as_nanos() as f64 / ITERATIONS as f64;
-    println!(
-        "  Addition:     {:.2} ns/op ({:.2} M ops/sec)",
-        ns_per_op,
-        1000.0 / ns_per_op
-    );
+    println!("  Addition:     {:.2} ns/op ({:.2} M ops/sec)",
+             ns_per_op, 1000.0 / ns_per_op);
 
     // Subtraction benchmark
     let start = Instant::now();
@@ -54,11 +51,8 @@ fn benchmark_p256() {
     }
     let duration = start.elapsed();
     let ns_per_op = duration.as_nanos() as f64 / ITERATIONS as f64;
-    println!(
-        "  Subtraction:  {:.2} ns/op ({:.2} M ops/sec)",
-        ns_per_op,
-        1000.0 / ns_per_op
-    );
+    println!("  Subtraction:  {:.2} ns/op ({:.2} M ops/sec)",
+             ns_per_op, 1000.0 / ns_per_op);
 
     // Multiplication benchmark
     let start = Instant::now();
@@ -67,11 +61,8 @@ fn benchmark_p256() {
     }
     let duration = start.elapsed();
     let ns_per_op = duration.as_nanos() as f64 / (ITERATIONS / 10) as f64;
-    println!(
-        "  Multiplication: {:.2} ns/op ({:.2} M ops/sec)",
-        ns_per_op,
-        1000.0 / ns_per_op
-    );
+    println!("  Multiplication: {:.2} ns/op ({:.2} M ops/sec)",
+             ns_per_op, 1000.0 / ns_per_op);
 }
 
 fn benchmark_p384() {
@@ -93,11 +84,8 @@ fn benchmark_p384() {
     }
     let duration = start.elapsed();
     let ns_per_op = duration.as_nanos() as f64 / ITERATIONS as f64;
-    println!(
-        "  Addition:     {:.2} ns/op ({:.2} M ops/sec)",
-        ns_per_op,
-        1000.0 / ns_per_op
-    );
+    println!("  Addition:     {:.2} ns/op ({:.2} M ops/sec)",
+             ns_per_op, 1000.0 / ns_per_op);
 
     // Subtraction benchmark
     let start = Instant::now();
@@ -106,11 +94,8 @@ fn benchmark_p384() {
     }
     let duration = start.elapsed();
     let ns_per_op = duration.as_nanos() as f64 / ITERATIONS as f64;
-    println!(
-        "  Subtraction:  {:.2} ns/op ({:.2} M ops/sec)",
-        ns_per_op,
-        1000.0 / ns_per_op
-    );
+    println!("  Subtraction:  {:.2} ns/op ({:.2} M ops/sec)",
+             ns_per_op, 1000.0 / ns_per_op);
 
     // Multiplication benchmark
     let start = Instant::now();
@@ -119,11 +104,8 @@ fn benchmark_p384() {
     }
     let duration = start.elapsed();
     let ns_per_op = duration.as_nanos() as f64 / (ITERATIONS / 10) as f64;
-    println!(
-        "  Multiplication: {:.2} ns/op ({:.2} M ops/sec)",
-        ns_per_op,
-        1000.0 / ns_per_op
-    );
+    println!("  Multiplication: {:.2} ns/op ({:.2} M ops/sec)",
+             ns_per_op, 1000.0 / ns_per_op);
 }
 
 fn benchmark_p521() {
@@ -145,11 +127,8 @@ fn benchmark_p521() {
     }
     let duration = start.elapsed();
     let ns_per_op = duration.as_nanos() as f64 / ITERATIONS as f64;
-    println!(
-        "  Addition:     {:.2} ns/op ({:.2} M ops/sec)",
-        ns_per_op,
-        1000.0 / ns_per_op
-    );
+    println!("  Addition:     {:.2} ns/op ({:.2} M ops/sec)",
+             ns_per_op, 1000.0 / ns_per_op);
 
     // Subtraction benchmark
     let start = Instant::now();
@@ -158,11 +137,8 @@ fn benchmark_p521() {
     }
     let duration = start.elapsed();
     let ns_per_op = duration.as_nanos() as f64 / ITERATIONS as f64;
-    println!(
-        "  Subtraction:  {:.2} ns/op ({:.2} M ops/sec)",
-        ns_per_op,
-        1000.0 / ns_per_op
-    );
+    println!("  Subtraction:  {:.2} ns/op ({:.2} M ops/sec)",
+             ns_per_op, 1000.0 / ns_per_op);
 
     // Multiplication benchmark
     let start = Instant::now();
@@ -171,9 +147,6 @@ fn benchmark_p521() {
     }
     let duration = start.elapsed();
     let ns_per_op = duration.as_nanos() as f64 / (ITERATIONS / 10) as f64;
-    println!(
-        "  Multiplication: {:.2} ns/op ({:.2} M ops/sec)",
-        ns_per_op,
-        1000.0 / ns_per_op
-    );
+    println!("  Multiplication: {:.2} ns/op ({:.2} M ops/sec)",
+             ns_per_op, 1000.0 / ns_per_op);
 }

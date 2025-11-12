@@ -10,14 +10,14 @@ fn main() {
     // The 512-bit product of (p-3)^2 as 8 x 64-bit limbs
     // From Python: 0xfffffffe00000002fffffffe0000000100000001fffffffe00000001fffffff800000007fffffff8fffffffffffffffffffffff8000000000000000000000010
     let product_limbs: [u64; 8] = [
-        0x0000000000000010, // limb 0
-        0xfffffff800000000, // limb 1
-        0xffffffffffffffff, // limb 2
-        0x00000007fffffff8, // limb 3
-        0x00000001fffffff8, // limb 4
-        0x00000001fffffffe, // limb 5
-        0xfffffffe00000001, // limb 6
-        0xfffffffe00000002, // limb 7
+        0x0000000000000010,  // limb 0
+        0xfffffff800000000,  // limb 1
+        0xffffffffffffffff,  // limb 2
+        0x00000007fffffff8,  // limb 3
+        0x00000001fffffff8,  // limb 4
+        0x00000001fffffffe,  // limb 5
+        0xfffffffe00000001,  // limb 6
+        0xfffffffe00000002,  // limb 7
     ];
 
     println!("Input (512-bit product):");
