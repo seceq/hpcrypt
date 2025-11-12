@@ -1,11 +1,27 @@
 [workspace]
 resolver = "2"
 members = [
+    "hpcrypt",           # Umbrella crate
     "hpcrypt-core",
     "hpcrypt-hash",
     "hpcrypt-curves",
     "hpcrypt-signatures",
     "hpcrypt-rng",
+    "hpcrypt-mlkem",
+    "hpcrypt-mldsa",
+    "hpcrypt-slhdsa",
+    "hpcrypt-aead",
+    "hpcrypt-cipher",
+    "hpcrypt-ecies",
+    "hpcrypt-fpe",
+    "hpcrypt-hpke",
+    "hpcrypt-kdf",
+    "hpcrypt-pake",
+    "hpcrypt-mac",
+    "hpcrypt-quic",
+    "hpcrypt-rsa",
+    "hpcrypt-threshold",
+    "hpcrypt-srp",
 ]
 
 [workspace.package]
@@ -24,11 +40,27 @@ subtle = { version = "2.6", default-features = false }
 zeroize = { version = "1.8", default-features = false, features = ["derive"] }
 
 # Internal workspace dependencies
+hpcrypt = { path = "hpcrypt", version = "0.1.0", default-features = false }
 hpcrypt-core = { path = "hpcrypt-core", version = "0.1.0", default-features = false }
 hpcrypt-hash = { path = "hpcrypt-hash", version = "0.1.0", default-features = false }
 hpcrypt-curves = { path = "hpcrypt-curves", version = "0.1.0", default-features = false }
 hpcrypt-signatures = { path = "hpcrypt-signatures", version = "0.1.0", default-features = false }
 hpcrypt-rng = { path = "hpcrypt-rng", version = "0.1.0", default-features = false }
+hpcrypt-mlkem = { path = "hpcrypt-mlkem", version = "0.1.0", default-features = false }
+hpcrypt-mldsa = { path = "hpcrypt-mldsa", version = "0.1.0", default-features = false }
+hpcrypt-slhdsa = { path = "hpcrypt-slhdsa", version = "0.1.0", default-features = false }
+hpcrypt-aead = { path = "hpcrypt-aead", version = "0.1.0", default-features = false }
+hpcrypt-cipher = { path = "hpcrypt-cipher", version = "0.1.0", default-features = false }
+hpcrypt-ecies = { path = "hpcrypt-ecies", version = "0.1.0", default-features = false }
+hpcrypt-fpe = { path = "hpcrypt-fpe", version = "0.1.0", default-features = false }
+hpcrypt-hpke = { path = "hpcrypt-hpke", version = "0.1.0", default-features = false }
+hpcrypt-kdf = { path = "hpcrypt-kdf", version = "0.1.0", default-features = false }
+hpcrypt-pake = { path = "hpcrypt-pake", version = "0.1.0", default-features = false }
+hpcrypt-mac = { path = "hpcrypt-mac", version = "0.1.0", default-features = false }
+hpcrypt-quic = { path = "hpcrypt-quic", version = "0.1.0", default-features = false }
+hpcrypt-rsa = { path = "hpcrypt-rsa", version = "0.1.0", default-features = false }
+hpcrypt-threshold = { path = "hpcrypt-threshold", version = "0.1.0", default-features = false }
+hpcrypt-srp = { path = "hpcrypt-srp", version = "0.1.0", default-features = false }
 
 # Development dependencies
 criterion = { version = "0.5", features = ["html_reports"] }
