@@ -1,0 +1,28 @@
+[package]
+name = "hpcrypt-cipher"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Block cipher modes of operation for HPCrypt"
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+hpcrypt-core = { workspace = true }
+hpcrypt-aead = { workspace = true }
+subtle = { workspace = true }
+zeroize = { workspace = true }
+num-bigint = { version = "0.4", default-features = false }
+num-traits = { version = "0.2", default-features = false }
+num-integer = { version = "0.1", default-features = false }
+
+[dev-dependencies]
+hex-literal = { workspace = true }
+
+[features]
+default = ["std", "alloc"]
+std = ["hpcrypt-core/std", "hpcrypt-aead/std", "alloc"]
+alloc = ["hpcrypt-core/alloc", "hpcrypt-aead/alloc"]

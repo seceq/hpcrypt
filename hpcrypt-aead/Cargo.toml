@@ -1,0 +1,34 @@
+[package]
+name = "hpcrypt-aead"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Authenticated Encryption with Associated Data (AEAD) implementations for HPCrypt"
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+hpcrypt-core = { workspace = true }
+subtle = { workspace = true }
+zeroize = { workspace = true }
+
+[dev-dependencies]
+hex-literal = { workspace = true }
+aes = "0.8"
+criterion = { workspace = true }
+
+[[bench]]
+name = "ghash_optimization_benchmarks"
+harness = false
+
+[features]
+default = ["std", "alloc"]
+std = ["hpcrypt-core/std", "alloc"]
+alloc = ["hpcrypt-core/alloc"]
+
+# Ascon-only build (NIST Lightweight Cryptography Winner)
+# Excludes all other AEAD algorithms to minimize binary size
+ascon-only = ["alloc"]

@@ -1,0 +1,25 @@
+[package]
+name = "hpcrypt-fpe"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Format-Preserving Encryption (FF1) - NIST SP 800-38G"
+
+[dependencies]
+hpcrypt-aead = { path = "../hpcrypt-aead", version = "0.1.0", default-features = false }
+num-bigint = { version = "0.4", default-features = false, features = ["std"] }
+num-traits = { version = "0.2", default-features = false }
+num-integer = { version = "0.1", default-features = false, features = ["std"] }
+zeroize = { version = "1.8", default-features = false, features = ["derive"] }
+
+[dev-dependencies]
+hex-literal = "0.4"
+
+[features]
+default = ["std"]
+std = ["hpcrypt-aead/std"]

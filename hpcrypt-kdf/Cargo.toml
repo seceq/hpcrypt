@@ -1,0 +1,19 @@
+[package]
+name = "hpcrypt-kdf"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+hpcrypt-core = { workspace = true }
+hpcrypt-hash = { workspace = true }
+subtle = { workspace = true }
+zeroize = { workspace = true }
+sha2 = { version = "0.10", default-features = false }
+
+[dev-dependencies]
+hex-literal = { workspace = true }
+
+[features]
+default = ["std"]
+std = ["hpcrypt-core/std"]
+alloc = ["hpcrypt-core/alloc"]
