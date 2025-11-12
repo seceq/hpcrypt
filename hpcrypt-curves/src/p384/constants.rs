@@ -31,7 +31,7 @@ pub const P384_MODULUS: [u64; 6] = [
 ///
 /// For P-384, a = p - 3
 pub const P384_A: [u64; 6] = [
-    0x00000000FFFFFFFC, // p - 3
+    0x00000000FFFFFFFC,  // p - 3
     0xFFFFFFFF00000000,
     0xFFFFFFFFFFFFFFFE,
     0xFFFFFFFFFFFFFFFF,
@@ -109,18 +109,18 @@ pub const P384_ORDER: [u64; 6] = [
 ///
 /// Represented as 12 x 64-bit limbs (little-endian), though only 7 are non-zero:
 pub const BARRETT_MU_SCALAR: [u64; 12] = [
-    0x1313E695333AD68D, // limbs[0]
-    0xA7E5F24DB74F5885, // limbs[1]
-    0x389CB27E0BC8D220, // limbs[2]
-    0x0000000000000000, // limbs[3]
-    0x0000000000000000, // limbs[4]
-    0x0000000000000000, // limbs[5]
-    0x0000000000000001, // limbs[6]
-    0x0000000000000000, // limbs[7]
-    0x0000000000000000, // limbs[8]
-    0x0000000000000000, // limbs[9]
-    0x0000000000000000, // limbs[10]
-    0x0000000000000000, // limbs[11]
+    0x1313E695333AD68D,  // limbs[0]
+    0xA7E5F24DB74F5885,  // limbs[1]
+    0x389CB27E0BC8D220,  // limbs[2]
+    0x0000000000000000,  // limbs[3]
+    0x0000000000000000,  // limbs[4]
+    0x0000000000000000,  // limbs[5]
+    0x0000000000000001,  // limbs[6]
+    0x0000000000000000,  // limbs[7]
+    0x0000000000000000,  // limbs[8]
+    0x0000000000000000,  // limbs[9]
+    0x0000000000000000,  // limbs[10]
+    0x0000000000000000,  // limbs[11]
 ];
 
 /// Field element representing zero

@@ -43,16 +43,16 @@
 
 pub mod constants;
 pub mod field;
-pub mod point;
 pub mod scalar;
+pub mod point;
 pub mod sign;
 pub mod sliding;
 
 pub use constants::*;
 pub use field::FieldElement;
-pub use point::{scalar_mul_base_comb, NielsPoint, Point};
 pub use scalar::Scalar;
-pub use sign::{public_key, sign, verify, PublicKey, Signature};
+pub use point::{Point, NielsPoint, scalar_mul_base_comb};
+pub use sign::{PublicKey, Signature, public_key, sign, verify};
 
 #[cfg(feature = "std")]
 pub use point::CombTable;

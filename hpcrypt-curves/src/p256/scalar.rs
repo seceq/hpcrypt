@@ -16,11 +16,10 @@
 //! - ECDSA signing: 61% faster
 //! - Constant-time operations throughout
 
+use crate::p256::constants::{P256_ORDER, BARRETT_MU_SCALAR};
 use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
-use crate::p256::constants::{BARRETT_MU_SCALAR, P256_ORDER};
 
 #[cfg(test)]
-#[allow(unused_imports)]
 use num_bigint::BigUint;
 
 /// A scalar value modulo the P-256 curve order n
@@ -246,9 +245,9 @@ impl Scalar {
     /// This function uses the optimized Barrett reduction algorithm (HAC 14.42)
     /// which was debugged and fixed in Session 6 after extensive investigation.
     ///
-    /// The bug was in the r\[4\] handling - we were extracting r[0..3] without
+    /// The bug was in the r[4] handling - we were extracting r[0..3] without
     /// first reducing the full 5-limb value. This caused failures for large inputs
-    /// like 7^301 squared (510-bit result with r\[4\]=1).
+    /// like 7^301 squared (510-bit result with r[4]=1).
     ///
     /// Performance: Barrett reduction is ~4x faster than BigUint, enabling:
     /// - 75% faster scalar multiplication
@@ -268,7 +267,7 @@ impl Scalar {
     /// - Sessions 1-3: Improved threshold from ~250 to ~1204 iterations
     /// - Session 4: Proved algorithm correctness, found failure at 7^602
     /// - Session 5: Investigated borrow handling (wrong location)
-    /// - Session 6: FIXED! Bug was in r\[4\] extraction (lines 386-437)
+    /// - Session 6: FIXED! Bug was in r[4] extraction (lines 386-437)
     ///
     /// The fix: Properly reduce full 5-limb value before extracting r[0..3].
     /// Result: All tests pass, 4x performance improvement over BigUint!
@@ -357,7 +356,7 @@ impl Scalar {
                 // Actually, after adding n once, we should be positive
                 // Let me just trust the arithmetic here
             }
-            borrow = 0; // After one addition, we should be non-negative
+            borrow = 0;  // After one addition, we should be non-negative
         }
 
         // Step 7: Reduce the full 5-limb value r modulo n
@@ -672,9 +671,10 @@ mod tests {
     fn test_scalar_bytes_round_trip_large() {
         // Test with large value
         let bytes = [
-            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
-            0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0xAB, 0xCD, 0xEF, 0x01,
-            0x23, 0x45, 0x67, 0x89,
+            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
+            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+            0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00,
+            0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89,
         ];
 
         let scalar = Scalar::from_bytes(&bytes);
@@ -694,10 +694,7 @@ mod tests {
 
         if input_big < n {
             // Should round-trip perfectly
-            assert_eq!(
-                bytes, recovered_bytes,
-                "Bytes should round-trip for value < n"
-            );
+            assert_eq!(bytes, recovered_bytes, "Bytes should round-trip for value < n");
         } else {
             // Should be reduced
             let expected = input_big % n;
@@ -750,11 +747,11 @@ mod tests {
         let c = Scalar::from_u64(13);
 
         let b_plus_c = b.add(&c);
-        let left = a.mul(&b_plus_c); // a * (b + c)
+        let left = a.mul(&b_plus_c);  // a * (b + c)
 
         let ab = a.mul(&b);
         let ac = a.mul(&c);
-        let right = ab.add(&ac); // a * b + a * c
+        let right = ab.add(&ac);  // a * b + a * c
 
         assert_eq!(left, right, "Distributivity failed: a*(b+c) != a*b + a*c");
     }
@@ -767,10 +764,10 @@ mod tests {
         let c = Scalar::from_u64(13);
 
         let ab = a.mul(&b);
-        let left = ab.mul(&c); // (a * b) * c
+        let left = ab.mul(&c);  // (a * b) * c
 
         let bc = b.mul(&c);
-        let right = a.mul(&bc); // a * (b * c)
+        let right = a.mul(&bc);  // a * (b * c)
 
         assert_eq!(left, right, "Associativity failed: (a*b)*c != a*(b*c)");
     }
@@ -779,32 +776,32 @@ mod tests {
     fn test_scalar_distributivity_large() {
         // Test distributivity with large 256-bit values
         let a = Scalar::from_bytes(&[
-            0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22,
-            0x11, 0x00, 0x0F, 0x1E, 0x2D, 0x3C, 0x4B, 0x5A, 0x69, 0x78, 0x87, 0x96, 0xA5, 0xB4,
-            0xC3, 0xD2, 0xE1, 0xF0,
+            0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88,
+            0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00,
+            0x0F, 0x1E, 0x2D, 0x3C, 0x4B, 0x5A, 0x69, 0x78,
+            0x87, 0x96, 0xA5, 0xB4, 0xC3, 0xD2, 0xE1, 0xF0,
         ]);
         let b = Scalar::from_bytes(&[
-            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
-            0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0xAB, 0xCD, 0xEF, 0x01,
-            0x23, 0x45, 0x67, 0x89,
+            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
+            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+            0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00,
+            0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89,
         ]);
         let c = Scalar::from_bytes(&[
-            0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10, 0x0F, 0x1E, 0x2D, 0x3C, 0x4B, 0x5A,
-            0x69, 0x78, 0x87, 0x96, 0xA5, 0xB4, 0xC3, 0xD2, 0xE1, 0xF0, 0x12, 0x34, 0x56, 0x78,
-            0x9A, 0xBC, 0xDE, 0xF0,
+            0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
+            0x0F, 0x1E, 0x2D, 0x3C, 0x4B, 0x5A, 0x69, 0x78,
+            0x87, 0x96, 0xA5, 0xB4, 0xC3, 0xD2, 0xE1, 0xF0,
+            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
         ]);
 
         let b_plus_c = b.add(&c);
-        let left = a.mul(&b_plus_c); // a * (b + c)
+        let left = a.mul(&b_plus_c);  // a * (b + c)
 
         let ab = a.mul(&b);
         let ac = a.mul(&c);
-        let right = ab.add(&ac); // a * b + a * c
+        let right = ab.add(&ac);  // a * b + a * c
 
-        assert_eq!(
-            left, right,
-            "Distributivity failed with large values: a*(b+c) != a*b + a*c"
-        );
+        assert_eq!(left, right, "Distributivity failed with large values: a*(b+c) != a*b + a*c");
     }
 
     #[test]
@@ -817,11 +814,7 @@ mod tests {
         let result = Scalar::reduce_wide(&limbs);
 
         // Should just be 42
-        assert_eq!(
-            result,
-            Scalar::from_u64(42),
-            "reduce_wide(42) should equal 42"
-        );
+        assert_eq!(result, Scalar::from_u64(42), "reduce_wide(42) should equal 42");
 
         // Test with a value that needs reduction: n + 42
         // First get n as BigUint
@@ -849,11 +842,7 @@ mod tests {
         let result = Scalar::reduce_wide(&limbs);
 
         // n + 42 mod n should be 42
-        assert_eq!(
-            result,
-            Scalar::from_u64(42),
-            "reduce_wide(n+42) should equal 42"
-        );
+        assert_eq!(result, Scalar::from_u64(42), "reduce_wide(n+42) should equal 42");
     }
 
     #[test]
@@ -887,10 +876,7 @@ mod tests {
         }
         let result_big = BigUint::from_bytes_le(&result_bytes);
 
-        assert_eq!(
-            result_big, expected_big,
-            "mul() doesn't match BigUint computation"
-        );
+        assert_eq!(result_big, expected_big, "mul() doesn't match BigUint computation");
     }
 
     #[test]
@@ -899,14 +885,16 @@ mod tests {
         use num_bigint::BigUint;
 
         let a_bytes = [
-            0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22,
-            0x11, 0x00, 0x0F, 0x1E, 0x2D, 0x3C, 0x4B, 0x5A, 0x69, 0x78, 0x87, 0x96, 0xA5, 0xB4,
-            0xC3, 0xD2, 0xE1, 0xF0,
+            0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88,
+            0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00,
+            0x0F, 0x1E, 0x2D, 0x3C, 0x4B, 0x5A, 0x69, 0x78,
+            0x87, 0x96, 0xA5, 0xB4, 0xC3, 0xD2, 0xE1, 0xF0,
         ];
         let b_bytes = [
-            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
-            0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0xAB, 0xCD, 0xEF, 0x01,
-            0x23, 0x45, 0x67, 0x89,
+            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
+            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+            0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00,
+            0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89,
         ];
 
         let a = Scalar::from_bytes(&a_bytes);
@@ -931,10 +919,7 @@ mod tests {
         let result_bytes_array = result.to_bytes();
         let result_big = BigUint::from_bytes_be(&result_bytes_array);
 
-        assert_eq!(
-            result_big, expected_big,
-            "mul() with large values doesn't match BigUint"
-        );
+        assert_eq!(result_big, expected_big, "mul() with large values doesn't match BigUint");
     }
 
     #[test]
@@ -957,10 +942,7 @@ mod tests {
         assert!(!Scalar::gte_n(&[0, 0, 0, 0]), "0 should be < n");
 
         // Max value should be >= n
-        assert!(
-            Scalar::gte_n(&[u64::MAX, u64::MAX, u64::MAX, u64::MAX]),
-            "max should be >= n"
-        );
+        assert!(Scalar::gte_n(&[u64::MAX, u64::MAX, u64::MAX, u64::MAX]), "max should be >= n");
     }
 
     #[test]
@@ -969,14 +951,16 @@ mod tests {
         use num_bigint::BigUint;
 
         let a_bytes = [
-            0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22,
-            0x11, 0x00, 0x0F, 0x1E, 0x2D, 0x3C, 0x4B, 0x5A, 0x69, 0x78, 0x87, 0x96, 0xA5, 0xB4,
-            0xC3, 0xD2, 0xE1, 0xF0,
+            0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88,
+            0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00,
+            0x0F, 0x1E, 0x2D, 0x3C, 0x4B, 0x5A, 0x69, 0x78,
+            0x87, 0x96, 0xA5, 0xB4, 0xC3, 0xD2, 0xE1, 0xF0,
         ];
         let b_bytes = [
-            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
-            0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0xAB, 0xCD, 0xEF, 0x01,
-            0x23, 0x45, 0x67, 0x89,
+            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
+            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+            0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00,
+            0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89,
         ];
 
         let a = Scalar::from_bytes(&a_bytes);
@@ -1001,10 +985,7 @@ mod tests {
         let result_bytes_array = result.to_bytes();
         let result_big = BigUint::from_bytes_be(&result_bytes_array);
 
-        assert_eq!(
-            result_big, expected_big,
-            "add() with large values doesn't match BigUint"
-        );
+        assert_eq!(result_big, expected_big, "add() with large values doesn't match BigUint");
     }
 
     #[test]
@@ -1015,14 +996,16 @@ mod tests {
 
         // Create two large values that will overflow when added
         let a_bytes = [
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-            0xFF, 0xFF, 0xFF, 0xFE,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE,
         ];
         let b_bytes = [
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x02,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
         ];
 
         let a = Scalar::from_bytes(&a_bytes);
@@ -1047,10 +1030,7 @@ mod tests {
         let result_bytes_array = result.to_bytes();
         let result_big = BigUint::from_bytes_be(&result_bytes_array);
 
-        assert_eq!(
-            result_big, expected_big,
-            "add() with carry overflow doesn't match BigUint"
-        );
+        assert_eq!(result_big, expected_big, "add() with carry overflow doesn't match BigUint");
     }
 }
 
@@ -1068,9 +1048,7 @@ mod barrett_tests {
             0xFFFFFFFFFFFFFFFF,
             0xFFFFFFFE00000001,
             0x0000000000000001,
-            0,
-            0,
-            0,
+            0, 0, 0
         ];
 
         let mu = crate::p256::constants::BARRETT_MU_SCALAR;
@@ -1131,9 +1109,7 @@ mod barrett_tests {
             0xFFFFFFFFFFFFFFFF,
             0xFFFFFFFE00000001,
             0x0000000000000001,
-            0,
-            0,
-            0,
+            0, 0, 0
         ];
         let x_ext = Scalar::extend_512_to_768(&x);
 
@@ -1175,9 +1151,7 @@ mod barrett_tests {
             0xFFFFFFFFFFFFFFFF,
             0xFFFFFFFE00000001,
             0x0000000000000001,
-            0,
-            0,
-            0,
+            0, 0, 0
         ];
 
         let result = Scalar::reduce_wide(&x);
@@ -1193,38 +1167,11 @@ mod barrett_tests {
             // Small value
             [100, 0, 0, 0, 0, 0, 0, 0],
             // Just under n
-            [
-                P256_ORDER[0] - 1,
-                P256_ORDER[1],
-                P256_ORDER[2],
-                P256_ORDER[3],
-                0,
-                0,
-                0,
-                0,
-            ],
+            [P256_ORDER[0] - 1, P256_ORDER[1], P256_ORDER[2], P256_ORDER[3], 0, 0, 0, 0],
             // Exactly n (should reduce to 0)
-            [
-                P256_ORDER[0],
-                P256_ORDER[1],
-                P256_ORDER[2],
-                P256_ORDER[3],
-                0,
-                0,
-                0,
-                0,
-            ],
+            [P256_ORDER[0], P256_ORDER[1], P256_ORDER[2], P256_ORDER[3], 0, 0, 0, 0],
             // n + 1 (should reduce to 1)
-            [
-                P256_ORDER[0] + 1,
-                P256_ORDER[1],
-                P256_ORDER[2],
-                P256_ORDER[3],
-                0,
-                0,
-                0,
-                0,
-            ],
+            [P256_ORDER[0] + 1, P256_ORDER[1], P256_ORDER[2], P256_ORDER[3], 0, 0, 0, 0],
             // Large value (will overflow if we try 2n directly, so use different approach)
             [u64::MAX, u64::MAX, u64::MAX, u64::MAX, 0, 0, 0, 0],
         ];
@@ -1259,9 +1206,7 @@ mod barrett_tests {
                     expected_limbs[i] = u64::from_le_bytes(bytes);
                 }
             }
-            let expected = Scalar {
-                limbs: expected_limbs,
-            };
+            let expected = Scalar { limbs: expected_limbs };
 
             assert_eq!(result, expected, "test case {} failed", idx);
         }
@@ -1270,16 +1215,14 @@ mod barrett_tests {
     #[test]
     fn test_mul_7_by_inv7() {
         // Manually create 7 and 7^-1, then multiply
-        let seven = Scalar {
-            limbs: [7, 0, 0, 0],
-        };
+        let seven = Scalar { limbs: [7, 0, 0, 0] };
         let inv_seven = Scalar {
             limbs: [
                 0xD7EBF0C9FEF7C185,
                 0x5A8B230D0B2B51DC,
                 0xB6DB6DB6DB6DB6DB,
                 0x49249248DB6DB6DB,
-            ],
+            ]
         };
 
         let product = seven.mul(&inv_seven);
@@ -1292,16 +1235,14 @@ mod barrett_tests {
     fn test_mul_creates_correct_wide_product() {
         // Test that mul() creates the correct 512-bit product before reduction
         // Use 7 * 7^-1 as our test case
-        let seven = Scalar {
-            limbs: [7, 0, 0, 0],
-        };
+        let seven = Scalar { limbs: [7, 0, 0, 0] };
         let inv_seven = Scalar {
             limbs: [
                 0xD7EBF0C9FEF7C185,
                 0x5A8B230D0B2B51DC,
                 0xB6DB6DB6DB6DB6DB,
                 0x49249248DB6DB6DB,
-            ],
+            ]
         };
 
         // Manually compute the schoolbook multiplication
@@ -1331,15 +1272,10 @@ mod barrett_tests {
             0xFFFFFFFFFFFFFFFF,
             0xFFFFFFFE00000001,
             0x0000000000000001,
-            0,
-            0,
-            0,
+            0, 0, 0
         ];
 
-        assert_eq!(
-            full, expected_wide,
-            "Schoolbook multiplication should match expected"
-        );
+        assert_eq!(full, expected_wide, "Schoolbook multiplication should match expected");
 
         // Now test reduce_wide on this product
         let reduced = Scalar::reduce_wide(&full);
@@ -1349,16 +1285,14 @@ mod barrett_tests {
     #[test]
     fn test_mul_step_by_step() {
         // Debug the mul() function step by step
-        let seven = Scalar {
-            limbs: [7, 0, 0, 0],
-        };
+        let seven = Scalar { limbs: [7, 0, 0, 0] };
         let inv_seven = Scalar {
             limbs: [
                 0xD7EBF0C9FEF7C185,
                 0x5A8B230D0B2B51DC,
                 0xB6DB6DB6DB6DB6DB,
                 0x49249248DB6DB6DB,
-            ],
+            ]
         };
 
         // Call mul and see what we get
@@ -1388,10 +1322,7 @@ mod barrett_tests {
 
         let manual_reduced = Scalar::reduce_wide(&full);
 
-        assert_eq!(
-            result, manual_reduced,
-            "mul() should match manual schoolbook + reduce_wide"
-        );
+        assert_eq!(result, manual_reduced, "mul() should match manual schoolbook + reduce_wide");
         assert_eq!(result, Scalar::one(), "Both should equal 1");
     }
 
@@ -1408,23 +1339,18 @@ mod barrett_tests {
                 0x5A8B230D0B2B51DC,
                 0xB6DB6DB6DB6DB6DB,
                 0x49249248DB6DB6DB,
-            ],
+            ]
         };
 
         // Check if they match
         if computed_inv != expected_inv {
             // They don't match - this is the bug!
             // The computed inverse is wrong, which means pow() or invert() has a bug
-            panic!(
-                "invert() computed wrong value: {:?}, expected: {:?}",
-                computed_inv.limbs, expected_inv.limbs
-            );
+            panic!("invert() computed wrong value: {:?}, expected: {:?}",
+                   computed_inv.limbs, expected_inv.limbs);
         }
 
-        assert_eq!(
-            computed_inv, expected_inv,
-            "invert() should compute correct inverse"
-        );
+        assert_eq!(computed_inv, expected_inv, "invert() should compute correct inverse");
 
         // Also verify the product
         let product = seven.mul(&computed_inv);
@@ -1494,14 +1420,9 @@ mod barrett_tests {
                 expected_limbs[i] = u64::from_le_bytes(limb_bytes);
             }
         }
-        let expected3 = Scalar {
-            limbs: expected_limbs,
-        };
+        let expected3 = Scalar { limbs: expected_limbs };
 
-        assert_eq!(
-            result3, expected3,
-            "2^64 mod n should match BigUint calculation"
-        );
+        assert_eq!(result3, expected3, "2^64 mod n should match BigUint calculation");
     }
 
     #[test]
@@ -1516,9 +1437,9 @@ mod barrett_tests {
             // Small value
             [7, 0, 0, 0, 0, 0, 0, 0],
             // Medium value
-            [49, 0, 0, 0, 0, 0, 0, 0], // 7^2
+            [49, 0, 0, 0, 0, 0, 0, 0],  // 7^2
             // Larger value that still fits in 256 bits
-            [16807, 0, 0, 0, 0, 0, 0, 0], // 7^5
+            [16807, 0, 0, 0, 0, 0, 0, 0],  // 7^5
         ];
 
         for (idx, limbs) in test_cases.iter().enumerate() {
@@ -1549,9 +1470,7 @@ mod barrett_tests {
                     expected_limbs[i] = u64::from_le_bytes(limb_bytes);
                 }
             }
-            let expected = Scalar {
-                limbs: expected_limbs,
-            };
+            let expected = Scalar { limbs: expected_limbs };
 
             assert_eq!(
                 barrett_result, expected,
@@ -1568,7 +1487,7 @@ mod barrett_tests {
 
         // 7^-1 mod n = 0x49249248db6db6dbb6db6db6db6db6db5a8b230d0b2b51dcd7ebf0c9fef7c185
         // In limbs (little-endian):
-        let _inv7_limbs = [
+        let inv7_limbs = [
             0xD7EBF0C9FEF7C185u64,
             0x5A8B230D0B2B51DCu64,
             0xB6DB6DB6DB6DB6DBu64,
@@ -1591,9 +1510,7 @@ mod barrett_tests {
         let result = Scalar::reduce_wide(&product);
 
         // Should be 1
-        let expected = Scalar {
-            limbs: [1, 0, 0, 0],
-        };
+        let expected = Scalar { limbs: [1, 0, 0, 0] };
 
         assert_eq!(
             result, expected,
@@ -1613,9 +1530,7 @@ mod barrett_tests {
 
         // Test with increasing exponents to find where divergence starts
         // Binary search to find ALL failures
-        let test_exponents: &[u64] = &[
-            256, 300, 400, 500, 600, 601, 602, 700, 800, 1000, 1203, 1204,
-        ];
+        let test_exponents: &[u64] = &[256, 300, 400, 500, 600, 601, 602, 700, 800, 1000, 1203, 1204];
 
         for &exp in test_exponents {
             let exp_limbs = [exp, 0, 0, 0];
@@ -1641,9 +1556,7 @@ mod barrett_tests {
                     expected_limbs[i] = u64::from_le_bytes(limb_bytes);
                 }
             }
-            let expected = Scalar {
-                limbs: expected_limbs,
-            };
+            let expected = Scalar { limbs: expected_limbs };
 
             assert_eq!(
                 barrett_result, expected,
@@ -1680,9 +1593,7 @@ mod barrett_tests {
         ];
 
         let result = Scalar::reduce_wide_barrett(&input_limbs);
-        let expected = Scalar {
-            limbs: expected_limbs,
-        };
+        let expected = Scalar { limbs: expected_limbs };
 
         assert_eq!(
             result, expected,
@@ -1737,9 +1648,7 @@ mod barrett_tests {
                 expected_limbs[i] = u64::from_le_bytes(limb_bytes);
             }
         }
-        let expected = Scalar {
-            limbs: expected_limbs,
-        };
+        let expected = Scalar { limbs: expected_limbs };
 
         // Path 1: 7^1203 × 7
         let val_1203 = Scalar::from_u64(7).pow(&[1203, 0, 0, 0]);
@@ -1790,9 +1699,7 @@ mod barrett_tests {
                 expected_limbs[i] = u64::from_le_bytes(limb_bytes);
             }
         }
-        let expected = Scalar {
-            limbs: expected_limbs,
-        };
+        let expected = Scalar { limbs: expected_limbs };
 
         assert_eq!(
             result, expected,
@@ -1945,11 +1852,9 @@ mod barrett_tests {
             ],
         };
 
-        assert_eq!(
-            result, expected,
+        assert_eq!(result, expected,
             "pow(7, 602) with BigUint failed:\nGot:      {:?}\nExpected: {:?}",
-            result.limbs, expected.limbs
-        );
+            result.limbs, expected.limbs);
     }
 
     #[test]
@@ -1980,11 +1885,9 @@ mod barrett_tests {
             ],
         };
 
-        assert_eq!(
-            result, expected,
+        assert_eq!(result, expected,
             "Barrett on 7^601×7 failed:\nGot:      {:?}\nExpected: {:?}",
-            result.limbs, expected.limbs
-        );
+            result.limbs, expected.limbs);
     }
 
     #[test]
@@ -2015,11 +1918,9 @@ mod barrett_tests {
             ],
         };
 
-        assert_eq!(
-            result, expected,
+        assert_eq!(result, expected,
             "Barrett on 7^301 squared failed:\nGot:      {:?}\nExpected: {:?}",
-            result.limbs, expected.limbs
-        );
+            result.limbs, expected.limbs);
     }
 
     #[test]
@@ -2047,9 +1948,7 @@ mod barrett_tests {
                 expected_limbs[i] = u64::from_le_bytes(limb_bytes);
             }
         }
-        let expected = Scalar {
-            limbs: expected_limbs,
-        };
+        let expected = Scalar { limbs: expected_limbs };
         assert_eq!(result_700, expected, "pow(7, 700) failed");
 
         // Test 7^1000
@@ -2066,9 +1965,7 @@ mod barrett_tests {
                 expected_1000_limbs[i] = u64::from_le_bytes(limb_bytes);
             }
         }
-        let expected_1000 = Scalar {
-            limbs: expected_1000_limbs,
-        };
+        let expected_1000 = Scalar { limbs: expected_1000_limbs };
         assert_eq!(result_1000, expected_1000, "pow(7, 1000) failed");
 
         // Test 7^1204 (the original failure point from Session 3!)
@@ -2085,13 +1982,8 @@ mod barrett_tests {
                 expected_1204_limbs[i] = u64::from_le_bytes(limb_bytes);
             }
         }
-        let expected_1204 = Scalar {
-            limbs: expected_1204_limbs,
-        };
-        assert_eq!(
-            result_1204, expected_1204,
-            "pow(7, 1204) failed - THIS WAS THE ORIGINAL FAILURE!"
-        );
+        let expected_1204 = Scalar { limbs: expected_1204_limbs };
+        assert_eq!(result_1204, expected_1204, "pow(7, 1204) failed - THIS WAS THE ORIGINAL FAILURE!");
 
         // Test 7^2000 (way beyond previous limits!)
         let result_2000 = Scalar::from_u64(7).pow(&[2000, 0, 0, 0]);
@@ -2107,9 +1999,8 @@ mod barrett_tests {
                 expected_2000_limbs[i] = u64::from_le_bytes(limb_bytes);
             }
         }
-        let expected_2000 = Scalar {
-            limbs: expected_2000_limbs,
-        };
+        let expected_2000 = Scalar { limbs: expected_2000_limbs };
         assert_eq!(result_2000, expected_2000, "pow(7, 2000) failed");
     }
 }
+

@@ -25,19 +25,19 @@
 //! This implementation prioritizes correctness. Performance optimizations and
 //! precomputed tables can be added in future releases.
 
-pub mod batch;
 pub mod constants;
+pub mod field_ops;
 pub mod field52; // 52-bit lazy reduction field arithmetic
 pub mod field_montgomery_native; // Montgomery CIOS (experimental)
-pub mod field_ops;
-pub mod glv;
-pub mod msm;
 pub mod point;
 pub mod point_montgomery; // Montgomery-optimized point operations (Phase 2)
-pub mod precomputed;
 pub mod scalar;
+pub mod precomputed;
+pub mod glv;
 pub mod schnorr;
+pub mod batch;
 pub mod wnaf;
+pub mod msm;
 
 // Internal modules
 pub(crate) mod u256; // 256-bit arithmetic (replaces num-bigint)
@@ -46,11 +46,11 @@ mod macros; // Macros for unrolled field operations
 
 // Re-export commonly used types
 pub use constants::*;
-pub use field52::FieldElement52; // 52-bit field element
 pub use field_ops::FieldElement;
+pub use field52::FieldElement52; // 52-bit field element
 pub use point::{AffinePoint, Point};
-pub use precomputed::PRECOMPUTED_TABLE;
 pub use scalar::Scalar;
+pub use precomputed::PRECOMPUTED_TABLE;
 
 /// secp256k1 curve module
 ///

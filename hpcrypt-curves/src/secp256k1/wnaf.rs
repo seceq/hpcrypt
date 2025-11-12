@@ -30,9 +30,9 @@
 
 extern crate alloc;
 
-use super::batch::batch_invert;
-use super::{AffinePoint, Point};
 use alloc::vec::Vec;
+use super::{Point, AffinePoint};
+use super::batch::batch_invert;
 
 /// Window width for wNAF (4-bit windows = 16 precomputed points)
 ///
@@ -108,7 +108,9 @@ impl WNafTable {
         }
 
         // Step 2: Extract Z coordinates for batch inversion
-        let mut z_coords: Vec<FieldElement> = jacobian_table.iter().map(|p| p.z).collect();
+        let mut z_coords: Vec<FieldElement> = jacobian_table.iter()
+            .map(|p| p.z)
+            .collect();
 
         // Step 3: Batch invert all Z coordinates (8 inversions for price of 1!)
         batch_invert(&mut z_coords);
@@ -131,9 +133,7 @@ impl WNafTable {
             affine_table[i].y = jacobian_table[i].y.mul(&z_inv_cubed);
         }
 
-        Self {
-            table: affine_table,
-        }
+        Self { table: affine_table }
     }
 
     /// Look up an odd multiple from the table
@@ -151,11 +151,8 @@ impl WNafTable {
     /// Panics if digit is even or out of range
     #[inline]
     pub fn lookup(&self, digit: usize) -> &AffinePoint {
-        debug_assert!(
-            digit > 0 && digit <= MAX_WNAF_VALUE && digit % 2 == 1,
-            "wNAF digit must be odd and in range [1, {}]",
-            MAX_WNAF_VALUE
-        );
+        debug_assert!(digit > 0 && digit <= MAX_WNAF_VALUE && digit % 2 == 1,
+                     "wNAF digit must be odd and in range [1, {}]", MAX_WNAF_VALUE);
 
         // Convert odd digit to table index
         // 1 -> 0, 3 -> 1, 5 -> 2, ..., 15 -> 7
@@ -189,9 +186,9 @@ impl WNafTable {
 ///    if k is odd:
 ///        digit = k mod 2^w (signed)
 ///        k = k - digit
-///        wnaf\[i\] = digit
+///        wnaf[i] = digit
 ///    else:
-///        wnaf\[i\] = 0
+///        wnaf[i] = 0
 ///    k = k / 2
 ///    i = i + 1
 /// ```
@@ -202,13 +199,10 @@ impl WNafTable {
 /// - Standard binary: [1, 1, 0, 1] (3 non-zero digits)
 /// - wNAF: [1, 0, -1, 0, 1] (2 non-zero digits, using 11 = 16 - 4 - 1)
 pub fn compute_wnaf(scalar: &[u8; 32], width: usize) -> Vec<i8> {
-    debug_assert!(
-        width >= 2 && width <= 8,
-        "Window width must be in range [2, 8]"
-    );
+    debug_assert!(width >= 2 && width <= 8, "Window width must be in range [2, 8]");
 
-    let window_size = 1usize << width; // 2^w
-    let window_mask = window_size - 1; // 2^w - 1
+    let window_size = 1usize << width;  // 2^w
+    let window_mask = window_size - 1;  // 2^w - 1
 
     // Use stack-allocated array instead of Vec for better performance
     // Maximum length is 257 (256 bits + 1 potential carry bit)
@@ -221,7 +215,7 @@ pub fn compute_wnaf(scalar: &[u8; 32], width: usize) -> Vec<i8> {
     for i in 0..4 {
         // Read bytes in big-endian order, but store limbs in little-endian order
         // byte[31-7..31] -> k[0], byte[23..16] -> k[1], etc.
-        let byte_start = 24 - (i * 8); // 24, 16, 8, 0
+        let byte_start = 24 - (i * 8);  // 24, 16, 8, 0
         k[i] = u64::from_be_bytes([
             scalar[byte_start],
             scalar[byte_start + 1],
@@ -403,14 +397,14 @@ fn add_small(k: &mut [u64; 4], val: u64) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ct_utils::ConstantTimeEq;
     use crate::secp256k1::Scalar;
+    use crate::ct_utils::ConstantTimeEq;
 
     #[test]
     fn test_wnaf_simple() {
         // Test wNAF computation for small values
         let mut scalar = [0u8; 32];
-        scalar[31] = 1; // Value 1 in big-endian (LSB is at byte[31])
+        scalar[31] = 1;  // Value 1 in big-endian (LSB is at byte[31])
         let wnaf = compute_wnaf(&scalar, 4);
 
         // wNAF of 1 should be just [1]
@@ -434,13 +428,9 @@ mod tests {
         }
 
         // Property 2: No two adjacent non-zero digits
-        for i in 0..wnaf.len() - 1 {
+        for i in 0..wnaf.len()-1 {
             if wnaf[i] != 0 {
-                assert_eq!(
-                    wnaf[i + 1],
-                    0,
-                    "Adjacent wNAF digits cannot both be non-zero"
-                );
+                assert_eq!(wnaf[i+1], 0, "Adjacent wNAF digits cannot both be non-zero");
             }
         }
     }

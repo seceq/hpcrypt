@@ -18,8 +18,8 @@
 #![allow(clippy::needless_range_loop)]
 
 use super::constants::P256_MODULUS;
-use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 use core::fmt;
+use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 /// A field element in the P-256 prime field.
 ///
@@ -52,9 +52,7 @@ impl FieldElement {
     /// Creates a field element representing zero.
     #[inline]
     pub const fn zero() -> Self {
-        Self {
-            limbs: [0, 0, 0, 0],
-        }
+        Self { limbs: [0, 0, 0, 0] }
     }
 
     /// Creates a field element representing one.

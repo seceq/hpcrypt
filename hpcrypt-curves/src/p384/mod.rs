@@ -27,24 +27,24 @@ pub mod constants;
 pub mod field;
 pub mod field_ops;
 // pub mod field_montgomery; // fiat-crypto Montgomery implementation (deprecated, kept for reference)
-pub mod batch;
-pub mod field_lazy;
 pub mod field_montgomery_native;
-pub mod msm;
+pub mod field_lazy;
 pub mod point;
-pub mod precomputed;
 pub mod scalar;
+pub mod precomputed;
+pub mod batch;
 pub mod wnaf;
+pub mod msm;
 
 // Re-export commonly used types
 pub use constants::*;
 pub use field::FieldElement;
-pub use field_lazy::LazyFieldElement;
 pub use field_montgomery_native::MontgomeryFieldElement;
-pub use msm::msm_2_points;
-pub use point::{AffinePoint, Point};
-pub use precomputed::scalar_mul_generator_fast;
+pub use field_lazy::LazyFieldElement;
+pub use point::{Point, AffinePoint};
 pub use scalar::Scalar;
+pub use precomputed::scalar_mul_generator_fast;
+pub use msm::msm_2_points;
 
 /// P-384 curve module
 ///

@@ -9,11 +9,10 @@
 //! - Reduction is performed using num-bigint for guaranteed correctness
 //! - Modular inverse uses the constant-time Fermat's method
 
+use crate::secp256k1::constants::{SECP256K1_ORDER, BARRETT_MU_SCALAR};
 use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
-use crate::secp256k1::constants::{BARRETT_MU_SCALAR, SECP256K1_ORDER};
 
 #[cfg(test)]
-#[allow(unused_imports)]
 use num_bigint::BigUint;
 
 /// A scalar value modulo the secp256k1 curve order n
@@ -219,10 +218,10 @@ impl Scalar {
         // n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
         // n-2 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD036413F
         let n_minus_2 = [
-            0xBFD25E8CD036413F, // limbs[0] (LSB)
-            0xBAAEDCE6AF48A03B, // limbs[1]
-            0xFFFFFFFFFFFFFFFE, // limbs[2]
-            0xFFFFFFFFFFFFFFFF, // limbs[3] (MSB)
+            0xBFD25E8CD036413F,  // limbs[0] (LSB)
+            0xBAAEDCE6AF48A03B,  // limbs[1]
+            0xFFFFFFFFFFFFFFFE,  // limbs[2]
+            0xFFFFFFFFFFFFFFFF,  // limbs[3] (MSB)
         ];
 
         Some(self.pow(&n_minus_2))
@@ -499,8 +498,7 @@ mod tests {
         let c = a.sub(&b);
 
         // Should wrap around: 3 - 10 = 3 + (n - 10) mod n
-        let expected = Scalar::from_u64(3)
-            .add(&Scalar::from_limbs(SECP256K1_ORDER).sub(&Scalar::from_u64(10)));
+        let expected = Scalar::from_u64(3).add(&Scalar::from_limbs(SECP256K1_ORDER).sub(&Scalar::from_u64(10)));
         assert_eq!(c, expected);
     }
 
@@ -529,12 +527,7 @@ mod tests {
         };
 
         let product = seven.mul(&seven_inv);
-        assert_eq!(
-            product,
-            Scalar::one(),
-            "7 * 7^(-1) should equal 1, got {:?}",
-            product
-        );
+        assert_eq!(product, Scalar::one(), "7 * 7^(-1) should equal 1, got {:?}", product);
     }
 
     #[test]
@@ -563,12 +556,7 @@ mod tests {
         if a_inv != expected_inv {
             // Different result - check if it's still valid
             let product = a.mul(&a_inv);
-            assert_eq!(
-                product,
-                Scalar::one(),
-                "7 * 7^(-1) should equal 1, got {:?}",
-                product
-            );
+            assert_eq!(product, Scalar::one(), "7 * 7^(-1) should equal 1, got {:?}", product);
         } else {
             // Correct inversion value - verify multiplication
             let product = a.mul(&a_inv);
@@ -652,10 +640,7 @@ mod tests {
         let ac = a.mul(&c);
         let right = ab.add(&ac);
 
-        assert_eq!(
-            left, right,
-            "Distributivity: a*(b+c) should equal a*b + a*c"
-        );
+        assert_eq!(left, right, "Distributivity: a*(b+c) should equal a*b + a*c");
     }
 
     #[test]
@@ -671,23 +656,22 @@ mod tests {
 
         // Test with larger values
         let c = Scalar::from_bytes(&[
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
-            0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C,
-            0x1D, 0x1E, 0x1F, 0x20,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+            0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+            0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20,
         ]);
         let d = Scalar::from_bytes(&[
-            0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22,
-            0x11, 0x00, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10, 0xEF, 0xCD, 0xAB, 0x89,
-            0x67, 0x45, 0x23, 0x01,
+            0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88,
+            0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00,
+            0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
+            0xEF, 0xCD, 0xAB, 0x89, 0x67, 0x45, 0x23, 0x01,
         ]);
 
         let cd = c.mul(&d);
         let dc = d.mul(&c);
 
-        assert_eq!(
-            cd, dc,
-            "Commutativity: c*d should equal d*c for large values"
-        );
+        assert_eq!(cd, dc, "Commutativity: c*d should equal d*c for large values");
     }
 
     #[test]

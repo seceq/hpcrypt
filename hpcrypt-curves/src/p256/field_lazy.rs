@@ -63,17 +63,13 @@ impl LazyFieldElement {
     /// The zero element
     #[inline(always)]
     pub const fn zero() -> Self {
-        Self {
-            limbs: [0, 0, 0, 0],
-        }
+        Self { limbs: [0, 0, 0, 0] }
     }
 
     /// The one element
     #[inline(always)]
     pub const fn one() -> Self {
-        Self {
-            limbs: [1, 0, 0, 0],
-        }
+        Self { limbs: [1, 0, 0, 0] }
     }
 
     /// Get the raw limbs
@@ -103,8 +99,7 @@ impl LazyFieldElement {
         // We need to reduce at least once
         if carry != 0 {
             // Subtract p to bring back into range
-            return Self::from_limbs_unchecked(result)
-                .sub_lazy(&Self::from_limbs_unchecked(P256_MODULUS));
+            return Self::from_limbs_unchecked(result).sub_lazy(&Self::from_limbs_unchecked(P256_MODULUS));
         }
 
         // Result may be >= p, but that's okay for lazy reduction

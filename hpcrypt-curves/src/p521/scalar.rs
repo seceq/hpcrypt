@@ -9,8 +9,8 @@
 //! - Reduction is performed using modular subtraction
 //! - Modular inverse uses constant-time Fermat's method
 
+use crate::p521::constants::{P521_ORDER, BARRETT_MU_SCALAR};
 use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
-use crate::p521::constants::{BARRETT_MU_SCALAR, P521_ORDER};
 
 #[cfg(test)]
 use num_bigint::BigUint;
@@ -280,8 +280,9 @@ impl Scalar {
         if carry != 0 {
             // Build a wide value for reduction
             let wide = [
-                result[0], result[1], result[2], result[3], result[4], result[5], result[6],
-                result[7], result[8], carry, 0, 0, 0, 0, 0, 0, 0, 0,
+                result[0], result[1], result[2], result[3], result[4],
+                result[5], result[6], result[7], result[8], carry,
+                0, 0, 0, 0, 0, 0, 0, 0,
             ];
             Self::reduce_wide(&wide)
         } else {
@@ -462,8 +463,8 @@ impl Scalar {
         // Step 1: q1 = floor(x / b^(k-1)) = x >> (8 * 64) bits
         // Extract limbs[8..18] (10 limbs)
         let q1: [u64; 10] = [
-            limbs[8], limbs[9], limbs[10], limbs[11], limbs[12], limbs[13], limbs[14], limbs[15],
-            limbs[16], limbs[17],
+            limbs[8], limbs[9], limbs[10], limbs[11], limbs[12],
+            limbs[13], limbs[14], limbs[15], limbs[16], limbs[17],
         ];
 
         // Step 2: q2 = q1 * μ
@@ -501,14 +502,15 @@ impl Scalar {
         // Step 3: q3 = floor(q2 / b^(k+1)) = q2 >> (10 * 64) bits
         // Extract limbs[10..19] from q2 (9 limbs for q3)
         let q3: [u64; 9] = [
-            q2[10], q2[11], q2[12], q2[13], q2[14], q2[15], q2[16], q2[17], q2[18],
+            q2[10], q2[11], q2[12], q2[13], q2[14],
+            q2[15], q2[16], q2[17], q2[18],
         ];
 
         // Step 4: r1 = x mod b^(k+1)
         // Extract lower 10 limbs from x
         let r1: [u64; 10] = [
-            limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5], limbs[6], limbs[7],
-            limbs[8], limbs[9],
+            limbs[0], limbs[1], limbs[2], limbs[3], limbs[4],
+            limbs[5], limbs[6], limbs[7], limbs[8], limbs[9],
         ];
 
         // Step 5: r2 = (q3 * n) mod b^(k+1)
@@ -536,8 +538,8 @@ impl Scalar {
 
         // Extract lower 10 limbs of r2
         let r2: [u64; 10] = [
-            r2_full[0], r2_full[1], r2_full[2], r2_full[3], r2_full[4], r2_full[5], r2_full[6],
-            r2_full[7], r2_full[8], r2_full[9],
+            r2_full[0], r2_full[1], r2_full[2], r2_full[3], r2_full[4],
+            r2_full[5], r2_full[6], r2_full[7], r2_full[8], r2_full[9],
         ];
 
         // Step 6: r = r1 - r2
@@ -785,10 +787,7 @@ mod tests {
         let decoded = Scalar::from_bytes(&bytes);
 
         // Check it's still not zero
-        assert!(
-            !bool::from(decoded.is_zero()),
-            "Decoded scalar 2 should not be zero!"
-        );
+        assert!(!bool::from(decoded.is_zero()), "Decoded scalar 2 should not be zero!");
 
         // Check they match (compare limbs since Scalar may not impl PartialEq)
         for i in 0..9 {
@@ -898,26 +897,7 @@ mod tests {
         let test_cases = [
             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [
-                0xFFFFFFFFFFFFFFFF,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-            ],
+            [0xFFFFFFFFFFFFFFFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         ];
 
         for (i, limbs) in test_cases.iter().enumerate() {
@@ -938,9 +918,7 @@ mod tests {
         let n = P521_ORDER;
 
         // 1 * n (should reduce to 0)
-        let one_n = [
-            n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7], n[8], 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        ];
+        let one_n = [n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7], n[8], 0, 0, 0, 0, 0, 0, 0, 0, 0];
         let barrett_result = Scalar::reduce_wide_barrett(&one_n);
         let bigint_result = Scalar::reduce_wide_bigint(&one_n);
         assert_eq!(barrett_result, bigint_result);
@@ -985,10 +963,7 @@ mod tests {
 
         let barrett_result = Scalar::reduce_wide_barrett(&n_minus_1);
         let bigint_result = Scalar::reduce_wide_bigint(&n_minus_1);
-        assert_eq!(
-            barrett_result, bigint_result,
-            "Barrett vs BigUint mismatch for n-1"
-        );
+        assert_eq!(barrett_result, bigint_result, "Barrett vs BigUint mismatch for n-1");
 
         // n + 1
         let mut n_plus_1 = [0u64; 18];
@@ -1008,80 +983,38 @@ mod tests {
 
         let barrett_result = Scalar::reduce_wide_barrett(&n_plus_1);
         let bigint_result = Scalar::reduce_wide_bigint(&n_plus_1);
-        assert_eq!(
-            barrett_result, bigint_result,
-            "Barrett vs BigUint mismatch for n+1"
-        );
+        assert_eq!(barrett_result, bigint_result, "Barrett vs BigUint mismatch for n+1");
         assert_eq!(barrett_result, Scalar::one(), "n+1 should reduce to 1");
     }
 
     #[test]
-    #[ignore] // Slow test - takes too long under code coverage instrumentation
     fn test_barrett_vs_bigint_large_values() {
         // Test with large random-looking values
         let test_cases = [
             // All limbs maxed out
             [
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
+                0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF,
+                0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF,
+                0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF,
+                0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF,
+                0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF,
+                0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF,
             ],
             // Mix of high and low bits
             [
-                0x123456789ABCDEF0,
-                0xFEDCBA9876543210,
-                0x0F0F0F0F0F0F0F0F,
-                0xF0F0F0F0F0F0F0F0,
-                0xAAAAAAAAAAAAAAAA,
-                0x5555555555555555,
-                0xFFFFFFFF00000000,
-                0x00000000FFFFFFFF,
-                0x8000000000000000,
-                0x0000000000000001,
-                0x7FFFFFFFFFFFFFFF,
-                0x8000000080000000,
-                0x0000000100000001,
-                0xFFFFFFFFFFFFFFFF,
-                0x1111111111111111,
-                0x2222222222222222,
-                0x3333333333333333,
-                0x4444444444444444,
+                0x123456789ABCDEF0, 0xFEDCBA9876543210, 0x0F0F0F0F0F0F0F0F,
+                0xF0F0F0F0F0F0F0F0, 0xAAAAAAAAAAAAAAAA, 0x5555555555555555,
+                0xFFFFFFFF00000000, 0x00000000FFFFFFFF, 0x8000000000000000,
+                0x0000000000000001, 0x7FFFFFFFFFFFFFFF, 0x8000000080000000,
+                0x0000000100000001, 0xFFFFFFFFFFFFFFFF, 0x1111111111111111,
+                0x2222222222222222, 0x3333333333333333, 0x4444444444444444,
             ],
             // Upper limbs set
             [
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
-                0xFFFFFFFFFFFFFFFF,
+                0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF,
+                0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF,
+                0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF,
             ],
         ];
 
@@ -1205,8 +1138,7 @@ mod tests {
             assert!(
                 !Scalar::gte_n(&result.limbs),
                 "mul({}, {}) result should be < n",
-                a_val,
-                b_val
+                a_val, b_val
             );
 
             // Compute expected value using BigUint for reference
@@ -1227,10 +1159,7 @@ mod tests {
         wide[..9].copy_from_slice(&small_val.limbs);
 
         let result = Scalar::reduce_wide_barrett(&wide);
-        assert_eq!(
-            result, small_val,
-            "Reducing value < n should return same value"
-        );
+        assert_eq!(result, small_val, "Reducing value < n should return same value");
 
         // Property: (n mod n) = 0
         let mut n_wide = [0u64; 18];

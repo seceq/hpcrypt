@@ -17,8 +17,8 @@
 //!
 //! Total table size: 131 windows × 16 points × 132 bytes = 276,672 bytes (~270 KB)
 
+use super::{Point, AffinePoint, Scalar};
 use super::field::FieldElement;
-use super::{AffinePoint, Point, Scalar};
 
 /// Window size for precomputed tables (in bits)
 ///
@@ -37,10 +37,10 @@ const NUM_WINDOWS: usize = (521 + WINDOW_SIZE - 1) / WINDOW_SIZE; // 131 windows
 ///
 /// Memory usage: 131 windows × 16 points × 132 bytes/point = 276,672 bytes (~270 KB)
 pub struct PrecomputedTable {
-    /// tables\[i\] contains precomputed multiples for window i
-    /// tables\[i\]\[j\] = j * (2^(4*i)) * G in affine coordinates
+    /// tables[i] contains precomputed multiples for window i
+    /// tables[i][j] = j * (2^(4*i)) * G in affine coordinates
     ///
-    /// Note: tables\[i\]\[0\] represents the point at infinity, stored as (0, 0)
+    /// Note: tables[i][0] represents the point at infinity, stored as (0, 0)
     /// which is handled specially during addition.
     tables: [[AffinePoint; 16]; NUM_WINDOWS],
 }
@@ -87,16 +87,14 @@ impl PrecomputedTable {
 
             // Precompute multiples: 0*base, 1*base, 2*base, ..., 15*base
             tables[window_idx][0] = AffinePoint::infinity_sentinel();
-            tables[window_idx][1] = base_jacobian
-                .to_affine()
+            tables[window_idx][1] = base_jacobian.to_affine()
                 .expect("Base point should not be infinity");
 
             // Build up the rest using Jacobian addition for speed
             let mut current = base_jacobian;
             for i in 2..16 {
                 current = current.add(&base_jacobian);
-                tables[window_idx][i] = current
-                    .to_affine()
+                tables[window_idx][i] = current.to_affine()
                     .expect("Multiple of base should not be infinity");
             }
         }
@@ -191,7 +189,6 @@ pub fn generator_mul(scalar: &Scalar) -> Point {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[allow(unused_imports)]
     use crate::ct_utils::ConstantTimeEq;
 
     #[test]
@@ -264,16 +261,10 @@ mod tests {
             let affine_precomputed = result_precomputed.to_affine().unwrap();
             let affine_regular = result_regular.to_affine().unwrap();
 
-            assert_eq!(
-                affine_precomputed.x, affine_regular.x,
-                "X mismatch for k={}",
-                k_val
-            );
-            assert_eq!(
-                affine_precomputed.y, affine_regular.y,
-                "Y mismatch for k={}",
-                k_val
-            );
+            assert_eq!(affine_precomputed.x, affine_regular.x,
+                "X mismatch for k={}", k_val);
+            assert_eq!(affine_precomputed.y, affine_regular.y,
+                "Y mismatch for k={}", k_val);
         }
     }
 
@@ -296,7 +287,7 @@ mod tests {
         scalar_bytes[0] = 0b10110101; // LSB
 
         let scalar = Scalar::from_bytes(&scalar_bytes);
-        let _table = PrecomputedTable::generate();
+        let table = PrecomputedTable::generate();
 
         // Window 0 should extract bits [0:3] = 0101 = 5
         // Window 1 should extract bits [4:7] = 1011 = 11

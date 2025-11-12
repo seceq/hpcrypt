@@ -19,7 +19,7 @@
 /// // m01 = a0*a1, m02 = a0*a2, m03 = a0*a3,
 /// // m12 = a1*a2, m13 = a1*a3, m23 = a2*a3  (6 products)
 /// // d0 = a0*a0, d1 = a1*a1, d2 = a2*a2, d3 = a3*a3  (4 products)
-/// // Then combines with doubling: result[i+j] += 2*m_ij (i≠j), result\[2i\] += d_i
+/// // Then combines with doubling: result[i+j] += 2*m_ij (i≠j), result[2i] += d_i
 /// ```
 macro_rules! unrolled_square_symmetric {
     // 4-limb version (for 64-bit FieldElement)
@@ -39,7 +39,10 @@ macro_rules! unrolled_square_symmetric {
         let d3 = $a3 * $a3;
 
         // Return tuple: (diagonals, off-diagonals, combined 512-bit result)
-        ([d0, d1, d2, d3], [m01, m02, m03, m12, m13, m23])
+        (
+            [d0, d1, d2, d3],
+            [m01, m02, m03, m12, m13, m23],
+        )
     }};
 
     // 5-limb version (for 52-bit FieldElement52)
@@ -155,16 +158,16 @@ macro_rules! combine_square_52bit {
         // wide[9] = 0                                       = 0
 
         [
-            d0,                                        // w0
-            (m01 << 1),                                // w1
-            (m02 << 1) + d1 + (m12 << 1),              // w2
-            (m03 << 1) + (m13 << 1),                   // w3
-            (m04 << 1) + d2 + (m14 << 1) + (m23 << 1), // w4
-            (m24 << 1) + (m34 << 1),                   // w5
-            d3,                                        // w6
-            0u128,                                     // w7
-            d4,                                        // w8
-            0u128,                                     // w9
+            d0,                                             // w0
+            (m01 << 1),                                     // w1
+            (m02 << 1) + d1 + (m12 << 1),                  // w2
+            (m03 << 1) + (m13 << 1),                       // w3
+            (m04 << 1) + d2 + (m14 << 1) + (m23 << 1),    // w4
+            (m24 << 1) + (m34 << 1),                       // w5
+            d3,                                             // w6
+            0u128,                                          // w7
+            d4,                                             // w8
+            0u128,                                          // w9
         ]
     }};
 }
@@ -216,6 +219,9 @@ macro_rules! impl_unrolled_square_52bit {
 
 // Export macros for use in other modules
 pub(crate) use {
-    combine_square_52bit, combine_square_64bit_inline, impl_unrolled_square_52bit,
-    impl_unrolled_square_64bit, unrolled_square_symmetric,
+    unrolled_square_symmetric,
+    combine_square_64bit_inline,
+    combine_square_52bit,
+    impl_unrolled_square_64bit,
+    impl_unrolled_square_52bit,
 };

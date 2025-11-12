@@ -32,7 +32,7 @@
 use super::constants::{SECP256K1_GX, SECP256K1_GY};
 use super::field_montgomery_native::MontgomeryFieldElement;
 use super::field_ops::FieldElement;
-use super::point::{AffinePoint, Point};
+use super::point::{Point, AffinePoint};
 use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 /// A point on the secp256k1 elliptic curve in Jacobian coordinates
@@ -137,39 +137,35 @@ impl MontgomeryPoint {
         let ret_inf = is_inf | y_zero;
 
         // Compute doubling formula (same structure as standard, but using Montgomery)
-        let y_squared = self.y.square(); // Y² (Montgomery mul)
-        let y_fourth = y_squared.square(); // Y⁴ (Montgomery mul)
+        let y_squared = self.y.square();           // Y² (Montgomery mul)
+        let y_fourth = y_squared.square();         // Y⁴ (Montgomery mul)
 
         // S = 4·X·Y²
-        let xy2 = self.x.mul(&y_squared); // X·Y²
-        let two_xy2 = xy2.add(&xy2); // 2·X·Y²
-        let s = two_xy2.add(&two_xy2); // 4·X·Y² (avoids chaining .double())
+        let xy2 = self.x.mul(&y_squared);          // X·Y²
+        let two_xy2 = xy2.add(&xy2);               // 2·X·Y²
+        let s = two_xy2.add(&two_xy2);             // 4·X·Y² (avoids chaining .double())
 
         // M = 3·X²  (for secp256k1 where a=0)
-        let x_squared = self.x.square(); // X² (Montgomery mul)
-        let m = x_squared.mul3(); // 3·X²
+        let x_squared = self.x.square();           // X² (Montgomery mul)
+        let m = x_squared.mul3();                  // 3·X²
 
         // X₃ = M² - 2·S
-        let m_squared = m.square(); // M² (Montgomery mul)
-        let two_s = s.add(&s); // 2·S (avoids .double())
-        let x3 = m_squared.sub(&two_s); // M² - 2·S
+        let m_squared = m.square();                // M² (Montgomery mul)
+        let two_s = s.add(&s);                     // 2·S (avoids .double())
+        let x3 = m_squared.sub(&two_s);            // M² - 2·S
 
         // Y₃ = M·(S - X₃) - 8·Y⁴
-        let two_y4 = y_fourth.add(&y_fourth); // 2·Y⁴
-        let four_y4 = two_y4.add(&two_y4); // 4·Y⁴
-        let eight_y4 = four_y4.add(&four_y4); // 8·Y⁴ (avoids chaining .double())
-        let s_minus_x3 = s.sub(&x3); // S - X₃
+        let two_y4 = y_fourth.add(&y_fourth);      // 2·Y⁴
+        let four_y4 = two_y4.add(&two_y4);         // 4·Y⁴
+        let eight_y4 = four_y4.add(&four_y4);      // 8·Y⁴ (avoids chaining .double())
+        let s_minus_x3 = s.sub(&x3);               // S - X₃
         let y3 = m.mul(&s_minus_x3).sub(&eight_y4); // M·(S - X₃) - 8·Y⁴
 
         // Z₃ = 2·Y·Z
-        let yz = self.y.mul(&self.z); // Y·Z
-        let z3 = yz.add(&yz); // 2·Y·Z (avoids .double())
+        let yz = self.y.mul(&self.z);              // Y·Z
+        let z3 = yz.add(&yz);                      // 2·Y·Z (avoids .double())
 
-        let result = MontgomeryPoint {
-            x: x3,
-            y: y3,
-            z: z3,
-        };
+        let result = MontgomeryPoint { x: x3, y: y3, z: z3 };
 
         // Constant-time select: return infinity if ret_inf is true, else result
         MontgomeryPoint::conditional_select(&result, &MontgomeryPoint::infinity(), ret_inf)
@@ -205,20 +201,20 @@ impl MontgomeryPoint {
         // Compute addition formula (always, for constant-time)
 
         // U₁ = X₁·Z₂²
-        let z2_squared = other.z.square(); // Montgomery mul
-        let u1 = self.x.mul(&z2_squared); // Montgomery mul
+        let z2_squared = other.z.square();          // Montgomery mul
+        let u1 = self.x.mul(&z2_squared);           // Montgomery mul
 
         // U₂ = X₂·Z₁²
-        let z1_squared = self.z.square(); // Montgomery mul
-        let u2 = other.x.mul(&z1_squared); // Montgomery mul
+        let z1_squared = self.z.square();           // Montgomery mul
+        let u2 = other.x.mul(&z1_squared);          // Montgomery mul
 
         // S₁ = Y₁·Z₂³
-        let z2_cubed = z2_squared.mul(&other.z); // Montgomery mul
-        let s1 = self.y.mul(&z2_cubed); // Montgomery mul
+        let z2_cubed = z2_squared.mul(&other.z);    // Montgomery mul
+        let s1 = self.y.mul(&z2_cubed);             // Montgomery mul
 
         // S₂ = Y₂·Z₁³
-        let z1_cubed = z1_squared.mul(&self.z); // Montgomery mul
-        let s2 = other.y.mul(&z1_cubed); // Montgomery mul
+        let z1_cubed = z1_squared.mul(&self.z);     // Montgomery mul
+        let s2 = other.y.mul(&z1_cubed);            // Montgomery mul
 
         // H = U₂ - U₁
         let h = u2.sub(&u1);
@@ -237,29 +233,25 @@ impl MontgomeryPoint {
         let points_inverse = h_zero & (!r_zero);
 
         // Compute general addition (even if we might not use it)
-        let h_squared = h.square(); // H² (Montgomery mul)
-        let h_cubed = h_squared.mul(&h); // H³ (Montgomery mul)
+        let h_squared = h.square();                 // H² (Montgomery mul)
+        let h_cubed = h_squared.mul(&h);            // H³ (Montgomery mul)
 
-        let u1_h2 = u1.mul(&h_squared); // U₁·H² (Montgomery mul)
-        let two_u1_h2 = u1_h2.double(); // 2·U₁·H²
+        let u1_h2 = u1.mul(&h_squared);             // U₁·H² (Montgomery mul)
+        let two_u1_h2 = u1_h2.double();             // 2·U₁·H²
 
         // X₃ = R² - H³ - 2·U₁·H²
-        let r_squared = r.square(); // Montgomery mul
+        let r_squared = r.square();                 // Montgomery mul
         let x3 = r_squared.sub(&h_cubed).sub(&two_u1_h2);
 
         // Y₃ = R·(U₁·H² - X₃) - S₁·H³
-        let s1_h3 = s1.mul(&h_cubed); // Montgomery mul
+        let s1_h3 = s1.mul(&h_cubed);               // Montgomery mul
         let u1_h2_minus_x3 = u1_h2.sub(&x3);
         let y3 = r.mul(&u1_h2_minus_x3).sub(&s1_h3); // Montgomery mul
 
         // Z₃ = H·Z₁·Z₂
-        let z3 = h.mul(&self.z).mul(&other.z); // Montgomery muls
+        let z3 = h.mul(&self.z).mul(&other.z);      // Montgomery muls
 
-        let add_result = MontgomeryPoint {
-            x: x3,
-            y: y3,
-            z: z3,
-        };
+        let add_result = MontgomeryPoint { x: x3, y: y3, z: z3 };
 
         // Select the appropriate result based on special cases
         let doubled = self.double();
@@ -307,15 +299,15 @@ impl MontgomeryPoint {
         let u1 = self.x;
 
         // U₂ = x₂·Z₁²
-        let z1_squared = self.z.square(); // Montgomery mul
-        let u2 = other.x.mul(&z1_squared); // Montgomery mul
+        let z1_squared = self.z.square();           // Montgomery mul
+        let u2 = other.x.mul(&z1_squared);          // Montgomery mul
 
         // S₁ = Y₁ (simplified because Z₂ = 1)
         let s1 = self.y;
 
         // S₂ = y₂·Z₁³
-        let z1_cubed = z1_squared.mul(&self.z); // Montgomery mul
-        let s2 = other.y.mul(&z1_cubed); // Montgomery mul
+        let z1_cubed = z1_squared.mul(&self.z);     // Montgomery mul
+        let s2 = other.y.mul(&z1_cubed);            // Montgomery mul
 
         // H = U₂ - U₁
         let h = u2.sub(&u1);
@@ -334,29 +326,25 @@ impl MontgomeryPoint {
         let points_inverse = h_zero & (!r_zero);
 
         // Compute mixed addition
-        let h_squared = h.square(); // Montgomery mul
-        let h_cubed = h_squared.mul(&h); // Montgomery mul
+        let h_squared = h.square();                 // Montgomery mul
+        let h_cubed = h_squared.mul(&h);            // Montgomery mul
 
-        let u1_h2 = u1.mul(&h_squared); // Montgomery mul
+        let u1_h2 = u1.mul(&h_squared);             // Montgomery mul
         let two_u1_h2 = u1_h2.double();
 
         // X₃ = R² - H³ - 2·U₁·H²
-        let r_squared = r.square(); // Montgomery mul
+        let r_squared = r.square();                 // Montgomery mul
         let x3 = r_squared.sub(&h_cubed).sub(&two_u1_h2);
 
         // Y₃ = R·(U₁·H² - X₃) - S₁·H³
-        let s1_h3 = s1.mul(&h_cubed); // Montgomery mul
+        let s1_h3 = s1.mul(&h_cubed);               // Montgomery mul
         let u1_h2_minus_x3 = u1_h2.sub(&x3);
         let y3 = r.mul(&u1_h2_minus_x3).sub(&s1_h3); // Montgomery mul
 
         // Z₃ = H·Z₁ (simplified because Z₂ = 1)
-        let z3 = h.mul(&self.z); // Montgomery mul
+        let z3 = h.mul(&self.z);                    // Montgomery mul
 
-        let add_result = MontgomeryPoint {
-            x: x3,
-            y: y3,
-            z: z3,
-        };
+        let add_result = MontgomeryPoint { x: x3, y: y3, z: z3 };
 
         // Select the appropriate result based on special cases
 
@@ -369,11 +357,7 @@ impl MontgomeryPoint {
         result = MontgomeryPoint::conditional_select(&result, &doubled, points_equal);
 
         // If points are inverses, return infinity
-        result = MontgomeryPoint::conditional_select(
-            &result,
-            &MontgomeryPoint::infinity(),
-            points_inverse,
-        );
+        result = MontgomeryPoint::conditional_select(&result, &MontgomeryPoint::infinity(), points_inverse);
 
         result
     }
@@ -421,14 +405,14 @@ impl MontgomeryPoint {
         let z_inv = MontgomeryFieldElement::to_montgomery(&z_inv_std.limbs);
 
         // Compute z_inv² and z_inv³ (using Montgomery)
-        let z_inv_squared = z_inv.square(); // Montgomery mul
+        let z_inv_squared = z_inv.square();         // Montgomery mul
         let z_inv_cubed = z_inv.mul(&z_inv_squared); // Montgomery mul
 
         // x = X / Z²
-        let x = self.x.mul(&z_inv_squared); // Montgomery mul
+        let x = self.x.mul(&z_inv_squared);          // Montgomery mul
 
         // y = Y / Z³
-        let y = self.y.mul(&z_inv_cubed); // Montgomery mul
+        let y = self.y.mul(&z_inv_cubed);            // Montgomery mul
 
         Some(MontgomeryAffinePoint { x, y })
     }
@@ -458,8 +442,8 @@ impl MontgomeryPoint {
                 r1 = MontgomeryPoint::conditional_select(&r1_copy, &r0_copy, bit_set);
 
                 // Always do the same operations (Montgomery-optimized!)
-                let sum = r0.add(&r1); // 12 Montgomery muls + 4 Montgomery squares
-                r0 = r0.double(); // 7 Montgomery muls + 4 Montgomery squares
+                let sum = r0.add(&r1);  // 12 Montgomery muls + 4 Montgomery squares
+                r0 = r0.double();       // 7 Montgomery muls + 4 Montgomery squares
                 r1 = sum;
 
                 // Conditionally swap back
@@ -563,12 +547,9 @@ impl MontgomeryPoint {
 }
 
 /// A point in affine coordinates with Montgomery field elements
-/// An affine point in Montgomery form for optimized arithmetic
 #[derive(Clone, Copy, Debug)]
 pub struct MontgomeryAffinePoint {
-    /// The x-coordinate in Montgomery form
     pub x: MontgomeryFieldElement,
-    /// The y-coordinate in Montgomery form
     pub y: MontgomeryFieldElement,
 }
 
@@ -628,11 +609,7 @@ impl PartialEq for MontgomeryPoint {
 impl Eq for MontgomeryPoint {}
 
 impl ConditionallySelectable for MontgomeryPoint {
-    fn conditional_select(
-        a: &MontgomeryPoint,
-        b: &MontgomeryPoint,
-        choice: Choice,
-    ) -> MontgomeryPoint {
+    fn conditional_select(a: &MontgomeryPoint, b: &MontgomeryPoint, choice: Choice) -> MontgomeryPoint {
         MontgomeryPoint {
             x: MontgomeryFieldElement::conditional_select(&a.x, &b.x, choice),
             y: MontgomeryFieldElement::conditional_select(&a.y, &b.y, choice),
@@ -676,16 +653,8 @@ mod tests {
         let g2_affine_expected = g2_expected.to_affine().expect("Should not be infinity");
 
         // Compare affine coordinates
-        assert_eq!(
-            g2_affine_std_from_mont.x.to_bytes(),
-            g2_affine_expected.x.to_bytes(),
-            "X coordinates don't match"
-        );
-        assert_eq!(
-            g2_affine_std_from_mont.y.to_bytes(),
-            g2_affine_expected.y.to_bytes(),
-            "Y coordinates don't match"
-        );
+        assert_eq!(g2_affine_std_from_mont.x.to_bytes(), g2_affine_expected.x.to_bytes(), "X coordinates don't match");
+        assert_eq!(g2_affine_std_from_mont.y.to_bytes(), g2_affine_expected.y.to_bytes(), "Y coordinates don't match");
     }
 
     #[test]
@@ -703,16 +672,8 @@ mod tests {
         let g3_affine_expected = g3_expected.to_affine().expect("Should not be infinity");
 
         // Compare affine coordinates
-        assert_eq!(
-            g3_affine_std.x.to_bytes(),
-            g3_affine_expected.x.to_bytes(),
-            "X coordinates don't match"
-        );
-        assert_eq!(
-            g3_affine_std.y.to_bytes(),
-            g3_affine_expected.y.to_bytes(),
-            "Y coordinates don't match"
-        );
+        assert_eq!(g3_affine_std.x.to_bytes(), g3_affine_expected.x.to_bytes(), "X coordinates don't match");
+        assert_eq!(g3_affine_std.y.to_bytes(), g3_affine_expected.y.to_bytes(), "Y coordinates don't match");
     }
 
     #[test]
@@ -771,14 +732,8 @@ mod tests {
         let affine_via_add = five_g_via_add.to_affine().expect("Should not be infinity");
         let affine_via_sum = five_g_via_sum.to_affine().expect("Should not be infinity");
 
-        assert_eq!(
-            affine_via_add.x.from_montgomery(),
-            affine_via_sum.x.from_montgomery()
-        );
-        assert_eq!(
-            affine_via_add.y.from_montgomery(),
-            affine_via_sum.y.from_montgomery()
-        );
+        assert_eq!(affine_via_add.x.from_montgomery(), affine_via_sum.x.from_montgomery());
+        assert_eq!(affine_via_add.y.from_montgomery(), affine_via_sum.y.from_montgomery());
     }
 
     #[test]
@@ -798,14 +753,8 @@ mod tests {
         let result_affine = result_mont.to_affine().expect("Should not be infinity");
         let expected_affine = expected.to_affine().expect("Should not be infinity");
 
-        assert_eq!(
-            result_affine.x.from_montgomery(),
-            expected_affine.x.from_montgomery()
-        );
-        assert_eq!(
-            result_affine.y.from_montgomery(),
-            expected_affine.y.from_montgomery()
-        );
+        assert_eq!(result_affine.x.from_montgomery(), expected_affine.x.from_montgomery());
+        assert_eq!(result_affine.y.from_montgomery(), expected_affine.y.from_montgomery());
     }
 
     #[test]
@@ -852,14 +801,8 @@ mod tests {
         let separate_affine = result_separate.to_affine().expect("Should not be infinity");
 
         // Check that both methods produce the same result
-        assert_eq!(
-            shamir_affine.x.from_montgomery(),
-            separate_affine.x.from_montgomery()
-        );
-        assert_eq!(
-            shamir_affine.y.from_montgomery(),
-            separate_affine.y.from_montgomery()
-        );
+        assert_eq!(shamir_affine.x.from_montgomery(), separate_affine.x.from_montgomery());
+        assert_eq!(shamir_affine.y.from_montgomery(), separate_affine.y.from_montgomery());
     }
 
     #[test]
@@ -894,11 +837,11 @@ mod tests {
 /// Precomputed to avoid conversion overhead.
 const BETA_MONTGOMERY: MontgomeryFieldElement = MontgomeryFieldElement {
     limbs: [
-        0x58a4361c8e81894e, // β·R mod p (correctly computed)
+        0x58a4361c8e81894e,  // β·R mod p (correctly computed)
         0x03fde1631c4b80af,
         0xf8e98978d02e3905,
         0x7a4a36aebcbb3d53,
-    ],
+    ]
 };
 
 impl MontgomeryPoint {
@@ -943,7 +886,7 @@ impl MontgomeryPoint {
     /// let result = point.scalar_mul_glv(&scalar);
     /// ```
     pub fn scalar_mul_glv(&self, scalar: &[u8; 32]) -> Self {
-        use super::glv::decompose_scalar;
+        use super::glv::{decompose_scalar};
         use super::scalar::Scalar;
 
         // Convert scalar to Scalar type
@@ -996,22 +939,19 @@ mod test_doubling_debug;
 #[cfg(test)]
 mod glv_tests {
     use super::*;
-    use crate::secp256k1::glv::scalar_mul_glv as standard_glv;
     use crate::secp256k1::Point;
+    use crate::secp256k1::glv::scalar_mul_glv as standard_glv;
 
     #[test]
     fn test_beta_montgomery_constant() {
         // Verify BETA_MONTGOMERY is correct by converting back to standard form
-        use crate::secp256k1::field_ops::FieldElement;
         use crate::secp256k1::glv::BETA;
+        use crate::secp256k1::field_ops::FieldElement;
 
         let beta_back = BETA_MONTGOMERY.from_montgomery();
         let beta_back_fe = FieldElement::from_limbs(beta_back);
 
-        assert_eq!(
-            beta_back_fe, BETA,
-            "BETA_MONTGOMERY should convert back to BETA"
-        );
+        assert_eq!(beta_back_fe, BETA, "BETA_MONTGOMERY should convert back to BETA");
     }
 
     #[test]
@@ -1031,14 +971,8 @@ mod glv_tests {
         let phi_g_mont_std = phi_g_mont_affine.to_standard();
         let phi_g_std_affine = phi_g_std.to_affine().expect("not infinity");
 
-        assert_eq!(
-            phi_g_mont_std.x, phi_g_std_affine.x,
-            "Endomorphism x-coordinate mismatch"
-        );
-        assert_eq!(
-            phi_g_mont_std.y, phi_g_std_affine.y,
-            "Endomorphism y-coordinate mismatch"
-        );
+        assert_eq!(phi_g_mont_std.x, phi_g_std_affine.x, "Endomorphism x-coordinate mismatch");
+        assert_eq!(phi_g_mont_std.y, phi_g_std_affine.y, "Endomorphism y-coordinate mismatch");
     }
 
     #[test]
@@ -1048,12 +982,17 @@ mod glv_tests {
         let g_mont = MontgomeryPoint::generator();
 
         // Test several scalar values
-        let test_scalars = [[1u8; 32], [2u8; 32], [0x42; 32], {
-            let mut s = [0u8; 32];
-            s[0] = 0xff;
-            s[1] = 0xff;
-            s
-        }];
+        let test_scalars = [
+            [1u8; 32],
+            [2u8; 32],
+            [0x42; 32],
+            {
+                let mut s = [0u8; 32];
+                s[0] = 0xff;
+                s[1] = 0xff;
+                s
+            },
+        ];
 
         for scalar in &test_scalars {
             // Standard scalar multiplication
@@ -1067,13 +1006,11 @@ mod glv_tests {
 
             assert_eq!(
                 result_glv_mont_std.x, result_std_affine.x,
-                "GLV Montgomery x mismatch for scalar {:?}",
-                scalar
+                "GLV Montgomery x mismatch for scalar {:?}", scalar
             );
             assert_eq!(
                 result_glv_mont_std.y, result_std_affine.y,
-                "GLV Montgomery y mismatch for scalar {:?}",
-                scalar
+                "GLV Montgomery y mismatch for scalar {:?}", scalar
             );
         }
     }
@@ -1113,13 +1050,11 @@ mod glv_tests {
 
             assert_eq!(
                 result_mont_glv_std.x, result_std_glv_affine.x,
-                "GLV Montgomery vs standard GLV x mismatch for scalar {:?}",
-                scalar
+                "GLV Montgomery vs standard GLV x mismatch for scalar {:?}", scalar
             );
             assert_eq!(
                 result_mont_glv_std.y, result_std_glv_affine.y,
-                "GLV Montgomery vs standard GLV y mismatch for scalar {:?}",
-                scalar
+                "GLV Montgomery vs standard GLV y mismatch for scalar {:?}", scalar
             );
         }
     }
@@ -1154,16 +1089,15 @@ mod glv_tests {
 
             assert_eq!(
                 result_mont_std.x, result_std_affine.x,
-                "Random scalar test {} failed (x)",
-                i
+                "Random scalar test {} failed (x)", i
             );
             assert_eq!(
                 result_mont_std.y, result_std_affine.y,
-                "Random scalar test {} failed (y)",
-                i
+                "Random scalar test {} failed (y)", i
             );
         }
     }
+
 
     #[test]
     fn test_glv_montgomery_edge_cases() {
@@ -1185,7 +1119,6 @@ mod glv_tests {
         let result_affine = result.to_affine();
 
         // Should not panic and should give valid point (or infinity)
-        #[allow(unused_imports)]
         use crate::ct_utils::ConstantTimeEq;
         assert!(result_affine.is_some() || bool::from(result.is_infinity()));
     }

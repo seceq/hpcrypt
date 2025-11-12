@@ -18,8 +18,8 @@
 //! Goldilocks prime optimizations.
 
 use super::constants::ED448_L;
+use core::ops::{Add, Sub, Mul};
 use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
-use core::ops::{Add, Mul, Sub};
 
 /// A scalar in Z/L where L is the base point order
 ///
@@ -57,16 +57,7 @@ impl Scalar {
     /// Creates a scalar from a u64 value
     pub const fn from_u64(value: u64) -> Self {
         Self {
-            limbs: [
-                value & Self::LIMB_MASK,
-                value >> Self::LIMB_BITS,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-            ],
+            limbs: [value & Self::LIMB_MASK, value >> Self::LIMB_BITS, 0, 0, 0, 0, 0, 0],
         }
     }
 
@@ -175,8 +166,8 @@ impl Scalar {
             for j in 0..8 {
                 // Multiply limbs and add to existing value at position [i+j]
                 let prod = (self.limbs[i] as u128) * (other.limbs[j] as u128)
-                    + (product[i + j] as u128)
-                    + carry;
+                         + (product[i + j] as u128)
+                         + carry;
                 product[i + j] = (prod as u64) & Self::LIMB_MASK;
                 carry = prod >> Self::LIMB_BITS;
             }
@@ -273,8 +264,7 @@ impl Scalar {
             // Add val * R_448 to w[shift..shift+8]
             // Do this carefully to avoid overflow
             let mut carry = 0u128;
-            for j in 0..5 {
-                // Only first 5 limbs of R_448 are non-zero
+            for j in 0..5 {  // Only first 5 limbs of R_448 are non-zero
                 if R_448[j] == 0 {
                     if carry > 0 {
                         let sum = (w[shift + j] as u128) + carry;
@@ -358,7 +348,7 @@ impl Scalar {
                 0x00000000000000,
                 0x00000000000000,
                 0x00000000000000,
-            ],
+            ]
         };
 
         // Start with the low 57 bytes
@@ -375,8 +365,7 @@ impl Scalar {
             let chunk_len = remaining.min(57);
 
             let mut chunk_bytes = [0u8; 57];
-            chunk_bytes[..chunk_len]
-                .copy_from_slice(&bytes[byte_offset..(byte_offset + chunk_len)]);
+            chunk_bytes[..chunk_len].copy_from_slice(&bytes[byte_offset..(byte_offset + chunk_len)]);
             let chunk_scalar = Self::from_bytes(&chunk_bytes);
 
             // Multiply by SHIFT_456 using schoolbook multiplication
@@ -386,8 +375,8 @@ impl Scalar {
                 let mut carry = 0u128;
                 for j in 0..8 {
                     let p = (chunk_scalar.limbs[i] as u128) * (SHIFT_456.limbs[j] as u128)
-                        + (prod[i + j] as u128)
-                        + carry;
+                          + (prod[i + j] as u128)
+                          + carry;
                     prod[i + j] = (p as u64) & Self::LIMB_MASK;
                     carry = p >> Self::LIMB_BITS;
                 }
@@ -399,10 +388,10 @@ impl Scalar {
             // reducing is sufficient
             let chunk_contribution = Self {
                 limbs: [
-                    prod[0], prod[1], prod[2], prod[3], prod[4], prod[5], prod[6], prod[7],
-                ],
-            }
-            .reduce();
+                    prod[0], prod[1], prod[2], prod[3],
+                    prod[4], prod[5], prod[6], prod[7],
+                ]
+            }.reduce();
 
             result = result + chunk_contribution;
             byte_offset += 57;
@@ -538,7 +527,7 @@ impl Scalar {
     /// Returns an array of 448 signed digits, each in {-1, 0, 1}.
     ///
     /// # Example
-    /// ```text
+    /// ```ignore
     /// // Binary:  ...110... (two consecutive 1s)
     /// // NAF:     ...1-10... (no adjacent non-zeros)
     /// // Same value: 2^(i+1) + 2^i = 2^(i+1) - 2^i + 2^(i+1) = 2^(i+2) - 2^i

@@ -82,14 +82,14 @@ pub const P256_ORDER: [u64; 4] = [
 /// See docs/BARRETT_INVESTIGATION_SESSION3.md
 #[allow(dead_code)]
 pub const BARRETT_MU_SCALAR: [u64; 8] = [
-    0x012FFD85EEDF9BFE, // limbs[0]
-    0x43190552DF1A6C21, // limbs[1]
-    0xFFFFFFFEFFFFFFFF, // limbs[2]
-    0x00000000FFFFFFFF, // limbs[3]
-    0x0000000000000001, // limbs[4]
-    0x0000000000000000, // limbs[5]
-    0x0000000000000000, // limbs[6]
-    0x0000000000000000, // limbs[7]
+    0x012FFD85EEDF9BFE,  // limbs[0]
+    0x43190552DF1A6C21,  // limbs[1]
+    0xFFFFFFFEFFFFFFFF,  // limbs[2]
+    0x00000000FFFFFFFF,  // limbs[3]
+    0x0000000000000001,  // limbs[4]
+    0x0000000000000000,  // limbs[5]
+    0x0000000000000000,  // limbs[6]
+    0x0000000000000000,  // limbs[7]
 ];
 
 /// Field element representing zero

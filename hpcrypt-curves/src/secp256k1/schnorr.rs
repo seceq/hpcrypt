@@ -51,9 +51,7 @@ pub fn public_key(secret_key: &PrivateKey) -> PublicKey {
     let p = Point::generator().scalar_mul(secret_key);
 
     // Return X-coordinate only (BIP 340 uses X-only public keys)
-    let affine = p
-        .to_affine()
-        .expect("Generator scalar multiplication cannot be infinity");
+    let affine = p.to_affine().expect("Generator scalar multiplication cannot be infinity");
     affine.x.to_bytes()
 }
 
@@ -72,9 +70,7 @@ pub fn sign(secret_key: &PrivateKey, message: &[u8], aux_rand: &[u8; 32]) -> Sig
 
     // Compute public key point P = d⋅G
     let p = Point::generator().scalar_mul(secret_key);
-    let p_affine = p
-        .to_affine()
-        .expect("Generator scalar multiplication cannot be infinity");
+    let p_affine = p.to_affine().expect("Generator scalar multiplication cannot be infinity");
 
     // If P.y is odd, negate d (BIP 340: implicit even Y)
     // Note: to_bytes() returns big-endian, so LSB is at the end
@@ -103,9 +99,7 @@ pub fn sign(secret_key: &PrivateKey, message: &[u8], aux_rand: &[u8; 32]) -> Sig
 
     // Compute R = k'⋅G
     let r = Point::generator().scalar_mul(&rand);
-    let r_affine = r
-        .to_affine()
-        .expect("Generator scalar multiplication cannot be infinity");
+    let r_affine = r.to_affine().expect("Generator scalar multiplication cannot be infinity");
 
     // If R.y is odd, negate k (BIP 340: implicit even Y)
     // Note: to_bytes() returns big-endian, so LSB is at the end
@@ -307,16 +301,12 @@ mod tests {
     #[test]
     fn test_bip340_vector1() {
         // BIP 340 test vector #0
-        // <https://github.com/bitcoin/bips/blob/master/bip-0340/test-vectors.csv>
+        // https://github.com/bitcoin/bips/blob/master/bip-0340/test-vectors.csv
 
-        let secret_key =
-            hex_to_bytes_32("0000000000000000000000000000000000000000000000000000000000000003");
-        let public_key_expected =
-            hex_to_bytes_32("F9308A019258C31049344F85F89D5229B531C845836F99B08601F113BCE036F9");
-        let aux_rand =
-            hex_to_bytes_32("0000000000000000000000000000000000000000000000000000000000000000");
-        let message =
-            hex_to_bytes_32("0000000000000000000000000000000000000000000000000000000000000000");
+        let secret_key = hex_to_bytes_32("0000000000000000000000000000000000000000000000000000000000000003");
+        let public_key_expected = hex_to_bytes_32("F9308A019258C31049344F85F89D5229B531C845836F99B08601F113BCE036F9");
+        let aux_rand = hex_to_bytes_32("0000000000000000000000000000000000000000000000000000000000000000");
+        let message = hex_to_bytes_32("0000000000000000000000000000000000000000000000000000000000000000");
         let signature_expected = hex_to_bytes_64("E907831F80848D1069A5371B402410364BDF1C5F8307B0084C55F1CE2DCA821525F66A4A85EA8B71E482A74F382D2CE5EBEEE8FDB2172F477DF4900D310536C0");
 
         // Test public key generation

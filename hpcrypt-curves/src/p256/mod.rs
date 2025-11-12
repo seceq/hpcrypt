@@ -35,8 +35,8 @@ pub mod constants;
 pub mod field;
 pub mod field_ops;
 // pub mod field_montgomery; // fiat-crypto Montgomery implementation (deprecated, kept for reference)
-pub mod field_lazy;
-pub mod field_montgomery_native; // Native high-performance Montgomery implementation // Lazy reduction for optimized add/sub chains
+pub mod field_montgomery_native; // Native high-performance Montgomery implementation
+pub mod field_lazy; // Lazy reduction for optimized add/sub chains
 
 /// Elliptic curve point operations for P-256.
 ///
@@ -81,12 +81,12 @@ pub mod msm;
 /// operations like signature verification.
 pub mod batch;
 
-pub use batch::batch_invert;
 pub use constants::{P256_A, P256_B, P256_GX, P256_GY, P256_MODULUS, P256_ORDER};
 pub use field::FieldElement;
-pub use field_lazy::LazyFieldElement;
 pub use field_montgomery_native::MontgomeryFieldElement;
-pub use msm::msm_2_points;
+pub use field_lazy::LazyFieldElement;
 pub use point::{AffinePoint, Point, PointMontgomery};
-pub use precomputed::{scalar_mul_generator, scalar_mul_generator_compressed};
 pub use scalar::Scalar;
+pub use precomputed::{scalar_mul_generator, scalar_mul_generator_compressed};
+pub use msm::msm_2_points;
+pub use batch::batch_invert;

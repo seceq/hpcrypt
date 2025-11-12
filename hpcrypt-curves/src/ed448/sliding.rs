@@ -39,19 +39,16 @@ use super::scalar::Scalar;
 /// - Sliding window: ~45 additions, 448 doublings
 /// - Expected speedup: 25-35% (based on Ed25519's 35.9% improvement)
 pub fn sliding_window_scalar_mul(point: &Point, scalar: &Scalar, width: usize) -> Point {
-    debug_assert!(
-        width >= 2 && width <= 5,
-        "Window width must be in range [2, 5]"
-    );
+    debug_assert!(width >= 2 && width <= 5, "Window width must be in range [2, 5]");
 
     // Step 1: Precompute odd multiples: P, 3P, 5P, ..., (2^w - 1)P
-    let num_odd = 1 << (width - 1); // 2^(w-1) odd multiples
+    let num_odd = 1 << (width - 1);  // 2^(w-1) odd multiples
     let mut odd_multiples = Vec::with_capacity(num_odd);
 
-    odd_multiples.push(*point); // 1P
+    odd_multiples.push(*point);  // 1P
 
     if num_odd > 1 {
-        let double_p = point.double(); // 2P
+        let double_p = point.double();  // 2P
         for i in 1..num_odd {
             // (2i+1)P = (2i-1)P + 2P
             odd_multiples.push(odd_multiples[i - 1].add(&double_p));
@@ -63,8 +60,7 @@ pub fn sliding_window_scalar_mul(point: &Point, scalar: &Scalar, width: usize) -
     let scalar_bytes = scalar.to_bytes();
     let mut bits = [false; 448];
 
-    for byte_idx in 0..56 {
-        // 56 bytes = 448 bits
+    for byte_idx in 0..56 {  // 56 bytes = 448 bits
         for bit_idx in 0..8 {
             let bit_position = byte_idx * 8 + bit_idx;
             if bit_position < 448 {
@@ -75,7 +71,7 @@ pub fn sliding_window_scalar_mul(point: &Point, scalar: &Scalar, width: usize) -
 
     // Step 3: Sliding window algorithm
     let mut result = Point::identity();
-    let mut i = 447; // Start from MSB (bit 447)
+    let mut i = 447;  // Start from MSB (bit 447)
 
     while i >= 0 {
         if !bits[i as usize] {
@@ -139,24 +135,21 @@ mod tests {
     fn test_sliding_window_correctness() {
         let point = Point::generator();
         let mut scalar_bytes = [0x00u8; 57];
-        scalar_bytes[0] = 0x42; // Small scalar that doesn't need reduction
+        scalar_bytes[0] = 0x42;  // Small scalar that doesn't need reduction
         let scalar = Scalar::from_bytes(&scalar_bytes);
 
         // Compare with standard scalar multiplication
         let expected = point.scalar_mul(&scalar);
         let result = sliding_window_scalar_mul(&point, &scalar, 4);
 
-        assert_eq!(
-            result, expected,
-            "Sliding window must produce same result as standard method"
-        );
+        assert_eq!(result, expected, "Sliding window must produce same result as standard method");
     }
 
     #[test]
     fn test_sliding_window_width_3() {
         let point = Point::generator();
         let mut scalar_bytes = [0x00u8; 57];
-        scalar_bytes[0] = 0x12; // Small scalar
+        scalar_bytes[0] = 0x12;  // Small scalar
         let scalar = Scalar::from_bytes(&scalar_bytes);
 
         let expected = point.scalar_mul(&scalar);
@@ -169,7 +162,7 @@ mod tests {
     fn test_sliding_window_width_5() {
         let point = Point::generator();
         let mut scalar_bytes = [0x00u8; 57];
-        scalar_bytes[0] = 0xff; // Small scalar with all bits set in first byte
+        scalar_bytes[0] = 0xff;  // Small scalar with all bits set in first byte
         let scalar = Scalar::from_bytes(&scalar_bytes);
 
         let expected = point.scalar_mul(&scalar);
@@ -202,15 +195,9 @@ mod tests {
         let expected_mul = point.scalar_mul(&scalar);
         let result_sliding = sliding_window_scalar_mul(&point, &scalar, 4);
 
-        std::println!(
-            "\nsliding == scalar_mul? {}",
-            result_sliding == expected_mul
-        );
+        std::println!("\nsliding == scalar_mul? {}", result_sliding == expected_mul);
 
-        assert_eq!(
-            result_sliding, expected_mul,
-            "Sliding window failed for scalar=0x42"
-        );
+        assert_eq!(result_sliding, expected_mul, "Sliding window failed for scalar=0x42");
     }
 
     #[test]

@@ -52,8 +52,7 @@ use super::field::FieldElement;
 /// # Example
 ///
 /// ```rust
-/// use hpcrypt_curves::p384::FieldElement;
-/// use hpcrypt_curves::p384::batch::batch_invert;
+/// use hpcrypt_curves::p256::{FieldElement, batch_invert};
 ///
 /// let a = FieldElement::from_u64(3);
 /// let b = FieldElement::from_u64(5);
@@ -63,9 +62,9 @@ use super::field::FieldElement;
 /// batch_invert(&mut elems);
 ///
 /// // elems now contains [a⁻¹, b⁻¹, c⁻¹]
-/// assert_eq!(elems[0].mul(&a), FieldElement::one());
-/// assert_eq!(elems[1].mul(&b), FieldElement::one());
-/// assert_eq!(elems[2].mul(&c), FieldElement::one());
+/// assert_eq!(elems[0] * a, FieldElement::one());
+/// assert_eq!(elems[1] * b, FieldElement::one());
+/// assert_eq!(elems[2] * c, FieldElement::one());
 /// ```
 ///
 /// # Security

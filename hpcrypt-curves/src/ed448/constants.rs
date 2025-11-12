@@ -54,14 +54,14 @@ pub const ED448_L: [u64; 8] = [
 /// From RFC 7748 - Corrected coordinates that satisfy the curve equation
 /// x = 224580040295924300187604334099896036246789641632564134246125461686950415467406032909029192869357953282578032075146446173674602635247710
 pub const ED448_B_X: [u64; 8] = [
-    0x26a82bc70cc05e, // limb 0
-    0x80e18b00938e26, // limb 1
-    0xf72ab66511433b, // limb 2
-    0xa3d3a46412ae1a, // limb 3
-    0x0f1767ea6de324, // limb 4
-    0x36da9e14657047, // limb 5
-    0xed221d15a622bf, // limb 6
-    0x4f1970c66bed0d, // limb 7
+    0x26a82bc70cc05e,  // limb 0
+    0x80e18b00938e26,  // limb 1
+    0xf72ab66511433b,  // limb 2
+    0xa3d3a46412ae1a,  // limb 3
+    0x0f1767ea6de324,  // limb 4
+    0x36da9e14657047,  // limb 5
+    0xed221d15a622bf,  // limb 6
+    0x4f1970c66bed0d,  // limb 7
 ];
 
 /// Base point (generator) Y-coordinate
@@ -69,18 +69,27 @@ pub const ED448_B_X: [u64; 8] = [
 /// From RFC 7748 - Corrected coordinates that satisfy the curve equation
 /// y = 298819210078481492676017930443930673437544040154080242095928241372331506189835876003536878655418784733982303233503462500531545062832660
 pub const ED448_B_Y: [u64; 8] = [
-    0x08795bf230fa14, // limb 0
-    0x132c4ed7c8ad98, // limb 1
-    0x1ce67c39c4fdbd, // limb 2
-    0x05a0c2d73ad3ff, // limb 3
-    0xa3984087789c1e, // limb 4
-    0xc7624bea73736c, // limb 5
-    0x248876203756c9, // limb 6
-    0x693f46716eb6bc, // limb 7
+    0x08795bf230fa14,  // limb 0
+    0x132c4ed7c8ad98,  // limb 1
+    0x1ce67c39c4fdbd,  // limb 2
+    0x05a0c2d73ad3ff,  // limb 3
+    0xa3984087789c1e,  // limb 4
+    0xc7624bea73736c,  // limb 5
+    0x248876203756c9,  // limb 6
+    0x693f46716eb6bc,  // limb 7
 ];
 
 /// The value 2^224 mod p (used in reduction)
-pub const TWO_POW_224: [u64; 8] = [0, 0, 0, 0, 1, 0, 0, 0];
+pub const TWO_POW_224: [u64; 8] = [
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+];
 
 #[cfg(test)]
 mod tests {

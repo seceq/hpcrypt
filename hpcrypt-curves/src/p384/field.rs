@@ -18,8 +18,8 @@
 #![allow(clippy::needless_range_loop)]
 
 use super::constants::P384_MODULUS;
-use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 use core::fmt;
+use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 /// A field element in the P-384 prime field.
 ///
@@ -52,9 +52,7 @@ impl FieldElement {
     /// Creates a field element representing zero.
     #[inline]
     pub const fn zero() -> Self {
-        Self {
-            limbs: [0, 0, 0, 0, 0, 0],
-        }
+        Self { limbs: [0, 0, 0, 0, 0, 0] }
     }
 
     /// Creates a field element representing one.
@@ -171,12 +169,7 @@ impl fmt::Debug for FieldElement {
         write!(
             f,
             "FieldElement({:016x}_{:016x}_{:016x}_{:016x}_{:016x}_{:016x})",
-            self.limbs[5],
-            self.limbs[4],
-            self.limbs[3],
-            self.limbs[2],
-            self.limbs[1],
-            self.limbs[0]
+            self.limbs[5], self.limbs[4], self.limbs[3], self.limbs[2], self.limbs[1], self.limbs[0]
         )
     }
 }

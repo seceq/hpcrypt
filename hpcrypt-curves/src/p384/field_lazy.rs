@@ -63,17 +63,13 @@ impl LazyFieldElement {
     /// The zero element
     #[inline(always)]
     pub const fn zero() -> Self {
-        Self {
-            limbs: [0, 0, 0, 0, 0, 0],
-        }
+        Self { limbs: [0, 0, 0, 0, 0, 0] }
     }
 
     /// The one element
     #[inline(always)]
     pub const fn one() -> Self {
-        Self {
-            limbs: [1, 0, 0, 0, 0, 0],
-        }
+        Self { limbs: [1, 0, 0, 0, 0, 0] }
     }
 
     /// Get the raw limbs
@@ -103,8 +99,7 @@ impl LazyFieldElement {
         // We need to reduce at least once
         if carry != 0 {
             // Subtract p to bring back into range
-            return Self::from_limbs_unchecked(result)
-                .sub_lazy(&Self::from_limbs_unchecked(P384_MODULUS));
+            return Self::from_limbs_unchecked(result).sub_lazy(&Self::from_limbs_unchecked(P384_MODULUS));
         }
 
         // Result may be >= p, but that's okay for lazy reduction
@@ -281,10 +276,7 @@ mod tests {
         let two = one.add_lazy(&one);
         let three = two.add_lazy(&one);
 
-        assert_eq!(
-            three.normalize(),
-            FieldElement::from_limbs([3, 0, 0, 0, 0, 0])
-        );
+        assert_eq!(three.normalize(), FieldElement::from_limbs([3, 0, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -293,10 +285,7 @@ mod tests {
         let two = LazyFieldElement::from_limbs_unchecked([2, 0, 0, 0, 0, 0]);
         let three = five.sub_lazy(&two);
 
-        assert_eq!(
-            three.normalize(),
-            FieldElement::from_limbs([3, 0, 0, 0, 0, 0])
-        );
+        assert_eq!(three.normalize(), FieldElement::from_limbs([3, 0, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -310,10 +299,7 @@ mod tests {
             acc = acc.add_lazy(&one);
         }
 
-        assert_eq!(
-            acc.normalize(),
-            FieldElement::from_limbs([10, 0, 0, 0, 0, 0])
-        );
+        assert_eq!(acc.normalize(), FieldElement::from_limbs([10, 0, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -324,19 +310,13 @@ mod tests {
         let p_plus_1 = p.add_lazy(&one);
 
         // Should normalize to 1
-        assert_eq!(
-            p_plus_1.normalize(),
-            FieldElement::from_limbs([1, 0, 0, 0, 0, 0])
-        );
+        assert_eq!(p_plus_1.normalize(), FieldElement::from_limbs([1, 0, 0, 0, 0, 0]));
     }
 
     #[test]
     fn test_zero_neg() {
         let zero = LazyFieldElement::zero();
         let neg_zero = zero.neg();
-        assert_eq!(
-            neg_zero.normalize(),
-            FieldElement::from_limbs([0, 0, 0, 0, 0, 0])
-        );
+        assert_eq!(neg_zero.normalize(), FieldElement::from_limbs([0, 0, 0, 0, 0, 0]));
     }
 }
