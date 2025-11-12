@@ -56,7 +56,7 @@ impl Signature {
     /// Returns a variable-length byte array in DER format.
     /// Maximum size is 104 bytes for P-384 (48-byte integers).
     ///
-    /// Format: 0x30 \[total-len\] 0x02 \[r-len\] \[r\] 0x02 \[s-len\] \[s\]
+    /// Format: 0x30 [total-len] 0x02 [r-len] [r] 0x02 [s-len] [s]
     pub fn to_der(&self) -> ([u8; 104], usize) {
         let mut der = [0u8; 104];
         let mut pos = 0;
@@ -110,7 +110,7 @@ impl Signature {
     /// Parse signature from DER encoding
     ///
     /// Accepts DER-encoded ECDSA signatures in the format:
-    /// 0x30 \[total-len\] 0x02 \[r-len\] \[r\] 0x02 \[s-len\] \[s\]
+    /// 0x30 [total-len] 0x02 [r-len] [r] 0x02 [s-len] [s]
     pub fn from_der(der: &[u8]) -> Result<Self, CurveError> {
         if der.len() < 8 {
             return Err(CurveError::InvalidSignature);
@@ -225,7 +225,25 @@ impl SigningKey {
     /// - In the range [1, n-1] where n is the curve order
     /// - Never reused or exposed
     pub fn from_bytes(bytes: &[u8; 48]) -> Result<Self, CurveError> {
-        // TODO: Validate that bytes is in range [1, n-1]
+        // Validate that bytes represents a scalar in range [1, n-1]
+        let scalar = Scalar::from_bytes(bytes);
+
+        // Reject zero (must be in [1, n-1])
+        if bool::from(scalar.is_zero()) {
+            return Err(CurveError::InvalidScalar {
+                expected: 48,
+                actual: 48,
+            });
+        }
+
+        // Reject if >= n (curve order)
+        if scalar.gte_order() {
+            return Err(CurveError::InvalidScalar {
+                expected: 48,
+                actual: 48,
+            });
+        }
+
         Ok(Self { secret: *bytes })
     }
 
@@ -256,10 +274,11 @@ impl SigningKey {
         // Try up to 100 times to generate a valid key
         for _ in 0..100 {
             let mut bytes = [0u8; 48];
-            generate_random_bytes(&mut bytes).map_err(|_| CurveError::InvalidScalar {
-                expected: 48,
-                actual: 48,
-            })?;
+            generate_random_bytes(&mut bytes)
+                .map_err(|_| CurveError::InvalidScalar {
+                    expected: 48,
+                    actual: 48,
+                })?;
 
             // Check if the scalar is in valid range [1, n-1]
             let scalar = Scalar::from_bytes(&bytes);
@@ -613,11 +632,48 @@ impl VerifyingKey {
             });
         }
 
-        // TODO: Parse x and y coordinates and validate point is on curve
-        Err(CurveError::InvalidEncoding {
-            expected: "valid point on P-384 curve",
-            actual: 97,
-        })
+        // Parse x and y coordinates (each 48 bytes)
+        use hpcrypt_curves::p384::{field::FieldElement, point::AffinePoint};
+
+        let mut x_bytes = [0u8; 48];
+        let mut y_bytes = [0u8; 48];
+        x_bytes.copy_from_slice(&bytes[1..49]);
+        y_bytes.copy_from_slice(&bytes[49..97]);
+
+        // Parse field elements (validates they're < p)
+        let x = FieldElement::from_bytes(&x_bytes)
+            .ok_or_else(|| CurveError::InvalidEncoding {
+                expected: "x-coordinate < p",
+                actual: 97,
+            })?;
+
+        let y = FieldElement::from_bytes(&y_bytes)
+            .ok_or_else(|| CurveError::InvalidEncoding {
+                expected: "y-coordinate < p",
+                actual: 97,
+            })?;
+
+        // Create affine point and convert to Jacobian
+        let affine = AffinePoint { x, y };
+        let point = Point::from_affine(&affine);
+
+        // Validate point is on curve
+        if !bool::from(point.is_on_curve()) {
+            return Err(CurveError::InvalidEncoding {
+                expected: "point on P-384 curve",
+                actual: 97,
+            });
+        }
+
+        // Reject point at infinity (shouldn't happen for valid public keys)
+        if bool::from(point.is_infinity()) {
+            return Err(CurveError::InvalidEncoding {
+                expected: "non-infinity point",
+                actual: 97,
+            });
+        }
+
+        Ok(Self { point })
     }
 }
 
@@ -731,7 +787,7 @@ mod tests {
                     extern crate std;
                     use std::println;
                     println!("\n=== VERIFICATION FAILURE DEBUG INFO ===");
-                    println!("Key {} failed verification", i + 1);
+                    println!("Key {} failed verification", i+1);
                     println!("This is a failing test case that can be used for debugging:");
                     println!("  Private key: {:02x?}", &key.secret[..]);
                     println!("  Message: {:?}", message);
@@ -748,12 +804,9 @@ mod tests {
                     let sig2 = key.sign(message);
                     let verify2 = verifying_key.verify(message, &sig2);
                     println!("  Re-sign verifies: {}", verify2);
-                    println!(
-                        "  Same signature: {}",
-                        signature.r == sig2.r && signature.s == sig2.s
-                    );
+                    println!("  Same signature: {}", signature.r == sig2.r && signature.s == sig2.s);
                 }
-                panic!("Key {} failed verification", i + 1);
+                panic!("Key {} failed verification", i+1);
             }
         }
     }
@@ -949,21 +1002,12 @@ mod tests {
             "A329C145786E679E7B82C71A38628AC8"
         );
 
-        assert_eq!(
-            signature.r, expected_r,
-            "RFC 6979 P-384 r component mismatch"
-        );
-        assert_eq!(
-            signature.s, expected_s,
-            "RFC 6979 P-384 s component mismatch"
-        );
+        assert_eq!(signature.r, expected_r, "RFC 6979 P-384 r component mismatch");
+        assert_eq!(signature.s, expected_s, "RFC 6979 P-384 s component mismatch");
 
         // Verify the signature
         let verifying_key = signing_key.verifying_key();
-        assert!(
-            verifying_key.verify(message, &signature),
-            "RFC 6979 P-384 signature should verify"
-        );
+        assert!(verifying_key.verify(message, &signature), "RFC 6979 P-384 signature should verify");
     }
 
     #[test]
@@ -993,14 +1037,8 @@ mod tests {
             "51AB373F9845C0514EEFB14024787265"
         );
 
-        assert_eq!(
-            signature.r, expected_r,
-            "RFC 6979 P-384 r component mismatch for 'test'"
-        );
-        assert_eq!(
-            signature.s, expected_s,
-            "RFC 6979 P-384 s component mismatch for 'test'"
-        );
+        assert_eq!(signature.r, expected_r, "RFC 6979 P-384 r component mismatch for 'test'");
+        assert_eq!(signature.s, expected_s, "RFC 6979 P-384 s component mismatch for 'test'");
 
         let verifying_key = signing_key.verifying_key();
         assert!(verifying_key.verify(message, &signature));
@@ -1019,22 +1057,10 @@ mod tests {
         let sig3 = signing_key.sign(message);
 
         // All signatures should be identical (deterministic)
-        assert_eq!(
-            sig1.r, sig2.r,
-            "RFC 6979 P-384 should be deterministic: r mismatch"
-        );
-        assert_eq!(
-            sig1.s, sig2.s,
-            "RFC 6979 P-384 should be deterministic: s mismatch"
-        );
-        assert_eq!(
-            sig2.r, sig3.r,
-            "RFC 6979 P-384 should be deterministic: r mismatch"
-        );
-        assert_eq!(
-            sig2.s, sig3.s,
-            "RFC 6979 P-384 should be deterministic: s mismatch"
-        );
+        assert_eq!(sig1.r, sig2.r, "RFC 6979 P-384 should be deterministic: r mismatch");
+        assert_eq!(sig1.s, sig2.s, "RFC 6979 P-384 should be deterministic: s mismatch");
+        assert_eq!(sig2.r, sig3.r, "RFC 6979 P-384 should be deterministic: r mismatch");
+        assert_eq!(sig2.s, sig3.s, "RFC 6979 P-384 should be deterministic: s mismatch");
     }
 
     #[test]

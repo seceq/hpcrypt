@@ -2,8 +2,6 @@
 //!
 //! This crate provides production-ready implementations of ECDSA (Elliptic Curve
 //! Digital Signature Algorithm) for multiple curves.
-
-#![allow(clippy::comparison_chain)]
 //!
 //! # Supported Algorithms
 //!
@@ -16,7 +14,7 @@
 //!
 //! ## ECDSA P-256 Signature
 //!
-//! ```ignore
+//! ```rust
 //! use hpcrypt_signatures::ecdsa::Ecdsa;
 //! use hpcrypt_curves::p256::{Scalar, Point};
 //!
@@ -42,7 +40,7 @@
 //!
 //! ## ECDSA P-384 Signature
 //!
-//! ```ignore
+//! ```rust
 //! use hpcrypt_signatures::ecdsa_p384::EcdsaP384;
 //! use hpcrypt_curves::p384::{Scalar, Point};
 //!
@@ -64,7 +62,7 @@
 //!
 //! ## ECDSA secp256k1 Signature
 //!
-//! ```ignore
+//! ```rust
 //! use hpcrypt_signatures::ecdsa_secp256k1::EcdsaSecp256k1;
 //! use hpcrypt_curves::secp256k1::{Scalar, Point};
 //!
@@ -138,6 +136,9 @@
 
 #[cfg(feature = "std")]
 extern crate std;
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
 
 /// ECDSA signatures for NIST P-256
 pub mod ecdsa;

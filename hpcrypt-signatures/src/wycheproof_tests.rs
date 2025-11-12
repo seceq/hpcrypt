@@ -11,11 +11,10 @@ mod tests {
     extern crate std;
     use std::vec;
 
-    use crate::ecdsa::{Signature, VerifyingKey};
+    use crate::ecdsa::{VerifyingKey, Signature};
     use hex_literal::hex;
 
     // Wycheproof test case structure
-    #[allow(dead_code)]
     struct WycheproofTest {
         tc_id: u32,
         comment: &'static str,
@@ -25,7 +24,6 @@ mod tests {
     }
 
     #[derive(Debug, PartialEq)]
-    #[allow(dead_code)]
     enum TestResult {
         Valid,
         Invalid,
@@ -72,10 +70,7 @@ mod tests {
         let verifying_key = VerifyingKey::from_affine_coords(&public_key[..32], &public_key[32..])
             .expect("Valid public key");
 
-        assert!(
-            !verifying_key.verify(&msg, &signature),
-            "Modified signature should not verify"
-        );
+        assert!(!verifying_key.verify(&msg, &signature), "Modified signature should not verify");
     }
 
     #[test]
@@ -91,10 +86,7 @@ mod tests {
         let verifying_key = VerifyingKey::from_affine_coords(&public_key[..32], &public_key[32..])
             .expect("Valid public key");
 
-        assert!(
-            !verifying_key.verify(&msg, &signature),
-            "Signature for different message should not verify"
-        );
+        assert!(!verifying_key.verify(&msg, &signature), "Signature for different message should not verify");
     }
 
     #[test]
@@ -110,10 +102,7 @@ mod tests {
         let verifying_key = VerifyingKey::from_affine_coords(&public_key[..32], &public_key[32..])
             .expect("Valid public key");
 
-        assert!(
-            !verifying_key.verify(&msg, &signature),
-            "All-zero signature should not verify"
-        );
+        assert!(!verifying_key.verify(&msg, &signature), "All-zero signature should not verify");
     }
 
     #[test]
@@ -129,10 +118,7 @@ mod tests {
         let verifying_key = VerifyingKey::from_affine_coords(&public_key[..32], &public_key[32..])
             .expect("Valid public key");
 
-        assert!(
-            !verifying_key.verify(&msg, &signature),
-            "Signature with r=0 should not verify"
-        );
+        assert!(!verifying_key.verify(&msg, &signature), "Signature with r=0 should not verify");
     }
 
     #[test]
@@ -148,10 +134,7 @@ mod tests {
         let verifying_key = VerifyingKey::from_affine_coords(&public_key[..32], &public_key[32..])
             .expect("Valid public key");
 
-        assert!(
-            !verifying_key.verify(&msg, &signature),
-            "Signature with s=0 should not verify"
-        );
+        assert!(!verifying_key.verify(&msg, &signature), "Signature with s=0 should not verify");
     }
 
     #[test]
@@ -169,10 +152,7 @@ mod tests {
             .expect("Valid public key");
 
         // This should not verify as s >= n
-        assert!(
-            !verifying_key.verify(&msg, &signature),
-            "Signature with s >= n should not verify"
-        );
+        assert!(!verifying_key.verify(&msg, &signature), "Signature with s >= n should not verify");
     }
 
     #[test]
@@ -190,10 +170,7 @@ mod tests {
             .expect("Valid public key");
 
         // This should not verify as r >= n
-        assert!(
-            !verifying_key.verify(&msg, &signature),
-            "Signature with r >= n should not verify"
-        );
+        assert!(!verifying_key.verify(&msg, &signature), "Signature with r >= n should not verify");
     }
 
     #[test]
@@ -245,8 +222,7 @@ mod tests {
 
         // Create the malleable version: s' = n - s
         // P-256 order n = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
-        let sig_s_malleable =
-            hex!("4cd60b865d442f5a3c7b11eb6c4e0ae97578ec6353a02bf783ecb4b6ea97b824");
+        let sig_s_malleable = hex!("4cd60b865d442f5a3c7b11eb6c4e0ae97578ec6353a02bf783ecb4b6ea97b824");
 
         let signature_original = Signature::new(sig_r, sig_s);
         let signature_malleable = Signature::new(sig_r, sig_s_malleable);
@@ -260,10 +236,8 @@ mod tests {
 
         // Both might verify mathematically, but we should reject high-s signatures
         // Note: This test verifies that our implementation handles this correctly
-        assert_eq!(
-            result_original, result_malleable,
-            "Signature malleability: both forms should have same verification result"
-        );
+        assert_eq!(result_original, result_malleable,
+            "Signature malleability: both forms should have same verification result");
     }
 
     #[test]
@@ -281,10 +255,7 @@ mod tests {
             .expect("Valid public key");
 
         // Should not verify (signature is for different message)
-        assert!(
-            !verifying_key.verify(msg, &signature),
-            "Wrong signature for empty message"
-        );
+        assert!(!verifying_key.verify(msg, &signature), "Wrong signature for empty message");
     }
 
     #[test]
@@ -301,9 +272,6 @@ mod tests {
             .expect("Valid public key");
 
         // Should not panic, should return false (wrong signature for this message)
-        assert!(
-            !verifying_key.verify(&msg, &signature),
-            "Wrong signature for long message"
-        );
+        assert!(!verifying_key.verify(&msg, &signature), "Wrong signature for long message");
     }
 }

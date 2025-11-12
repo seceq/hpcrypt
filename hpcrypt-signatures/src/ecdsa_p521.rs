@@ -56,7 +56,7 @@ impl Signature {
     /// Returns a variable-length byte array in DER format.
     /// Maximum size is 141 bytes for P-521 (66-byte integers).
     ///
-    /// Format: 0x30 \[total-len\] 0x02 \[r-len\] \[r\] 0x02 \[s-len\] \[s\]
+    /// Format: 0x30 [total-len] 0x02 [r-len] [r] 0x02 [s-len] [s]
     pub fn to_der(&self) -> ([u8; 141], usize) {
         let mut der = [0u8; 141];
         let mut pos = 0;
@@ -628,7 +628,8 @@ mod tests {
         let vk = sk.verifying_key();
 
         let sec1 = vk.to_sec1_uncompressed();
-        let vk2 = VerifyingKey::from_sec1_uncompressed(&sec1).expect("SEC1 parsing failed");
+        let vk2 = VerifyingKey::from_sec1_uncompressed(&sec1)
+            .expect("SEC1 parsing failed");
 
         // Should produce the same public key
         let message = b"Test";
@@ -661,8 +662,8 @@ mod tests {
 
     #[test]
     fn test_simple_sign_verify() {
-        use hpcrypt_curves::p521::Scalar;
         use hpcrypt_hash::sha512::Sha512;
+        use hpcrypt_curves::p521::Scalar;
 
         // Use a simple known private key: d = 2
         let two = Scalar::from_u64(2);
@@ -703,10 +704,7 @@ mod tests {
         let vk = sk.verifying_key();
 
         // Check that vk.point is on curve
-        assert!(
-            bool::from(vk.point.is_on_curve()),
-            "Public key not on curve!"
-        );
+        assert!(bool::from(vk.point.is_on_curve()), "Public key not on curve!");
 
         // Get affine coordinates
         let affine_orig = vk.point.to_affine().expect("Should not be infinity");
@@ -731,22 +729,16 @@ mod tests {
 
         // Try to create point from these coordinates
         let point_reconstructed = Point::from_affine(&x_decoded, &y_decoded);
-        assert!(
-            point_reconstructed.is_some(),
-            "from_affine should succeed with valid coordinates"
-        );
+        assert!(point_reconstructed.is_some(), "from_affine should succeed with valid coordinates");
 
         let point = point_reconstructed.unwrap();
-        assert!(
-            bool::from(point.is_on_curve()),
-            "Reconstructed point should be on curve"
-        );
+        assert!(bool::from(point.is_on_curve()), "Reconstructed point should be on curve");
     }
 
     #[test]
     fn test_ecdsa_step_by_step() {
-        use hpcrypt_curves::p521::{Point, Scalar};
         use hpcrypt_hash::sha512::Sha512;
+        use hpcrypt_curves::p521::{Point, Scalar};
 
         // Use d = 2, k = 3 for easy verification
         let d = Scalar::from_u64(2);
@@ -762,16 +754,8 @@ mod tests {
         let g_doubled = g.double();
         let affine_q = q.to_affine().unwrap();
         let affine_g2 = g_doubled.to_affine().unwrap();
-        assert_eq!(
-            affine_q.x.to_bytes(),
-            affine_g2.x.to_bytes(),
-            "Q should equal 2*G (X coord)"
-        );
-        assert_eq!(
-            affine_q.y.to_bytes(),
-            affine_g2.y.to_bytes(),
-            "Q should equal 2*G (Y coord)"
-        );
+        assert_eq!(affine_q.x.to_bytes(), affine_g2.x.to_bytes(), "Q should equal 2*G (X coord)");
+        assert_eq!(affine_q.y.to_bytes(), affine_g2.y.to_bytes(), "Q should equal 2*G (Y coord)");
 
         // Hash message
         let message = b"test";
@@ -818,10 +802,7 @@ mod tests {
 
         let r_prime = u1_g.add(&u2_q);
         assert!(bool::from(r_prime.is_on_curve()), "R' should be on curve");
-        assert!(
-            !bool::from(r_prime.is_infinity()),
-            "R' should not be infinity"
-        );
+        assert!(!bool::from(r_prime.is_infinity()), "R' should not be infinity");
 
         let affine_rprime = r_prime.to_affine().expect("R' should not be infinity");
         let r_prime_x_bytes = affine_rprime.x.to_bytes();
@@ -866,25 +847,14 @@ mod tests {
         let affine_rprime_check = r_prime.to_affine().unwrap();
 
         // Compare the actual points
-        assert_eq!(
-            affine_orig_r.x.to_bytes(),
-            affine_rprime_check.x.to_bytes(),
-            "R and R' X coordinates should match"
-        );
-        assert_eq!(
-            affine_orig_r.y.to_bytes(),
-            affine_rprime_check.y.to_bytes(),
-            "R and R' Y coordinates should match"
-        );
+        assert_eq!(affine_orig_r.x.to_bytes(), affine_rprime_check.x.to_bytes(), "R and R' X coordinates should match");
+        assert_eq!(affine_orig_r.y.to_bytes(), affine_rprime_check.y.to_bytes(), "R and R' Y coordinates should match");
 
         // If we get here, R == R', so the field element encoding must be the issue
         // Compare r and v by encoding to bytes
         let r_bytes = r.to_bytes();
         let v_bytes = v.to_bytes();
 
-        assert_eq!(
-            r_bytes, v_bytes,
-            "Verification should succeed: v should equal r"
-        );
+        assert_eq!(r_bytes, v_bytes, "Verification should succeed: v should equal r");
     }
 }
