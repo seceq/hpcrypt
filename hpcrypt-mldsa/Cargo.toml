@@ -1,0 +1,62 @@
+[package]
+name = "hpcrypt-mldsa"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+authors = ["HPCrypt Contributors"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/hpcrypt"
+homepage = "https://github.com/yourusername/hpcrypt"
+documentation = "https://docs.rs/hpcrypt-mldsa"
+readme = "README.md"
+description = "ML-DSA (Module-Lattice-Based Digital Signature Algorithm) implementation per NIST FIPS 204 - Pure Rust portable implementation"
+keywords = ["cryptography", "post-quantum", "ml-dsa", "dilithium", "signatures"]
+categories = ["cryptography", "no-std"]
+
+[dependencies]
+sha3 = { version = "0.10", default-features = false }
+subtle = { version = "2.6", default-features = false }
+zeroize = { version = "1.8", default-features = false, features = ["derive"], optional = true }
+getrandom = { version = "0.2", default-features = false, optional = true }
+serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
+serde_arrays = { version = "0.1", optional = true }
+pem = { version = "3.0", optional = true }
+der = { version = "0.7", optional = true }
+spki = { version = "0.7", optional = true }
+
+[dev-dependencies]
+hex = "0.4"
+rand = "0.8"
+proptest = "1.6"
+criterion = { version = "0.5", features = ["html_reports"] }
+serde_json = "1.0"
+dudect-bencher = "0.6"
+
+[[bench]]
+name = "bench_operations"
+harness = false
+
+[[bench]]
+name = "bench_ntt_simple"
+harness = false
+
+[[bench]]
+name = "bench_batch_verify"
+harness = false
+
+[[bench]]
+name = "dudect_constant_time"
+harness = false
+
+[lib]
+name = "hpcrypt_mldsa"
+path = "src/lib.rs"
+
+[features]
+default = ["getrandom"]
+std = []
+zeroize = ["dep:zeroize"]
+serde = ["dep:serde", "dep:serde_arrays"]
+pem = ["dep:pem", "dep:der", "dep:spki"]
+wasm = ["getrandom/js"]
+timing-tests = []
