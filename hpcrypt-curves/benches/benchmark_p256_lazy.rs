@@ -7,8 +7,11 @@
 // Expected benefits: lazy reduction should be 10-30% faster for add/sub chains
 // which are common in ECC point operations (point doubling, addition formulas)
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use hpcrypt_curves::p256::{FieldElement, LazyFieldElement};
+use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use hpcrypt_curves::p256::{
+    FieldElement,
+    LazyFieldElement,
+};
 
 // Test values for benchmarking
 fn get_test_values() -> (FieldElement, FieldElement) {
@@ -30,10 +33,7 @@ fn get_test_values() -> (FieldElement, FieldElement) {
 
 fn get_test_values_lazy() -> (LazyFieldElement, LazyFieldElement) {
     let (a, b) = get_test_values();
-    (
-        LazyFieldElement::from_canonical(&a),
-        LazyFieldElement::from_canonical(&b),
-    )
+    (LazyFieldElement::from_canonical(&a), LazyFieldElement::from_canonical(&b))
 }
 
 //
@@ -133,17 +133,21 @@ fn bench_add_chain(c: &mut Criterion) {
         );
 
         // Lazy addition chain (normalize at end)
-        group.bench_with_input(BenchmarkId::new("lazy", chain_len), chain_len, |b, &len| {
-            let (a, bb) = get_test_values_lazy();
-            b.iter(|| {
-                let mut acc = black_box(a);
-                for _ in 0..len {
-                    acc = acc.add_lazy(&black_box(bb));
-                }
-                let normalized = acc.normalize();
-                black_box(normalized)
-            });
-        });
+        group.bench_with_input(
+            BenchmarkId::new("lazy", chain_len),
+            chain_len,
+            |b, &len| {
+                let (a, bb) = get_test_values_lazy();
+                b.iter(|| {
+                    let mut acc = black_box(a);
+                    for _ in 0..len {
+                        acc = acc.add_lazy(&black_box(bb));
+                    }
+                    let normalized = acc.normalize();
+                    black_box(normalized)
+                });
+            },
+        );
     }
 
     group.finish();
@@ -170,7 +174,7 @@ fn bench_mixed_operations(c: &mut Criterion) {
             let t1 = black_box(a) + black_box(bb);
             let t2 = t1 + black_box(a);
             let t3 = t2 - black_box(bb);
-            let t4 = t3 + t3; // double
+            let t4 = t3 + t3;  // double
             let t5 = t4 + black_box(a);
             let t6 = t5 - black_box(bb);
             black_box(t6)

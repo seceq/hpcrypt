@@ -1,6 +1,6 @@
 // Benchmark comparing different squaring implementations
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 use hpcrypt_curves::secp256k1::{FieldElement, FieldElement52};
 
 fn bench_64bit_squaring(c: &mut Criterion) {
@@ -9,16 +9,22 @@ fn bench_64bit_squaring(c: &mut Criterion) {
     let test_value = FieldElement::from_u64(0x123456789ABCDEF0);
 
     group.bench_function("square_current", |bencher| {
-        bencher.iter(|| black_box(test_value.square()));
+        bencher.iter(|| {
+            black_box(test_value.square())
+        });
     });
 
     group.bench_function("square_unrolled", |bencher| {
-        bencher.iter(|| black_box(test_value.square_unrolled()));
+        bencher.iter(|| {
+            black_box(test_value.square_unrolled())
+        });
     });
 
     // Compare with mul(self, self) to show squaring advantage
     group.bench_function("mul_self_self", |bencher| {
-        bencher.iter(|| black_box(test_value.mul(&test_value)));
+        bencher.iter(|| {
+            black_box(test_value.mul(&test_value))
+        });
     });
 
     group.finish();
@@ -30,20 +36,28 @@ fn bench_52bit_squaring(c: &mut Criterion) {
     let test_value = FieldElement52::from_u64(0x123456789ABCDEF0);
 
     group.bench_function("square_current", |bencher| {
-        bencher.iter(|| black_box(test_value.square()));
+        bencher.iter(|| {
+            black_box(test_value.square())
+        });
     });
 
     group.bench_function("square_unrolled", |bencher| {
-        bencher.iter(|| black_box(test_value.square_unrolled()));
+        bencher.iter(|| {
+            black_box(test_value.square_unrolled())
+        });
     });
 
     group.bench_function("square_karatsuba", |bencher| {
-        bencher.iter(|| black_box(test_value.square_karatsuba()));
+        bencher.iter(|| {
+            black_box(test_value.square_karatsuba())
+        });
     });
 
     // Compare with mul(self, self)
     group.bench_function("mul_self_self", |bencher| {
-        bencher.iter(|| black_box(test_value.mul(&test_value)));
+        bencher.iter(|| {
+            black_box(test_value.mul(&test_value))
+        });
     });
 
     group.finish();
