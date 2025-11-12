@@ -1,0 +1,24 @@
+[package]
+name = "hpcrypt-threshold"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Threshold cryptography primitives including Shamir Secret Sharing"
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+hpcrypt-core = { workspace = true }
+hpcrypt-rng = { workspace = true, features = ["os-rng"] }
+subtle = { workspace = true }
+zeroize = { workspace = true }
+
+[dev-dependencies]
+hex-literal = { workspace = true }
+
+[features]
+default = ["std"]
+std = ["hpcrypt-core/std"]

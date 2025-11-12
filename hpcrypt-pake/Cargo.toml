@@ -1,0 +1,28 @@
+[package]
+name = "hpcrypt-pake"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Password-Authenticated Key Exchange (PAKE) protocols for HPCrypt including OPAQUE"
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+hpcrypt-core = { workspace = true }
+hpcrypt-curves = { workspace = true }
+hpcrypt-hash = { workspace = true }
+hpcrypt-kdf = { workspace = true }
+hpcrypt-rng = { workspace = true, features = ["os-rng"] }
+subtle = { workspace = true }
+zeroize = { workspace = true }
+
+[dev-dependencies]
+hex-literal = { workspace = true }
+
+[features]
+default = ["std", "alloc"]
+std = ["hpcrypt-core/std", "hpcrypt-curves/std", "hpcrypt-hash/std", "hpcrypt-kdf/std"]
+alloc = ["hpcrypt-core/alloc", "hpcrypt-curves/alloc", "hpcrypt-hash/alloc", "hpcrypt-kdf/alloc"]

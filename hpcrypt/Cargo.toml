@@ -1,0 +1,61 @@
+[package]
+name = "hpcrypt"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+authors = ["HPCrypt Contributors"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/hpcrypt"
+homepage = "https://github.com/yourusername/hpcrypt"
+documentation = "https://docs.rs/hpcrypt"
+readme = "README.md"
+description = "High-performance cryptography library - Unified interface to HPCrypt components"
+keywords = ["cryptography", "crypto", "post-quantum", "security", "no-std"]
+categories = ["cryptography", "no-std"]
+
+[dependencies]
+# Core dependencies (always included)
+hpcrypt-core = { workspace = true }
+hpcrypt-hash = { workspace = true }
+hpcrypt-rng = { workspace = true }
+
+# Optional components
+hpcrypt-curves = { workspace = true, optional = true }
+hpcrypt-signatures = { workspace = true, optional = true }
+hpcrypt-mlkem = { workspace = true, optional = true }
+hpcrypt-mldsa = { workspace = true, optional = true }
+hpcrypt-slhdsa = { workspace = true, optional = true }
+
+[features]
+default = ["std", "curves", "signatures"]
+
+# Standard library support
+std = [
+    "hpcrypt-core/std",
+    "hpcrypt-hash/std",
+    "hpcrypt-rng/std",
+    "hpcrypt-curves?/std",
+    "hpcrypt-signatures?/std",
+    "hpcrypt-mlkem?/std",
+    "hpcrypt-mldsa?/std",
+    "hpcrypt-slhdsa?/std",
+]
+
+# Cryptographic primitives
+curves = ["dep:hpcrypt-curves"]
+signatures = ["dep:hpcrypt-signatures", "curves"]
+
+# Post-quantum cryptography
+pq-kem = ["dep:hpcrypt-mlkem"]
+pq-sig-mldsa = ["dep:hpcrypt-mldsa"]
+pq-sig-slhdsa = ["dep:hpcrypt-slhdsa"]
+pq-sig = ["pq-sig-mldsa", "pq-sig-slhdsa"]
+pq = ["pq-kem", "pq-sig"]
+
+# Convenience features
+classical = ["curves", "signatures"]
+full = ["classical", "pq"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
