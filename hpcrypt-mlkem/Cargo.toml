@@ -1,0 +1,57 @@
+[package]
+name = "hpcrypt-mlkem"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+authors = ["HPCrypt Contributors"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/hpcrypt"
+homepage = "https://github.com/yourusername/hpcrypt"
+documentation = "https://docs.rs/hpcrypt-mlkem"
+readme = "README.md"
+description = "ML-KEM (Module-Lattice-Based Key Encapsulation Mechanism) implementation per NIST FIPS 203 - Pure Rust portable implementation"
+keywords = ["cryptography", "post-quantum", "ml-kem", "kyber", "kem"]
+categories = ["cryptography", "no-std"]
+
+[dependencies]
+sha3 = { version = "0.10", default-features = false }
+hpcrypt-rng = { workspace = true, default-features = false, features = ["os-rng"] }
+serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
+zeroize = { version = "1.8", default-features = false, features = ["alloc"], optional = true }
+
+[dev-dependencies]
+hex = "0.4"
+rand = "0.8"
+proptest = "1.6"
+criterion = { version = "0.5", features = ["html_reports"] }
+serde_json = "1.0"
+
+[lib]
+name = "hpcrypt_mlkem"
+path = "src/lib.rs"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(disabled_outdated_example)'] }
+
+[features]
+default = []
+std = []
+timing-tests = ["std"]
+serde = ["dep:serde"]
+zeroize = ["dep:zeroize"]
+
+[[bench]]
+name = "keygen"
+harness = false
+
+[[bench]]
+name = "encaps"
+harness = false
+
+[[bench]]
+name = "decaps"
+harness = false
+
+[[bench]]
+name = "primitives"
+harness = false
