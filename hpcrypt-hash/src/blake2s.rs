@@ -3,13 +3,11 @@
 //! BLAKE2s is a cryptographic hash function optimized for 8- to 32-bit platforms.
 //! It produces digests of any size between 1 and 32 bytes.
 //!
-//! Specified in RFC 7693: <https://tools.ietf.org/html/rfc7693>
+//! Specified in RFC 7693: https://tools.ietf.org/html/rfc7693
 //! Target performance: ~5-7 cycles/byte on 32-bit platforms
 //!
 //! Features:
 //! - Arbitrary output length (1-32 bytes)
-
-#![allow(clippy::needless_range_loop)]
 //! - Keyed hashing (MAC mode)
 //! - Personalization and salt support
 
@@ -227,6 +225,7 @@ impl Blake2s {
 
     fn compress(&mut self, is_last: bool) {
         let mut m = [0u32; 16];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..16 {
             m[i] = read_u32_le(&self.buf[i * 4..(i + 1) * 4]);
         }
@@ -243,8 +242,7 @@ impl Blake2s {
         }
 
         // 10 rounds for BLAKE2s
-        for round in 0..10 {
-            let s = &SIGMA[round];
+        for s in &SIGMA[0..10] {
 
             Self::g(&mut v, 0, 4, 8, 12, m[s[0]], m[s[1]]);
             Self::g(&mut v, 1, 5, 9, 13, m[s[2]], m[s[3]]);

@@ -21,18 +21,23 @@ const K: [u32; 64] = [
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 ];
 
+// Const helper functions for better code organization
+#[inline(always)]
+const fn ch(e: u32, f: u32, g: u32) -> u32 {
+    g ^ (e & (f ^ g))
+}
+
+#[inline(always)]
+const fn maj(a: u32, b: u32, c: u32) -> u32 {
+    (a & b) | (c & (a | b))
+}
+
 #[derive(Clone)]
 pub struct Sha256 {
     h: [u32; 8],
     buf: [u8; BLOCK_LEN],
     buflen: usize,
     len: u64,
-}
-
-impl Default for Sha256 {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl Sha256 {
@@ -116,12 +121,12 @@ impl Sha256 {
         macro_rules! sha256_round {
             ($a:expr, $b:expr, $c:expr, $d:expr, $e:expr, $f:expr, $g:expr, $h:expr, $ki:expr, $wi:expr) => {{
                 let s1 = rotr32($e, 6) ^ rotr32($e, 11) ^ rotr32($e, 25);
-                let ch = $g ^ ($e & ($f ^ $g));
-                let temp1 = $h.wrapping_add(s1).wrapping_add(ch).wrapping_add($ki).wrapping_add($wi);
+                let ch_val = ch($e, $f, $g);
+                let temp1 = $h.wrapping_add(s1).wrapping_add(ch_val).wrapping_add($ki).wrapping_add($wi);
 
                 let s0 = rotr32($a, 2) ^ rotr32($a, 13) ^ rotr32($a, 22);
-                let maj = ($a & $b) | ($c & ($a | $b));
-                let temp2 = s0.wrapping_add(maj);
+                let maj_val = maj($a, $b, $c);
+                let temp2 = s0.wrapping_add(maj_val);
 
                 $h = $g;
                 $g = $f;

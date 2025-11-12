@@ -8,8 +8,6 @@
 //!
 //! Key features:
 //! - Single-pass Merkle tree construction
-
-#![allow(clippy::needless_range_loop)]
 //! - Unlimited output length (XOF mode)
 //! - Keyed hash and key derivation modes
 //! - Highly parallelizable
@@ -183,8 +181,7 @@ impl Output {
         v[15] = self.flags as u32;
 
         // 7 rounds of mixing
-        for round in 0..7 {
-            let schedule = &MSG_SCHEDULE[round];
+        for schedule in &MSG_SCHEDULE[0..7] {
 
             // Column step
             Self::g(
@@ -324,6 +321,7 @@ impl ChunkState {
         while !input.is_empty() {
             if self.block_len as usize == BLOCK_LEN {
                 let mut block_words = [0u32; 16];
+                #[allow(clippy::needless_range_loop)]
                 for i in 0..16 {
                     block_words[i] = read_u32_le(&self.block[i * 4..(i + 1) * 4]);
                 }

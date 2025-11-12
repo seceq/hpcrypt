@@ -1,5 +1,7 @@
-// SHA-256 with 4-way partial loop unrolling (EXPERIMENTAL)
-// This is a test implementation to benchmark 4-way unrolling
+//! SHA-256 with 8-way partial loop unrolling
+//!
+//! This version uses 8-way unrolling with rolling macros to test if it provides
+//! better performance than 4-way unrolling while maintaining code readability.
 
 use hpcrypt_core::utils::{read_u32_be, rotr32, write_u32_be};
 
@@ -27,12 +29,6 @@ pub struct Sha256 {
     buf: [u8; BLOCK_LEN],
     buflen: usize,
     len: u64,
-}
-
-impl Default for Sha256 {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl Sha256 {
@@ -92,11 +88,10 @@ impl Sha256 {
         out
     }
 
+    /// Process a single 512-bit block with 8-way partial unrolling
     #[inline(always)]
     fn process_block(&mut self) {
-        // Rolling macros for better code organization
-
-        // Macro for message schedule update
+        // Define rolling macros locally for organization
         macro_rules! update_w {
             ($w:expr, $i:expr) => {{
                 let w_i_minus_15 = $w[($i - 15) & 15];
@@ -112,7 +107,6 @@ impl Sha256 {
             }};
         }
 
-        // Macro for compression round
         macro_rules! sha256_round {
             ($a:expr, $b:expr, $c:expr, $d:expr, $e:expr, $f:expr, $g:expr, $h:expr, $ki:expr, $wi:expr) => {{
                 let s1 = rotr32($e, 6) ^ rotr32($e, 11) ^ rotr32($e, 25);
@@ -134,7 +128,6 @@ impl Sha256 {
             }};
         }
 
-        // Circular buffer
         let mut w = [0u32; 16];
 
         #[allow(clippy::needless_range_loop)]
@@ -151,12 +144,11 @@ impl Sha256 {
         let mut g = self.h[6];
         let mut h = self.h[7];
 
-        // First 16 rounds (no message schedule update needed)
+        // First 16 rounds (no message schedule update needed) - grouped by 8 for visual consistency
         sha256_round!(a, b, c, d, e, f, g, h, K[0], w[0]);
         sha256_round!(a, b, c, d, e, f, g, h, K[1], w[1]);
         sha256_round!(a, b, c, d, e, f, g, h, K[2], w[2]);
         sha256_round!(a, b, c, d, e, f, g, h, K[3], w[3]);
-
         sha256_round!(a, b, c, d, e, f, g, h, K[4], w[4]);
         sha256_round!(a, b, c, d, e, f, g, h, K[5], w[5]);
         sha256_round!(a, b, c, d, e, f, g, h, K[6], w[6]);
@@ -166,80 +158,67 @@ impl Sha256 {
         sha256_round!(a, b, c, d, e, f, g, h, K[9], w[9]);
         sha256_round!(a, b, c, d, e, f, g, h, K[10], w[10]);
         sha256_round!(a, b, c, d, e, f, g, h, K[11], w[11]);
-
         sha256_round!(a, b, c, d, e, f, g, h, K[12], w[12]);
         sha256_round!(a, b, c, d, e, f, g, h, K[13], w[13]);
         sha256_round!(a, b, c, d, e, f, g, h, K[14], w[14]);
         sha256_round!(a, b, c, d, e, f, g, h, K[15], w[15]);
 
-        // Remaining 48 rounds with 4-way unrolling
-        // Rounds 16-19
+        // Remaining 48 rounds with 8-way unrolling (6 groups of 8)
+        // Rounds 16-23
         update_w!(w, 16); sha256_round!(a, b, c, d, e, f, g, h, K[16], w[16 & 15]);
         update_w!(w, 17); sha256_round!(a, b, c, d, e, f, g, h, K[17], w[17 & 15]);
         update_w!(w, 18); sha256_round!(a, b, c, d, e, f, g, h, K[18], w[18 & 15]);
         update_w!(w, 19); sha256_round!(a, b, c, d, e, f, g, h, K[19], w[19 & 15]);
-
-        // Rounds 20-23
         update_w!(w, 20); sha256_round!(a, b, c, d, e, f, g, h, K[20], w[20 & 15]);
         update_w!(w, 21); sha256_round!(a, b, c, d, e, f, g, h, K[21], w[21 & 15]);
         update_w!(w, 22); sha256_round!(a, b, c, d, e, f, g, h, K[22], w[22 & 15]);
         update_w!(w, 23); sha256_round!(a, b, c, d, e, f, g, h, K[23], w[23 & 15]);
 
-        // Rounds 24-27
+        // Rounds 24-31
         update_w!(w, 24); sha256_round!(a, b, c, d, e, f, g, h, K[24], w[24 & 15]);
         update_w!(w, 25); sha256_round!(a, b, c, d, e, f, g, h, K[25], w[25 & 15]);
         update_w!(w, 26); sha256_round!(a, b, c, d, e, f, g, h, K[26], w[26 & 15]);
         update_w!(w, 27); sha256_round!(a, b, c, d, e, f, g, h, K[27], w[27 & 15]);
-
-        // Rounds 28-31
         update_w!(w, 28); sha256_round!(a, b, c, d, e, f, g, h, K[28], w[28 & 15]);
         update_w!(w, 29); sha256_round!(a, b, c, d, e, f, g, h, K[29], w[29 & 15]);
         update_w!(w, 30); sha256_round!(a, b, c, d, e, f, g, h, K[30], w[30 & 15]);
         update_w!(w, 31); sha256_round!(a, b, c, d, e, f, g, h, K[31], w[31 & 15]);
 
-        // Rounds 32-35
+        // Rounds 32-39
         update_w!(w, 32); sha256_round!(a, b, c, d, e, f, g, h, K[32], w[32 & 15]);
         update_w!(w, 33); sha256_round!(a, b, c, d, e, f, g, h, K[33], w[33 & 15]);
         update_w!(w, 34); sha256_round!(a, b, c, d, e, f, g, h, K[34], w[34 & 15]);
         update_w!(w, 35); sha256_round!(a, b, c, d, e, f, g, h, K[35], w[35 & 15]);
-
-        // Rounds 36-39
         update_w!(w, 36); sha256_round!(a, b, c, d, e, f, g, h, K[36], w[36 & 15]);
         update_w!(w, 37); sha256_round!(a, b, c, d, e, f, g, h, K[37], w[37 & 15]);
         update_w!(w, 38); sha256_round!(a, b, c, d, e, f, g, h, K[38], w[38 & 15]);
         update_w!(w, 39); sha256_round!(a, b, c, d, e, f, g, h, K[39], w[39 & 15]);
 
-        // Rounds 40-43
+        // Rounds 40-47
         update_w!(w, 40); sha256_round!(a, b, c, d, e, f, g, h, K[40], w[40 & 15]);
         update_w!(w, 41); sha256_round!(a, b, c, d, e, f, g, h, K[41], w[41 & 15]);
         update_w!(w, 42); sha256_round!(a, b, c, d, e, f, g, h, K[42], w[42 & 15]);
         update_w!(w, 43); sha256_round!(a, b, c, d, e, f, g, h, K[43], w[43 & 15]);
-
-        // Rounds 44-47
         update_w!(w, 44); sha256_round!(a, b, c, d, e, f, g, h, K[44], w[44 & 15]);
         update_w!(w, 45); sha256_round!(a, b, c, d, e, f, g, h, K[45], w[45 & 15]);
         update_w!(w, 46); sha256_round!(a, b, c, d, e, f, g, h, K[46], w[46 & 15]);
         update_w!(w, 47); sha256_round!(a, b, c, d, e, f, g, h, K[47], w[47 & 15]);
 
-        // Rounds 48-51
+        // Rounds 48-55
         update_w!(w, 48); sha256_round!(a, b, c, d, e, f, g, h, K[48], w[48 & 15]);
         update_w!(w, 49); sha256_round!(a, b, c, d, e, f, g, h, K[49], w[49 & 15]);
         update_w!(w, 50); sha256_round!(a, b, c, d, e, f, g, h, K[50], w[50 & 15]);
         update_w!(w, 51); sha256_round!(a, b, c, d, e, f, g, h, K[51], w[51 & 15]);
-
-        // Rounds 52-55
         update_w!(w, 52); sha256_round!(a, b, c, d, e, f, g, h, K[52], w[52 & 15]);
         update_w!(w, 53); sha256_round!(a, b, c, d, e, f, g, h, K[53], w[53 & 15]);
         update_w!(w, 54); sha256_round!(a, b, c, d, e, f, g, h, K[54], w[54 & 15]);
         update_w!(w, 55); sha256_round!(a, b, c, d, e, f, g, h, K[55], w[55 & 15]);
 
-        // Rounds 56-59
+        // Rounds 56-63
         update_w!(w, 56); sha256_round!(a, b, c, d, e, f, g, h, K[56], w[56 & 15]);
         update_w!(w, 57); sha256_round!(a, b, c, d, e, f, g, h, K[57], w[57 & 15]);
         update_w!(w, 58); sha256_round!(a, b, c, d, e, f, g, h, K[58], w[58 & 15]);
         update_w!(w, 59); sha256_round!(a, b, c, d, e, f, g, h, K[59], w[59 & 15]);
-
-        // Rounds 60-63
         update_w!(w, 60); sha256_round!(a, b, c, d, e, f, g, h, K[60], w[60 & 15]);
         update_w!(w, 61); sha256_round!(a, b, c, d, e, f, g, h, K[61], w[61 & 15]);
         update_w!(w, 62); sha256_round!(a, b, c, d, e, f, g, h, K[62], w[62 & 15]);
@@ -254,6 +233,12 @@ impl Sha256 {
         self.h[5] = self.h[5].wrapping_add(f);
         self.h[6] = self.h[6].wrapping_add(g);
         self.h[7] = self.h[7].wrapping_add(h);
+    }
+}
+
+impl Default for Sha256 {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

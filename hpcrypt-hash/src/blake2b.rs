@@ -9,8 +9,6 @@
 //! - Personalization and salt support
 //! - Tree hashing mode
 
-#![allow(clippy::needless_range_loop)]
-
 extern crate alloc;
 use alloc::vec::Vec;
 use core::cmp::min;
@@ -79,8 +77,7 @@ fn compress(h: &mut [u64; 8], m: &[u64; 16], t: u64, f: bool) {
     }
 
     // 12 rounds
-    for i in 0..12 {
-        let s = &SIGMA[i];
+    for s in &SIGMA[0..12] {
 
         // Column step
         g(&mut v, 0, 4, 8, 12, m[s[0]], m[s[1]]);
@@ -170,6 +167,7 @@ impl Blake2b {
             if self.buf_len == BLOCK_LEN {
                 self.t += BLOCK_LEN as u64;
                 let mut m = [0u64; 16];
+                #[allow(clippy::needless_range_loop)]
                 for i in 0..16 {
                     m[i] = bytes_to_u64(&self.buf[i * 8..(i + 1) * 8]);
                 }
@@ -192,6 +190,7 @@ impl Blake2b {
         self.buf[self.buf_len..].fill(0);
 
         let mut m = [0u64; 16];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..16 {
             m[i] = bytes_to_u64(&self.buf[i * 8..min((i + 1) * 8, BLOCK_LEN)]);
         }
@@ -217,6 +216,7 @@ impl Blake2b {
         self.buf[self.buf_len..].fill(0);
 
         let mut m = [0u64; 16];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..16 {
             m[i] = bytes_to_u64(&self.buf[i * 8..min((i + 1) * 8, BLOCK_LEN)]);
         }

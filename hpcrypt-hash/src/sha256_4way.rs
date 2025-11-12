@@ -22,20 +22,15 @@ const K: [u32; 64] = [
 ];
 
 #[derive(Clone)]
-pub struct Sha256 {
+#[repr(C, align(64))]
+pub struct Sha256_4Way {
     h: [u32; 8],
     buf: [u8; BLOCK_LEN],
     buflen: usize,
     len: u64,
 }
 
-impl Default for Sha256 {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Sha256 {
+impl Sha256_4Way {
     pub fn new() -> Self {
         Self {
             h: H0,
@@ -257,8 +252,8 @@ impl Sha256 {
     }
 }
 
-pub fn sha256(data: &[u8]) -> [u8; OUT_LEN] {
-    let mut hasher = Sha256::new();
+pub fn sha256_4way(data: &[u8]) -> [u8; OUT_LEN] {
+    let mut hasher = Sha256_4Way::new();
     hasher.update(data);
     hasher.finalize()
 }

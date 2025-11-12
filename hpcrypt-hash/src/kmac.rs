@@ -18,7 +18,7 @@ use alloc::vec::Vec;
 /// Keccak state size in 64-bit words
 const STATE_SIZE: usize = 25;
 
-/// Round constants for Keccak-f\[1600\] (from sha3.rs)
+/// Round constants for Keccak-f[1600] (from sha3.rs)
 pub const ROUND_CONSTANTS: [u64; 24] = [
     0x0000000000000001,
     0x0000000000008082,
@@ -56,7 +56,7 @@ const PI_LANE: [usize; 24] = [
     10, 7, 11, 17, 18, 3, 5, 16, 8, 21, 24, 4, 15, 23, 19, 13, 12, 2, 20, 14, 22, 9, 6, 1,
 ];
 
-/// Keccak-f\[1600\] permutation function
+/// Keccak-f[1600] permutation function
 ///
 /// Applies the 24-round Keccak permutation to the 1600-bit state.
 /// This is the core cryptographic transformation used in SHA-3, SHAKE, and KMAC.
@@ -124,7 +124,7 @@ fn keccak_f(state: &mut [u64; 25]) {
 /// - 8 bytes for the value (maximum usize on 64-bit platforms)
 ///
 /// Using stack allocation provides significant performance improvements (3-6x speedup)
-/// compared to heap-allocated `Vec<u8>` for these small, fixed-size encodings.
+/// compared to heap-allocated Vec<u8> for these small, fixed-size encodings.
 #[derive(Clone, Copy)]
 pub struct EncodedValue {
     /// Stack-allocated buffer (max 9 bytes: 1 length + 8 data bytes for usize on 64-bit)
@@ -700,8 +700,6 @@ impl CShake256 {
 ///
 /// # Example
 /// ```
-/// # #[cfg(feature = "alloc")]
-/// # {
 /// use hpcrypt_hash::Kmac128;
 ///
 /// let key = b"my secret key";
@@ -710,7 +708,6 @@ impl CShake256 {
 ///
 /// // Generate 32-byte MAC
 /// let mac = Kmac128::mac(key, message, customization, 32);
-/// # }
 /// ```
 #[derive(Clone)]
 pub struct Kmac128 {
@@ -755,7 +752,7 @@ impl Kmac128 {
     /// * `output_len` - Desired MAC length in bytes (recommended: >= 16 bytes)
     ///
     /// # Returns
-    /// The computed MAC as a `Vec<u8>`
+    /// The computed MAC as a Vec<u8>
     #[cfg(feature = "alloc")]
     pub fn finalize(mut self, output_len: usize) -> Vec<u8> {
         // Append right_encode(output_len in bits)
@@ -803,8 +800,6 @@ impl Kmac128 {
     ///
     /// # Example
     /// ```
-    /// # #[cfg(feature = "alloc")]
-    /// # {
     /// use hpcrypt_hash::Kmac128;
     ///
     /// let key = b"secret key";
@@ -816,7 +811,6 @@ impl Kmac128 {
     /// // Verify MAC (constant-time)
     /// assert!(Kmac128::verify(key, message, b"", &mac));
     /// assert!(!Kmac128::verify(key, b"wrong message", b"", &mac));
-    /// # }
     /// ```
     #[cfg(feature = "alloc")]
     pub fn verify(key: &[u8], message: &[u8], customization: &[u8], tag: &[u8]) -> bool {
@@ -850,8 +844,6 @@ impl Kmac128 {
 ///
 /// # Example
 /// ```
-/// # #[cfg(feature = "alloc")]
-/// # {
 /// use hpcrypt_hash::Kmac256;
 ///
 /// let key = b"my secret key";
@@ -860,7 +852,6 @@ impl Kmac128 {
 ///
 /// // Generate 64-byte MAC
 /// let mac = Kmac256::mac(key, message, customization, 64);
-/// # }
 /// ```
 #[derive(Clone)]
 pub struct Kmac256 {
@@ -905,7 +896,7 @@ impl Kmac256 {
     /// * `output_len` - Desired MAC length in bytes (recommended: >= 16 bytes)
     ///
     /// # Returns
-    /// The computed MAC as a `Vec<u8>`
+    /// The computed MAC as a Vec<u8>
     #[cfg(feature = "alloc")]
     pub fn finalize(mut self, output_len: usize) -> Vec<u8> {
         // Append right_encode(output_len in bits)
@@ -953,8 +944,6 @@ impl Kmac256 {
     ///
     /// # Example
     /// ```
-    /// # #[cfg(feature = "alloc")]
-    /// # {
     /// use hpcrypt_hash::Kmac256;
     ///
     /// let key = b"secret key";
@@ -966,7 +955,6 @@ impl Kmac256 {
     /// // Verify MAC (constant-time)
     /// assert!(Kmac256::verify(key, message, b"", &mac));
     /// assert!(!Kmac256::verify(key, b"wrong message", b"", &mac));
-    /// # }
     /// ```
     #[cfg(feature = "alloc")]
     pub fn verify(key: &[u8], message: &[u8], customization: &[u8], tag: &[u8]) -> bool {
@@ -991,14 +979,11 @@ impl Kmac256 {
 ///
 /// # Example
 /// ```
-/// # #[cfg(feature = "alloc")]
-/// # {
 /// use hpcrypt_hash::kmac128;
 ///
 /// let key = b"secret key";
 /// let message = b"hello world";
 /// let mac = kmac128(key, message, b"", 32);
-/// # }
 /// ```
 #[cfg(feature = "alloc")]
 pub fn kmac128(key: &[u8], message: &[u8], customization: &[u8], output_len: usize) -> Vec<u8> {
@@ -1020,14 +1005,11 @@ pub fn kmac128(key: &[u8], message: &[u8], customization: &[u8], output_len: usi
 ///
 /// # Example
 /// ```
-/// # #[cfg(feature = "alloc")]
-/// # {
 /// use hpcrypt_hash::kmac256;
 ///
 /// let key = b"secret key";
 /// let message = b"hello world";
 /// let mac = kmac256(key, message, b"", 64);
-/// # }
 /// ```
 #[cfg(feature = "alloc")]
 pub fn kmac256(key: &[u8], message: &[u8], customization: &[u8], output_len: usize) -> Vec<u8> {
@@ -1036,16 +1018,9 @@ pub fn kmac256(key: &[u8], message: &[u8], customization: &[u8], output_len: usi
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "alloc")]
     use super::*;
 
-    #[cfg(feature = "alloc")]
-    extern crate alloc;
-    #[cfg(feature = "alloc")]
-    use alloc::vec;
-
     #[test]
-    #[cfg(feature = "alloc")]
     fn test_left_encode() {
         assert_eq!(left_encode(0), vec![1, 0]);
         assert_eq!(left_encode(255), vec![1, 255]);
@@ -1054,7 +1029,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn test_right_encode() {
         assert_eq!(right_encode(0), vec![0, 1]);
         assert_eq!(right_encode(255), vec![255, 1]);
@@ -1063,7 +1037,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn test_kmac128_basic() {
         // Basic smoke test
         let key = b"my secret key";
@@ -1081,7 +1054,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn test_kmac256_basic() {
         // Basic smoke test
         let key = b"my secret key";
@@ -1099,7 +1071,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn test_kmac_variable_output_length() {
         let key = b"test";
         let message = b"data";
@@ -1112,7 +1083,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn test_kmac_customization() {
         let key = b"key";
         let message = b"message";
@@ -1129,7 +1099,6 @@ mod tests {
 
     // NIST SP 800-185 test vectors
     #[test]
-    #[cfg(feature = "alloc")]
     fn test_kmac128_nist_sample_1() {
         use hex_literal::hex;
         // Sample #1 from NIST SP 800-185
@@ -1144,7 +1113,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn test_kmac256_nist_sample_1() {
         use hex_literal::hex;
         // Sample #4 from NIST SP 800-185
@@ -1159,7 +1127,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn test_kmac128_verify() {
         let key = b"test key";
         let message = b"test message";
@@ -1183,12 +1150,7 @@ mod tests {
         // Verify with corrupted MAC (flip one bit)
         let mut corrupted_mac = mac.clone();
         corrupted_mac[0] ^= 1;
-        assert!(!Kmac128::verify(
-            key,
-            message,
-            customization,
-            &corrupted_mac
-        ));
+        assert!(!Kmac128::verify(key, message, customization, &corrupted_mac));
 
         // Verify with wrong MAC length
         let short_mac = &mac[..16];
@@ -1196,7 +1158,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn test_kmac256_verify() {
         let key = b"test key";
         let message = b"test message";
@@ -1220,12 +1181,7 @@ mod tests {
         // Verify with corrupted MAC (flip one bit)
         let mut corrupted_mac = mac.clone();
         corrupted_mac[0] ^= 1;
-        assert!(!Kmac256::verify(
-            key,
-            message,
-            customization,
-            &corrupted_mac
-        ));
+        assert!(!Kmac256::verify(key, message, customization, &corrupted_mac));
 
         // Verify with wrong MAC length
         let short_mac = &mac[..32];

@@ -15,26 +15,51 @@ hpcrypt-core = { workspace = true }
 
 [dev-dependencies]
 blake3 = "1.8.2"
-hex = { workspace = true }
 hex-literal = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "shake_optimization"
+harness = false
+
+[[bench]]
+name = "kmac_optimization_benchmarks"
+harness = false
+
+[[bench]]
+name = "kmac_encoding_comparison"
+harness = false
+
+[[bench]]
+name = "kmac_absorb_comparison"
+harness = false
+
+[[bench]]
+name = "kmac_precomputed_comparison"
+harness = false
+
+[[bench]]
+name = "keccak_f_comparison"
+harness = false
+
+[[bench]]
+name = "keccak_step_level_comparison"
+harness = false
+
+[[bench]]
+name = "kmac_const_generic_comparison"
+harness = false
+
+[[bench]]
+name = "lane_complement_comparison"
+harness = false
+
+[[bench]]
+name = "small_message_fast_path"
+harness = false
 
 [features]
 default = ["std", "alloc"]
 std = ["hpcrypt-core/std"]
 alloc = ["hpcrypt-core/alloc"]
-
-[[example]]
-name = "kmac_basic"
-required-features = ["alloc"]
-
-[[example]]
-name = "xof_reader"
-required-features = ["alloc"]
-
-[[test]]
-name = "kmac_tests"
-required-features = ["alloc"]
-
-[[test]]
-name = "xof_reader_tests"
-required-features = ["alloc"]
+lane-complement = []

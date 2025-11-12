@@ -8,8 +8,6 @@
 //! Security properties:
 //! - Provides message authenticity and integrity
 //! - Resists length extension attacks
-
-#![allow(clippy::needless_range_loop)]
 //! - Key-dependent pseudorandom function
 
 extern crate alloc;
@@ -60,6 +58,7 @@ impl HmacSha256 {
 
         // XOR key with ipad (key is already padded to BLOCK_LEN)
         let mut ipad_key = [0u8; BLOCK_LEN];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..BLOCK_LEN {
             ipad_key[i] = self.key[i] ^ IPAD;
         }
@@ -72,6 +71,7 @@ impl HmacSha256 {
 
         // XOR key with opad
         let mut opad_key = [0u8; BLOCK_LEN];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..BLOCK_LEN {
             opad_key[i] = self.key[i] ^ OPAD;
         }
@@ -121,6 +121,7 @@ impl HmacSha384 {
         // Compute inner hash: H((K ⊕ ipad) || message)
         let mut inner = Sha384::new();
         let mut ipad_key = [0u8; BLOCK_LEN];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..BLOCK_LEN {
             ipad_key[i] = self.key[i] ^ IPAD;
         }
@@ -131,6 +132,7 @@ impl HmacSha384 {
         // Compute outer hash: H((K ⊕ opad) || inner_hash)
         let mut outer = Sha384::new();
         let mut opad_key = [0u8; BLOCK_LEN];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..BLOCK_LEN {
             opad_key[i] = self.key[i] ^ OPAD;
         }
@@ -179,6 +181,7 @@ impl HmacSha512 {
         // Compute inner hash: H((K ⊕ ipad) || message)
         let mut inner = Sha512::new();
         let mut ipad_key = [0u8; BLOCK_LEN];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..BLOCK_LEN {
             ipad_key[i] = self.key[i] ^ IPAD;
         }
@@ -189,6 +192,7 @@ impl HmacSha512 {
         // Compute outer hash: H((K ⊕ opad) || inner_hash)
         let mut outer = Sha512::new();
         let mut opad_key = [0u8; BLOCK_LEN];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..BLOCK_LEN {
             opad_key[i] = self.key[i] ^ OPAD;
         }
@@ -233,6 +237,7 @@ impl HmacBlake2b {
         // Compute inner hash: H((K ⊕ ipad) || message)
         let mut inner = Blake2b::new();
         let mut ipad_key = [0u8; BLOCK_LEN];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..BLOCK_LEN {
             ipad_key[i] = self.key[i] ^ IPAD;
         }
@@ -243,6 +248,7 @@ impl HmacBlake2b {
         // Compute outer hash: H((K ⊕ opad) || inner_hash)
         let mut outer = Blake2b::new();
         let mut opad_key = [0u8; BLOCK_LEN];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..BLOCK_LEN {
             opad_key[i] = self.key[i] ^ OPAD;
         }

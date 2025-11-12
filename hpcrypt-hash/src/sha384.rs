@@ -23,12 +23,6 @@ pub struct Sha384 {
     total_len: u64,
 }
 
-impl Default for Sha384 {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl Sha384 {
     /// Create a new SHA-384 hasher
     pub fn new() -> Self {
@@ -270,6 +264,12 @@ impl Sha384 {
         self.state[5] = self.state[5].wrapping_add(f);
         self.state[6] = self.state[6].wrapping_add(g);
         self.state[7] = self.state[7].wrapping_add(h);
+    }
+}
+
+impl Default for Sha384 {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
