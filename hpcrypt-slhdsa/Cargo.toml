@@ -1,0 +1,143 @@
+[package]
+name = "hpcrypt-slhdsa"
+version = "0.1.0"
+edition = "2021"
+authors = ["Maamoun"]
+description = "High-performance implementation of SLH-DSA (SPHINCS+) in Rust with comprehensive testing and benchmarks"
+license = "MIT OR Apache-2.0"
+keywords = ["cryptography", "post-quantum", "signature", "sphincs", "slh-dsa"]
+categories = ["cryptography", "no-std"]
+
+[dependencies]
+# Hash functions
+sha2 = { version = "0.10", default-features = false }
+sha3 = { version = "0.10", default-features = false }
+
+# Random number generation
+rand_core = { version = "0.6", default-features = false }
+
+# Constant-time operations and zeroization
+subtle = { version = "2.5", default-features = false }
+zeroize = { version = "1.7", default-features = false, features = ["derive"] }
+
+[dev-dependencies]
+# Benchmarking
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# Testing utilities
+hex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rand = "0.8"
+
+[features]
+default = ["std"]
+std = ["sha2/std", "sha3/std", "rand_core/std", "subtle/std", "zeroize/std"]
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = false
+debug = false
+panic = "abort"
+
+[profile.bench]
+inherits = "release"
+debug = true
+
+[[bench]]
+name = "keygen"
+harness = false
+
+[[bench]]
+name = "sign"
+harness = false
+
+[[bench]]
+name = "verify"
+harness = false
+
+[[bench]]
+name = "components"
+harness = false
+
+[[bench]]
+name = "hash_optimization"
+harness = false
+
+[[bench]]
+name = "fors_optimization"
+harness = false
+
+[[bench]]
+name = "wots_optimization"
+harness = false
+
+[lib]
+name = "hpcrypt_slhdsa"
+path = "src/lib.rs"
+
+[[bench]]
+name = "hardware_acceleration"
+harness = false
+
+[[bench]]
+name = "sha_ni_comparison"
+harness = false
+
+[[bench]]
+name = "memory_optimization"
+harness = false
+
+[[bench]]
+name = "pgo_test"
+harness = false
+
+[[bench]]
+name = "optimization_tests"
+harness = false
+
+[[bench]]
+name = "merkle_cache_bench"
+harness = false
+
+[[bench]]
+name = "address_optimization"
+harness = false
+
+[[bench]]
+name = "hypertree_clone_optimization"
+harness = false
+
+[[bench]]
+name = "stack_allocation_bench"
+harness = false
+
+[[bench]]
+name = "fors_root_optimization"
+harness = false
+
+[[bench]]
+name = "inline_optimization"
+harness = false
+
+[[bench]]
+name = "wots_buffer_optimization"
+harness = false
+
+[[bench]]
+name = "merkle_to_vec_optimization"
+harness = false
+
+[[bench]]
+name = "code_dedup_optimization"
+harness = false
+
+[[bench]]
+name = "const_generic_optimization"
+harness = false
+
+[[bench]]
+name = "vectorization_bench"
+harness = false
