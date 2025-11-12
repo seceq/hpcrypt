@@ -1,0 +1,3 @@
+warning: /home/maamoun/hpcrypt/Cargo.toml: `panic` setting is ignored for `bench` profile
+error: no bench target named `sha2_quick_bench`.
+
