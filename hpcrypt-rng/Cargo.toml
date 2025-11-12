@@ -20,6 +20,9 @@ zeroize = { version = "1.7", default-features = false, features = ["alloc"] }
 # For constant-time operations
 subtle = { version = "2.5", default-features = false }
 
+# ChaCha20 for DRBG (future feature, moved to future-crates)
+# hpcrypt-aead = { path = "../hpcrypt-aead", default-features = false, optional = true }
+
 [dev-dependencies]
 # For testing randomness quality
 rand = "0.8"
@@ -31,6 +34,10 @@ alloc = ["zeroize/alloc"]
 
 # OS-based RNG (default, recommended)
 os-rng = ["getrandom/std"]
+
+# Deterministic RNG (for testing/reproducibility)
+# TODO: Implement chacha20_rng module before enabling this feature
+# chacha20-rng = ["hpcrypt-aead", "alloc"]
 
 [package.metadata.docs.rs]
 all-features = true
