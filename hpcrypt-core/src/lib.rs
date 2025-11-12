@@ -31,6 +31,7 @@ pub use zeroize;
 
 pub use ct::{CtEqual, CtOption};
 pub use ct_utils::{
-    ct_is_zero_u64, ct_swap_array, ct_swap_u64, ct_table_lookup, Choice, ConditionallyNegatable,
-    ConditionallySelectable, ConstantTimeEq, ConstantTimeGreater, ConstantTimeLess,
+    Choice, ConditionallySelectable, ConditionallyNegatable, ConstantTimeEq,
+    ConstantTimeGreater, ConstantTimeLess,
+    ct_table_lookup, ct_is_zero_u64, ct_swap_u64, ct_swap_array
 };

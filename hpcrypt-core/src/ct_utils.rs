@@ -34,13 +34,13 @@ impl Choice {
 
     /// Construct a `Choice` representing true (1)
     #[inline]
-    pub const fn true_choice() -> Self {
+    pub const fn TRUE() -> Self {
         Choice(1)
     }
 
     /// Construct a `Choice` representing false (0)
     #[inline]
-    pub const fn false_choice() -> Self {
+    pub const fn FALSE() -> Self {
         Choice(0)
     }
 
@@ -224,7 +224,7 @@ impl ConditionallySelectable for u64 {
 impl ConditionallySelectable for u8 {
     #[inline]
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
-        let mask = choice.0.wrapping_neg();
+        let mask = (choice.0 as u8).wrapping_neg();
         (a & !mask) | (b & mask)
     }
 }
@@ -269,7 +269,7 @@ impl ConstantTimeEq for u8 {
     #[inline]
     fn ct_eq(&self, other: &Self) -> Choice {
         let xor = self ^ other;
-        let result = (xor | xor.wrapping_neg()) >> 7;
+        let result = ((xor | xor.wrapping_neg()) >> 7) as u8;
         Choice(1 - result)
     }
 }
@@ -281,11 +281,7 @@ impl ConstantTimeGreater for u64 {
         // self > other  <==>  self - other - 1 doesn't underflow
         // Compute (self - other - 1) and check if borrow occurred
         let (_, borrow) = self.overflowing_sub(*other);
-        let (_, borrow2) = if borrow {
-            (0u64, true)
-        } else {
-            self.wrapping_sub(*other).overflowing_sub(1)
-        };
+        let (_, borrow2) = if borrow { (0u64, true) } else { self.wrapping_sub(*other).overflowing_sub(1) };
 
         // If no borrow in final computation, self > other
         Choice((!borrow2) as u8)
@@ -315,12 +311,12 @@ impl ConstantTimeEq for i64 {
 impl ConstantTimeEq for [u64] {
     fn ct_eq(&self, other: &Self) -> Choice {
         if self.len() != other.len() {
-            return Choice::false_choice();
+            return Choice::FALSE();
         }
 
-        let mut result = Choice::true_choice();
+        let mut result = Choice::TRUE();
         for (a, b) in self.iter().zip(other.iter()) {
-            result &= a.ct_eq(b);
+            result = result & a.ct_eq(b);
         }
         result
     }
@@ -330,12 +326,12 @@ impl ConstantTimeEq for [u64] {
 impl ConstantTimeEq for [u8] {
     fn ct_eq(&self, other: &Self) -> Choice {
         if self.len() != other.len() {
-            return Choice::false_choice();
+            return Choice::FALSE();
         }
 
-        let mut result = Choice::true_choice();
+        let mut result = Choice::TRUE();
         for (a, b) in self.iter().zip(other.iter()) {
-            result &= a.ct_eq(b);
+            result = result & a.ct_eq(b);
         }
         result
     }
@@ -348,9 +344,9 @@ macro_rules! impl_ct_eq_array {
             impl ConstantTimeEq for [u64; $n] {
                 #[inline]
                 fn ct_eq(&self, other: &Self) -> Choice {
-                    let mut result = Choice::true_choice();
+                    let mut result = Choice::TRUE();
                     for i in 0..$n {
-                        result &= self[i].ct_eq(&other[i]);
+                        result = result & self[i].ct_eq(&other[i]);
                     }
                     result
                 }
@@ -368,9 +364,9 @@ macro_rules! impl_ct_eq_array_i64 {
             impl ConstantTimeEq for [i64; $n] {
                 #[inline]
                 fn ct_eq(&self, other: &Self) -> Choice {
-                    let mut result = Choice::true_choice();
+                    let mut result = Choice::TRUE();
                     for i in 0..$n {
-                        result &= self[i].ct_eq(&other[i]);
+                        result = result & self[i].ct_eq(&other[i]);
                     }
                     result
                 }
@@ -424,7 +420,7 @@ impl<const N: usize> ConditionallyNegatable for [i64; N] {
 #[inline]
 pub fn ct_table_lookup<T: ConditionallySelectable + Default + Copy>(
     table: &[T],
-    index: usize,
+    index: usize
 ) -> T {
     let mut result = T::default();
 
@@ -474,8 +470,8 @@ mod tests {
 
     #[test]
     fn test_choice_basic() {
-        let t = Choice::true_choice();
-        let f = Choice::false_choice();
+        let t = Choice::TRUE();
+        let f = Choice::FALSE();
 
         assert_eq!(t.unwrap_u8(), 1);
         assert_eq!(f.unwrap_u8(), 0);
@@ -485,8 +481,8 @@ mod tests {
 
     #[test]
     fn test_choice_logic() {
-        let t = Choice::true_choice();
-        let f = Choice::false_choice();
+        let t = Choice::TRUE();
+        let f = Choice::FALSE();
 
         assert_eq!((t & t).unwrap_u8(), 1);
         assert_eq!((t & f).unwrap_u8(), 0);
@@ -507,10 +503,10 @@ mod tests {
         let a = 42u64;
         let b = 99u64;
 
-        let result = u64::conditional_select(&a, &b, Choice::false_choice());
+        let result = u64::conditional_select(&a, &b, Choice::FALSE());
         assert_eq!(result, 42);
 
-        let result = u64::conditional_select(&a, &b, Choice::true_choice());
+        let result = u64::conditional_select(&a, &b, Choice::TRUE());
         assert_eq!(result, 99);
     }
 
@@ -549,17 +545,17 @@ mod tests {
     fn test_conditional_negate_i64() {
         let value = 42i64;
 
-        let result = value.conditional_negate(Choice::false_choice());
+        let result = value.conditional_negate(Choice::FALSE());
         assert_eq!(result, 42);
 
-        let result = value.conditional_negate(Choice::true_choice());
+        let result = value.conditional_negate(Choice::TRUE());
         assert_eq!(result, -42);
 
         let neg_value = -42i64;
-        let result = neg_value.conditional_negate(Choice::true_choice());
+        let result = neg_value.conditional_negate(Choice::TRUE());
         assert_eq!(result, 42);
 
-        let result = neg_value.conditional_negate(Choice::false_choice());
+        let result = neg_value.conditional_negate(Choice::FALSE());
         assert_eq!(result, -42);
     }
 
@@ -586,11 +582,11 @@ mod tests {
         let mut a = 42u64;
         let mut b = 99u64;
 
-        ct_swap_u64(&mut a, &mut b, Choice::false_choice());
+        ct_swap_u64(&mut a, &mut b, Choice::FALSE());
         assert_eq!(a, 42);
         assert_eq!(b, 99);
 
-        ct_swap_u64(&mut a, &mut b, Choice::true_choice());
+        ct_swap_u64(&mut a, &mut b, Choice::TRUE());
         assert_eq!(a, 99);
         assert_eq!(b, 42);
     }
@@ -600,11 +596,11 @@ mod tests {
         let mut a = [1u64, 2, 3, 4];
         let mut b = [5u64, 6, 7, 8];
 
-        ct_swap_array(&mut a, &mut b, Choice::false_choice());
+        ct_swap_array(&mut a, &mut b, Choice::FALSE());
         assert_eq!(a, [1, 2, 3, 4]);
         assert_eq!(b, [5, 6, 7, 8]);
 
-        ct_swap_array(&mut a, &mut b, Choice::true_choice());
+        ct_swap_array(&mut a, &mut b, Choice::TRUE());
         assert_eq!(a, [5, 6, 7, 8]);
         assert_eq!(b, [1, 2, 3, 4]);
     }
