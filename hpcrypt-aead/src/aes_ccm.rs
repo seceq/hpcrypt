@@ -4,9 +4,9 @@
 //! CCM combines CTR mode encryption with CBC-MAC for authentication.
 
 extern crate alloc;
+use crate::aes::{Aes, BLOCK_SIZE};
 use alloc::vec;
 use alloc::vec::Vec;
-use crate::aes::{Aes, BLOCK_SIZE};
 
 /// CCM error types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -55,7 +55,11 @@ impl Aes128Ccm {
         }
 
         let l = 15 - nonce.len(); // Length field size
-        let max_msg_len = if l < 8 { (1u64 << (8 * l)) - 1 } else { u64::MAX };
+        let max_msg_len = if l < 8 {
+            (1u64 << (8 * l)) - 1
+        } else {
+            u64::MAX
+        };
         if plaintext.len() as u64 > max_msg_len {
             return Err(CcmError::MessageTooLong);
         }
@@ -167,7 +171,11 @@ impl Aes256Ccm {
         }
 
         let l = 15 - nonce.len();
-        let max_msg_len = if l < 8 { (1u64 << (8 * l)) - 1 } else { u64::MAX };
+        let max_msg_len = if l < 8 {
+            (1u64 << (8 * l)) - 1
+        } else {
+            u64::MAX
+        };
         if plaintext.len() as u64 > max_msg_len {
             return Err(CcmError::MessageTooLong);
         }
@@ -403,10 +411,12 @@ mod tests {
         let aad = hex!("0001020304050607");
         let tag_len = 8;
 
-        let ciphertext_and_tag = Aes128Ccm::encrypt(&key, &nonce, &plaintext, &aad, tag_len).unwrap();
+        let ciphertext_and_tag =
+            Aes128Ccm::encrypt(&key, &nonce, &plaintext, &aad, tag_len).unwrap();
 
         // Verify we can decrypt
-        let decrypted = Aes128Ccm::decrypt(&key, &nonce, &ciphertext_and_tag, &aad, tag_len).unwrap();
+        let decrypted =
+            Aes128Ccm::decrypt(&key, &nonce, &ciphertext_and_tag, &aad, tag_len).unwrap();
         assert_eq!(decrypted, plaintext);
     }
 
@@ -418,8 +428,10 @@ mod tests {
         let aad = hex!("0001020304050607");
         let tag_len = 8;
 
-        let ciphertext_and_tag = Aes128Ccm::encrypt(&key, &nonce, plaintext, &aad, tag_len).unwrap();
-        let decrypted = Aes128Ccm::decrypt(&key, &nonce, &ciphertext_and_tag, &aad, tag_len).unwrap();
+        let ciphertext_and_tag =
+            Aes128Ccm::encrypt(&key, &nonce, plaintext, &aad, tag_len).unwrap();
+        let decrypted =
+            Aes128Ccm::decrypt(&key, &nonce, &ciphertext_and_tag, &aad, tag_len).unwrap();
         assert_eq!(decrypted, plaintext);
     }
 
@@ -431,8 +443,10 @@ mod tests {
         let aad = b"";
         let tag_len = 8;
 
-        let ciphertext_and_tag = Aes128Ccm::encrypt(&key, &nonce, &plaintext, aad, tag_len).unwrap();
-        let decrypted = Aes128Ccm::decrypt(&key, &nonce, &ciphertext_and_tag, aad, tag_len).unwrap();
+        let ciphertext_and_tag =
+            Aes128Ccm::encrypt(&key, &nonce, &plaintext, aad, tag_len).unwrap();
+        let decrypted =
+            Aes128Ccm::decrypt(&key, &nonce, &ciphertext_and_tag, aad, tag_len).unwrap();
         assert_eq!(decrypted, plaintext);
     }
 
@@ -444,7 +458,8 @@ mod tests {
         let aad = hex!("0001020304050607");
         let tag_len = 8;
 
-        let mut ciphertext_and_tag = Aes128Ccm::encrypt(&key, &nonce, &plaintext, &aad, tag_len).unwrap();
+        let mut ciphertext_and_tag =
+            Aes128Ccm::encrypt(&key, &nonce, &plaintext, &aad, tag_len).unwrap();
 
         // Corrupt the tag
         let len = ciphertext_and_tag.len();
@@ -463,7 +478,8 @@ mod tests {
         let wrong_aad = hex!("0001020304050608");
         let tag_len = 8;
 
-        let ciphertext_and_tag = Aes128Ccm::encrypt(&key, &nonce, &plaintext, &aad, tag_len).unwrap();
+        let ciphertext_and_tag =
+            Aes128Ccm::encrypt(&key, &nonce, &plaintext, &aad, tag_len).unwrap();
         let result = Aes128Ccm::decrypt(&key, &nonce, &ciphertext_and_tag, &wrong_aad, tag_len);
         assert_eq!(result, Err(CcmError::AuthenticationFailed));
     }
@@ -476,8 +492,10 @@ mod tests {
         let aad = hex!("0001020304050607");
         let tag_len = 16;
 
-        let ciphertext_and_tag = Aes256Ccm::encrypt(&key, &nonce, &plaintext, &aad, tag_len).unwrap();
-        let decrypted = Aes256Ccm::decrypt(&key, &nonce, &ciphertext_and_tag, &aad, tag_len).unwrap();
+        let ciphertext_and_tag =
+            Aes256Ccm::encrypt(&key, &nonce, &plaintext, &aad, tag_len).unwrap();
+        let decrypted =
+            Aes256Ccm::decrypt(&key, &nonce, &ciphertext_and_tag, &aad, tag_len).unwrap();
         assert_eq!(decrypted, plaintext);
     }
 
@@ -489,8 +507,10 @@ mod tests {
         let aad = hex!("0001020304050607");
 
         for &tag_len in &[4, 6, 8, 10, 12, 14, 16] {
-            let ciphertext_and_tag = Aes128Ccm::encrypt(&key, &nonce, &plaintext, &aad, tag_len).unwrap();
-            let decrypted = Aes128Ccm::decrypt(&key, &nonce, &ciphertext_and_tag, &aad, tag_len).unwrap();
+            let ciphertext_and_tag =
+                Aes128Ccm::encrypt(&key, &nonce, &plaintext, &aad, tag_len).unwrap();
+            let decrypted =
+                Aes128Ccm::decrypt(&key, &nonce, &ciphertext_and_tag, &aad, tag_len).unwrap();
             assert_eq!(decrypted, plaintext);
         }
     }
