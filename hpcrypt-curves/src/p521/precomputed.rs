@@ -17,8 +17,8 @@
 //!
 //! Total table size: 131 windows × 16 points × 132 bytes = 276,672 bytes (~270 KB)
 
-use super::{Point, AffinePoint, Scalar};
 use super::field::FieldElement;
+use super::{AffinePoint, Point, Scalar};
 
 /// Window size for precomputed tables (in bits)
 ///
@@ -87,14 +87,16 @@ impl PrecomputedTable {
 
             // Precompute multiples: 0*base, 1*base, 2*base, ..., 15*base
             tables[window_idx][0] = AffinePoint::infinity_sentinel();
-            tables[window_idx][1] = base_jacobian.to_affine()
+            tables[window_idx][1] = base_jacobian
+                .to_affine()
                 .expect("Base point should not be infinity");
 
             // Build up the rest using Jacobian addition for speed
             let mut current = base_jacobian;
             for i in 2..16 {
                 current = current.add(&base_jacobian);
-                tables[window_idx][i] = current.to_affine()
+                tables[window_idx][i] = current
+                    .to_affine()
                     .expect("Multiple of base should not be infinity");
             }
         }
@@ -261,10 +263,16 @@ mod tests {
             let affine_precomputed = result_precomputed.to_affine().unwrap();
             let affine_regular = result_regular.to_affine().unwrap();
 
-            assert_eq!(affine_precomputed.x, affine_regular.x,
-                "X mismatch for k={}", k_val);
-            assert_eq!(affine_precomputed.y, affine_regular.y,
-                "Y mismatch for k={}", k_val);
+            assert_eq!(
+                affine_precomputed.x, affine_regular.x,
+                "X mismatch for k={}",
+                k_val
+            );
+            assert_eq!(
+                affine_precomputed.y, affine_regular.y,
+                "Y mismatch for k={}",
+                k_val
+            );
         }
     }
 
