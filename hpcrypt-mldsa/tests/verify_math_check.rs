@@ -1,12 +1,12 @@
 // Test to verify the mathematical relationship: w' = w - c·s2 + c·t0
 
 use mldsa::keygen::keygen_from_seed;
-use mldsa::sign::sign;
-use mldsa::params::{MlDsa65, DsaParams};
-use mldsa::poly::Poly;
 use mldsa::ntt::poly_mul_ntt;
-use mldsa::sampling::{expand_matrix_a, sample_in_ball};
 use mldsa::params::Q;
+use mldsa::params::{DsaParams, MlDsa65};
+use mldsa::poly::Poly;
+use mldsa::sampling::{expand_matrix_a, sample_in_ball};
+use mldsa::sign::sign;
 
 #[test]
 fn test_verify_mathematical_relationship() {
@@ -48,12 +48,16 @@ fn test_verify_mathematical_relationship() {
 
         let mut ct1_2d = Poly::new();
         for j in 0..256 {
-            ct1_2d.coeffs[j] = ((ct1.coeffs[j] as i64 * two_pow_d as i64).rem_euclid(Q as i64)) as i32;
+            ct1_2d.coeffs[j] =
+                ((ct1.coeffs[j] as i64 * two_pow_d as i64).rem_euclid(Q as i64)) as i32;
         }
         ct1_scaled.push(ct1_2d);
     }
 
-    eprintln!("c·t1·2^d[0].coeffs[0..4]: {:?}", &ct1_scaled[0].coeffs[0..4]);
+    eprintln!(
+        "c·t1·2^d[0].coeffs[0..4]: {:?}",
+        &ct1_scaled[0].coeffs[0..4]
+    );
 
     // Step 5: Compute w' = A·z - c·t1·2^d
     let mut w_prime = Vec::with_capacity(MlDsa65::K);
@@ -128,7 +132,10 @@ fn test_verify_mathematical_relationship() {
 
     eprintln!("\n=== COMPARISON ===");
     eprintln!("A·y[0].coeffs[0..4]:         {:?}", &ay[0].coeffs[0..4]);
-    eprintln!("w_reconstructed[0].coeffs[0..4]: {:?}", &w_reconstructed[0].coeffs[0..4]);
+    eprintln!(
+        "w_reconstructed[0].coeffs[0..4]: {:?}",
+        &w_reconstructed[0].coeffs[0..4]
+    );
 
     // Compute A·s1 using the SAME method as keygen
     // This is critical - must match the keygen approach exactly
@@ -154,7 +161,10 @@ fn test_verify_mathematical_relationship() {
         ay_check.push(check);
     }
     eprintln!("A·y[0].coeffs[0..4]:           {:?}", &ay[0].coeffs[0..4]);
-    eprintln!("A·z - c·A·s1 [0].coeffs[0..4]: {:?}", &ay_check[0].coeffs[0..4]);
+    eprintln!(
+        "A·z - c·A·s1 [0].coeffs[0..4]: {:?}",
+        &ay_check[0].coeffs[0..4]
+    );
 
     // Also check: t = A·s1 + s2
     eprintln!("\n=== TESTING: t vs A·s1 + s2 ===");
@@ -166,7 +176,9 @@ fn test_verify_mathematical_relationship() {
         let mut t_i = Poly::new();
         for j in 0..256 {
             // t = 2^d·t1 + t0
-            t_i.coeffs[j] = ((pk.t1[i].coeffs[j] as i64 * two_pow_d as i64 + sk.t0[i].coeffs[j] as i64).rem_euclid(Q as i64)) as i32;
+            t_i.coeffs[j] = ((pk.t1[i].coeffs[j] as i64 * two_pow_d as i64
+                + sk.t0[i].coeffs[j] as i64)
+                .rem_euclid(Q as i64)) as i32;
         }
         t_from_t1t0.push(t_i);
     }
@@ -178,19 +190,32 @@ fn test_verify_mathematical_relationship() {
         t_from_as1_s2.push(t_i);
     }
 
-    eprintln!("t (from t1,t0)[0].coeffs[0..4]:     {:?}", &t_from_t1t0[0].coeffs[0..4]);
-    eprintln!("t (from A·s1+s2)[0].coeffs[0..4]:   {:?}", &t_from_as1_s2[0].coeffs[0..4]);
+    eprintln!(
+        "t (from t1,t0)[0].coeffs[0..4]:     {:?}",
+        &t_from_t1t0[0].coeffs[0..4]
+    );
+    eprintln!(
+        "t (from A·s1+s2)[0].coeffs[0..4]:   {:?}",
+        &t_from_as1_s2[0].coeffs[0..4]
+    );
 
     // Check all coefficients
     let mut all_match = true;
     for i in 0..256 {
         if ay[0].coeffs[i] != w_reconstructed[0].coeffs[i] {
             all_match = false;
-            eprintln!("Mismatch at coeff[{}]: A·y={}, w_recon={}, diff={}",
-                i, ay[0].coeffs[i], w_reconstructed[0].coeffs[i],
-                (ay[0].coeffs[i] - w_reconstructed[0].coeffs[i]).abs());
+            eprintln!(
+                "Mismatch at coeff[{}]: A·y={}, w_recon={}, diff={}",
+                i,
+                ay[0].coeffs[i],
+                w_reconstructed[0].coeffs[i],
+                (ay[0].coeffs[i] - w_reconstructed[0].coeffs[i]).abs()
+            );
         }
     }
 
-    assert!(all_match, "The mathematical relationship w' = w - c·s2 + c·t0 does not hold!");
+    assert!(
+        all_match,
+        "The mathematical relationship w' = w - c·s2 + c·t0 does not hold!"
+    );
 }

@@ -4,11 +4,11 @@
 // the implementation produces consistent, reproducible results.
 
 use mldsa::keygen::keygen_from_seed;
+use mldsa::params::MlDsa65;
+use mldsa::serialize::{deserialize_public_key, deserialize_secret_key, deserialize_signature};
+use mldsa::serialize::{serialize_public_key, serialize_secret_key, serialize_signature};
 use mldsa::sign::sign_deterministic;
 use mldsa::verify::verify;
-use mldsa::params::MlDsa65;
-use mldsa::serialize::{serialize_public_key, serialize_secret_key, serialize_signature};
-use mldsa::serialize::{deserialize_public_key, deserialize_secret_key, deserialize_signature};
 
 #[test]
 fn test_kat_deterministic_keygen() {
@@ -36,10 +36,8 @@ fn test_kat_deterministic_signing() {
     let message = b"Test message for KAT";
     let rnd = [0x22u8; 32];
 
-    let sig1 = sign_deterministic::<MlDsa65>(&sk, message, &rnd)
-        .expect("Signing failed");
-    let sig2 = sign_deterministic::<MlDsa65>(&sk, message, &rnd)
-        .expect("Signing failed");
+    let sig1 = sign_deterministic::<MlDsa65>(&sk, message, &rnd).expect("Signing failed");
+    let sig2 = sign_deterministic::<MlDsa65>(&sk, message, &rnd).expect("Signing failed");
 
     // Same inputs should produce identical signatures
     assert_eq!(sig1.c_tilde, sig2.c_tilde, "c_tilde should be identical");
@@ -47,8 +45,14 @@ fn test_kat_deterministic_signing() {
     assert_eq!(sig1.h, sig2.h, "h should be identical");
 
     // Both should verify
-    assert!(verify::<MlDsa65>(&pk, message, &sig1), "Signature 1 should verify");
-    assert!(verify::<MlDsa65>(&pk, message, &sig2), "Signature 2 should verify");
+    assert!(
+        verify::<MlDsa65>(&pk, message, &sig1),
+        "Signature 1 should verify"
+    );
+    assert!(
+        verify::<MlDsa65>(&pk, message, &sig2),
+        "Signature 2 should verify"
+    );
 
     eprintln!("✓ Deterministic signing validated");
 }
@@ -70,18 +74,29 @@ fn test_kat_vector_1_empty_message() {
     let message = b"";
 
     let (pk, sk) = keygen_from_seed::<MlDsa65>(&seed);
-    let sig = sign_deterministic::<MlDsa65>(&sk, message, &rnd)
-        .expect("Signing failed");
+    let sig = sign_deterministic::<MlDsa65>(&sk, message, &rnd).expect("Signing failed");
 
     // Verify
-    assert!(verify::<MlDsa65>(&pk, message, &sig), "KAT vector 1 should verify");
+    assert!(
+        verify::<MlDsa65>(&pk, message, &sig),
+        "KAT vector 1 should verify"
+    );
 
     // Print for reference
     eprintln!("\n=== KAT Vector 1: Empty Message ===");
     eprintln!("seed: {}", hex::encode(&seed[..8]));
-    eprintln!("pk size: {} bytes", serialize_public_key::<MlDsa65>(&pk).len());
-    eprintln!("sk size: {} bytes", serialize_secret_key::<MlDsa65>(&sk).len());
-    eprintln!("sig size: {} bytes", serialize_signature::<MlDsa65>(&sig).len());
+    eprintln!(
+        "pk size: {} bytes",
+        serialize_public_key::<MlDsa65>(&pk).len()
+    );
+    eprintln!(
+        "sk size: {} bytes",
+        serialize_secret_key::<MlDsa65>(&sk).len()
+    );
+    eprintln!(
+        "sig size: {} bytes",
+        serialize_signature::<MlDsa65>(&sig).len()
+    );
     eprintln!("✓ KAT vector 1 validated");
 }
 
@@ -93,11 +108,13 @@ fn test_kat_vector_2_simple_message() {
     let message = b"Hello, ML-DSA!";
 
     let (pk, sk) = keygen_from_seed::<MlDsa65>(&seed);
-    let sig = sign_deterministic::<MlDsa65>(&sk, message, &rnd)
-        .expect("Signing failed");
+    let sig = sign_deterministic::<MlDsa65>(&sk, message, &rnd).expect("Signing failed");
 
     // Verify
-    assert!(verify::<MlDsa65>(&pk, message, &sig), "KAT vector 2 should verify");
+    assert!(
+        verify::<MlDsa65>(&pk, message, &sig),
+        "KAT vector 2 should verify"
+    );
 
     eprintln!("\n=== KAT Vector 2: Simple Message ===");
     eprintln!("message: {:?}", core::str::from_utf8(message).unwrap());
@@ -112,11 +129,13 @@ fn test_kat_vector_3_binary_data() {
     let message: &[u8] = &[0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD, 0xFC];
 
     let (pk, sk) = keygen_from_seed::<MlDsa65>(&seed);
-    let sig = sign_deterministic::<MlDsa65>(&sk, message, &rnd)
-        .expect("Signing failed");
+    let sig = sign_deterministic::<MlDsa65>(&sk, message, &rnd).expect("Signing failed");
 
     // Verify
-    assert!(verify::<MlDsa65>(&pk, message, &sig), "KAT vector 3 should verify");
+    assert!(
+        verify::<MlDsa65>(&pk, message, &sig),
+        "KAT vector 3 should verify"
+    );
 
     eprintln!("\n=== KAT Vector 3: Binary Data ===");
     eprintln!("message len: {} bytes", message.len());

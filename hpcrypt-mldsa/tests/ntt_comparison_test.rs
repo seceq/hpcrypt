@@ -50,14 +50,20 @@ fn compare_ntt_implementations() {
                 first_mismatch_idx = Some(i);
             }
             if mismatch_count < 20 {
-                println!("{:5} | {:10} | {:11} | {:10}", i, poly_c.coeffs[i], poly_rust.coeffs[i], diff);
+                println!(
+                    "{:5} | {:10} | {:11} | {:10}",
+                    i, poly_c.coeffs[i], poly_rust.coeffs[i], diff
+                );
             }
             mismatch_count += 1;
         }
     }
 
     if mismatch_count > 20 {
-        println!("... ({} total mismatches, showing first 20)", mismatch_count);
+        println!(
+            "... ({} total mismatches, showing first 20)",
+            mismatch_count
+        );
     }
 
     if mismatch_count == 0 {
@@ -92,14 +98,20 @@ fn compare_ntt_implementations() {
                 first_inv_mismatch_idx = Some(i);
             }
             if inv_mismatch_count < 20 {
-                println!("{:5} | {:10} | {:11} | {:10}", i, poly_c_inv.coeffs[i], poly_rust_inv.coeffs[i], diff);
+                println!(
+                    "{:5} | {:10} | {:11} | {:10}",
+                    i, poly_c_inv.coeffs[i], poly_rust_inv.coeffs[i], diff
+                );
             }
             inv_mismatch_count += 1;
         }
     }
 
     if inv_mismatch_count > 20 {
-        println!("... ({} total mismatches, showing first 20)", inv_mismatch_count);
+        println!(
+            "... ({} total mismatches, showing first 20)",
+            inv_mismatch_count
+        );
     }
 
     if inv_mismatch_count == 0 {
@@ -133,8 +145,10 @@ fn compare_ntt_implementations() {
             rust_roundtrip_errors += 1;
         }
 
-        println!("{:5} | {:10} | {:10} | {:11} | {:6} | {:9}",
-                 i, orig, c_result, rust_result, c_diff, rust_diff);
+        println!(
+            "{:5} | {:10} | {:10} | {:11} | {:6} | {:9}",
+            i, orig, c_result, rust_result, c_diff, rust_diff
+        );
     }
 
     println!("\nSummary:");
@@ -142,6 +156,12 @@ fn compare_ntt_implementations() {
     println!("  Native Rust round-trip errors: {}", rust_roundtrip_errors);
 
     // For CI: assert the implementations match
-    assert_eq!(mismatch_count, 0, "Forward NTT implementations should match");
-    assert_eq!(inv_mismatch_count, 0, "Inverse NTT implementations should match");
+    assert_eq!(
+        mismatch_count, 0,
+        "Forward NTT implementations should match"
+    );
+    assert_eq!(
+        inv_mismatch_count, 0,
+        "Inverse NTT implementations should match"
+    );
 }

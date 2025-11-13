@@ -3,11 +3,11 @@
 //! This test module validates the ML-DSA implementation against official
 //! NIST/Dilithium test vectors downloaded from the dilithium-py repository.
 
-use mldsa::params::MlDsa65;
 use mldsa::keygen::keygen_from_seed;
+use mldsa::params::MlDsa65;
+use mldsa::serialize::{serialize_public_key, serialize_secret_key, serialize_signature};
 use mldsa::sign::sign_deterministic;
 use mldsa::verify::verify;
-use mldsa::serialize::{serialize_public_key, serialize_secret_key, serialize_signature};
 
 /// Parse hex string to bytes
 fn parse_hex(hex: &str) -> Vec<u8> {
@@ -32,7 +32,7 @@ struct KatVector {
     pk: Vec<u8>,
     sk: Vec<u8>,
     smlen: usize,
-    sm: Vec<u8>,  // signature || message
+    sm: Vec<u8>, // signature || message
 }
 
 impl KatVector {
@@ -133,8 +133,7 @@ fn parse_kat_file(content: &str) -> Vec<KatVector> {
 fn test_parse_kat_vectors() {
     // Read the KAT file
     let kat_path = "tests/data/PQCsignKAT_ML_DSA_65.rsp";
-    let kat_content = std::fs::read_to_string(kat_path)
-        .expect("Failed to read KAT file");
+    let kat_content = std::fs::read_to_string(kat_path).expect("Failed to read KAT file");
 
     let vectors = parse_kat_file(&kat_content);
 
@@ -155,7 +154,11 @@ fn test_parse_kat_vectors() {
 
     // These are the actual sizes from Dilithium3/ML-DSA-65 test vectors
     assert_eq!(v0.pk.len(), 1952, "ML-DSA-65 public key is 1952 bytes");
-    assert_eq!(v0.sk.len(), 4000, "Dilithium3/ML-DSA-65 secret key in these KAT files is 4000 bytes");
+    assert_eq!(
+        v0.sk.len(),
+        4000,
+        "Dilithium3/ML-DSA-65 secret key in these KAT files is 4000 bytes"
+    );
     assert_eq!(v0.sm.len(), v0.smlen);
 
     println!("✓ KAT vector parsing successful");
@@ -165,8 +168,7 @@ fn test_parse_kat_vectors() {
 fn test_kat_keygen_first_vector() {
     // Read the KAT file
     let kat_path = "tests/data/PQCsignKAT_ML_DSA_65.rsp";
-    let kat_content = std::fs::read_to_string(kat_path)
-        .expect("Failed to read KAT file");
+    let kat_content = std::fs::read_to_string(kat_path).expect("Failed to read KAT file");
 
     let vectors = parse_kat_file(&kat_content);
     assert!(!vectors.is_empty(), "No vectors found");
@@ -186,8 +188,16 @@ fn test_kat_keygen_first_vector() {
     let serialized_pk = serialize_public_key::<MlDsa65>(&pk);
     let serialized_sk = serialize_secret_key::<MlDsa65>(&sk);
 
-    println!("Generated PK size: {} bytes (expected {})", serialized_pk.len(), vector.pk.len());
-    println!("Generated SK size: {} bytes (expected {})", serialized_sk.len(), vector.sk.len());
+    println!(
+        "Generated PK size: {} bytes (expected {})",
+        serialized_pk.len(),
+        vector.pk.len()
+    );
+    println!(
+        "Generated SK size: {} bytes (expected {})",
+        serialized_sk.len(),
+        vector.sk.len()
+    );
 
     // Note: We may not get exact byte-for-byte match because the KAT vectors
     // may use a different seed expansion or parameter set
@@ -200,8 +210,7 @@ fn test_kat_keygen_first_vector() {
 fn test_kat_sign_verify_cycle() {
     // Read the KAT file
     let kat_path = "tests/data/PQCsignKAT_ML_DSA_65.rsp";
-    let kat_content = std::fs::read_to_string(kat_path)
-        .expect("Failed to read KAT file");
+    let kat_content = std::fs::read_to_string(kat_path).expect("Failed to read KAT file");
 
     let vectors = parse_kat_file(&kat_content);
     assert!(!vectors.is_empty(), "No vectors found");
@@ -209,7 +218,10 @@ fn test_kat_sign_verify_cycle() {
     // Test first 10 vectors
     for i in 0..std::cmp::min(10, vectors.len()) {
         let vector = &vectors[i];
-        println!("\n=== Testing Sign/Verify Cycle for Vector {} ===", vector.count);
+        println!(
+            "\n=== Testing Sign/Verify Cycle for Vector {} ===",
+            vector.count
+        );
 
         // Use first 32 bytes of seed
         let mut seed = [0u8; 32];
@@ -239,8 +251,7 @@ fn test_kat_sign_verify_cycle() {
 fn test_kat_signature_sizes() {
     // Read the KAT file
     let kat_path = "tests/data/PQCsignKAT_ML_DSA_65.rsp";
-    let kat_content = std::fs::read_to_string(kat_path)
-        .expect("Failed to read KAT file");
+    let kat_content = std::fs::read_to_string(kat_path).expect("Failed to read KAT file");
 
     let vectors = parse_kat_file(&kat_content);
 
@@ -261,12 +272,19 @@ fn test_kat_signature_sizes() {
         let serialized_sig = serialize_signature::<MlDsa65>(&sig);
         let expected_sig = vector.signature();
 
-        println!("Vector {}: Generated sig size: {}, Expected sig size: {}",
-                 i, serialized_sig.len(), expected_sig.len());
+        println!(
+            "Vector {}: Generated sig size: {}, Expected sig size: {}",
+            i,
+            serialized_sig.len(),
+            expected_sig.len()
+        );
 
         // ML-DSA-65 signature should be 3309 bytes
-        assert_eq!(serialized_sig.len(), 3309,
-                   "Signature size should be 3309 bytes for ML-DSA-65");
+        assert_eq!(
+            serialized_sig.len(),
+            3309,
+            "Signature size should be 3309 bytes for ML-DSA-65"
+        );
     }
 
     println!("✓ All signature sizes correct");
@@ -276,8 +294,7 @@ fn test_kat_signature_sizes() {
 fn test_kat_cross_vector_verification() {
     // Read the KAT file
     let kat_path = "tests/data/PQCsignKAT_ML_DSA_65.rsp";
-    let kat_content = std::fs::read_to_string(kat_path)
-        .expect("Failed to read KAT file");
+    let kat_content = std::fs::read_to_string(kat_path).expect("Failed to read KAT file");
 
     let vectors = parse_kat_file(&kat_content);
     assert!(vectors.len() >= 2, "Need at least 2 vectors");
@@ -295,16 +312,19 @@ fn test_kat_cross_vector_verification() {
     let message = b"Test message";
 
     // Sign with keypair 1
-    let sig1 = sign_deterministic::<MlDsa65>(&sk1, message, &rnd)
-        .expect("Signing failed");
+    let sig1 = sign_deterministic::<MlDsa65>(&sk1, message, &rnd).expect("Signing failed");
 
     // Verify with correct public key
-    assert!(verify::<MlDsa65>(&pk1, message, &sig1),
-            "Signature should verify with correct key");
+    assert!(
+        verify::<MlDsa65>(&pk1, message, &sig1),
+        "Signature should verify with correct key"
+    );
 
     // Verify with wrong public key (should fail)
-    assert!(!verify::<MlDsa65>(&pk2, message, &sig1),
-            "Signature should NOT verify with wrong key");
+    assert!(
+        !verify::<MlDsa65>(&pk2, message, &sig1),
+        "Signature should NOT verify with wrong key"
+    );
 
     println!("✓ Cross-vector verification test passed");
 }

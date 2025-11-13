@@ -1,13 +1,13 @@
 // Test to compare w1 from signing vs w1' from verification
 
-use mldsa::keygen::keygen_from_seed;
-use mldsa::sign::sign;
-use mldsa::params::{MlDsa65, DsaParams, Q};
-use mldsa::poly::Poly;
-use mldsa::ntt::{poly_mul_ntt, ntt, matrix_vector_mul_ntt};
-use mldsa::sampling::{expand_matrix_a, sample_in_ball};
-use mldsa::rounding::high_bits;
 use mldsa::hints::use_hint_poly;
+use mldsa::keygen::keygen_from_seed;
+use mldsa::ntt::{matrix_vector_mul_ntt, ntt, poly_mul_ntt};
+use mldsa::params::{DsaParams, MlDsa65, Q};
+use mldsa::poly::Poly;
+use mldsa::rounding::high_bits;
+use mldsa::sampling::{expand_matrix_a, sample_in_ball};
+use mldsa::sign::sign;
 
 #[test]
 fn test_w1_recovery() {
@@ -69,7 +69,10 @@ fn test_w1_recovery() {
         w1_no_hint.push(w1_i);
     }
 
-    println!("w1 (no hint)[0].coeffs[0..8]: {:?}", &w1_no_hint[0].coeffs[0..8]);
+    println!(
+        "w1 (no hint)[0].coeffs[0..8]: {:?}",
+        &w1_no_hint[0].coeffs[0..8]
+    );
 
     // Now reconstruct what w1 SHOULD be from signing
     // We know: w' = w - c·s2 + c·t0
@@ -105,12 +108,24 @@ fn test_w1_recovery() {
         w1_expected.push(w1_i);
     }
 
-    println!("w1 (expected)[0].coeffs[0..8]: {:?}", &w1_expected[0].coeffs[0..8]);
+    println!(
+        "w1 (expected)[0].coeffs[0..8]: {:?}",
+        &w1_expected[0].coeffs[0..8]
+    );
 
     println!("\n=== COMPARISON ===");
-    println!("w1_prime (with hints)  [0].coeffs[0..8]: {:?}", &w1_prime[0].coeffs[0..8]);
-    println!("w1_expected (from w)   [0].coeffs[0..8]: {:?}", &w1_expected[0].coeffs[0..8]);
-    println!("w1_no_hint (from w')   [0].coeffs[0..8]: {:?}", &w1_no_hint[0].coeffs[0..8]);
+    println!(
+        "w1_prime (with hints)  [0].coeffs[0..8]: {:?}",
+        &w1_prime[0].coeffs[0..8]
+    );
+    println!(
+        "w1_expected (from w)   [0].coeffs[0..8]: {:?}",
+        &w1_expected[0].coeffs[0..8]
+    );
+    println!(
+        "w1_no_hint (from w')   [0].coeffs[0..8]: {:?}",
+        &w1_no_hint[0].coeffs[0..8]
+    );
 
     // Check if they match
     let mut all_match = true;
@@ -133,10 +148,10 @@ fn test_w1_recovery() {
     }
 
     if all_match {
-        println!("\n✅ SUCCESS! w1_prime = w1_expected");
+        println!("\n SUCCESS! w1_prime = w1_expected");
         println!("The hints correctly recover w1 from w'");
     } else {
-        println!("\n❌ FAILURE! w1_prime ≠ w1_expected");
+        println!("\n FAILURE! w1_prime ≠ w1_expected");
         println!("The hints are NOT working correctly");
     }
 }

@@ -1,10 +1,10 @@
 // Debug test for serialization issue
 
 use mldsa::keygen::keygen_from_seed;
+use mldsa::params::MlDsa65;
+use mldsa::serialize::{deserialize_signature, serialize_signature};
 use mldsa::sign::sign;
 use mldsa::verify::verify;
-use mldsa::params::MlDsa65;
-use mldsa::serialize::{serialize_signature, deserialize_signature};
 
 #[test]
 fn test_serialization_debug() {
@@ -45,8 +45,8 @@ fn test_serialization_debug() {
     eprintln!("Serialized[0..16]: {:02x?}", &serialized[..16]);
 
     eprintln!("\n=== DESERIALIZATION ===");
-    let deserialized = deserialize_signature::<MlDsa65>(&serialized)
-        .expect("Deserialization should succeed");
+    let deserialized =
+        deserialize_signature::<MlDsa65>(&serialized).expect("Deserialization should succeed");
 
     eprintln!("\n=== DESERIALIZED SIGNATURE ===");
     eprintln!("c_tilde len: {}", deserialized.c_tilde.len());
@@ -77,8 +77,10 @@ fn test_serialization_debug() {
     for i in 0..sig.h.len() {
         for j in 0..256 {
             if sig.h[i].coeffs[j] != deserialized.h[i].coeffs[j] {
-                eprintln!("Hint mismatch at h[{}].coeffs[{}]: original={}, deserialized={}",
-                    i, j, sig.h[i].coeffs[j], deserialized.h[i].coeffs[j]);
+                eprintln!(
+                    "Hint mismatch at h[{}].coeffs[{}]: original={}, deserialized={}",
+                    i, j, sig.h[i].coeffs[j], deserialized.h[i].coeffs[j]
+                );
             }
         }
     }

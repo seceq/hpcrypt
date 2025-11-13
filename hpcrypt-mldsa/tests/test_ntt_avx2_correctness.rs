@@ -5,16 +5,18 @@
 
 #[cfg(all(test, feature = "avx2", target_arch = "x86_64"))]
 mod avx2_tests {
-    use mldsa::poly::Poly;
     use mldsa::ntt::{ntt_scalar, ZETAS};
-    use mldsa::simd::dispatch::ntt_simd;
-    use mldsa::simd::avx2::init_qdata;
     use mldsa::params::N;
+    use mldsa::poly::Poly;
+    use mldsa::simd::avx2::init_qdata;
+    use mldsa::simd::dispatch::ntt_simd;
 
     #[test]
     fn test_ntt_avx2_vs_scalar_zeros() {
         // Initialize qdata for AVX2
-        unsafe { init_qdata(); }
+        unsafe {
+            init_qdata();
+        }
 
         // Test with zero polynomial
         let poly = Poly::new();
@@ -32,7 +34,9 @@ mod avx2_tests {
 
     #[test]
     fn test_ntt_avx2_vs_scalar_ones() {
-        unsafe { init_qdata(); }
+        unsafe {
+            init_qdata();
+        }
 
         // Test with all-ones polynomial
         let mut poly = Poly::new();
@@ -54,7 +58,9 @@ mod avx2_tests {
 
     #[test]
     fn test_ntt_avx2_vs_scalar_sequential() {
-        unsafe { init_qdata(); }
+        unsafe {
+            init_qdata();
+        }
 
         // Test with sequential values [0, 1, 2, 3, ..., 255]
         let mut poly = Poly::new();
@@ -76,7 +82,9 @@ mod avx2_tests {
 
     #[test]
     fn test_ntt_avx2_vs_scalar_random_small() {
-        unsafe { init_qdata(); }
+        unsafe {
+            init_qdata();
+        }
 
         // Test with small random values
         let mut poly = Poly::new();
@@ -98,7 +106,9 @@ mod avx2_tests {
 
     #[test]
     fn test_ntt_avx2_vs_scalar_large_values() {
-        unsafe { init_qdata(); }
+        unsafe {
+            init_qdata();
+        }
 
         // Test with values close to Q
         const Q: i32 = 8380417;
@@ -121,7 +131,9 @@ mod avx2_tests {
 
     #[test]
     fn test_ntt_avx2_vs_scalar_negative_values() {
-        unsafe { init_qdata(); }
+        unsafe {
+            init_qdata();
+        }
 
         // Test with negative values
         let mut poly = Poly::new();
@@ -143,7 +155,9 @@ mod avx2_tests {
 
     #[test]
     fn test_ntt_avx2_vs_scalar_alternating_signs() {
-        unsafe { init_qdata(); }
+        unsafe {
+            init_qdata();
+        }
 
         // Test with alternating positive/negative values
         let mut poly = Poly::new();
@@ -165,7 +179,9 @@ mod avx2_tests {
 
     #[test]
     fn test_ntt_avx2_vs_scalar_powers_of_two() {
-        unsafe { init_qdata(); }
+        unsafe {
+            init_qdata();
+        }
 
         // Test with powers of 2
         let mut poly = Poly::new();
@@ -187,7 +203,9 @@ mod avx2_tests {
 
     #[test]
     fn test_ntt_avx2_vs_scalar_sparse() {
-        unsafe { init_qdata(); }
+        unsafe {
+            init_qdata();
+        }
 
         // Test with sparse polynomial (mostly zeros)
         let mut poly = Poly::new();
@@ -211,7 +229,9 @@ mod avx2_tests {
 
     #[test]
     fn test_ntt_avx2_vs_scalar_multiple_runs() {
-        unsafe { init_qdata(); }
+        unsafe {
+            init_qdata();
+        }
 
         // Test that multiple NTT calls produce consistent results
         let mut poly = Poly::new();

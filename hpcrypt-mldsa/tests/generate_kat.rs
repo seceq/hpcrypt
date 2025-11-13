@@ -4,20 +4,15 @@
 // to validate the implementation against the FIPS 204 standard.
 
 use mldsa::keygen::keygen_from_seed;
-use mldsa::sign::sign_deterministic;
-use mldsa::params::{MlDsa44, MlDsa65, MlDsa87, DsaParams};
+use mldsa::params::{DsaParams, MlDsa44, MlDsa65, MlDsa87};
 use mldsa::serialize::{serialize_public_key, serialize_secret_key, serialize_signature};
+use mldsa::sign::sign_deterministic;
 
 fn hex_encode(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
-fn generate_kat_entry<P: DsaParams>(
-    count: usize,
-    seed: &[u8; 32],
-    message: &[u8],
-    rnd: &[u8; 32],
-) {
+fn generate_kat_entry<P: DsaParams>(count: usize, seed: &[u8; 32], message: &[u8], rnd: &[u8; 32]) {
     println!("count = {}", count);
     println!("seed = {}", hex_encode(seed));
 
@@ -34,8 +29,7 @@ fn generate_kat_entry<P: DsaParams>(
     println!("msg = {}", hex_encode(message));
 
     // Sign message
-    let sig = sign_deterministic::<P>(&sk, message, rnd)
-        .expect("Signing failed");
+    let sig = sign_deterministic::<P>(&sk, message, rnd).expect("Signing failed");
 
     let sig_bytes = serialize_signature::<P>(&sig);
 

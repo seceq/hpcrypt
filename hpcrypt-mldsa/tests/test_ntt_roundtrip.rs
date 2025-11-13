@@ -1,7 +1,7 @@
 //! Test NTT round-trip property to verify correctness
 
+use mldsa::ntt::{inv_ntt, ntt};
 use mldsa::poly::Poly;
-use mldsa::ntt::{ntt, inv_ntt};
 use mldsa::sampling::sample_poly_eta;
 use mldsa::symmetric::expand_s;
 
@@ -9,10 +9,9 @@ use mldsa::symmetric::expand_s;
 fn test_ntt_roundtrip_with_kat_seed() {
     // Test seed from KAT
     let test_xi: [u8; 32] = [
-        0xf6, 0x96, 0x48, 0x40, 0x48, 0xec, 0x21, 0xf9,
-        0x6c, 0xf5, 0x0a, 0x56, 0xd0, 0x75, 0x9c, 0x44,
-        0x8f, 0x37, 0x79, 0x75, 0x2f, 0x03, 0x83, 0xd3,
-        0x74, 0x49, 0x69, 0x06, 0x94, 0xcf, 0x7a, 0x68
+        0xf6, 0x96, 0x48, 0x40, 0x48, 0xec, 0x21, 0xf9, 0x6c, 0xf5, 0x0a, 0x56, 0xd0, 0x75, 0x9c,
+        0x44, 0x8f, 0x37, 0x79, 0x75, 0x2f, 0x03, 0x83, 0xd3, 0x74, 0x49, 0x69, 0x06, 0x94, 0xcf,
+        0x7a, 0x68,
     ];
 
     // Expand to get rho'
@@ -36,7 +35,10 @@ fn test_ntt_roundtrip_with_kat_seed() {
 
     // Apply INVNTT
     let recovered_mont = inv_ntt(&s1_0_ntt);
-    println!("After INVNTT (Montgomery form) first 8: {:?}", &recovered_mont.coeffs[0..8]);
+    println!(
+        "After INVNTT (Montgomery form) first 8: {:?}",
+        &recovered_mont.coeffs[0..8]
+    );
 
     // Convert from Montgomery form and reduce to centered representation
     let mut recovered = Poly::new();
@@ -49,7 +51,10 @@ fn test_ntt_roundtrip_with_kat_seed() {
         }
         recovered.coeffs[i] = val;
     }
-    println!("After from_montgomery (centered) first 8: {:?}", &recovered.coeffs[0..8]);
+    println!(
+        "After from_montgomery (centered) first 8: {:?}",
+        &recovered.coeffs[0..8]
+    );
 
     // Check if round-trip works EXACTLY
     let mut errors = 0;
@@ -59,8 +64,10 @@ fn test_ntt_roundtrip_with_kat_seed() {
         let diff = (s1_0.coeffs[i] - recovered.coeffs[i]).abs();
         if diff > 0 {
             if errors < 10 {
-                println!("Mismatch at index {}: original={}, recovered={}, diff={}",
-                         i, s1_0.coeffs[i], recovered.coeffs[i], diff);
+                println!(
+                    "Mismatch at index {}: original={}, recovered={}, diff={}",
+                    i, s1_0.coeffs[i], recovered.coeffs[i], diff
+                );
             }
             errors += 1;
             if diff > max_error {
@@ -70,9 +77,12 @@ fn test_ntt_roundtrip_with_kat_seed() {
     }
 
     if errors == 0 {
-        println!("\n✅ NTT round-trip PERFECT: INVNTT(NTT(x)) == x for all 256 coefficients");
+        println!("\n NTT round-trip PERFECT: INVNTT(NTT(x)) == x for all 256 coefficients");
     } else {
-        println!("\n❌ NTT round-trip FAILED: {} mismatches out of 256", errors);
+        println!(
+            "\n NTT round-trip FAILED: {} mismatches out of 256",
+            errors
+        );
         println!("   Max error: {}", max_error);
         panic!("NTT round-trip test failed - NTT is mathematically incorrect!");
     }
@@ -106,9 +116,12 @@ fn test_ntt_roundtrip_simple() {
     println!("After INVNTT: {:?}", &recovered.coeffs[0..4]);
 
     for i in 0..256 {
-        assert_eq!(poly.coeffs[i], recovered.coeffs[i],
-                   "Mismatch at index {}: {} != {}", i, poly.coeffs[i], recovered.coeffs[i]);
+        assert_eq!(
+            poly.coeffs[i], recovered.coeffs[i],
+            "Mismatch at index {}: {} != {}",
+            i, poly.coeffs[i], recovered.coeffs[i]
+        );
     }
 
-    println!("✅ Simple NTT round-trip test PASSED");
+    println!(" Simple NTT round-trip test PASSED");
 }

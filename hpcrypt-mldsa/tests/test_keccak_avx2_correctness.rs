@@ -5,7 +5,10 @@
 
 #![cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
 
-use sha3::{Shake256, digest::{Update, ExtendableOutput, XofReader}};
+use sha3::{
+    digest::{ExtendableOutput, Update, XofReader},
+    Shake256,
+};
 
 /// Reference SHAKE256 implementation using sha3 crate
 fn shake256_reference(input: &[u8], outlen: usize) -> Vec<u8> {
@@ -18,11 +21,7 @@ fn shake256_reference(input: &[u8], outlen: usize) -> Vec<u8> {
 }
 
 /// Test helper: run 4-way AVX2 and compare each output with reference
-fn test_shake256x4_against_reference(
-    inputs: [&[u8]; 4],
-    output_len: usize,
-    test_name: &str,
-) {
+fn test_shake256x4_against_reference(inputs: [&[u8]; 4], output_len: usize, test_name: &str) {
     use mldsa::simd::keccak::shake256x4_batch;
 
     // Compute with AVX2
@@ -49,12 +48,7 @@ fn test_1_empty_input() {
 #[test]
 fn test_2_short_inputs() {
     // All inputs must have same length for fips202x4
-    let inputs = [
-        b"aaa" as &[u8],
-        b"bbb",
-        b"ccc",
-        b"ddd",
-    ];
+    let inputs = [b"aaa" as &[u8], b"bbb", b"ccc", b"ddd"];
     test_shake256x4_against_reference(inputs, 32, "Short inputs");
 }
 
@@ -133,12 +127,7 @@ fn test_11_incremental_squeezing() {
     // Test that incremental squeezing produces same result as all-at-once
     use mldsa::simd::keccak::{Shake256X4, SHAKE256_RATE};
 
-    let inputs = [
-        b"test0" as &[u8],
-        b"test1",
-        b"test2",
-        b"test3",
-    ];
+    let inputs = [b"test0" as &[u8], b"test1", b"test2", b"test3"];
 
     // Incremental: squeeze 3 blocks one at a time
     let mut xof = Shake256X4::absorb_once(inputs);
@@ -167,10 +156,9 @@ fn test_12_nist_kat_vectors() {
     // Example: SHAKE256("abc") first 32 bytes
     let input = b"abc";
     let expected_start = [
-        0x48, 0x33, 0x66, 0x60, 0x13, 0x60, 0xa8, 0x77,
-        0x1c, 0x68, 0x63, 0x08, 0x0c, 0xc4, 0x11, 0x4d,
-        0x8d, 0xb4, 0x45, 0x30, 0xf8, 0xf1, 0xe1, 0xee,
-        0x4f, 0x94, 0xea, 0x37, 0xe7, 0x8b, 0x57, 0x39,
+        0x48, 0x33, 0x66, 0x60, 0x13, 0x60, 0xa8, 0x77, 0x1c, 0x68, 0x63, 0x08, 0x0c, 0xc4, 0x11,
+        0x4d, 0x8d, 0xb4, 0x45, 0x30, 0xf8, 0xf1, 0xe1, 0xee, 0x4f, 0x94, 0xea, 0x37, 0xe7, 0x8b,
+        0x57, 0x39,
     ];
 
     use mldsa::simd::keccak::shake256x4_batch;
@@ -178,7 +166,8 @@ fn test_12_nist_kat_vectors() {
 
     for i in 0..4 {
         assert_eq!(
-            &outputs[i][..32], &expected_start[..],
+            &outputs[i][..32],
+            &expected_start[..],
             "NIST KAT: Output {} mismatch",
             i
         );
@@ -190,18 +179,13 @@ fn test_13_different_inputs_different_outputs() {
     // Verify that different inputs produce different outputs (no collisions)
     use mldsa::simd::keccak::shake256x4_batch;
 
-    let inputs = [
-        b"input0" as &[u8],
-        b"input1",
-        b"input2",
-        b"input3",
-    ];
+    let inputs = [b"input0" as &[u8], b"input1", b"input2", b"input3"];
 
     let outputs = shake256x4_batch(inputs, 64);
 
     // All outputs should be different
     for i in 0..4 {
-        for j in (i+1)..4 {
+        for j in (i + 1)..4 {
             assert_ne!(
                 outputs[i], outputs[j],
                 "Collision detected: outputs {} and {} are identical",
@@ -254,7 +238,7 @@ fn test_15_ml_dsa_parameters() {
     test_shake256x4_against_reference(
         [&in0[..], &in1[..], &in2[..], &in3[..]],
         256,
-        "ML-DSA ExpandS simulation"
+        "ML-DSA ExpandS simulation",
     );
 }
 
@@ -273,10 +257,6 @@ fn test_17_edge_case_rate_boundary() {
     for len in [135, 136, 137] {
         let input = vec![0xABu8; len];
         let inputs = [&input[..]; 4];
-        test_shake256x4_against_reference(
-            inputs,
-            64,
-            &format!("Rate boundary: {} bytes", len)
-        );
+        test_shake256x4_against_reference(inputs, 64, &format!("Rate boundary: {} bytes", len));
     }
 }
