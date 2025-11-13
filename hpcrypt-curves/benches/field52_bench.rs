@@ -1,6 +1,6 @@
 // Benchmark comparing 64-bit (4 limbs) vs 52-bit (5 limbs) field arithmetic
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use hpcrypt_curves::secp256k1::{FieldElement, FieldElement52};
 
 fn bench_field_ops(c: &mut Criterion) {
@@ -15,80 +15,56 @@ fn bench_field_ops(c: &mut Criterion) {
 
     // Addition
     group.bench_function(BenchmarkId::new("add", "64-bit"), |bencher| {
-        bencher.iter(|| {
-            black_box(a_64.add(&b_64))
-        });
+        bencher.iter(|| black_box(a_64.add(&b_64)));
     });
 
     group.bench_function(BenchmarkId::new("add", "52-bit"), |bencher| {
-        bencher.iter(|| {
-            black_box(a_52.add(&b_52))
-        });
+        bencher.iter(|| black_box(a_52.add(&b_52)));
     });
 
     // Subtraction
     group.bench_function(BenchmarkId::new("sub", "64-bit"), |bencher| {
-        bencher.iter(|| {
-            black_box(a_64.sub(&b_64))
-        });
+        bencher.iter(|| black_box(a_64.sub(&b_64)));
     });
 
     group.bench_function(BenchmarkId::new("sub", "52-bit"), |bencher| {
-        bencher.iter(|| {
-            black_box(a_52.sub(&b_52))
-        });
+        bencher.iter(|| black_box(a_52.sub(&b_52)));
     });
 
     // Multiplication
     group.bench_function(BenchmarkId::new("mul", "64-bit"), |bencher| {
-        bencher.iter(|| {
-            black_box(a_64.mul(&b_64))
-        });
+        bencher.iter(|| black_box(a_64.mul(&b_64)));
     });
 
     group.bench_function(BenchmarkId::new("mul", "52-bit_karatsuba"), |bencher| {
-        bencher.iter(|| {
-            black_box(a_52.mul(&b_52))
-        });
+        bencher.iter(|| black_box(a_52.mul(&b_52)));
     });
 
     // Squaring
     group.bench_function(BenchmarkId::new("square", "64-bit"), |bencher| {
-        bencher.iter(|| {
-            black_box(a_64.square())
-        });
+        bencher.iter(|| black_box(a_64.square()));
     });
 
     group.bench_function(BenchmarkId::new("square", "52-bit"), |bencher| {
-        bencher.iter(|| {
-            black_box(a_52.square())
-        });
+        bencher.iter(|| black_box(a_52.square()));
     });
 
     // Doubling
     group.bench_function(BenchmarkId::new("double", "64-bit"), |bencher| {
-        bencher.iter(|| {
-            black_box(a_64.double())
-        });
+        bencher.iter(|| black_box(a_64.double()));
     });
 
     group.bench_function(BenchmarkId::new("double", "52-bit"), |bencher| {
-        bencher.iter(|| {
-            black_box(a_52.double())
-        });
+        bencher.iter(|| black_box(a_52.double()));
     });
 
     // Negation
     group.bench_function(BenchmarkId::new("neg", "64-bit"), |bencher| {
-        bencher.iter(|| {
-            black_box(a_64.neg())
-        });
+        bencher.iter(|| black_box(a_64.neg()));
     });
 
     group.bench_function(BenchmarkId::new("neg", "52-bit"), |bencher| {
-        bencher.iter(|| {
-            black_box(a_52.neg())
-        });
+        bencher.iter(|| black_box(a_52.neg()));
     });
 
     group.finish();
@@ -130,15 +106,11 @@ fn bench_inversion(c: &mut Criterion) {
     let a_52 = FieldElement52::from_u64(42);
 
     group.bench_function("invert_64bit", |bencher| {
-        bencher.iter(|| {
-            black_box(a_64.invert().unwrap())
-        });
+        bencher.iter(|| black_box(a_64.invert().unwrap()));
     });
 
     group.bench_function("invert_52bit", |bencher| {
-        bencher.iter(|| {
-            black_box(a_52.invert().unwrap())
-        });
+        bencher.iter(|| black_box(a_52.invert().unwrap()));
     });
 
     group.finish();

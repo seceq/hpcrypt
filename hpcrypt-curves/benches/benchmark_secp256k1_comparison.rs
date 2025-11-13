@@ -7,11 +7,11 @@
 //
 // We test various use cases to understand when each implementation excels.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use hpcrypt_curves::secp256k1::{
-    field_ops::FieldElement as KaratsubaField,
     field52::FieldElement52 as LazyField,
     field_montgomery_native::MontgomeryFieldElement as MontgomeryField,
+    field_ops::FieldElement as KaratsubaField,
 };
 
 // Test values for benchmarking
@@ -50,8 +50,8 @@ fn get_test_values_lazy() -> (LazyField, LazyField) {
     let mut a_bytes = [0u8; 32];
     let mut b_bytes = [0u8; 32];
     for i in 0..4 {
-        a_bytes[i*8..(i+1)*8].copy_from_slice(&a_u64[i].to_le_bytes());
-        b_bytes[i*8..(i+1)*8].copy_from_slice(&b_u64[i].to_le_bytes());
+        a_bytes[i * 8..(i + 1) * 8].copy_from_slice(&a_u64[i].to_le_bytes());
+        b_bytes[i * 8..(i + 1) * 8].copy_from_slice(&b_u64[i].to_le_bytes());
     }
 
     let a = LazyField::from_bytes(&a_bytes);
@@ -102,8 +102,18 @@ fn bench_single_multiplication(c: &mut Criterion) {
     });
 
     // Montgomery (with conversion overhead)
-    let a_limbs = [0x79BE667EF9DCBBAC, 0x55A06295CE870B07, 0x029BFCDB2DCE28D9, 0x59F2815B16F81798];
-    let b_limbs = [0x483ADA7726A3C465, 0x5DA4FBFC0E1108A8, 0xFD17B448A6855419, 0x9C47D08FFB10D4B8];
+    let a_limbs = [
+        0x79BE667EF9DCBBAC,
+        0x55A06295CE870B07,
+        0x029BFCDB2DCE28D9,
+        0x59F2815B16F81798,
+    ];
+    let b_limbs = [
+        0x483ADA7726A3C465,
+        0x5DA4FBFC0E1108A8,
+        0xFD17B448A6855419,
+        0x9C47D08FFB10D4B8,
+    ];
     group.bench_function("montgomery_with_conversion", |bencher| {
         bencher.iter(|| {
             let a = MontgomeryField::to_montgomery(black_box(&a_limbs));
@@ -200,42 +210,64 @@ fn bench_batch_multiplications(c: &mut Criterion) {
     for count in [5, 10, 20].iter() {
         // Karatsuba
         let (a, b) = get_test_values_karatsuba();
-        group.bench_with_input(BenchmarkId::new("karatsuba", count), count, |bencher, &n| {
-            bencher.iter(|| {
-                let mut result = a;
-                for _ in 0..n {
-                    result = result.mul(&b);
-                }
-                black_box(result)
-            });
-        });
+        group.bench_with_input(
+            BenchmarkId::new("karatsuba", count),
+            count,
+            |bencher, &n| {
+                bencher.iter(|| {
+                    let mut result = a;
+                    for _ in 0..n {
+                        result = result.mul(&b);
+                    }
+                    black_box(result)
+                });
+            },
+        );
 
         // 52-bit lazy
         let (a, b) = get_test_values_lazy();
-        group.bench_with_input(BenchmarkId::new("52bit_lazy", count), count, |bencher, &n| {
-            bencher.iter(|| {
-                let mut result = a;
-                for _ in 0..n {
-                    result = result.mul(&b);
-                }
-                black_box(result)
-            });
-        });
+        group.bench_with_input(
+            BenchmarkId::new("52bit_lazy", count),
+            count,
+            |bencher, &n| {
+                bencher.iter(|| {
+                    let mut result = a;
+                    for _ in 0..n {
+                        result = result.mul(&b);
+                    }
+                    black_box(result)
+                });
+            },
+        );
 
         // Montgomery (with conversion overhead amortized)
-        let a_limbs = [0x79BE667EF9DCBBAC, 0x55A06295CE870B07, 0x029BFCDB2DCE28D9, 0x59F2815B16F81798];
-        let b_limbs = [0x483ADA7726A3C465, 0x5DA4FBFC0E1108A8, 0xFD17B448A6855419, 0x9C47D08FFB10D4B8];
-        group.bench_with_input(BenchmarkId::new("montgomery", count), count, |bencher, &n| {
-            bencher.iter(|| {
-                let mut result = MontgomeryField::to_montgomery(&a_limbs);
-                let b = MontgomeryField::to_montgomery(&b_limbs);
-                for _ in 0..n {
-                    result = result.mul(&b);
-                }
-                let _normal = result.from_montgomery();
-                black_box(result)
-            });
-        });
+        let a_limbs = [
+            0x79BE667EF9DCBBAC,
+            0x55A06295CE870B07,
+            0x029BFCDB2DCE28D9,
+            0x59F2815B16F81798,
+        ];
+        let b_limbs = [
+            0x483ADA7726A3C465,
+            0x5DA4FBFC0E1108A8,
+            0xFD17B448A6855419,
+            0x9C47D08FFB10D4B8,
+        ];
+        group.bench_with_input(
+            BenchmarkId::new("montgomery", count),
+            count,
+            |bencher, &n| {
+                bencher.iter(|| {
+                    let mut result = MontgomeryField::to_montgomery(&a_limbs);
+                    let b = MontgomeryField::to_montgomery(&b_limbs);
+                    for _ in 0..n {
+                        result = result.mul(&b);
+                    }
+                    let _normal = result.from_montgomery();
+                    black_box(result)
+                });
+            },
+        );
     }
 
     group.finish();
@@ -255,12 +287,12 @@ fn bench_mixed_operations(c: &mut Criterion) {
     let (a, b) = get_test_values_karatsuba();
     group.bench_function("karatsuba", |bencher| {
         bencher.iter(|| {
-            let t1 = a.square();           // x^2
-            let t2 = t1.mul(&a);           // x^3
-            let t3 = t2.add(&b);           // x^3 + b
-            let t4 = t3.square();          // (x^3 + b)^2
-            let t5 = t4.mul(&t1);          // (x^3 + b)^2 * x^2
-            let result = t5.sub(&t3);      // result
+            let t1 = a.square(); // x^2
+            let t2 = t1.mul(&a); // x^3
+            let t3 = t2.add(&b); // x^3 + b
+            let t4 = t3.square(); // (x^3 + b)^2
+            let t5 = t4.mul(&t1); // (x^3 + b)^2 * x^2
+            let result = t5.sub(&t3); // result
             black_box(result)
         });
     });
@@ -307,39 +339,51 @@ fn bench_square_chain(c: &mut Criterion) {
     for count in [10, 20, 50].iter() {
         // Karatsuba
         let (a, _) = get_test_values_karatsuba();
-        group.bench_with_input(BenchmarkId::new("karatsuba", count), count, |bencher, &n| {
-            bencher.iter(|| {
-                let mut result = a;
-                for _ in 0..n {
-                    result = result.square();
-                }
-                black_box(result)
-            });
-        });
+        group.bench_with_input(
+            BenchmarkId::new("karatsuba", count),
+            count,
+            |bencher, &n| {
+                bencher.iter(|| {
+                    let mut result = a;
+                    for _ in 0..n {
+                        result = result.square();
+                    }
+                    black_box(result)
+                });
+            },
+        );
 
         // 52-bit lazy
         let (a, _) = get_test_values_lazy();
-        group.bench_with_input(BenchmarkId::new("52bit_lazy", count), count, |bencher, &n| {
-            bencher.iter(|| {
-                let mut result = a;
-                for _ in 0..n {
-                    result = result.square();
-                }
-                black_box(result)
-            });
-        });
+        group.bench_with_input(
+            BenchmarkId::new("52bit_lazy", count),
+            count,
+            |bencher, &n| {
+                bencher.iter(|| {
+                    let mut result = a;
+                    for _ in 0..n {
+                        result = result.square();
+                    }
+                    black_box(result)
+                });
+            },
+        );
 
         // Montgomery
         let (a, _) = get_test_values_montgomery();
-        group.bench_with_input(BenchmarkId::new("montgomery", count), count, |bencher, &n| {
-            bencher.iter(|| {
-                let mut result = a;
-                for _ in 0..n {
-                    result = result.square();
-                }
-                black_box(result)
-            });
-        });
+        group.bench_with_input(
+            BenchmarkId::new("montgomery", count),
+            count,
+            |bencher, &n| {
+                bencher.iter(|| {
+                    let mut result = a;
+                    for _ in 0..n {
+                        result = result.square();
+                    }
+                    black_box(result)
+                });
+            },
+        );
     }
 
     group.finish();
