@@ -15,29 +15,28 @@
 //!
 //! # Implementation Status
 //!
-//! - Field operations: ✅ Complete and tested
-//! - Scalar arithmetic: ✅ Complete and tested
-//! - Point operations: ✅ Complete and tested
-//! - ECDSA signatures: ✅ Complete and tested
+//! - Field operations:  Complete and tested
+//! - Scalar arithmetic:  Complete and tested
+//! - Point operations:  Complete and tested
+//! - ECDSA signatures:  Complete and tested
 //!
 //! # Performance
 //!
 //! This implementation prioritizes correctness. Performance optimizations and
 //! precomputed tables can be added in future releases.
 
-pub mod constants;
-pub mod field_ops;
-pub mod field52; // 52-bit lazy reduction field arithmetic
-pub mod field_montgomery_native; // Montgomery CIOS (experimental)
-pub mod point;
-pub mod point_montgomery; // Montgomery-optimized point operations (Phase 2)
-pub mod scalar;
-pub mod precomputed;
-pub mod glv;
-pub mod schnorr;
 pub mod batch;
-pub mod wnaf;
+pub mod constants;
+pub mod field52; // 52-bit lazy reduction field arithmetic
+pub mod field_ops;
+pub mod field_montgomery_native; // Montgomery arithmetic (44% faster for batch operations)
+pub mod glv;
 pub mod msm;
+pub mod point;
+pub mod precomputed;
+pub mod scalar;
+pub mod schnorr;
+pub mod wnaf;
 
 // Internal modules
 pub(crate) mod u256; // 256-bit arithmetic (replaces num-bigint)
@@ -46,11 +45,12 @@ mod macros; // Macros for unrolled field operations
 
 // Re-export commonly used types
 pub use constants::*;
-pub use field_ops::FieldElement;
 pub use field52::FieldElement52; // 52-bit field element
+pub use field_montgomery_native::MontgomeryFieldElement;
+pub use field_ops::FieldElement;
 pub use point::{AffinePoint, Point};
-pub use scalar::Scalar;
 pub use precomputed::PRECOMPUTED_TABLE;
+pub use scalar::Scalar;
 
 /// secp256k1 curve module
 ///

@@ -75,9 +75,9 @@ use super::field_ops::FieldElement;
 ///
 /// It should ONLY be used in contexts where the number of elements being
 /// inverted is not secret. For example:
-/// - ✅ Batch signature verification (number of signatures is public)
-/// - ✅ Affine coordinate conversion for precomputed tables
-/// - ❌ DO NOT use if the count reveals secret information
+/// -  Batch signature verification (number of signatures is public)
+/// -  Affine coordinate conversion for precomputed tables
+/// -  DO NOT use if the count reveals secret information
 pub fn batch_invert(elems: &mut [FieldElement]) {
     let n = elems.len();
 
@@ -86,7 +86,9 @@ pub fn batch_invert(elems: &mut [FieldElement]) {
         return;
     }
     if n == 1 {
-        elems[0] = elems[0].invert().expect("inversion should succeed for non-zero elements");
+        elems[0] = elems[0]
+            .invert()
+            .expect("inversion should succeed for non-zero elements");
         return;
     }
 
@@ -105,7 +107,9 @@ pub fn batch_invert(elems: &mut [FieldElement]) {
 
     // Invert the final product
     // This is the ONLY inversion in the entire batch!
-    let mut acc = products[n - 1].invert().expect("inversion should succeed for non-zero elements");
+    let mut acc = products[n - 1]
+        .invert()
+        .expect("inversion should succeed for non-zero elements");
 
     // Backward pass: compute individual inverses
     // Working backward from the end
@@ -250,7 +254,10 @@ mod tests {
         let elems: Vec<FieldElement> = values.iter().map(|&v| FieldElement::from_u64(v)).collect();
 
         // Individual inversions
-        let individual: Vec<FieldElement> = elems.iter().map(|e| e.invert().expect("inversion should succeed")).collect();
+        let individual: Vec<FieldElement> = elems
+            .iter()
+            .map(|e| e.invert().expect("inversion should succeed"))
+            .collect();
 
         // Batch inversion
         let mut batch = elems.clone();
