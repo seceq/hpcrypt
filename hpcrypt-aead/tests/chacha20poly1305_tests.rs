@@ -1,6 +1,6 @@
 //! ChaCha20-Poly1305 tests
 
-use hpcrypt_aead::chacha20poly1305::*;
+use hpcrypt_aead::ChaCha20Poly1305;
 
 #[test]
 fn test_chacha20poly1305_encrypt_decrypt() {
@@ -9,8 +9,8 @@ fn test_chacha20poly1305_encrypt_decrypt() {
     let plaintext = b"ChaCha20-Poly1305 test";
     let aad = b"Associated";
 
-    let ciphertext = chacha20poly1305_encrypt(&key, &nonce, plaintext, aad).unwrap();
-    let decrypted = chacha20poly1305_decrypt(&key, &nonce, &ciphertext, aad).unwrap();
+    let ciphertext = ChaCha20Poly1305::encrypt(&key, &nonce, plaintext, aad);
+    let decrypted = ChaCha20Poly1305::decrypt(&key, &nonce, &ciphertext, aad).unwrap();
 
     assert_eq!(plaintext, &decrypted[..]);
 }
@@ -22,7 +22,7 @@ fn test_chacha20poly1305_authentication_failure() {
     let plaintext = b"Authenticated";
     let aad = b"";
 
-    let mut ciphertext = chacha20poly1305_encrypt(&key, &nonce, plaintext, aad).unwrap();
+    let mut ciphertext = ChaCha20Poly1305::encrypt(&key, &nonce, plaintext, aad);
 
     // Tamper with tag
     let len = ciphertext.len();
@@ -30,8 +30,8 @@ fn test_chacha20poly1305_authentication_failure() {
         ciphertext[len - 1] ^= 1;
     }
 
-    let result = chacha20poly1305_decrypt(&key, &nonce, &ciphertext, aad);
-    assert!(result.is_err());
+    let result = ChaCha20Poly1305::decrypt(&key, &nonce, &ciphertext, aad);
+    assert!(result.is_none());
 }
 
 #[test]
@@ -42,9 +42,9 @@ fn test_chacha20poly1305_different_keys() {
     let plaintext = b"Test message";
     let aad = b"";
 
-    let ciphertext = chacha20poly1305_encrypt(&key1, &nonce, plaintext, aad).unwrap();
+    let ciphertext = ChaCha20Poly1305::encrypt(&key1, &nonce, plaintext, aad);
 
     // Decryption with wrong key should fail
-    let result = chacha20poly1305_decrypt(&key2, &nonce, &ciphertext, aad);
-    assert!(result.is_err());
+    let result = ChaCha20Poly1305::decrypt(&key2, &nonce, &ciphertext, aad);
+    assert!(result.is_none());
 }
