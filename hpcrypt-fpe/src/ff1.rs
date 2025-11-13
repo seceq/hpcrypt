@@ -39,15 +39,15 @@
 
 extern crate alloc;
 use alloc::string::{String, ToString};
-use alloc::vec::Vec;
 use alloc::vec;
+use alloc::vec::Vec;
 
 use num_bigint::BigUint;
-use num_traits::{Zero, One, ToPrimitive};
 use num_integer::Integer;
+use num_traits::{ToPrimitive, Zero};
 
 use hpcrypt_aead::Aes;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::ZeroizeOnDrop;
 
 /// FF1 error types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -248,7 +248,10 @@ impl FF1 {
             #[cfg(test)]
             if n == 10 && radix == 10 && i < 2 {
                 use std::println;
-                println!("DEBUG Round {}: After  - A={:?}, B={:?}, C={:?}", round, a, b, c);
+                println!(
+                    "DEBUG Round {}: After  - A={:?}, B={:?}, C={:?}",
+                    round, a, b, c
+                );
             }
 
             // Step 2.ii: Swap variables
@@ -347,7 +350,10 @@ impl FF1 {
         #[cfg(test)]
         if i == 0 && n == 10 && radix == 10 {
             use std::println;
-            println!("DEBUG F-function round {}: b={:?}, b_bytes_len={}, pad_len={}", i, b, b_bytes_len, pad_len);
+            println!(
+                "DEBUG F-function round {}: b={:?}, b_bytes_len={}, pad_len={}",
+                i, b, b_bytes_len, pad_len
+            );
             println!("DEBUG F-function round {}: Q = {:02x?}", i, q);
         }
 
@@ -387,7 +393,10 @@ impl FF1 {
         #[cfg(test)]
         if i == 0 && n == 10 && radix == 10 {
             use std::println;
-            println!("DEBUG F-function round {}: result={}, m={}, modulus={}", i, &result, m, &modulus);
+            println!(
+                "DEBUG F-function round {}: result={}, m={}, modulus={}",
+                i, &result, m, &modulus
+            );
         }
 
         self.str_m_radix(&result, radix, m)
@@ -438,11 +447,14 @@ impl FF1 {
         #[cfg(test)]
         {
             use std::println;
-            println!("DEBUG CIPH: first {} bytes from R directly: {:02x?}", first_block_size, &result);
+            println!(
+                "DEBUG CIPH: first {} bytes from R directly: {:02x?}",
+                first_block_size, &result
+            );
         }
 
         // If we need more bytes (d > 16), generate additional blocks
-        let mut j = 1u128;  // j starts at 1 for additional blocks
+        let mut j = 1u128; // j starts at 1 for additional blocks
         while result.len() < d {
             // Create block by XORing R with big-endian j
             let mut block = [0u8; 16];
@@ -517,19 +529,6 @@ impl FF1 {
         Ok(result)
     }
 
-    /// Convert numeral string to bytes
-    fn num_radix_bytes(&self, x: &[u32], radix: u32) -> Result<Vec<u8>, FF1Error> {
-        let num = self.num_radix(x, radix)?;
-        let bytes = num.to_bytes_be();
-
-        // Ensure at least 1 byte
-        if bytes.is_empty() {
-            Ok(vec![0])
-        } else {
-            Ok(bytes)
-        }
-    }
-
     /// Convert BigUint to numeral string of length m
     fn str_m_radix(&self, x: &BigUint, radix: u32, m: usize) -> Result<Vec<u32>, FF1Error> {
         let mut result = Vec::with_capacity(m);
@@ -567,7 +566,12 @@ impl FF1 {
     }
 
     /// Convert numeral to string
-    fn numeral_to_str(&self, numeral: &[u32], radix: u32, alphabet: &str) -> Result<String, FF1Error> {
+    fn numeral_to_str(
+        &self,
+        numeral: &[u32],
+        radix: u32,
+        alphabet: &str,
+    ) -> Result<String, FF1Error> {
         let mut result = String::with_capacity(numeral.len());
         let alphabet_chars: Vec<char> = alphabet.chars().collect();
 
@@ -626,7 +630,9 @@ impl FF1 {
             36 => Ok("0123456789abcdefghijklmnopqrstuvwxyz".to_string()),
             52 => Ok("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".to_string()),
             62 => Ok("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".to_string()),
-            64 => Ok("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/".to_string()),
+            64 => {
+                Ok("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/".to_string())
+            }
             _ => {
                 // For other radixes, generate numeric alphabet
                 if radix <= 256 {
@@ -668,7 +674,10 @@ mod tests {
         let ciphertext = ff1.encrypt(plaintext, tweak, radix).unwrap();
         let decrypted = ff1.decrypt(&ciphertext, tweak, radix).unwrap();
 
-        println!("Basic test: plaintext={}, ciphertext={}, decrypted={}", plaintext, ciphertext, decrypted);
+        println!(
+            "Basic test: plaintext={}, ciphertext={}, decrypted={}",
+            plaintext, ciphertext, decrypted
+        );
         assert_eq!(plaintext, decrypted);
         assert_eq!(plaintext.len(), ciphertext.len());
     }
@@ -847,13 +856,19 @@ mod tests {
         let ciphertext = ff1.encrypt(plaintext, tweak, 10).unwrap();
         println!("NIST Sample 1:");
         println!("  Plaintext:  {}", plaintext);
-        println!("  Ciphertext: {} (expected: {})", ciphertext, expected_ciphertext);
+        println!(
+            "  Ciphertext: {} (expected: {})",
+            ciphertext, expected_ciphertext
+        );
 
         // Debug: try decrypting the expected ciphertext to see if decrypt works
         if ciphertext != expected_ciphertext {
             println!("  Attempting to decrypt expected ciphertext...");
             let test_decrypt = ff1.decrypt(expected_ciphertext, tweak, 10).unwrap();
-            println!("  Decrypt of expected: {} (should be: {})", test_decrypt, plaintext);
+            println!(
+                "  Decrypt of expected: {} (should be: {})",
+                test_decrypt, plaintext
+            );
         }
 
         assert_eq!(ciphertext, expected_ciphertext);
@@ -875,7 +890,10 @@ mod tests {
         let ciphertext = ff1.encrypt(plaintext, &tweak, 10).unwrap();
         println!("NIST Sample 2:");
         println!("  Plaintext:  {}", plaintext);
-        println!("  Ciphertext: {} (expected: {})", ciphertext, expected_ciphertext);
+        println!(
+            "  Ciphertext: {} (expected: {})",
+            ciphertext, expected_ciphertext
+        );
 
         assert_eq!(ciphertext, expected_ciphertext);
 
@@ -896,7 +914,10 @@ mod tests {
         let ciphertext = ff1.encrypt(plaintext, tweak, 10).unwrap();
         println!("NIST Sample 7 (AES-256):");
         println!("  Plaintext:  {}", plaintext);
-        println!("  Ciphertext: {} (expected: {})", ciphertext, expected_ciphertext);
+        println!(
+            "  Ciphertext: {} (expected: {})",
+            ciphertext, expected_ciphertext
+        );
 
         assert_eq!(ciphertext, expected_ciphertext);
 

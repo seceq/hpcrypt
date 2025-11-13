@@ -63,4 +63,4 @@ extern crate alloc;
 
 pub mod ff1;
 
-pub use ff1::{FF1, FF1Error};
+pub use ff1::{FF1Error, FF1};
