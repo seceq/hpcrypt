@@ -116,22 +116,14 @@ pub fn barrett_reduce(a: i16) -> i16 {
 /// The bit-reversal is applied to optimize memory access patterns
 #[doc(hidden)]
 pub const ZETAS: [i16; 128] = [
-    -1044, -758, -359, -1517, 1493, 1422, 287, 202,
-    -171, 622, 1577, 182, 962, -1202, -1474, 1468,
-    573, -1325, 264, 383, -829, 1458, -1602, -130,
-    -681, 1017, 732, 608, -1542, 411, -205, -1571,
-    1223, 652, -552, 1015, -1293, 1491, -282, -1544,
-    516, -8, -320, -666, -1618, -1162, 126, 1469,
-    -853, -90, -271, 830, 107, -1421, -247, -951,
-    -398, 961, -1508, -725, 448, -1065, 677, -1275,
-    -1103, 430, 555, 843, -1251, 871, 1550, 105,
-    422, 587, 177, -235, -291, -460, 1574, 1653,
-    -246, 778, 1159, -147, -777, 1483, -602, 1119,
-    -1590, 644, -872, 349, 418, 329, -156, -75,
-    817, 1097, 603, 610, 1322, -1285, -1465, 384,
-    -1215, -136, 1218, -1335, -874, 220, -1187, -1659,
-    -1185, -1530, -1278, 794, -1510, -854, -870, 478,
-    -108, -308, 996, 991, 958, -1460, 1522, 1628
+    -1044, -758, -359, -1517, 1493, 1422, 287, 202, -171, 622, 1577, 182, 962, -1202, -1474, 1468,
+    573, -1325, 264, 383, -829, 1458, -1602, -130, -681, 1017, 732, 608, -1542, 411, -205, -1571,
+    1223, 652, -552, 1015, -1293, 1491, -282, -1544, 516, -8, -320, -666, -1618, -1162, 126, 1469,
+    -853, -90, -271, 830, 107, -1421, -247, -951, -398, 961, -1508, -725, 448, -1065, 677, -1275,
+    -1103, 430, 555, 843, -1251, 871, 1550, 105, 422, 587, 177, -235, -291, -460, 1574, 1653, -246,
+    778, 1159, -147, -777, 1483, -602, 1119, -1590, 644, -872, 349, 418, 329, -156, -75, 817, 1097,
+    603, 610, 1322, -1285, -1465, 384, -1215, -136, 1218, -1335, -874, 220, -1187, -1659, -1185,
+    -1530, -1278, 794, -1510, -854, -870, 478, -108, -308, 996, 991, 958, -1460, 1522, 1628,
 ];
 
 // ===== VECTORIZED NTT LAYER FUNCTIONS =====
@@ -139,26 +131,58 @@ pub const ZETAS: [i16; 128] = [
 
 #[inline(always)]
 fn ntt_layer_1_step(vec: &mut [i16], z0: i16, z1: i16, z2: i16, z3: i16) {
-    let t = fqmul(z0, vec[2]); vec[2] = vec[0] - t; vec[0] += t;
-    let t = fqmul(z0, vec[3]); vec[3] = vec[1] - t; vec[1] += t;
-    let t = fqmul(z1, vec[6]); vec[6] = vec[4] - t; vec[4] += t;
-    let t = fqmul(z1, vec[7]); vec[7] = vec[5] - t; vec[5] += t;
-    let t = fqmul(z2, vec[10]); vec[10] = vec[8] - t; vec[8] += t;
-    let t = fqmul(z2, vec[11]); vec[11] = vec[9] - t; vec[9] += t;
-    let t = fqmul(z3, vec[14]); vec[14] = vec[12] - t; vec[12] += t;
-    let t = fqmul(z3, vec[15]); vec[15] = vec[13] - t; vec[13] += t;
+    let t = fqmul(z0, vec[2]);
+    vec[2] = vec[0] - t;
+    vec[0] += t;
+    let t = fqmul(z0, vec[3]);
+    vec[3] = vec[1] - t;
+    vec[1] += t;
+    let t = fqmul(z1, vec[6]);
+    vec[6] = vec[4] - t;
+    vec[4] += t;
+    let t = fqmul(z1, vec[7]);
+    vec[7] = vec[5] - t;
+    vec[5] += t;
+    let t = fqmul(z2, vec[10]);
+    vec[10] = vec[8] - t;
+    vec[8] += t;
+    let t = fqmul(z2, vec[11]);
+    vec[11] = vec[9] - t;
+    vec[9] += t;
+    let t = fqmul(z3, vec[14]);
+    vec[14] = vec[12] - t;
+    vec[12] += t;
+    let t = fqmul(z3, vec[15]);
+    vec[15] = vec[13] - t;
+    vec[13] += t;
 }
 
 #[inline(always)]
 fn ntt_layer_2_step(vec: &mut [i16], z0: i16, z1: i16) {
-    let t = fqmul(z0, vec[4]); vec[4] = vec[0] - t; vec[0] += t;
-    let t = fqmul(z0, vec[5]); vec[5] = vec[1] - t; vec[1] += t;
-    let t = fqmul(z0, vec[6]); vec[6] = vec[2] - t; vec[2] += t;
-    let t = fqmul(z0, vec[7]); vec[7] = vec[3] - t; vec[3] += t;
-    let t = fqmul(z1, vec[12]); vec[12] = vec[8] - t; vec[8] += t;
-    let t = fqmul(z1, vec[13]); vec[13] = vec[9] - t; vec[9] += t;
-    let t = fqmul(z1, vec[14]); vec[14] = vec[10] - t; vec[10] += t;
-    let t = fqmul(z1, vec[15]); vec[15] = vec[11] - t; vec[11] += t;
+    let t = fqmul(z0, vec[4]);
+    vec[4] = vec[0] - t;
+    vec[0] += t;
+    let t = fqmul(z0, vec[5]);
+    vec[5] = vec[1] - t;
+    vec[1] += t;
+    let t = fqmul(z0, vec[6]);
+    vec[6] = vec[2] - t;
+    vec[2] += t;
+    let t = fqmul(z0, vec[7]);
+    vec[7] = vec[3] - t;
+    vec[3] += t;
+    let t = fqmul(z1, vec[12]);
+    vec[12] = vec[8] - t;
+    vec[8] += t;
+    let t = fqmul(z1, vec[13]);
+    vec[13] = vec[9] - t;
+    vec[9] += t;
+    let t = fqmul(z1, vec[14]);
+    vec[14] = vec[10] - t;
+    vec[10] += t;
+    let t = fqmul(z1, vec[15]);
+    vec[15] = vec[11] - t;
+    vec[11] += t;
 }
 
 #[inline(always)]
@@ -205,7 +229,13 @@ pub fn ntt_inplace_portable(poly: &mut Poly) {
     }
     for round in 0..16 {
         let base = round * 16;
-        ntt_layer_1_step(&mut poly.coeffs[base..base + 16], ZETAS[k], ZETAS[k + 1], ZETAS[k + 2], ZETAS[k + 3]);
+        ntt_layer_1_step(
+            &mut poly.coeffs[base..base + 16],
+            ZETAS[k],
+            ZETAS[k + 1],
+            ZETAS[k + 2],
+            ZETAS[k + 3],
+        );
         k += 4;
     }
 }
@@ -335,8 +365,8 @@ pub fn intt_inplace_portable(poly: &mut Poly) {
 ///
 /// // UNSAFE: For arbitrary polynomials
 /// let mut poly = some_arbitrary_polynomial();
-/// // intt_after_basemul_inplace(&mut poly);  // ❌ MAY OVERFLOW!
-/// intt_inplace(&mut poly);  // ✅ Use normal INTT instead
+/// // intt_after_basemul_inplace(&mut poly);  // MAY OVERFLOW!
+/// intt_inplace(&mut poly);  // Use normal INTT instead
 /// ```
 ///
 /// # Algorithm
@@ -364,13 +394,13 @@ pub fn intt_after_basemul_inplace(poly: &mut Poly) {
 
         let j = start;
         let t0 = poly.coeffs[j] as i32;
-        poly.coeffs[j] = (t0 + poly.coeffs[j + 2] as i32) as i16;  // No reduction!
+        poly.coeffs[j] = (t0 + poly.coeffs[j + 2] as i32) as i16; // No reduction!
         let diff = poly.coeffs[j + 2] as i32 - t0;
         poly.coeffs[j + 2] = montgomery_reduce(zeta * diff);
 
         let j = start + 1;
         let t1 = poly.coeffs[j] as i32;
-        poly.coeffs[j] = (t1 + poly.coeffs[j + 2] as i32) as i16;  // No reduction!
+        poly.coeffs[j] = (t1 + poly.coeffs[j + 2] as i32) as i16; // No reduction!
         let diff = poly.coeffs[j + 2] as i32 - t1;
         poly.coeffs[j + 2] = montgomery_reduce(zeta * diff);
 
@@ -385,7 +415,7 @@ pub fn intt_after_basemul_inplace(poly: &mut Poly) {
 
         for j in start..(start + 4) {
             let t = poly.coeffs[j] as i32;
-            poly.coeffs[j] = (t + poly.coeffs[j + 4] as i32) as i16;  // No reduction!
+            poly.coeffs[j] = (t + poly.coeffs[j + 4] as i32) as i16; // No reduction!
             let diff = poly.coeffs[j + 4] as i32 - t;
             poly.coeffs[j + 4] = montgomery_reduce(zeta * diff);
         }
@@ -401,7 +431,7 @@ pub fn intt_after_basemul_inplace(poly: &mut Poly) {
 
         for j in start..(start + 8) {
             let t = poly.coeffs[j] as i32;
-            poly.coeffs[j] = (t + poly.coeffs[j + 8] as i32) as i16;  // No reduction!
+            poly.coeffs[j] = (t + poly.coeffs[j + 8] as i32) as i16; // No reduction!
             let diff = poly.coeffs[j + 8] as i32 - t;
             poly.coeffs[j + 8] = montgomery_reduce(zeta * diff);
         }
@@ -421,7 +451,7 @@ pub fn intt_after_basemul_inplace(poly: &mut Poly) {
 
             for j in start..(start + len) {
                 let t = poly.coeffs[j];
-                poly.coeffs[j] = barrett_reduce(t + poly.coeffs[j + len]);  // Reduce!
+                poly.coeffs[j] = barrett_reduce(t + poly.coeffs[j + len]); // Reduce!
                 poly.coeffs[j + len] -= t;
                 poly.coeffs[j + len] = fqmul(zeta, poly.coeffs[j + len]);
             }
@@ -500,7 +530,6 @@ pub(crate) fn fqmul(a: i16, b: i16) -> i16 {
     montgomery_reduce(a as i32 * b as i32)
 }
 
-
 impl Default for PolyMulcache {
     fn default() -> Self {
         Self::new()
@@ -510,9 +539,7 @@ impl Default for PolyMulcache {
 impl PolyMulcache {
     /// Create a new empty mulcache
     pub const fn new() -> Self {
-        Self {
-            coeffs: [0; N / 2],
-        }
+        Self { coeffs: [0; N / 2] }
     }
 
     /// Compute mulcache from a polynomial in NTT representation
@@ -543,7 +570,6 @@ impl PolyMulcache {
         cache
     }
 }
-
 
 /// Polynomial vector base multiplication with accumulation and mulcache
 ///
@@ -580,11 +606,7 @@ impl PolyMulcache {
 /// - max_acc = K * 4 * max_product ≈ 44M for K=4
 /// - Well within i32::MAX (2.1B)
 #[inline(always)]
-pub fn polyvec_basemul_acc_cached(
-    a: &[Poly],
-    b: &[Poly],
-    b_caches: &[PolyMulcache],
-) -> Poly {
+pub fn polyvec_basemul_acc_cached(a: &[Poly], b: &[Poly], b_caches: &[PolyMulcache]) -> Poly {
     debug_assert_eq!(a.len(), b.len());
     debug_assert_eq!(a.len(), b_caches.len());
 
@@ -952,8 +974,11 @@ mod tests {
         for i in 0..N {
             let orig = ((p.coeffs[i] % Q) + Q) % Q;
             let recovered = ((p_recovered.coeffs[i] % Q) + Q) % Q;
-            assert_eq!(orig, recovered,
-                "Coefficient {} mismatch: expected {}, got {}", i, p.coeffs[i], p_recovered.coeffs[i]);
+            assert_eq!(
+                orig, recovered,
+                "Coefficient {} mismatch: expected {}, got {}",
+                i, p.coeffs[i], p_recovered.coeffs[i]
+            );
         }
     }
 
@@ -977,8 +1002,7 @@ mod tests {
         for i in 0..N {
             let orig = ((p.coeffs[i] % Q) + Q) % Q;
             let recovered = ((p_recovered.coeffs[i] % Q) + Q) % Q;
-            assert_eq!(orig, recovered,
-                "Coefficient {} mismatch", i);
+            assert_eq!(orig, recovered, "Coefficient {} mismatch", i);
         }
     }
 
@@ -1017,8 +1041,7 @@ mod tests {
         for i in 0..N {
             let b_reduced = ((b.coeffs[i] % Q) + Q) % Q;
             let c_reduced = ((c.coeffs[i] % Q) + Q) % Q;
-            assert_eq!(c_reduced, b_reduced,
-                "Coefficient {} mismatch", i);
+            assert_eq!(c_reduced, b_reduced, "Coefficient {} mismatch", i);
         }
     }
 
@@ -1026,8 +1049,8 @@ mod tests {
     fn test_poly_mul_ntt_simple() {
         // Test (X + 1) * (X + 1) = X^2 + 2X + 1
         let mut a = Poly::new();
-        a.coeffs[0] = 1;  // Constant term
-        a.coeffs[1] = 1;  // X term
+        a.coeffs[0] = 1; // Constant term
+        a.coeffs[1] = 1; // X term
 
         let c = poly_mul_ntt(&a, &a);
 
@@ -1059,8 +1082,11 @@ mod tests {
         for i in 0..N {
             let ntt_val = ((c_ntt.coeffs[i] % Q) + Q) % Q;
             let school_val = ((c_school.coeffs[i] % Q) + Q) % Q;
-            assert_eq!(ntt_val, school_val,
-                "Coefficient {} mismatch: NTT={}, Schoolbook={}", i, ntt_val, school_val);
+            assert_eq!(
+                ntt_val, school_val,
+                "Coefficient {} mismatch: NTT={}, Schoolbook={}",
+                i, ntt_val, school_val
+            );
         }
     }
 
@@ -1091,7 +1117,7 @@ mod tests {
         // 100 * 200 = 20000
         // 20000 * 169 = 3380000
         // 3380000 mod 3329 = 1015
-        let r_inv = 169i32;  // R^(-1) mod q = 169
+        let r_inv = 169i32; // R^(-1) mod q = 169
         let expected = ((100i32 * 200 * r_inv) % Q as i32) as i16;
         println!("Expected (with R^(-1) = 169): {}", expected);
 
@@ -1102,7 +1128,6 @@ mod tests {
     fn test_zetas_length() {
         assert_eq!(ZETAS.len(), 128);
     }
-
 
     #[test]
     fn test_polyvec_basemul_acc_cached() {
@@ -1196,7 +1221,8 @@ mod tests {
         for i in 0..N {
             assert_eq!(
                 result_mul_ntt.coeffs[i], result_polyvec.coeffs[i],
-                "Coefficient {}: mul_ntt != polyvec_acc", i
+                "Coefficient {}: mul_ntt != polyvec_acc",
+                i
             );
         }
     }
@@ -1245,7 +1271,11 @@ mod tests {
             let mut bytes_a = [0u8; 128];
             let mut bytes_b = [0u8; 128];
             prf(&[trial as u8; 32], trial as u8, &mut bytes_a);
-            prf(&[(trial + 100) as u8; 32], (trial + 100) as u8, &mut bytes_b);
+            prf(
+                &[(trial + 100) as u8; 32],
+                (trial + 100) as u8,
+                &mut bytes_b,
+            );
 
             // Generate random polynomials with CBD distribution (typical for ML-KEM)
             let a = sample_poly_cbd(2, &bytes_a);
@@ -1264,7 +1294,8 @@ mod tests {
                 assert!(
                     result.coeffs[i].abs() < Q,
                     "Coefficient {} out of bounds: {}",
-                    i, result.coeffs[i]
+                    i,
+                    result.coeffs[i]
                 );
             }
         }
