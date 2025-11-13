@@ -278,9 +278,6 @@ pub fn poly_hint_count(h: &Poly) -> usize {
 }
 
 mod tests {
-    
-    
-    
 
     #[test]
     fn test_make_hint_no_change() {

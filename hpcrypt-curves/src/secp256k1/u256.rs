@@ -341,7 +341,8 @@ impl U256 {
 
         if bit_shift == 0 {
             // Simple limb shift
-            result[..(4 - limb_shift)].copy_from_slice(&self.limbs[limb_shift..((4 - limb_shift) + limb_shift)]);
+            result[..(4 - limb_shift)]
+                .copy_from_slice(&self.limbs[limb_shift..((4 - limb_shift) + limb_shift)]);
         } else {
             // Shift with bit offset
             for i in 0..(4 - limb_shift) {

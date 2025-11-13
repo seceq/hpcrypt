@@ -110,25 +110,11 @@ fn bench_kmac_convenience(c: &mut Criterion) {
     group.throughput(Throughput::Bytes(1024));
 
     group.bench_function("kmac128_convenience", |b| {
-        b.iter(|| {
-            black_box(kmac128(
-                black_box(key),
-                black_box(&data),
-                b"",
-                32,
-            ))
-        });
+        b.iter(|| black_box(kmac128(black_box(key), black_box(&data), b"", 32)));
     });
 
     group.bench_function("kmac256_convenience", |b| {
-        b.iter(|| {
-            black_box(kmac256(
-                black_box(key),
-                black_box(&data),
-                b"",
-                64,
-            ))
-        });
+        b.iter(|| black_box(kmac256(black_box(key), black_box(&data), b"", 64)));
     });
 
     group.finish();
@@ -188,7 +174,7 @@ fn bench_kmac_verification(c: &mut Criterion) {
                 black_box(key),
                 black_box(&data),
                 b"",
-                black_box(&mac)
+                black_box(&mac),
             ))
         });
     });

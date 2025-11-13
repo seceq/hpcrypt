@@ -629,10 +629,6 @@ pub fn deserialize_signature<P: DsaParams>(bytes: &[u8]) -> Result<Signature<P>,
 }
 
 mod tests {
-    
-    
-    
-    
 
     #[test]
     fn test_encode_decode_poly_full() {

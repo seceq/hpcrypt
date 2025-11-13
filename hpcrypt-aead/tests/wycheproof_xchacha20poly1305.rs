@@ -89,7 +89,8 @@ fn run_xchacha20poly1305_test(test: &TestCase) -> bool {
             TestResult::Valid => {
                 eprintln!(
                     "XChaCha20-Poly1305 Test {} FAILED: Valid test has invalid key size: {}",
-                    test.tc_id, test.key.len()
+                    test.tc_id,
+                    test.key.len()
                 );
                 return false;
             }
@@ -106,7 +107,8 @@ fn run_xchacha20poly1305_test(test: &TestCase) -> bool {
             TestResult::Valid => {
                 eprintln!(
                     "XChaCha20-Poly1305 Test {} FAILED: Valid test has invalid nonce size: {}",
-                    test.tc_id, test.iv.len()
+                    test.tc_id,
+                    test.iv.len()
                 );
                 return false;
             }
@@ -123,7 +125,8 @@ fn run_xchacha20poly1305_test(test: &TestCase) -> bool {
             TestResult::Valid => {
                 eprintln!(
                     "XChaCha20-Poly1305 Test {} FAILED: Valid test has invalid tag size: {}",
-                    test.tc_id, test.tag.len()
+                    test.tc_id,
+                    test.tag.len()
                 );
                 return false;
             }
@@ -144,7 +147,8 @@ fn run_xchacha20poly1305_test(test: &TestCase) -> bool {
     match test.result {
         TestResult::Valid => {
             // For valid tests, encrypt and verify we get expected ciphertext+tag
-            let ciphertext_with_tag = XChaCha20Poly1305::encrypt(&key, &nonce, &test.msg, &test.aad);
+            let ciphertext_with_tag =
+                XChaCha20Poly1305::encrypt(&key, &nonce, &test.msg, &test.aad);
 
             // Expected output is ct || tag
             let mut expected = test.ct.clone();
@@ -155,12 +159,17 @@ fn run_xchacha20poly1305_test(test: &TestCase) -> bool {
                     "XChaCha20-Poly1305 Test {} FAILED: Valid test encryption mismatch: {}",
                     test.tc_id, test.comment
                 );
-                eprintln!("  Expected length: {}, Got length: {}", expected.len(), ciphertext_with_tag.len());
+                eprintln!(
+                    "  Expected length: {}, Got length: {}",
+                    expected.len(),
+                    ciphertext_with_tag.len()
+                );
                 return false;
             }
 
             // Also test decryption
-            let decrypted = XChaCha20Poly1305::decrypt(&key, &nonce, &ciphertext_with_tag, &test.aad);
+            let decrypted =
+                XChaCha20Poly1305::decrypt(&key, &nonce, &ciphertext_with_tag, &test.aad);
 
             match decrypted {
                 Some(plaintext) => {
@@ -186,7 +195,8 @@ fn run_xchacha20poly1305_test(test: &TestCase) -> bool {
             let mut ciphertext_with_tag = test.ct.clone();
             ciphertext_with_tag.extend_from_slice(&test.tag);
 
-            let decrypted = XChaCha20Poly1305::decrypt(&key, &nonce, &ciphertext_with_tag, &test.aad);
+            let decrypted =
+                XChaCha20Poly1305::decrypt(&key, &nonce, &ciphertext_with_tag, &test.aad);
 
             if decrypted.is_some() {
                 eprintln!(
@@ -278,29 +288,49 @@ fn wycheproof_xchacha20poly1305() {
 #[test]
 fn xchacha20poly1305_edge_cases() {
     let key = [0u8; 32];
-    let nonce = [0u8; 24];  // 24 bytes for XChaCha20
+    let nonce = [0u8; 24]; // 24 bytes for XChaCha20
 
     // Test with empty message
     let ciphertext1 = XChaCha20Poly1305::encrypt(&key, &nonce, b"", b"");
-    assert_eq!(ciphertext1.len(), 16, "Empty message should produce 16-byte tag only");
+    assert_eq!(
+        ciphertext1.len(),
+        16,
+        "Empty message should produce 16-byte tag only"
+    );
 
     let decrypted1 = XChaCha20Poly1305::decrypt(&key, &nonce, &ciphertext1, b"");
-    assert_eq!(decrypted1, Some(vec![]), "Decryption of empty message should succeed");
+    assert_eq!(
+        decrypted1,
+        Some(vec![]),
+        "Decryption of empty message should succeed"
+    );
 
     // Test with non-empty message
     let msg = b"Hello, XChaCha20-Poly1305!";
     let ciphertext2 = XChaCha20Poly1305::encrypt(&key, &nonce, msg, b"");
-    assert_eq!(ciphertext2.len(), msg.len() + 16, "Ciphertext should be plaintext + 16-byte tag");
+    assert_eq!(
+        ciphertext2.len(),
+        msg.len() + 16,
+        "Ciphertext should be plaintext + 16-byte tag"
+    );
 
     let decrypted2 = XChaCha20Poly1305::decrypt(&key, &nonce, &ciphertext2, b"");
-    assert_eq!(decrypted2, Some(msg.to_vec()), "Decryption should recover plaintext");
+    assert_eq!(
+        decrypted2,
+        Some(msg.to_vec()),
+        "Decryption should recover plaintext"
+    );
 
     // Test with AAD
     let aad = b"additional authenticated data";
     let ciphertext3 = XChaCha20Poly1305::encrypt(&key, &nonce, msg, aad);
 
     let decrypted3 = XChaCha20Poly1305::decrypt(&key, &nonce, &ciphertext3, aad);
-    assert_eq!(decrypted3, Some(msg.to_vec()), "Decryption with AAD should succeed");
+    assert_eq!(
+        decrypted3,
+        Some(msg.to_vec()),
+        "Decryption with AAD should succeed"
+    );
 
     // Wrong AAD should fail
     let decrypted4 = XChaCha20Poly1305::decrypt(&key, &nonce, &ciphertext3, b"wrong aad");
@@ -310,7 +340,10 @@ fn xchacha20poly1305_edge_cases() {
     let mut modified = ciphertext2.clone();
     modified[0] ^= 1;
     let decrypted5 = XChaCha20Poly1305::decrypt(&key, &nonce, &modified, b"");
-    assert_eq!(decrypted5, None, "Decryption of modified ciphertext should fail");
+    assert_eq!(
+        decrypted5, None,
+        "Decryption of modified ciphertext should fail"
+    );
 
     // Modified tag should fail
     let mut modified_tag = ciphertext2.clone();

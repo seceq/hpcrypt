@@ -1016,8 +1016,6 @@ fn rej_uniform(coeffs: &mut [i32], start: usize, len: usize, buf: &[u8], buflen:
 }
 
 mod tests {
-    
-    
 
     #[test]
     fn test_sample_in_ball_count() {

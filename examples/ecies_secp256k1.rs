@@ -20,8 +20,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (recipient_secret, recipient_public) = EciesSecp256k1::generate_keypair(&mut rng)?;
 
     println!("   Recipient private key: {} bytes", recipient_secret.len());
-    println!("   Recipient public key: {} bytes (0x04 || X || Y)", recipient_public.len());
-    println!("   Public key prefix: 0x{:02x} (uncompressed)", recipient_public[0]);
+    println!(
+        "   Recipient public key: {} bytes (0x04 || X || Y)",
+        recipient_public.len()
+    );
+    println!(
+        "   Public key prefix: 0x{:02x} (uncompressed)",
+        recipient_public[0]
+    );
 
     // 2. Encrypt a message
     println!("\n2. Encryption");
@@ -32,7 +38,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ciphertext = EciesSecp256k1::encrypt(&recipient_public, message, &[], &mut rng)?;
 
     println!("   Ciphertext size: {} bytes", ciphertext.len());
-    println!("   Overhead: {} bytes (ephemeral key + nonce + tag)", ciphertext.len() - message.len());
+    println!(
+        "   Overhead: {} bytes (ephemeral key + nonce + tag)",
+        ciphertext.len() - message.len()
+    );
     println!("   Breakdown:");
     println!("     - Ephemeral public key: 65 bytes");
     println!("     - AES-GCM nonce: 12 bytes");
@@ -43,8 +52,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n3. Decryption");
     let plaintext = EciesSecp256k1::decrypt(&recipient_secret, &ciphertext, &[])?;
 
-    println!("   Decrypted: {:?}", std::str::from_utf8(&plaintext).unwrap());
-    println!("   Match original: {}", if plaintext == message { " YES" } else { " NO" });
+    println!(
+        "   Decrypted: {:?}",
+        std::str::from_utf8(&plaintext).unwrap()
+    );
+    println!(
+        "   Match original: {}",
+        if plaintext == message { " YES" } else { " NO" }
+    );
 
     // 4. Demonstrate forward secrecy
     println!("\n4. Forward Secrecy");
@@ -52,7 +67,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ciphertext2 = EciesSecp256k1::encrypt(&recipient_public, message2, &[], &mut rng)?;
 
     println!("   Same recipient, different message");
-    println!("   Ciphertext 1 != Ciphertext 2: {}", if ciphertext != ciphertext2 { " YES" } else { " NO" });
+    println!(
+        "   Ciphertext 1 != Ciphertext 2: {}",
+        if ciphertext != ciphertext2 {
+            " YES"
+        } else {
+            " NO"
+        }
+    );
     println!("   Reason: Fresh ephemeral key for each encryption");
 
     // 5. Domain separation with shared info
@@ -64,12 +86,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ct_chat = EciesSecp256k1::encrypt(&recipient_public, message, context2, &mut rng)?;
 
     println!("   Same message, different contexts");
-    println!("   Email context: {:?}", std::str::from_utf8(context1).unwrap());
-    println!("   Chat context: {:?}", std::str::from_utf8(context2).unwrap());
+    println!(
+        "   Email context: {:?}",
+        std::str::from_utf8(context1).unwrap()
+    );
+    println!(
+        "   Chat context: {:?}",
+        std::str::from_utf8(context2).unwrap()
+    );
 
     // Decrypting with wrong context fails
     let wrong_context_result = EciesSecp256k1::decrypt(&recipient_secret, &ct_email, context2);
-    println!("   Decrypt email with chat context: {}", if wrong_context_result.is_err() { " FAILS (GOOD!)" } else { " WORKS (BAD!)" });
+    println!(
+        "   Decrypt email with chat context: {}",
+        if wrong_context_result.is_err() {
+            " FAILS (GOOD!)"
+        } else {
+            " WORKS (BAD!)"
+        }
+    );
 
     // Decrypting with correct context works
     let correct_result = EciesSecp256k1::decrypt(&recipient_secret, &ct_email, context1)?;
@@ -82,7 +117,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tampered_ciphertext[len - 1] ^= 0x01; // Flip one bit in the tag
 
     let tamper_result = EciesSecp256k1::decrypt(&recipient_secret, &tampered_ciphertext, &[]);
-    println!("   Tampered ciphertext decryption: {}", if tamper_result.is_err() { " FAILS (GOOD!)" } else { " WORKS (BAD!)" });
+    println!(
+        "   Tampered ciphertext decryption: {}",
+        if tamper_result.is_err() {
+            " FAILS (GOOD!)"
+        } else {
+            " WORKS (BAD!)"
+        }
+    );
 
     // 7. Empty message support
     println!("\n7. Edge Cases");
@@ -91,8 +133,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let empty_pt = EciesSecp256k1::decrypt(&recipient_secret, &empty_ct, &[])?;
 
     println!("   Empty message: {:?}", empty_message);
-    println!("   Ciphertext size: {} bytes (just overhead)", empty_ct.len());
-    println!("   Decryption works: {}", if empty_pt == empty_message { " YES" } else { " NO" });
+    println!(
+        "   Ciphertext size: {} bytes (just overhead)",
+        empty_ct.len()
+    );
+    println!(
+        "   Decryption works: {}",
+        if empty_pt == empty_message {
+            " YES"
+        } else {
+            " NO"
+        }
+    );
 
     // 8. Use cases
     println!("\n8. Use Cases");

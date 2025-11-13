@@ -8,7 +8,6 @@
 /// - Incremental updates
 /// - Different update patterns
 /// - Edge cases (empty, single block, multi-block)
-
 use hpcrypt::hash::sha1::{sha1, Sha1};
 
 fn main() {

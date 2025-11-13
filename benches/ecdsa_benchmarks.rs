@@ -1,7 +1,11 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use hpcrypt_signatures::ecdsa::{SigningKey as P256SigningKey, VerifyingKey as P256VerifyingKey};
-use hpcrypt_signatures::ecdsa_p384::{SigningKey as P384SigningKey, VerifyingKey as P384VerifyingKey};
-use hpcrypt_signatures::ecdsa_secp256k1::{SigningKey as Secp256k1SigningKey, VerifyingKey as Secp256k1VerifyingKey};
+use hpcrypt_signatures::ecdsa_p384::{
+    SigningKey as P384SigningKey, VerifyingKey as P384VerifyingKey,
+};
+use hpcrypt_signatures::ecdsa_secp256k1::{
+    SigningKey as Secp256k1SigningKey, VerifyingKey as Secp256k1VerifyingKey,
+};
 
 // P-256 ECDSA Benchmarks
 fn bench_p256_key_generation(c: &mut Criterion) {
@@ -190,27 +194,21 @@ fn bench_sign_comparison(c: &mut Criterion) {
     let message = b"Hello, world!";
 
     group.bench_with_input(BenchmarkId::new("curve", "P-256"), &(), |b, _| {
-        b.iter(|| {
-            black_box(p256_key.sign(message))
-        });
+        b.iter(|| black_box(p256_key.sign(message)));
     });
 
     // P-384
     let p384_key = P384SigningKey::from_bytes(&[1u8; 48]).unwrap();
 
     group.bench_with_input(BenchmarkId::new("curve", "P-384"), &(), |b, _| {
-        b.iter(|| {
-            black_box(p384_key.sign(message))
-        });
+        b.iter(|| black_box(p384_key.sign(message)));
     });
 
     // secp256k1
     let secp_key = Secp256k1SigningKey::from_bytes(&[1u8; 32]).unwrap();
 
     group.bench_with_input(BenchmarkId::new("curve", "secp256k1"), &(), |b, _| {
-        b.iter(|| {
-            black_box(secp_key.sign(message))
-        });
+        b.iter(|| black_box(secp_key.sign(message)));
     });
 
     group.finish();
@@ -227,9 +225,7 @@ fn bench_verify_comparison(c: &mut Criterion) {
     let p256_sig = p256_signing.sign(message);
 
     group.bench_with_input(BenchmarkId::new("curve", "P-256"), &(), |b, _| {
-        b.iter(|| {
-            black_box(p256_verifying.verify(message, &p256_sig))
-        });
+        b.iter(|| black_box(p256_verifying.verify(message, &p256_sig)));
     });
 
     // P-384
@@ -238,9 +234,7 @@ fn bench_verify_comparison(c: &mut Criterion) {
     let p384_sig = p384_signing.sign(message);
 
     group.bench_with_input(BenchmarkId::new("curve", "P-384"), &(), |b, _| {
-        b.iter(|| {
-            black_box(p384_verifying.verify(message, &p384_sig))
-        });
+        b.iter(|| black_box(p384_verifying.verify(message, &p384_sig)));
     });
 
     // secp256k1
@@ -249,9 +243,7 @@ fn bench_verify_comparison(c: &mut Criterion) {
     let secp_sig = secp_signing.sign(message);
 
     group.bench_with_input(BenchmarkId::new("curve", "secp256k1"), &(), |b, _| {
-        b.iter(|| {
-            black_box(secp_verifying.verify(message, &secp_sig))
-        });
+        b.iter(|| black_box(secp_verifying.verify(message, &secp_sig)));
     });
 
     group.finish();
@@ -270,9 +262,7 @@ fn bench_p256_varying_message_sizes(c: &mut Criterion) {
             BenchmarkId::new("size", format!("{}_bytes", size)),
             &message,
             |b, msg| {
-                b.iter(|| {
-                    black_box(signing_key.sign(msg))
-                });
+                b.iter(|| black_box(signing_key.sign(msg)));
             },
         );
     }

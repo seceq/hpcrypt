@@ -77,7 +77,8 @@ fn run_ed25519_test(test: &TestCase, public_key: &[u8; 32]) -> bool {
             TestResult::Valid => {
                 eprintln!(
                     "Ed25519 Test {} FAILED: Valid test has invalid signature length: {}",
-                    test.tc_id, test.sig.len()
+                    test.tc_id,
+                    test.sig.len()
                 );
                 return false;
             }
@@ -139,8 +140,8 @@ fn run_ed25519_test(test: &TestCase, public_key: &[u8; 32]) -> bool {
 #[test]
 fn wycheproof_ed25519() {
     let test_data = include_str!("../../../wycheproof/testvectors_v1/ed25519_test.json");
-    let test_file: TestFile = serde_json::from_str(test_data)
-        .expect("Failed to parse Wycheproof Ed25519 test vectors");
+    let test_file: TestFile =
+        serde_json::from_str(test_data).expect("Failed to parse Wycheproof Ed25519 test vectors");
 
     println!(
         "Running {} Wycheproof Ed25519 tests...",
@@ -181,8 +182,7 @@ fn wycheproof_ed25519() {
     );
 
     assert_eq!(
-        passed_tests,
-        total_tests,
+        passed_tests, total_tests,
         "Some Ed25519 tests failed (note: {} tests were skipped for unsupported parameters)",
         skipped_tests
     );
@@ -212,7 +212,10 @@ fn ed25519_edge_cases() {
     );
 
     // Signatures should be different
-    assert_ne!(sig1, sig2, "Different messages should produce different signatures");
+    assert_ne!(
+        sig1, sig2,
+        "Different messages should produce different signatures"
+    );
 
     // Wrong message should fail
     assert!(

@@ -99,7 +99,11 @@ fn karatsuba_mul(a: &TestValue, b: &TestValue) -> [u64; 8] {
     z1[1] = z_mid[1];
     z1[2] = z_mid[2];
     z1[3] = z_mid[3];
-    z1[4] = if a_sum_carry != 0 && b_sum_carry != 0 { 1 } else { 0 };
+    z1[4] = if a_sum_carry != 0 && b_sum_carry != 0 {
+        1
+    } else {
+        0
+    };
 
     // z1 -= z0
     let sub0 = (z1[0] as u128).wrapping_sub(z0[0] as u128);
@@ -246,7 +250,10 @@ fn main() {
     let ns_per_sb = duration_sb.as_nanos() as f64 / total as f64;
 
     println!("  Time per multiplication: {:.2} ns", ns_per_sb);
-    println!("  Throughput: {:.2} million ops/sec", 1000.0 / (ns_per_sb / 1000.0));
+    println!(
+        "  Throughput: {:.2} million ops/sec",
+        1000.0 / (ns_per_sb / 1000.0)
+    );
     println!();
 
     // Benchmark Karatsuba
@@ -268,7 +275,10 @@ fn main() {
     let ns_per_kt = duration_kt.as_nanos() as f64 / total as f64;
 
     println!("  Time per multiplication: {:.2} ns", ns_per_kt);
-    println!("  Throughput: {:.2} million ops/sec", 1000.0 / (ns_per_kt / 1000.0));
+    println!(
+        "  Throughput: {:.2} million ops/sec",
+        1000.0 / (ns_per_kt / 1000.0)
+    );
     println!();
 
     // Comparison
@@ -284,14 +294,27 @@ fn main() {
     let improvement = ((ns_per_sb - ns_per_kt) / ns_per_sb) * 100.0;
 
     if speedup > 1.0 {
-        println!("   Karatsuba is {:.2}x faster ({:.1}% improvement)", speedup, improvement);
+        println!(
+            "   Karatsuba is {:.2}x faster ({:.1}% improvement)",
+            speedup, improvement
+        );
     } else {
-        println!("    Schoolbook is {:.2}x faster ({:.1}% slower)", 1.0/speedup, -improvement);
+        println!(
+            "    Schoolbook is {:.2}x faster ({:.1}% slower)",
+            1.0 / speedup,
+            -improvement
+        );
     }
 
     println!();
-    println!("  Time saved per multiplication: {:.2} ns", ns_per_sb - ns_per_kt);
-    println!("  Time saved per 1000 multiplications: {:.2} μs", (ns_per_sb - ns_per_kt) / 1000.0);
+    println!(
+        "  Time saved per multiplication: {:.2} ns",
+        ns_per_sb - ns_per_kt
+    );
+    println!(
+        "  Time saved per 1000 multiplications: {:.2} μs",
+        (ns_per_sb - ns_per_kt) / 1000.0
+    );
     println!();
     println!("{}", "=".repeat(70));
 }

@@ -6,9 +6,9 @@
 //! Expected improvement: 10-15% for point operations based on reducing
 //! the number of full reductions from ~15 to ~6-8 per operation.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use hpcrypt_curves::field25519::FieldElement;
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use hpcrypt_curves::ed25519::{EdwardsPoint, Scalar};
+use hpcrypt_curves::field25519::FieldElement;
 
 // ============================================================================
 // BASELINE: Current Implementation Benchmarks

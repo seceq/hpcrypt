@@ -17,7 +17,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("1. Key Generation");
     let (recipient_secret, recipient_public) = EciesSecp256k1::generate_keypair(&mut rng)?;
     println!("   Recipient private key: {} bytes", recipient_secret.len());
-    println!("   Recipient public key: {} bytes (uncompressed)\n", recipient_public.len());
+    println!(
+        "   Recipient public key: {} bytes (uncompressed)\n",
+        recipient_public.len()
+    );
 
     // 2. Encrypt with uncompressed ephemeral key (default)
     println!("2. Encryption with Uncompressed Key");
@@ -27,15 +30,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let ct_uncompressed = EciesSecp256k1::encrypt(&recipient_public, message, &[], &mut rng)?;
     println!("   Ciphertext size: {} bytes", ct_uncompressed.len());
-    println!("   Overhead: {} bytes (65 ephemeral + 12 nonce + 16 tag)", ct_uncompressed.len() - message.len());
-    println!("   Ephemeral key prefix: 0x{:02x} (uncompressed)\n", ct_uncompressed[0]);
+    println!(
+        "   Overhead: {} bytes (65 ephemeral + 12 nonce + 16 tag)",
+        ct_uncompressed.len() - message.len()
+    );
+    println!(
+        "   Ephemeral key prefix: 0x{:02x} (uncompressed)\n",
+        ct_uncompressed[0]
+    );
 
     // 3. Encrypt with compressed ephemeral key
     println!("3. Encryption with Compressed Key");
-    let ct_compressed = EciesSecp256k1::encrypt_compressed(&recipient_public, message, &[], &mut rng)?;
+    let ct_compressed =
+        EciesSecp256k1::encrypt_compressed(&recipient_public, message, &[], &mut rng)?;
     println!("   Ciphertext size: {} bytes", ct_compressed.len());
-    println!("   Overhead: {} bytes (33 ephemeral + 12 nonce + 16 tag)", ct_compressed.len() - message.len());
-    println!("   Ephemeral key prefix: 0x{:02x} (compressed)\n", ct_compressed[0]);
+    println!(
+        "   Overhead: {} bytes (33 ephemeral + 12 nonce + 16 tag)",
+        ct_compressed.len() - message.len()
+    );
+    println!(
+        "   Ephemeral key prefix: 0x{:02x} (compressed)\n",
+        ct_compressed[0]
+    );
 
     // 4. Compare sizes
     println!("4. Overhead Comparison");
@@ -53,12 +69,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("5. Decryption (Automatic Format Detection)");
 
     let pt_uncompressed = EciesSecp256k1::decrypt(&recipient_secret, &ct_uncompressed, &[])?;
-    println!("   Decrypted from uncompressed: {:?}", std::str::from_utf8(&pt_uncompressed).unwrap());
+    println!(
+        "   Decrypted from uncompressed: {:?}",
+        std::str::from_utf8(&pt_uncompressed).unwrap()
+    );
 
     let pt_compressed = EciesSecp256k1::decrypt(&recipient_secret, &ct_compressed, &[])?;
-    println!("   Decrypted from compressed: {:?}", std::str::from_utf8(&pt_compressed).unwrap());
+    println!(
+        "   Decrypted from compressed: {:?}",
+        std::str::from_utf8(&pt_compressed).unwrap()
+    );
 
-    println!("   Both decrypt to same message: {}\n", pt_uncompressed == pt_compressed && pt_compressed == message);
+    println!(
+        "   Both decrypt to same message: {}\n",
+        pt_uncompressed == pt_compressed && pt_compressed == message
+    );
 
     // 6. Size comparison for different message lengths
     println!("6. Overhead Analysis for Different Message Sizes");
@@ -74,10 +99,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let saved = ct_uncomp.len() - ct_comp.len();
         let total_size = ct_comp.len();
-        let reduction = if total_size > 0 { (saved * 100) / ct_uncomp.len() } else { 0 };
+        let reduction = if total_size > 0 {
+            (saved * 100) / ct_uncomp.len()
+        } else {
+            0
+        };
 
-        println!("   {:7} | {:12} | {:10} | {:6} | {:7}%",
-            size, ct_uncomp.len(), ct_comp.len(), saved, reduction);
+        println!(
+            "   {:7} | {:12} | {:10} | {:6} | {:7}%",
+            size,
+            ct_uncomp.len(),
+            ct_comp.len(),
+            saved,
+            reduction
+        );
     }
     println!();
 
@@ -90,11 +125,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ct2 = EciesSecp256k1::encrypt_compressed(&recipient_public, msg2, &[], &mut rng)?;
 
     println!("   Same recipient, different messages");
-    println!("   Ciphertext 1 ephemeral key: 0x{:02x}{:02x}...{:02x}{:02x}",
-        ct1[0], ct1[1], ct1[30], ct1[31]);
-    println!("   Ciphertext 2 ephemeral key: 0x{:02x}{:02x}...{:02x}{:02x}",
-        ct2[0], ct2[1], ct2[30], ct2[31]);
-    println!("   Keys are different: {} (fresh ephemeral key per encryption)\n", ct1[..33] != ct2[..33]);
+    println!(
+        "   Ciphertext 1 ephemeral key: 0x{:02x}{:02x}...{:02x}{:02x}",
+        ct1[0], ct1[1], ct1[30], ct1[31]
+    );
+    println!(
+        "   Ciphertext 2 ephemeral key: 0x{:02x}{:02x}...{:02x}{:02x}",
+        ct2[0], ct2[1], ct2[30], ct2[31]
+    );
+    println!(
+        "   Keys are different: {} (fresh ephemeral key per encryption)\n",
+        ct1[..33] != ct2[..33]
+    );
 
     // 8. Use cases
     println!("8. When to Use Compressed Keys");
@@ -123,7 +165,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!(" ECIES compressed keys demonstration complete!");
     println!("\nKey Takeaway: Compressed keys save 32 bytes (35% overhead reduction)");
-    println!("with minimal performance impact, making them ideal for Bitcoin/Ethereum applications.");
+    println!(
+        "with minimal performance impact, making them ideal for Bitcoin/Ethereum applications."
+    );
 
     Ok(())
 }

@@ -110,8 +110,8 @@ fn run_ed25519_test(public_key: &[u8], test: &TestCase) -> bool {
 #[test]
 fn wycheproof_ed25519() {
     let test_data = include_str!("../../../wycheproof/testvectors_v1/ed25519_test.json");
-    let test_file: TestFile = serde_json::from_str(test_data)
-        .expect("Failed to parse Wycheproof Ed25519 test vectors");
+    let test_file: TestFile =
+        serde_json::from_str(test_data).expect("Failed to parse Wycheproof Ed25519 test vectors");
 
     println!(
         "Running {} Wycheproof Ed25519 tests...",
@@ -136,11 +136,7 @@ fn wycheproof_ed25519() {
         passed_tests, total_tests
     );
 
-    assert_eq!(
-        passed_tests,
-        total_tests,
-        "Some Ed25519 tests failed"
-    );
+    assert_eq!(passed_tests, total_tests, "Some Ed25519 tests failed");
 }
 
 #[test]

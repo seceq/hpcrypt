@@ -461,8 +461,7 @@ impl UltraWideWindowTable {
     }
 }
 
-static ULTRA_WIDE_TABLE: Lazy<UltraWideWindowTable> =
-    Lazy::new(UltraWideWindowTable::generate);
+static ULTRA_WIDE_TABLE: Lazy<UltraWideWindowTable> = Lazy::new(UltraWideWindowTable::generate);
 
 /// Fast scalar multiplication with the generator using precomputed tables
 ///

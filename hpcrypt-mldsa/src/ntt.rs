@@ -1310,8 +1310,6 @@ pub fn inv_ntt_specialized(poly: &Poly) -> Poly {
 }
 
 mod tests {
-    
-    
 
     #[test]
     #[cfg(feature = "std")]

@@ -1,5 +1,5 @@
-use std::time::Instant;
 use hpcrypt_curves::ed448::{Point, Scalar};
+use std::time::Instant;
 
 fn main() {
     println!("=== Ed448 Operation Micro-Benchmarks ===\n");
@@ -47,7 +47,7 @@ fn main() {
 
     // Benchmark field inversion
     println!("4. Field Inversion (expensive!)");
-    let iterations_inv = 100;  // Much fewer iterations
+    let iterations_inv = 100; // Much fewer iterations
     let start = Instant::now();
     for _ in 0..iterations_inv {
         let _ = a.invert();

@@ -972,7 +972,8 @@ impl FieldElement {
         let _low = Self::from_limbs([limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5]]);
 
         // Extract high part (bits 384..768) as a field element
-        let _high = Self::from_limbs([limbs[6], limbs[7], limbs[8], limbs[9], limbs[10], limbs[11]]);
+        let _high =
+            Self::from_limbs([limbs[6], limbs[7], limbs[8], limbs[9], limbs[10], limbs[11]]);
 
         // Apply reduction formula: high * 2^384 ≡ high * (2^128 + 2^96 - 2^32 + 1) (mod p)
         // But DON'T reduce yet - we need to allow overflow!

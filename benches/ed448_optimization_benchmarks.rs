@@ -3,9 +3,9 @@
 // This benchmark suite measures the performance of each Ed448 optimization
 // technique to validate gains before applying changes.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
-use hpcrypt_curves::ed448::{FieldElement, Scalar, Point, sign, verify, public_key};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use hpcrypt_curves::ed448::sliding::sliding_window_scalar_mul;
+use hpcrypt_curves::ed448::{public_key, sign, verify, FieldElement, Point, Scalar};
 
 // ============================================================================
 // Baseline Field Operation Benchmarks
@@ -281,16 +281,18 @@ fn bench_batch_inversion(c: &mut Criterion) {
 
     for n in [4, 8, 16, 32].iter() {
         let elements: Vec<FieldElement> = (0..*n)
-            .map(|i| FieldElement::from_limbs([
-                (i + 1) as u64,
-                (i + 2) as u64,
-                (i + 3) as u64,
-                (i + 4) as u64,
-                (i + 5) as u64,
-                (i + 6) as u64,
-                (i + 7) as u64,
-                (i + 8) as u64
-            ]))
+            .map(|i| {
+                FieldElement::from_limbs([
+                    (i + 1) as u64,
+                    (i + 2) as u64,
+                    (i + 3) as u64,
+                    (i + 4) as u64,
+                    (i + 5) as u64,
+                    (i + 6) as u64,
+                    (i + 7) as u64,
+                    (i + 8) as u64,
+                ])
+            })
             .collect();
 
         group.throughput(Throughput::Elements(*n as u64));
@@ -298,9 +300,7 @@ fn bench_batch_inversion(c: &mut Criterion) {
         // Baseline: individual inversions
         group.bench_with_input(BenchmarkId::new("individual", n), n, |bencher, _| {
             bencher.iter(|| {
-                let results: Vec<FieldElement> = elements.iter()
-                    .map(|e| e.invert())
-                    .collect();
+                let results: Vec<FieldElement> = elements.iter().map(|e| e.invert()).collect();
                 black_box(results)
             });
         });
@@ -337,9 +337,7 @@ fn bench_multiscalar_multiplication(c: &mut Criterion) {
             .map(|i| Scalar::from_bytes(&[i as u8; 57]))
             .collect();
 
-        let scalar_bytes: Vec<[u8; 57]> = (0..*n)
-            .map(|i| [i as u8; 57])
-            .collect();
+        let scalar_bytes: Vec<[u8; 57]> = (0..*n).map(|i| [i as u8; 57]).collect();
 
         group.throughput(Throughput::Elements(*n as u64));
 

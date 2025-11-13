@@ -208,21 +208,13 @@ fn bench_sha3_256_input_sizes(c: &mut Criterion) {
 fn bench_empty_input(c: &mut Criterion) {
     let mut group = c.benchmark_group("sha3_empty_input");
 
-    group.bench_function("sha3_224", |b| {
-        b.iter(|| Sha3_224::digest(black_box(b"")))
-    });
+    group.bench_function("sha3_224", |b| b.iter(|| Sha3_224::digest(black_box(b""))));
 
-    group.bench_function("sha3_256", |b| {
-        b.iter(|| Sha3_256::digest(black_box(b"")))
-    });
+    group.bench_function("sha3_256", |b| b.iter(|| Sha3_256::digest(black_box(b""))));
 
-    group.bench_function("sha3_384", |b| {
-        b.iter(|| Sha3_384::digest(black_box(b"")))
-    });
+    group.bench_function("sha3_384", |b| b.iter(|| Sha3_384::digest(black_box(b""))));
 
-    group.bench_function("sha3_512", |b| {
-        b.iter(|| Sha3_512::digest(black_box(b"")))
-    });
+    group.bench_function("sha3_512", |b| b.iter(|| Sha3_512::digest(black_box(b""))));
 
     group.finish();
 }

@@ -36,9 +36,7 @@ fn bench_sha1_single_block(c: &mut Criterion) {
     let data = vec![0u8; 64];
     group.throughput(Throughput::Bytes(64));
 
-    group.bench_function("64_bytes", |b| {
-        b.iter(|| sha1(black_box(&data)))
-    });
+    group.bench_function("64_bytes", |b| b.iter(|| sha1(black_box(&data))));
 
     group.finish();
 }
@@ -49,9 +47,7 @@ fn bench_sha1_1kb(c: &mut Criterion) {
     let data = vec![0u8; 1024];
     group.throughput(Throughput::Bytes(1024));
 
-    group.bench_function("1kb", |b| {
-        b.iter(|| sha1(black_box(&data)))
-    });
+    group.bench_function("1kb", |b| b.iter(|| sha1(black_box(&data))));
 
     group.finish();
 }
@@ -63,9 +59,7 @@ fn bench_sha1_1mb(c: &mut Criterion) {
     let data = vec![0u8; 1024 * 1024];
     group.throughput(Throughput::Bytes(1024 * 1024));
 
-    group.bench_function("1mb", |b| {
-        b.iter(|| sha1(black_box(&data)))
-    });
+    group.bench_function("1mb", |b| b.iter(|| sha1(black_box(&data))));
 
     group.finish();
 }
@@ -78,9 +72,7 @@ fn bench_sha1_incremental(c: &mut Criterion) {
     let data = vec![0u8; 10240]; // 10 KB
     group.throughput(Throughput::Bytes(data.len() as u64));
 
-    group.bench_function("one_shot", |b| {
-        b.iter(|| sha1(black_box(&data)))
-    });
+    group.bench_function("one_shot", |b| b.iter(|| sha1(black_box(&data))));
 
     group.bench_function("incremental_1kb_chunks", |b| {
         b.iter(|| {

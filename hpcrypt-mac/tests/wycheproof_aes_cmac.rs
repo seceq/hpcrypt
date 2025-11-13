@@ -84,7 +84,8 @@ fn run_aes_cmac_test(test: &TestCase) -> bool {
             TestResult::Valid => {
                 eprintln!(
                     "AES-CMAC Test {} FAILED: Valid test has invalid key size: {}",
-                    test.tc_id, test.key.len()
+                    test.tc_id,
+                    test.key.len()
                 );
                 return false;
             }
@@ -102,7 +103,8 @@ fn run_aes_cmac_test(test: &TestCase) -> bool {
             TestResult::Valid => {
                 eprintln!(
                     "AES-CMAC Test {} FAILED: Valid test has non-standard tag size: {}",
-                    test.tc_id, test.tag.len()
+                    test.tc_id,
+                    test.tag.len()
                 );
                 return false;
             }
@@ -157,8 +159,8 @@ fn run_aes_cmac_test(test: &TestCase) -> bool {
 #[test]
 fn wycheproof_aes_cmac() {
     let test_data = include_str!("../../../wycheproof/testvectors_v1/aes_cmac_test.json");
-    let test_file: TestFile = serde_json::from_str(test_data)
-        .expect("Failed to parse Wycheproof AES-CMAC test vectors");
+    let test_file: TestFile =
+        serde_json::from_str(test_data).expect("Failed to parse Wycheproof AES-CMAC test vectors");
 
     println!(
         "Running {} Wycheproof AES-CMAC tests...",
@@ -205,8 +207,7 @@ fn wycheproof_aes_cmac() {
     );
 
     assert_eq!(
-        passed_tests,
-        total_tests,
+        passed_tests, total_tests,
         "Some AES-CMAC tests failed (note: {} tests were skipped for unsupported parameters)",
         skipped_tests
     );
@@ -216,27 +217,47 @@ fn wycheproof_aes_cmac() {
 #[test]
 fn aes_cmac_edge_cases() {
     // Test with empty message
-    let key = [0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
-               0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c];
+    let key = [
+        0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f,
+        0x3c,
+    ];
     let cmac = AesCmac128::new(&key);
     let tag = cmac.compute(b"");
-    assert_ne!(tag, [0u8; 16], "Tag for empty message should not be all zeros");
+    assert_ne!(
+        tag, [0u8; 16],
+        "Tag for empty message should not be all zeros"
+    );
 
     // Test with single block
     let tag_single = cmac.compute(&[0u8; 16]);
-    assert_ne!(tag_single, tag, "Different messages should produce different tags");
+    assert_ne!(
+        tag_single, tag,
+        "Different messages should produce different tags"
+    );
 
     // Test with multiple blocks
     let tag_multi = cmac.compute(&[0u8; 32]);
-    assert_ne!(tag_multi, tag_single, "Different lengths should produce different tags");
+    assert_ne!(
+        tag_multi, tag_single,
+        "Different lengths should produce different tags"
+    );
 
     // Test with incomplete block
     let tag_incomplete = cmac.compute(&[0u8; 10]);
-    assert_ne!(tag_incomplete, tag_single, "Incomplete blocks should produce different tags");
+    assert_ne!(
+        tag_incomplete, tag_single,
+        "Incomplete blocks should produce different tags"
+    );
 
     // Test verification
-    assert!(cmac.verify(b"", &tag), "Verification should succeed for matching tag");
-    assert!(!cmac.verify(b"", &tag_single), "Verification should fail for mismatched tag");
+    assert!(
+        cmac.verify(b"", &tag),
+        "Verification should succeed for matching tag"
+    );
+    assert!(
+        !cmac.verify(b"", &tag_single),
+        "Verification should fail for mismatched tag"
+    );
 
     println!("AES-CMAC edge case tests: All passed");
 }

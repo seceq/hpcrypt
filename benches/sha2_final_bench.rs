@@ -2,7 +2,7 @@
 //! Measures actual performance of optimized implementations
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
-use hpcrypt_hash::{sha256, sha512, sha384, Sha256};
+use hpcrypt_hash::{sha256, sha384, sha512, Sha256};
 
 fn bench_sha256_final(c: &mut Criterion) {
     let mut group = c.benchmark_group("sha256_final");
@@ -64,16 +64,12 @@ fn bench_sha384_final(c: &mut Criterion) {
     // Medium message
     let data_medium = vec![0u8; 1024];
     group.throughput(Throughput::Bytes(1024));
-    group.bench_function("1KB", |b| {
-        b.iter(|| sha384(black_box(&data_medium)))
-    });
+    group.bench_function("1KB", |b| b.iter(|| sha384(black_box(&data_medium))));
 
     // Large message
     let data_large = vec![0u8; 65536];
     group.throughput(Throughput::Bytes(65536));
-    group.bench_function("64KB", |b| {
-        b.iter(|| sha384(black_box(&data_large)))
-    });
+    group.bench_function("64KB", |b| b.iter(|| sha384(black_box(&data_large))));
 
     group.finish();
 }
@@ -85,9 +81,7 @@ fn bench_incremental_overhead(c: &mut Criterion) {
     group.throughput(Throughput::Bytes(4096));
 
     // One-shot
-    group.bench_function("sha256_oneshot", |b| {
-        b.iter(|| sha256(black_box(&data)))
-    });
+    group.bench_function("sha256_oneshot", |b| b.iter(|| sha256(black_box(&data))));
 
     // Incremental with 64-byte chunks
     group.bench_function("sha256_incremental_64B", |b| {

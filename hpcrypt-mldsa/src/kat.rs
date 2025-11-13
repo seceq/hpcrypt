@@ -174,9 +174,6 @@ pub fn parse_kat_file(content: &str) -> Result<Vec<KatVector>, &'static str> {
 }
 
 mod tests {
-    
-    
-    
 
     #[test]
     fn test_parse_hex() {

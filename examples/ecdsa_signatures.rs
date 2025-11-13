@@ -60,8 +60,7 @@ fn p256_example() {
 
     // 1. Generate a signing key
     println!("1.  Generating P-256 keypair...");
-    let signing_key = P256SigningKey::generate()
-        .expect("Failed to generate P-256 signing key");
+    let signing_key = P256SigningKey::generate().expect("Failed to generate P-256 signing key");
 
     // Derive the corresponding verifying (public) key
     let verifying_key = signing_key.verifying_key();
@@ -82,28 +81,49 @@ fn p256_example() {
     // 4. Verify the signature
     println!("\n4.  Verifying signature...");
     let is_valid = verifying_key.verify(message, &signature);
-    println!("   ✓ Signature verification: {}",
-        if is_valid { "✓ VALID" } else { "✗ INVALID" });
+    println!(
+        "   ✓ Signature verification: {}",
+        if is_valid { "✓ VALID" } else { "✗ INVALID" }
+    );
 
     // 5. DER encoding (for interoperability)
     println!("\n5.  DER encoding signature...");
     let (der_bytes, len) = signature.to_der();
-    println!("   ✓ DER encoded ({} bytes): {:02x?}...", len, &der_bytes[..16]);
+    println!(
+        "   ✓ DER encoded ({} bytes): {:02x?}...",
+        len,
+        &der_bytes[..16]
+    );
 
     // 6. Public key serialization
     println!("\n6.  Public key serialization:");
     let pub_uncompressed = verifying_key.to_bytes_uncompressed();
-    println!("   Uncompressed (65 bytes): {:02x?}...", &pub_uncompressed[..10]);
+    println!(
+        "   Uncompressed (65 bytes): {:02x?}...",
+        &pub_uncompressed[..10]
+    );
 
     let pub_compressed = verifying_key.to_bytes_compressed();
-    println!("   Compressed (33 bytes):   {:02x?}...", &pub_compressed[..10]);
+    println!(
+        "   Compressed (33 bytes):   {:02x?}...",
+        &pub_compressed[..10]
+    );
 
     // 7. Deterministic signing (same message = same signature)
     println!("\n7.  Testing RFC 6979 determinism...");
     let signature2 = signing_key.sign(message);
-    println!("   First signature:  {:02x?}...", &signature.to_bytes()[..8]);
-    println!("   Second signature: {:02x?}...", &signature2.to_bytes()[..8]);
-    println!("   ✓ Signatures match: {}", signature.to_bytes() == signature2.to_bytes());
+    println!(
+        "   First signature:  {:02x?}...",
+        &signature.to_bytes()[..8]
+    );
+    println!(
+        "   Second signature: {:02x?}...",
+        &signature2.to_bytes()[..8]
+    );
+    println!(
+        "   ✓ Signatures match: {}",
+        signature.to_bytes() == signature2.to_bytes()
+    );
 
     // 8. Invalid signature detection
     println!("\n8.  Testing invalid signature detection...");
@@ -121,8 +141,7 @@ fn p384_example() {
 
     // 1. Generate a signing key
     println!("1.  Generating P-384 keypair...");
-    let signing_key = P384SigningKey::generate()
-        .expect("Failed to generate P-384 signing key");
+    let signing_key = P384SigningKey::generate().expect("Failed to generate P-384 signing key");
     let verifying_key = signing_key.verifying_key();
     println!("   ✓ Keypair generated (384-bit security)");
 
@@ -137,16 +156,24 @@ fn p384_example() {
     // 3. Verify
     println!("\n4.  Verifying signature...");
     let is_valid = verifying_key.verify(message, &signature);
-    println!("   ✓ Signature verification: {}",
-        if is_valid { "✓ VALID" } else { "✗ INVALID" });
+    println!(
+        "   ✓ Signature verification: {}",
+        if is_valid { "✓ VALID" } else { "✗ INVALID" }
+    );
 
     // 4. Show larger key sizes
     println!("\n5.  P-384 key sizes:");
     let pub_uncompressed = verifying_key.to_bytes_uncompressed();
-    println!("   Uncompressed public key: {} bytes", pub_uncompressed.len());
+    println!(
+        "   Uncompressed public key: {} bytes",
+        pub_uncompressed.len()
+    );
     let pub_compressed = verifying_key.to_bytes_compressed();
     println!("   Compressed public key:   {} bytes", pub_compressed.len());
-    println!("   Signature size:          {} bytes", signature.to_bytes().len());
+    println!(
+        "   Signature size:          {} bytes",
+        signature.to_bytes().len()
+    );
 }
 
 /// Example: ECDSA with secp256k1 curve (Bitcoin/Ethereum)
@@ -158,8 +185,8 @@ fn secp256k1_example() {
 
     // 1. Generate a signing key
     println!("1.  Generating secp256k1 keypair...");
-    let signing_key = Secp256k1SigningKey::generate()
-        .expect("Failed to generate secp256k1 signing key");
+    let signing_key =
+        Secp256k1SigningKey::generate().expect("Failed to generate secp256k1 signing key");
     let verifying_key = signing_key.verifying_key();
     println!("   ✓ Keypair generated");
 
@@ -177,8 +204,10 @@ fn secp256k1_example() {
     // 3. Verify the transaction signature
     println!("\n4.  Verifying transaction signature...");
     let is_valid = verifying_key.verify(transaction, &signature);
-    println!("   ✓ Signature verification: {}",
-        if is_valid { "✓ VALID" } else { "✗ INVALID" });
+    println!(
+        "   ✓ Signature verification: {}",
+        if is_valid { "✓ VALID" } else { "✗ INVALID" }
+    );
 
     // 4. DER encoding (used in Bitcoin)
     println!("\n5.  DER encoding (Bitcoin format)...");
@@ -189,9 +218,15 @@ fn secp256k1_example() {
     // 5. Public key formats
     println!("\n6.  Public key formats:");
     let pub_uncompressed = verifying_key.to_bytes_uncompressed();
-    println!("   Uncompressed (65 bytes): {:02x?}...", &pub_uncompressed[..10]);
+    println!(
+        "   Uncompressed (65 bytes): {:02x?}...",
+        &pub_uncompressed[..10]
+    );
     let pub_compressed = verifying_key.to_bytes_compressed();
-    println!("   Compressed (33 bytes):   {:02x?}...", &pub_compressed[..10]);
+    println!(
+        "   Compressed (33 bytes):   {:02x?}...",
+        &pub_compressed[..10]
+    );
     println!("   (Bitcoin uses compressed format by default)");
 }
 
@@ -214,8 +249,7 @@ fn batch_verification_example() {
     let mut signatures = Vec::new();
 
     for (i, msg) in messages.iter().enumerate() {
-        let signing_key = P256SigningKey::generate()
-            .expect("Failed to generate key");
+        let signing_key = P256SigningKey::generate().expect("Failed to generate key");
         let verifying_key = signing_key.verifying_key();
         let signature = signing_key.sign(msg);
 
@@ -229,10 +263,17 @@ fn batch_verification_example() {
     println!("\n2.  Verifying all signatures...");
     for (i, ((key, sig), msg)) in keys.iter().zip(&signatures).zip(&messages).enumerate() {
         let valid = key.verify(msg, sig);
-        println!("   Signature {}: {}", i + 1, if valid { "✓ VALID" } else { "✗ INVALID" });
+        println!(
+            "   Signature {}: {}",
+            i + 1,
+            if valid { "✓ VALID" } else { "✗ INVALID" }
+        );
     }
 
-    println!("\n   ✓ Batch verification: All {} signatures valid", messages.len());
+    println!(
+        "\n   ✓ Batch verification: All {} signatures valid",
+        messages.len()
+    );
 
     // Test with one invalid signature
     println!("\n3.  Testing with one tampered signature...");
@@ -242,5 +283,9 @@ fn batch_verification_example() {
 
 // Helper function for minimum
 fn min(a: usize, b: usize) -> usize {
-    if a < b { a } else { b }
+    if a < b {
+        a
+    } else {
+        b
+    }
 }

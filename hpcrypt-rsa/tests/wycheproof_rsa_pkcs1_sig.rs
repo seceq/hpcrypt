@@ -172,21 +172,21 @@ fn parse_length(data: &[u8], offset: &mut usize) -> Option<usize> {
 fn hash_message(algorithm: &str, message: &[u8]) -> Option<(Vec<u8>, HashAlgorithm)> {
     match algorithm {
         "SHA-256" => {
-            use sha2::{Sha256, Digest};
+            use sha2::{Digest, Sha256};
             let mut hasher = Sha256::new();
             hasher.update(message);
             let digest = hasher.finalize().to_vec();
             Some((digest, HashAlgorithm::Sha256))
         }
         "SHA-384" => {
-            use sha2::{Sha384, Digest};
+            use sha2::{Digest, Sha384};
             let mut hasher = Sha384::new();
             hasher.update(message);
             let digest = hasher.finalize().to_vec();
             Some((digest, HashAlgorithm::Sha384))
         }
         "SHA-512" => {
-            use sha2::{Sha512, Digest};
+            use sha2::{Digest, Sha512};
             let mut hasher = Sha512::new();
             hasher.update(message);
             let digest = hasher.finalize().to_vec();
@@ -243,7 +243,8 @@ fn run_test(test: &TestCase, public_key: &RsaPublicKey, sha_algorithm: &str) -> 
 
 #[test]
 fn wycheproof_rsa_pkcs1_2048_sig_gen() {
-    let test_data = include_str!("../../../wycheproof/testvectors_v1/rsa_pkcs1_2048_sig_gen_test.json");
+    let test_data =
+        include_str!("../../../wycheproof/testvectors_v1/rsa_pkcs1_2048_sig_gen_test.json");
     let test_file: TestFile = serde_json::from_str(test_data)
         .expect("Failed to parse Wycheproof RSA PKCS#1 2048 test vectors");
 
@@ -291,7 +292,8 @@ fn wycheproof_rsa_pkcs1_2048_sig_gen() {
 
 #[test]
 fn wycheproof_rsa_pkcs1_3072_sig_gen() {
-    let test_data = include_str!("../../../wycheproof/testvectors_v1/rsa_pkcs1_3072_sig_gen_test.json");
+    let test_data =
+        include_str!("../../../wycheproof/testvectors_v1/rsa_pkcs1_3072_sig_gen_test.json");
     let test_file: TestFile = serde_json::from_str(test_data)
         .expect("Failed to parse Wycheproof RSA PKCS#1 3072 test vectors");
 
@@ -338,7 +340,8 @@ fn wycheproof_rsa_pkcs1_3072_sig_gen() {
 
 #[test]
 fn wycheproof_rsa_pkcs1_4096_sig_gen() {
-    let test_data = include_str!("../../../wycheproof/testvectors_v1/rsa_pkcs1_4096_sig_gen_test.json");
+    let test_data =
+        include_str!("../../../wycheproof/testvectors_v1/rsa_pkcs1_4096_sig_gen_test.json");
     let test_file: TestFile = serde_json::from_str(test_data)
         .expect("Failed to parse Wycheproof RSA PKCS#1 4096 test vectors");
 

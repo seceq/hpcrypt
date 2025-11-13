@@ -3,8 +3,8 @@
 //! Compares the performance of the new Karatsuba implementation
 //! against the traditional schoolbook multiplication.
 
-use std::time::Instant;
 use hpcrypt_curves::p256::field::FieldElement;
+use std::time::Instant;
 
 const ITERATIONS: usize = 100_000;
 
@@ -43,12 +43,7 @@ fn main() {
         0x8888888888888888,
     ]);
 
-    let test_pairs = vec![
-        (a, b),
-        (b, c),
-        (c, d),
-        (d, a),
-    ];
+    let test_pairs = vec![(a, b), (b, c), (c, d), (d, a)];
 
     // Benchmark Karatsuba (current implementation)
     println!("Current Implementation (Karatsuba):");
@@ -72,13 +67,23 @@ fn main() {
     let us_per_mul_k = ns_per_mul_k / 1000.0;
 
     println!("  Total multiplications: {}", total_muls);
-    println!("  Time per multiplication: {:.2} ns ({:.3} μs)", ns_per_mul_k, us_per_mul_k);
-    println!("  Throughput: {:.0} multiplications/sec", 1_000_000_000.0 / ns_per_mul_k);
+    println!(
+        "  Time per multiplication: {:.2} ns ({:.3} μs)",
+        ns_per_mul_k, us_per_mul_k
+    );
+    println!(
+        "  Throughput: {:.0} multiplications/sec",
+        1_000_000_000.0 / ns_per_mul_k
+    );
 
     // Verify correctness
     let test_result = a.mul(&b);
     let expected = b.mul(&a);
-    assert_eq!(test_result.to_bytes(), expected.to_bytes(), "Commutative check");
+    assert_eq!(
+        test_result.to_bytes(),
+        expected.to_bytes(),
+        "Commutative check"
+    );
     println!("   Correctness verified");
 
     println!();
@@ -88,7 +93,10 @@ fn main() {
     println!("KARATSUBA IMPLEMENTATION RESULTS:");
     println!("{}", "=".repeat(70));
     println!();
-    println!("  Multiplication time: {:.2} ns ({:.3} μs)", ns_per_mul_k, us_per_mul_k);
+    println!(
+        "  Multiplication time: {:.2} ns ({:.3} μs)",
+        ns_per_mul_k, us_per_mul_k
+    );
     println!("  Throughput: {:.2} million ops/sec", 1000.0 / us_per_mul_k);
     println!();
 
@@ -120,7 +128,10 @@ fn main() {
     ]);
     let max_result = max_a.mul(&max_a);
     let one = FieldElement::one();
-    println!("  (p-1) * (p-1) correct: {}", max_result.mul(&one).to_bytes() == max_result.to_bytes());
+    println!(
+        "  (p-1) * (p-1) correct: {}",
+        max_result.mul(&one).to_bytes() == max_result.to_bytes()
+    );
 
     // Test associativity
     let test_a = FieldElement::from_limbs([2, 0, 0, 0]);
@@ -128,7 +139,10 @@ fn main() {
     let test_c = FieldElement::from_limbs([5, 0, 0, 0]);
     let left = test_a.mul(&test_b).mul(&test_c);
     let right = test_a.mul(&test_b.mul(&test_c));
-    println!("  (2*3)*5 == 2*(3*5): {}", left.to_bytes() == right.to_bytes());
+    println!(
+        "  (2*3)*5 == 2*(3*5): {}",
+        left.to_bytes() == right.to_bytes()
+    );
 
     println!();
     println!("{}", "=".repeat(70));

@@ -132,9 +132,9 @@ impl<const RATE: usize, const ROUNDS: usize> XofReader<RATE, ROUNDS> {
             // Lane complement mode: certain lanes are stored complemented
             // For SHAKE128 (RATE=168): lanes that need complementing
             const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false, false, false, false, true, false, false,
-                false, true, false, false, false, false, true, false, false, true, false,
-                false, false, false,
+                false, true, true, false, false, false, false, false, true, false, false, false,
+                true, false, false, false, false, true, false, false, true, false, false, false,
+                false,
             ];
 
             // Extract complete u64 words with complementing

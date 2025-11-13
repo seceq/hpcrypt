@@ -417,8 +417,6 @@ fn poly_multiply(a: &Poly, b: &Poly) -> Poly {
 }
 
 mod tests {
-    
-    
 
     #[test]
     fn test_keygen_deterministic() {

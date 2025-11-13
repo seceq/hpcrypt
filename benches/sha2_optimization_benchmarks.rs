@@ -60,9 +60,7 @@ fn bench_sha256_single_block(c: &mut Criterion) {
     let data = vec![0u8; 64]; // Exactly one block
     group.throughput(Throughput::Bytes(64));
 
-    group.bench_function("64_bytes", |b| {
-        b.iter(|| sha256(black_box(&data)))
-    });
+    group.bench_function("64_bytes", |b| b.iter(|| sha256(black_box(&data))));
 
     group.finish();
 }
@@ -73,9 +71,7 @@ fn bench_sha512_single_block(c: &mut Criterion) {
     let data = vec![0u8; 128]; // Exactly one block
     group.throughput(Throughput::Bytes(128));
 
-    group.bench_function("128_bytes", |b| {
-        b.iter(|| sha512(black_box(&data)))
-    });
+    group.bench_function("128_bytes", |b| b.iter(|| sha512(black_box(&data))));
 
     group.finish();
 }
@@ -89,9 +85,7 @@ fn bench_sha256_incremental(c: &mut Criterion) {
     group.throughput(Throughput::Bytes(4096));
 
     // One-shot
-    group.bench_function("one_shot", |b| {
-        b.iter(|| sha256(black_box(&data)))
-    });
+    group.bench_function("one_shot", |b| b.iter(|| sha256(black_box(&data))));
 
     // Incremental (64-byte chunks)
     group.bench_function("incremental_64b_chunks", |b| {
@@ -127,9 +121,7 @@ fn bench_sha512_incremental(c: &mut Criterion) {
     group.throughput(Throughput::Bytes(4096));
 
     // One-shot
-    group.bench_function("one_shot", |b| {
-        b.iter(|| sha512(black_box(&data)))
-    });
+    group.bench_function("one_shot", |b| b.iter(|| sha512(black_box(&data))));
 
     // Incremental (128-byte chunks)
     group.bench_function("incremental_128b_chunks", |b| {

@@ -368,8 +368,6 @@ pub fn low_bits_poly(poly: &Poly, alpha: i32) -> Poly {
 }
 
 mod tests {
-    
-    
 
     #[test]
     fn test_power2round_basic() {

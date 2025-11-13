@@ -1,6 +1,6 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use hpcrypt_curves::X25519;
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use hpcrypt_curves::field25519::FieldElement;
+use hpcrypt_curves::X25519;
 
 fn bench_x25519_public_key(c: &mut Criterion) {
     let mut group = c.benchmark_group("X25519 Key Generation");
@@ -49,7 +49,8 @@ fn bench_x25519_full_exchange(c: &mut Criterion) {
             let bob_public = black_box(X25519::public_key(&bob_private));
 
             // Both compute shared secret
-            let alice_shared = black_box(X25519::shared_secret(&alice_private, &bob_public).unwrap());
+            let alice_shared =
+                black_box(X25519::shared_secret(&alice_private, &bob_public).unwrap());
             let bob_shared = black_box(X25519::shared_secret(&bob_private, &alice_public).unwrap());
 
             black_box((alice_shared, bob_shared))
@@ -130,16 +131,12 @@ fn bench_x25519_input_patterns(c: &mut Criterion) {
     for (name, private_key) in test_cases {
         let public_key = X25519::public_key(&[1u8; 32]);
 
-        group.bench_with_input(
-            BenchmarkId::new("pattern", name),
-            &private_key,
-            |b, pk| {
-                b.iter(|| {
-                    let shared = black_box(X25519::shared_secret(pk, &public_key).unwrap());
-                    black_box(shared)
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("pattern", name), &private_key, |b, pk| {
+            b.iter(|| {
+                let shared = black_box(X25519::shared_secret(pk, &public_key).unwrap());
+                black_box(shared)
+            });
+        });
     }
 
     group.finish();
@@ -170,7 +167,8 @@ fn bench_x25519_batch(c: &mut Criterion) {
                 b.iter(|| {
                     for i in 0..size {
                         let shared = black_box(
-                            X25519::shared_secret(&private_keys[i], &public_keys[(i + 1) % size]).unwrap()
+                            X25519::shared_secret(&private_keys[i], &public_keys[(i + 1) % size])
+                                .unwrap(),
                         );
                         black_box(shared);
                     }

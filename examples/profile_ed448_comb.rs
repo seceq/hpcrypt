@@ -1,5 +1,5 @@
+use hpcrypt_curves::ed448::{scalar_mul_base_comb, Point, Scalar};
 use std::time::Instant;
-use hpcrypt_curves::ed448::{Point, Scalar, scalar_mul_base_comb};
 
 fn main() {
     let scalar_bytes = [0x42u8; 57];
@@ -12,7 +12,10 @@ fn main() {
     let start = Instant::now();
     let _ = scalar_mul_base_comb(&scalar_bytes);
     let warmup_time = start.elapsed();
-    println!("   First call (includes table generation): {:?}\n", warmup_time);
+    println!(
+        "   First call (includes table generation): {:?}\n",
+        warmup_time
+    );
 
     // Measure Comb method performance
     println!("2. Measuring Comb method (table already loaded)...");

@@ -2,7 +2,7 @@
 //! Tests Phase 1 optimizations: circular buffer + padding with .fill()
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
-use hpcrypt_hash::{sha256, sha512, sha384};
+use hpcrypt_hash::{sha256, sha384, sha512};
 
 fn bench_sha256_optimized(c: &mut Criterion) {
     let mut group = c.benchmark_group("sha256_phase1");

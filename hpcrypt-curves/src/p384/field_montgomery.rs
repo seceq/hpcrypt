@@ -44,7 +44,9 @@ impl MontgomeryFieldElement {
         #[cfg(target_pointer_width = "32")]
         {
             Self {
-                limbs: fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+                limbs: fiat_p384_montgomery_domain_field_element([
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                ]),
             }
         }
     }
@@ -61,8 +63,10 @@ impl MontgomeryFieldElement {
 
         #[cfg(target_pointer_width = "32")]
         {
-            let one = fiat_p384_non_montgomery_domain_field_element([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-            let mut result = fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            let one =
+                fiat_p384_non_montgomery_domain_field_element([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            let mut result =
+                fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
             fiat_p384_to_montgomery(&mut result, &one);
             Self { limbs: result }
         }
@@ -103,7 +107,8 @@ impl MontgomeryFieldElement {
             fiat_p384_from_bytes(&mut non_mont_limbs, &bytes_le);
 
             let non_mont = fiat_p384_non_montgomery_domain_field_element(non_mont_limbs);
-            let mut mont = fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            let mut mont =
+                fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
             fiat_p384_to_montgomery(&mut mont, &non_mont);
 
             Some(Self { limbs: mont })
@@ -128,7 +133,8 @@ impl MontgomeryFieldElement {
 
         #[cfg(target_pointer_width = "32")]
         {
-            let mut non_mont = fiat_p384_non_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            let mut non_mont =
+                fiat_p384_non_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
             fiat_p384_from_montgomery(&mut non_mont, &self.limbs);
 
             let mut bytes_le = [0u8; 48];
@@ -153,7 +159,8 @@ impl MontgomeryFieldElement {
 
         #[cfg(target_pointer_width = "32")]
         {
-            let mut result = fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            let mut result =
+                fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
             fiat_p384_add(&mut result, &self.limbs, &rhs.limbs);
             Self { limbs: result }
         }
@@ -170,7 +177,8 @@ impl MontgomeryFieldElement {
 
         #[cfg(target_pointer_width = "32")]
         {
-            let mut result = fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            let mut result =
+                fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
             fiat_p384_sub(&mut result, &self.limbs, &rhs.limbs);
             Self { limbs: result }
         }
@@ -187,7 +195,8 @@ impl MontgomeryFieldElement {
 
         #[cfg(target_pointer_width = "32")]
         {
-            let mut result = fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            let mut result =
+                fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
             fiat_p384_opp(&mut result, &self.limbs);
             Self { limbs: result }
         }
@@ -204,7 +213,8 @@ impl MontgomeryFieldElement {
 
         #[cfg(target_pointer_width = "32")]
         {
-            let mut result = fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            let mut result =
+                fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
             fiat_p384_mul(&mut result, &self.limbs, &rhs.limbs);
             Self { limbs: result }
         }
@@ -221,7 +231,8 @@ impl MontgomeryFieldElement {
 
         #[cfg(target_pointer_width = "32")]
         {
-            let mut result = fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            let mut result =
+                fiat_p384_montgomery_domain_field_element([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
             fiat_p384_square(&mut result, &self.limbs);
             Self { limbs: result }
         }

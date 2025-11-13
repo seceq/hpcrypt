@@ -498,8 +498,14 @@ mod tests {
         assert_eq!(ct_eq_u8(42, 42).unwrap_u8(), 1);
         assert_eq!(ct_eq_u8(42, 43).unwrap_u8(), 0);
 
-        assert_eq!(ct_eq_u64(0x1234567890ABCDEF, 0x1234567890ABCDEF).unwrap_u8(), 1);
-        assert_eq!(ct_eq_u64(0x1234567890ABCDEF, 0x1234567890ABCDEE).unwrap_u8(), 0);
+        assert_eq!(
+            ct_eq_u64(0x1234567890ABCDEF, 0x1234567890ABCDEF).unwrap_u8(),
+            1
+        );
+        assert_eq!(
+            ct_eq_u64(0x1234567890ABCDEF, 0x1234567890ABCDEE).unwrap_u8(),
+            0
+        );
 
         let a = [1u8, 2, 3, 4];
         let b = [1u8, 2, 3, 4];
@@ -554,12 +560,7 @@ mod tests {
 
     #[test]
     fn test_ct_lookup() {
-        let table = [
-            [1u8, 2, 3],
-            [4u8, 5, 6],
-            [7u8, 8, 9],
-            [10u8, 11, 12],
-        ];
+        let table = [[1u8, 2, 3], [4u8, 5, 6], [7u8, 8, 9], [10u8, 11, 12]];
 
         assert_eq!(ct_lookup_u8_array(&table, 0), [1, 2, 3]);
         assert_eq!(ct_lookup_u8_array(&table, 1), [4, 5, 6]);

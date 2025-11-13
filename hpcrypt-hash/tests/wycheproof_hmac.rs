@@ -75,10 +75,7 @@ fn run_hmac_sha256_test(test: &TestCase) -> bool {
     match test.result {
         TestResult::Valid => {
             if computed_tag.as_slice() != test.tag.as_slice() {
-                eprintln!(
-                    "HMAC-SHA256 Test {} FAILED: {}",
-                    test.tc_id, test.comment
-                );
+                eprintln!("HMAC-SHA256 Test {} FAILED: {}", test.tc_id, test.comment);
                 eprintln!("  Expected tag: [binary data]");
                 eprintln!("  Computed tag: [binary data]");
                 return false;
@@ -115,10 +112,7 @@ fn run_hmac_sha384_test(test: &TestCase) -> bool {
     match test.result {
         TestResult::Valid => {
             if computed_tag.as_slice() != test.tag.as_slice() {
-                eprintln!(
-                    "HMAC-SHA384 Test {} FAILED: {}",
-                    test.tc_id, test.comment
-                );
+                eprintln!("HMAC-SHA384 Test {} FAILED: {}", test.tc_id, test.comment);
                 eprintln!("  Expected tag: [binary data]");
                 eprintln!("  Computed tag: [binary data]");
                 return false;
@@ -154,10 +148,7 @@ fn run_hmac_sha512_test(test: &TestCase) -> bool {
     match test.result {
         TestResult::Valid => {
             if computed_tag.as_slice() != test.tag.as_slice() {
-                eprintln!(
-                    "HMAC-SHA512 Test {} FAILED: {}",
-                    test.tc_id, test.comment
-                );
+                eprintln!("HMAC-SHA512 Test {} FAILED: {}", test.tc_id, test.comment);
                 eprintln!("  Expected tag: [binary data]");
                 eprintln!("  Computed tag: [binary data]");
                 return false;
@@ -210,11 +201,7 @@ fn wycheproof_hmac_sha256() {
         passed_tests, total_tests
     );
 
-    assert_eq!(
-        passed_tests,
-        total_tests,
-        "Some HMAC-SHA256 tests failed"
-    );
+    assert_eq!(passed_tests, total_tests, "Some HMAC-SHA256 tests failed");
 }
 
 #[test]
@@ -246,11 +233,7 @@ fn wycheproof_hmac_sha384() {
         passed_tests, total_tests
     );
 
-    assert_eq!(
-        passed_tests,
-        total_tests,
-        "Some HMAC-SHA384 tests failed"
-    );
+    assert_eq!(passed_tests, total_tests, "Some HMAC-SHA384 tests failed");
 }
 
 #[test]
@@ -282,9 +265,5 @@ fn wycheproof_hmac_sha512() {
         passed_tests, total_tests
     );
 
-    assert_eq!(
-        passed_tests,
-        total_tests,
-        "Some HMAC-SHA512 tests failed"
-    );
+    assert_eq!(passed_tests, total_tests, "Some HMAC-SHA512 tests failed");
 }

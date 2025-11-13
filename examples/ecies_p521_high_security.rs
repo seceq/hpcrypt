@@ -26,8 +26,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 2. Key Generation
     println!("2. Key Generation");
     let (recipient_secret, recipient_public) = EciesP521::generate_keypair(&mut rng)?;
-    println!("   Private key: {} bytes (66 bytes = 528 bits)", recipient_secret.len());
-    println!("   Public key: {} bytes (uncompressed P-521 point)", recipient_public.len());
+    println!(
+        "   Private key: {} bytes (66 bytes = 528 bits)",
+        recipient_secret.len()
+    );
+    println!(
+        "   Public key: {} bytes (uncompressed P-521 point)",
+        recipient_public.len()
+    );
     println!("   Public key format: 0x04 || X (66 bytes) || Y (66 bytes)\n");
 
     // 3. High-Security Message Encryption
@@ -48,7 +54,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("   Message classification: TOP SECRET//SI//NOFORN");
     println!("   Message size: {} bytes", message.len());
-    println!("   Context info: {}", std::str::from_utf8(shared_info).unwrap());
+    println!(
+        "   Context info: {}",
+        std::str::from_utf8(shared_info).unwrap()
+    );
 
     let ciphertext = EciesP521::encrypt(&recipient_public, message, shared_info, &mut rng)?;
 
@@ -61,7 +70,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Bytes 0-132:   Ephemeral public key (P-521 point, uncompressed)");
     println!("   Bytes 133-144: Nonce (96 bits, random)");
     println!("   Bytes 145-end: Encrypted data || Authentication tag (128 bits)");
-    println!("   First byte: 0x{:02x} (uncompressed point prefix)\n", ciphertext[0]);
+    println!(
+        "   First byte: 0x{:02x} (uncompressed point prefix)\n",
+        ciphertext[0]
+    );
 
     // 5. Security Analysis
     println!("5. Security Analysis");
@@ -117,20 +129,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &recipient_public,
         b"Classified document",
         b"classification:secret",
-        &mut rng
+        &mut rng,
     )?;
 
     // Try to decrypt with wrong context
     let result_wrong_context = EciesP521::decrypt(
         &recipient_secret,
         &ct_classified,
-        b"classification:unclassified"  // Wrong context!
+        b"classification:unclassified", // Wrong context!
     );
 
     println!("   Encrypted with context: 'classification:secret'");
-    println!("   Decrypt with correct context: {}",
-        EciesP521::decrypt(&recipient_secret, &ct_classified, b"classification:secret").is_ok());
-    println!("   Decrypt with wrong context: {} ", result_wrong_context.is_ok());
+    println!(
+        "   Decrypt with correct context: {}",
+        EciesP521::decrypt(&recipient_secret, &ct_classified, b"classification:secret").is_ok()
+    );
+    println!(
+        "   Decrypt with wrong context: {} ",
+        result_wrong_context.is_ok()
+    );
     println!("   Benefit: Prevents ciphertext from being used in wrong context\n");
 
     // 10. Tampering Detection
@@ -144,10 +161,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("   Original ciphertext: {} bytes", ct_original.len());
     println!("   Tampered byte {} (flipped 1 bit)", tamper_idx);
-    println!("   Decrypt original: {}",
-        EciesP521::decrypt(&recipient_secret, &ct_original, &[]).is_ok());
-    println!("   Decrypt tampered: {} ",
-        EciesP521::decrypt(&recipient_secret, &ct_tampered, &[]).is_ok());
+    println!(
+        "   Decrypt original: {}",
+        EciesP521::decrypt(&recipient_secret, &ct_original, &[]).is_ok()
+    );
+    println!(
+        "   Decrypt tampered: {} ",
+        EciesP521::decrypt(&recipient_secret, &ct_tampered, &[]).is_ok()
+    );
     println!("   GCM authentication tag detects ANY modification\n");
 
     // 11. Use Cases

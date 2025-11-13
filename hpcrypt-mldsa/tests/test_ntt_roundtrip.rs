@@ -79,10 +79,7 @@ fn test_ntt_roundtrip_with_kat_seed() {
     if errors == 0 {
         println!("\n NTT round-trip PERFECT: INVNTT(NTT(x)) == x for all 256 coefficients");
     } else {
-        println!(
-            "\n NTT round-trip FAILED: {} mismatches out of 256",
-            errors
-        );
+        println!("\n NTT round-trip FAILED: {} mismatches out of 256", errors);
         println!("   Max error: {}", max_error);
         panic!("NTT round-trip test failed - NTT is mathematically incorrect!");
     }

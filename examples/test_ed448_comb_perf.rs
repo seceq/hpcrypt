@@ -1,5 +1,5 @@
+use hpcrypt_curves::ed448::{scalar_mul_base_comb, Point, Scalar};
 use std::time::Instant;
-use hpcrypt_curves::ed448::{Point, Scalar, scalar_mul_base_comb};
 
 fn main() {
     let scalar_bytes = [0x42u8; 57];

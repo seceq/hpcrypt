@@ -40,7 +40,10 @@ fn main() {
     kmac.update(message);
     let mac = kmac.finalize(32);
 
-    println!("   Customization: {:?}", std::str::from_utf8(customization).unwrap());
+    println!(
+        "   Customization: {:?}",
+        std::str::from_utf8(customization).unwrap()
+    );
     println!("   MAC: {}", hex::encode(&mac));
     println!();
 

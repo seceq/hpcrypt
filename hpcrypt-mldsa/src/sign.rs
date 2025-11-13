@@ -598,11 +598,6 @@ fn encode_w1<P: DsaParams>(w1: &[Poly]) -> Vec<u8> {
 }
 
 mod tests {
-    
-    
-    
-    
-    
 
     #[test]
     fn test_sign_succeeds() {
