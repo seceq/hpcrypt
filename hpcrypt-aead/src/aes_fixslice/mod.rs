@@ -11,15 +11,15 @@
 //!   https://eprint.iacr.org/2020/1123
 //! - Boyar & Peralta (2010): "A depth-16 circuit for the AES S-box"
 
-#![allow(dead_code)]  // Remove this as we implement
+#![allow(dead_code)] // Remove this as we implement
 
 use alloc::vec::Vec;
 
 mod bitslice;
-mod sbox;
+mod consts;
 mod keysched;
 mod mixcolumns;
-mod consts;
+mod sbox;
 
 #[cfg(test)]
 mod tests;
@@ -112,7 +112,7 @@ impl AesFixslice {
         for round in 1..self.nr {
             sbox::sub_bytes(&mut state);
             // Note: sub_bytes_nots is NOT called here - the compensation is in the round keys
-            bitslice::shift_rows_1(&mut state);  // Standard ShiftRows
+            bitslice::shift_rows_1(&mut state); // Standard ShiftRows
             mixcolumns::mix_columns(&mut state);
             bitslice::xor_round_key(&mut state, &self.round_keys[round]);
         }
@@ -120,7 +120,7 @@ impl AesFixslice {
         // Step 4: Final round (no MixColumns)
         sbox::sub_bytes(&mut state);
         // Note: sub_bytes_nots is NOT called here - the compensation is in the round keys
-        bitslice::shift_rows_1(&mut state);  // Standard ShiftRows
+        bitslice::shift_rows_1(&mut state); // Standard ShiftRows
         bitslice::xor_round_key(&mut state, &self.round_keys[self.nr]);
 
         // Step 5: Convert back to block representation
@@ -145,7 +145,7 @@ impl AesFixslice {
         bitslice::xor_round_key(&mut state, &self.round_keys[self.nr]);
 
         // Step 3: Inverse final round (no InvMixColumns)
-        bitslice::inv_shift_rows_1(&mut state);  // Inverse ShiftRows
+        bitslice::inv_shift_rows_1(&mut state); // Inverse ShiftRows
         sbox::inv_sub_bytes(&mut state);
         // Note: sub_bytes_nots is NOT called - the compensation is in the round keys
 
@@ -153,7 +153,7 @@ impl AesFixslice {
         for round in (1..self.nr).rev() {
             bitslice::xor_round_key(&mut state, &self.round_keys[round]);
             mixcolumns::inv_mix_columns(&mut state);
-            bitslice::inv_shift_rows_1(&mut state);  // Inverse ShiftRows
+            bitslice::inv_shift_rows_1(&mut state); // Inverse ShiftRows
             sbox::inv_sub_bytes(&mut state);
             // Note: sub_bytes_nots is NOT called - the compensation is in the round keys
         }
