@@ -103,11 +103,11 @@
 //!
 //! ## Security Considerations
 //!
-//! - **Never store passwords**: Always store salt and verifier
-//! - **Use appropriate group size**: Minimum 2048-bit for new deployments
-//! - **Protect verifiers**: Leaked verifier enables impersonation and offline attacks
-//! - **Use strong passwords**: SRP doesn't prevent weak password choices
-//! - **Rate limiting**: Implement authentication attempt limiting on server
+//! - Never store passwords: Always store salt and verifier
+//! - Use appropriate group size: Minimum 2048-bit for new deployments
+//! - Protect verifiers: Leaked verifier enables impersonation and offline attacks
+//! - Use strong passwords: SRP doesn't prevent weak password choices
+//! - Rate limiting: Implement authentication attempt limiting on server
 //!
 //! ## References
 //!
@@ -131,21 +131,24 @@ mod utils;
 pub use client::SrpClient;
 pub use error::{Result, SrpError};
 pub use groups::SrpGroup;
-pub use registration::{create_verifier, create_verifier_with_hash, register_user, register_user_with_hash, SrpRegistration};
+pub use registration::{
+    create_verifier, create_verifier_with_hash, register_user, register_user_with_hash,
+    SrpRegistration,
+};
 pub use server::SrpServer;
 
 /// Hash function to use for SRP protocol
 ///
 /// Different hash functions provide different security levels and compatibility:
 ///
-/// - **Sha1**: RFC 5054 standard (legacy, not recommended for new deployments)
-/// - **Sha256**: Modern standard, compatible with AWS Cognito and most systems
-/// - **Sha512**: Highest security, recommended for new deployments
+/// - Sha1: RFC 5054 standard (legacy, not recommended for new deployments)
+/// - Sha256: Modern standard, compatible with AWS Cognito and most systems
+/// - Sha512: Highest security, recommended for new deployments
 ///
 /// # Security Recommendation
 ///
-/// ⚠️ **SHA-1 is cryptographically broken** (collision attacks since 2017).
-/// Use **SHA-256** or **SHA-512** for new applications.
+/// WARNING: SHA-1 is cryptographically broken (collision attacks since 2017).
+/// Use SHA-256 or SHA-512 for new applications.
 ///
 /// SHA-1 is provided only for:
 /// - RFC 5054 compatibility
@@ -154,9 +157,9 @@ pub use server::SrpServer;
 ///
 /// # Compatibility
 ///
-/// - **AWS Cognito**: Uses SHA-256
-/// - **Apple iCloud**: Likely SHA-256 or stronger
-/// - **RFC 5054**: Specifies SHA-1 (legacy)
+/// - AWS Cognito: Uses SHA-256
+/// - Apple iCloud: Likely SHA-256 or stronger
+/// - RFC 5054: Specifies SHA-1 (legacy)
 ///
 /// # Examples
 ///
@@ -170,22 +173,22 @@ pub use server::SrpServer;
 /// let hash = SrpHashFunction::Sha512;
 ///
 /// // Legacy compatibility only
-/// let hash = SrpHashFunction::Sha1; // ⚠️ Not recommended
+/// let hash = SrpHashFunction::Sha1; // Not recommended
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SrpHashFunction {
     /// SHA-1 (RFC 5054 standard)
     ///
-    /// ⚠️ **WARNING**: SHA-1 is cryptographically broken. Use only for:
+    /// WARNING: SHA-1 is cryptographically broken. Use only for:
     /// - RFC 5054 compatibility
     /// - Legacy system interoperability
     ///
-    /// **Not recommended for new deployments.**
+    /// Not recommended for new deployments.
     Sha1,
 
     /// SHA-256 (Modern standard)
     ///
-    /// **Recommended** for most applications. Compatible with:
+    /// Recommended for most applications. Compatible with:
     /// - AWS Cognito
     /// - Modern SRP implementations
     /// - Provides 128-bit security
@@ -193,7 +196,7 @@ pub enum SrpHashFunction {
 
     /// SHA-512 (Highest security)
     ///
-    /// **Recommended** for high-security applications.
+    /// Recommended for high-security applications.
     /// - Provides 256-bit security
     /// - Best choice for long-term security
     Sha512,
