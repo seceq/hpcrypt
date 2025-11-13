@@ -50,12 +50,7 @@ impl Aes128Ocb {
     ///
     /// Ciphertext || Tag (tag appended to ciphertext)
     #[cfg(feature = "alloc")]
-    pub fn encrypt(
-        key: &[u8; 16],
-        nonce: &[u8],
-        plaintext: &[u8],
-        aad: &[u8],
-    ) -> Vec<u8> {
+    pub fn encrypt(key: &[u8; 16], nonce: &[u8], plaintext: &[u8], aad: &[u8]) -> Vec<u8> {
         let cipher = Aes::new_128(key);
         ocb_encrypt(&cipher, nonce, plaintext, aad)
     }
@@ -91,12 +86,7 @@ pub struct Aes256Ocb;
 impl Aes256Ocb {
     /// Encrypt and authenticate data
     #[cfg(feature = "alloc")]
-    pub fn encrypt(
-        key: &[u8; 32],
-        nonce: &[u8],
-        plaintext: &[u8],
-        aad: &[u8],
-    ) -> Vec<u8> {
+    pub fn encrypt(key: &[u8; 32], nonce: &[u8], plaintext: &[u8], aad: &[u8]) -> Vec<u8> {
         let cipher = Aes::new_256(key);
         ocb_encrypt(&cipher, nonce, plaintext, aad)
     }
@@ -307,11 +297,7 @@ fn ocb_decrypt(
 }
 
 // Process AAD
-fn process_aad(
-    cipher: &Aes,
-    l_star: &[u8; BLOCK_SIZE],
-    aad: &[u8],
-) -> [u8; BLOCK_SIZE] {
+fn process_aad(cipher: &Aes, l_star: &[u8; BLOCK_SIZE], aad: &[u8]) -> [u8; BLOCK_SIZE] {
     let mut offset = [0u8; BLOCK_SIZE];
     let mut sum = [0u8; BLOCK_SIZE];
 
@@ -431,8 +417,9 @@ mod tests {
     #[test]
     fn test_aes256_ocb_roundtrip() {
         let key = [0x42; 32];
-        let nonce = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                     0x09, 0x0a, 0x0b, 0x0c];
+        let nonce = [
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
+        ];
         let plaintext = b"OCB mode test with AES-256";
         let aad = b"some AAD";
 
@@ -488,11 +475,11 @@ mod tests {
 
     #[test]
     fn test_ntz() {
-        assert_eq!(ntz(1), 0);  // 1 = 0b1
-        assert_eq!(ntz(2), 1);  // 2 = 0b10
-        assert_eq!(ntz(4), 2);  // 4 = 0b100
-        assert_eq!(ntz(8), 3);  // 8 = 0b1000
-        assert_eq!(ntz(6), 1);  // 6 = 0b110
+        assert_eq!(ntz(1), 0); // 1 = 0b1
+        assert_eq!(ntz(2), 1); // 2 = 0b10
+        assert_eq!(ntz(4), 2); // 4 = 0b100
+        assert_eq!(ntz(8), 3); // 8 = 0b1000
+        assert_eq!(ntz(6), 1); // 6 = 0b110
         assert_eq!(ntz(12), 2); // 12 = 0b1100
     }
 }
