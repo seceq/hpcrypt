@@ -87,8 +87,8 @@ impl FieldElement {
 
         // Extract high bits beyond position 521
         // limbs[8] has top 9 bits, so we need to split it
-        let high = (limbs[8] >> 9) + carry;  // High part beyond 521 bits
-        limbs[8] &= 0x1FF;  // Mask to keep only 9 bits
+        let high = (limbs[8] >> 9) + carry; // High part beyond 521 bits
+        limbs[8] &= 0x1FF; // Mask to keep only 9 bits
 
         if high == 0 {
             // Fast path: already reduced
@@ -105,7 +105,7 @@ impl FieldElement {
 
         // May still need final reduction if result >= p
         let mut result = Self { limbs };
-        result.limbs[8] &= 0x1FF;  // Ensure top limb is masked
+        result.limbs[8] &= 0x1FF; // Ensure top limb is masked
 
         // If result >= p, subtract p (which is just setting all bits to 0)
         // Use constant-time conditional selection
@@ -243,7 +243,7 @@ impl FieldElement {
         let b_high = [b.limbs[5], b.limbs[6], b.limbs[7], b.limbs[8]];
 
         // Compute three sub-products
-        let z0 = Self::mul_5x5(&a_low, &b_low);   // a_low * b_low (10 limbs)
+        let z0 = Self::mul_5x5(&a_low, &b_low); // a_low * b_low (10 limbs)
         let z2 = Self::mul_4x4(&a_high, &b_high); // a_high * b_high (8 limbs)
 
         // Compute (a_high + a_low) and (b_high + b_low)
@@ -254,14 +254,30 @@ impl FieldElement {
         // Need to handle potential 6x6 multiply due to carries
         let z1 = if a_carry || b_carry {
             Self::mul_6x6(
-                &[a_sum[0], a_sum[1], a_sum[2], a_sum[3], a_sum[4], a_carry as u64],
-                &[b_sum[0], b_sum[1], b_sum[2], b_sum[3], b_sum[4], b_carry as u64],
+                &[
+                    a_sum[0],
+                    a_sum[1],
+                    a_sum[2],
+                    a_sum[3],
+                    a_sum[4],
+                    a_carry as u64,
+                ],
+                &[
+                    b_sum[0],
+                    b_sum[1],
+                    b_sum[2],
+                    b_sum[3],
+                    b_sum[4],
+                    b_carry as u64,
+                ],
             )
         } else {
             // Extend 5x5 result to 12 limbs for uniform handling
             let z1_5x5 = Self::mul_5x5(&a_sum, &b_sum);
-            [z1_5x5[0], z1_5x5[1], z1_5x5[2], z1_5x5[3], z1_5x5[4],
-             z1_5x5[5], z1_5x5[6], z1_5x5[7], z1_5x5[8], z1_5x5[9], 0, 0]
+            [
+                z1_5x5[0], z1_5x5[1], z1_5x5[2], z1_5x5[3], z1_5x5[4], z1_5x5[5], z1_5x5[6],
+                z1_5x5[7], z1_5x5[8], z1_5x5[9], 0, 0,
+            ]
         };
 
         // Combine: result = z2 * 2^640 + (z1 - z2 - z0) * 2^320 + z0
@@ -332,8 +348,8 @@ impl FieldElement {
         let a_high = [a.limbs[5], a.limbs[6], a.limbs[7], a.limbs[8]];
 
         // Compute three sub-operations
-        let z0 = Self::square_5x5(&a_low);   // a_low^2 (10 limbs)
-        let z2 = Self::square_4x4(&a_high);  // a_high^2 (8 limbs)
+        let z0 = Self::square_5x5(&a_low); // a_low^2 (10 limbs)
+        let z2 = Self::square_4x4(&a_high); // a_high^2 (8 limbs)
         let cross = Self::mul_5x4(&a_low, &a_high); // a_low * a_high (9 limbs)
 
         // a^2 = z2 * 2^640 + 2*cross * 2^320 + z0
@@ -614,73 +630,6 @@ impl FieldElement {
         result
     }
 
-    /// Optimized squaring: computes self * self -> 1042-bit result.
-    ///
-    /// This exploits symmetry: since a[i] * a[j] == a[j] * a[i], we only compute
-    /// each unique product once and double the off-diagonal products.
-    ///
-    /// Algorithm:
-    /// 1. Compute all off-diagonal products a[i]*a[j] where i < j
-    /// 2. Double the entire result (shift left by 1)
-    /// 3. Add diagonal products a[i]*a[i]
-    ///
-    /// For 9 limbs: 45 multiplications instead of 81 (~44% fewer muls)
-    ///
-    /// Expected speedup: 20-30% faster than schoolbook_mul(a, a)
-    #[inline]
-    fn schoolbook_square(a: &Self) -> [u64; 18] {
-        let mut result = [0u64; 18];
-
-        // Step 1: Compute off-diagonal products (i < j)
-        for i in 0..9 {
-            let mut carry = 0u128;
-            for j in (i + 1)..9 {
-                let product = (a.limbs[i] as u128) * (a.limbs[j] as u128);
-                let sum = (result[i + j] as u128) + product + carry;
-                result[i + j] = sum as u64;
-                carry = sum >> 64;
-            }
-            // Propagate carry
-            let mut k = i + 9;
-            while carry != 0 && k < 18 {
-                let sum = (result[k] as u128) + carry;
-                result[k] = sum as u64;
-                carry = sum >> 64;
-                k += 1;
-            }
-        }
-
-        // Step 2: Double the off-diagonal sum (left shift by 1)
-        let mut carry = 0u64;
-        for i in 0..18 {
-            let tmp = result[i];
-            result[i] = (tmp << 1) | carry;
-            carry = tmp >> 63;
-        }
-
-        // Step 3: Add diagonal products a[i] * a[i]
-        for i in 0..9 {
-            let product = (a.limbs[i] as u128) * (a.limbs[i] as u128);
-            let sum = (result[2 * i] as u128) + (product as u64) as u128;
-            result[2 * i] = sum as u64;
-
-            let sum = (result[2 * i + 1] as u128) + (product >> 64) as u128 + (sum >> 64);
-            result[2 * i + 1] = sum as u64;
-
-            // Propagate carry from diagonal addition
-            let mut carry = (sum >> 64) as u64;
-            let mut k = 2 * i + 2;
-            while carry != 0 && k < 18 {
-                let sum = (result[k] as u128) + (carry as u128);
-                result[k] = sum as u64;
-                carry = (sum >> 64) as u64;
-                k += 1;
-            }
-        }
-
-        result
-    }
-
     /// Reduces 1042-bit product to 521-bit using Mersenne reduction.
     ///
     /// For p = 2^521 - 1, we have x mod p = (x mod 2^521) + (x / 2^521) mod p.
@@ -705,7 +654,7 @@ impl FieldElement {
         limbs[5] = product[5];
         limbs[6] = product[6];
         limbs[7] = product[7];
-        limbs[8] = product[8] & 0x1FF;  // Only low 9 bits
+        limbs[8] = product[8] & 0x1FF; // Only low 9 bits
 
         // Extract high part (bits 521+) - manually unrolled for performance
         // High part starts at bit 521 (product[8] bit 9)
@@ -754,7 +703,7 @@ impl FieldElement {
 
         let (r8, c8_1) = limbs[8].overflowing_add(high_8 & 0x1FF);
         let (r8, c8_2) = r8.overflowing_add((c7_1 | c7_2) as u64);
-        limbs[8] = r8 & 0x1FF;  // Mask to 9 bits
+        limbs[8] = r8 & 0x1FF; // Mask to 9 bits
 
         // Handle final carry - if we carried out of bit 521, add it back
         let final_carry = (c8_1 | c8_2) as u64 | (high_8 >> 9) | (r8 >> 9);
@@ -796,11 +745,13 @@ impl FieldElement {
             panic!("Cannot invert zero");
         }
 
-        use crate::safegcd::safegcd_invert_vartime_p521;
         use super::constants::P521_MODULUS;
+        use crate::safegcd::safegcd_invert_vartime_p521;
 
         let result_limbs = safegcd_invert_vartime_p521(&self.limbs, &P521_MODULUS);
-        Self { limbs: result_limbs }
+        Self {
+            limbs: result_limbs,
+        }
     }
 
     /// Computes the multiplicative inverse using Fermat's Little Theorem.
@@ -819,15 +770,15 @@ impl FieldElement {
         // p - 2 = 2^521 - 3 = 0x1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD
         // In limbs (little-endian):
         let p_minus_2 = [
-            0xFFFFFFFFFFFFFFFD,  // limb 0: ...FFFFFFFD
-            0xFFFFFFFFFFFFFFFF,  // limb 1: all 1s
-            0xFFFFFFFFFFFFFFFF,  // limb 2: all 1s
-            0xFFFFFFFFFFFFFFFF,  // limb 3: all 1s
-            0xFFFFFFFFFFFFFFFF,  // limb 4: all 1s
-            0xFFFFFFFFFFFFFFFF,  // limb 5: all 1s
-            0xFFFFFFFFFFFFFFFF,  // limb 6: all 1s
-            0xFFFFFFFFFFFFFFFF,  // limb 7: all 1s
-            0x1FF,               // limb 8: 9 bits
+            0xFFFFFFFFFFFFFFFD, // limb 0: ...FFFFFFFD
+            0xFFFFFFFFFFFFFFFF, // limb 1: all 1s
+            0xFFFFFFFFFFFFFFFF, // limb 2: all 1s
+            0xFFFFFFFFFFFFFFFF, // limb 3: all 1s
+            0xFFFFFFFFFFFFFFFF, // limb 4: all 1s
+            0xFFFFFFFFFFFFFFFF, // limb 5: all 1s
+            0xFFFFFFFFFFFFFFFF, // limb 6: all 1s
+            0xFFFFFFFFFFFFFFFF, // limb 7: all 1s
+            0x1FF,              // limb 8: 9 bits
         ];
 
         self.pow_vartime(&p_minus_2)
@@ -862,15 +813,15 @@ impl FieldElement {
         // 2^519 in binary is 1 followed by 519 zeros
         // In limbs: bit 519 = limb 8, bit 7 (since 519 = 8*64 + 7)
         let p_plus_1_div_4 = [
-            0x0000000000000000,  // limb 0
-            0x0000000000000000,  // limb 1
-            0x0000000000000000,  // limb 2
-            0x0000000000000000,  // limb 3
-            0x0000000000000000,  // limb 4
-            0x0000000000000000,  // limb 5
-            0x0000000000000000,  // limb 6
-            0x0000000000000000,  // limb 7
-            0x080,               // limb 8: bit 7 = 0x80
+            0x0000000000000000, // limb 0
+            0x0000000000000000, // limb 1
+            0x0000000000000000, // limb 2
+            0x0000000000000000, // limb 3
+            0x0000000000000000, // limb 4
+            0x0000000000000000, // limb 5
+            0x0000000000000000, // limb 6
+            0x0000000000000000, // limb 7
+            0x080,              // limb 8: bit 7 = 0x80
         ];
 
         let candidate = self.pow_vartime(&p_plus_1_div_4);
@@ -889,7 +840,7 @@ impl FieldElement {
     /// This is a variable-time implementation suitable for public exponents.
     fn pow_vartime(&self, exp: &[u64; 9]) -> Self {
         // Find the position of the most significant set bit
-        let mut bit_pos = 576;  // Start from highest possible (9*64 = 576)
+        let mut bit_pos = 576; // Start from highest possible (9*64 = 576)
         let mut found_msb = false;
 
         while bit_pos > 0 {
@@ -905,9 +856,9 @@ impl FieldElement {
         if !found_msb {
             // Exponent is 0 or 1
             if exp[0] & 1 == 1 {
-                return *self;  // self^1
+                return *self; // self^1
             } else {
-                return Self::one();  // self^0
+                return Self::one(); // self^0
             }
         }
 
@@ -1077,7 +1028,7 @@ mod tests {
     fn test_sub_underflow() {
         let one = FieldElement::one();
         let two = FieldElement::from_limbs([2, 0, 0, 0, 0, 0, 0, 0, 0]);
-        let result = one.sub(&two);  // Should wrap: 1 - 2 = p - 1
+        let result = one.sub(&two); // Should wrap: 1 - 2 = p - 1
 
         // Result should be p - 1
         assert_eq!(result.limbs[0], 0xFFFFFFFFFFFFFFFE);
@@ -1156,10 +1107,7 @@ mod tests {
     fn test_karatsuba_vs_schoolbook() {
         // Verify Karatsuba and schoolbook produce identical results
         let test_cases = [
-            (
-                FieldElement::from_u64(7),
-                FieldElement::from_u64(7),
-            ),
+            (FieldElement::from_u64(7), FieldElement::from_u64(7)),
             (
                 FieldElement::from_limbs([
                     0x0123456789ABCDEF,
@@ -1170,7 +1118,7 @@ mod tests {
                     0x7766554433221100,
                     0xAABBCCDDEEFF0011,
                     0x2233445566778899,
-                    0x00000000000001FF,  // 9 bits
+                    0x00000000000001FF, // 9 bits
                 ]),
                 FieldElement::from_limbs([
                     0x1337694200BADDCA,
@@ -1181,7 +1129,7 @@ mod tests {
                     0x0FEDCBA987654321,
                     0x1122334455667788,
                     0x99AABBCCDDEEFF00,
-                    0x00000000000001AA,  // 9 bits
+                    0x00000000000001AA, // 9 bits
                 ]),
             ),
             (
@@ -1194,7 +1142,7 @@ mod tests {
                     0xFFFFFFFFFFFFFFFF,
                     0xFFFFFFFFFFFFFFFF,
                     0xFFFFFFFFFFFFFFFF,
-                    0x00000000000001FF,  // Maximum valid value
+                    0x00000000000001FF, // Maximum valid value
                 ]),
                 FieldElement::from_u64(3),
             ),

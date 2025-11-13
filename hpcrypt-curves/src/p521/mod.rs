@@ -44,18 +44,17 @@
 //! // let public_key = g.scalar_mul(&k);
 //! ```
 
+pub mod batch;
 pub mod constants;
 pub mod field;
 pub mod field_ops;
-pub mod field_montgomery_native;
-pub mod scalar;
 pub mod point;
 pub mod precomputed;
+pub mod scalar;
 pub mod wnaf;
-pub mod batch;
 
 pub use constants::*;
 pub use field::FieldElement;
-pub use scalar::Scalar;
-pub use point::{Point, AffinePoint};
+pub use point::{AffinePoint, Point};
 pub use precomputed::generator_mul;
+pub use scalar::Scalar;

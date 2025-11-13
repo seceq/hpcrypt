@@ -122,14 +122,14 @@ impl Point {
         // For Jacobian (x = X/Z², y = Y/Z³): Y² = X³ - 3XZ⁴ + bZ⁶
 
         // Compute intermediate values
-        let z2 = self.z.square();       // Z²
-        let z4 = z2.square();           // Z⁴
-        let z6 = z4.mul(&z2);           // Z⁶
+        let z2 = self.z.square(); // Z²
+        let z4 = z2.square(); // Z⁴
+        let z6 = z4.mul(&z2); // Z⁶
 
-        let y2 = self.y.square();       // Y²
+        let y2 = self.y.square(); // Y²
 
-        let x2 = self.x.square();       // X²
-        let x3 = x2.mul(&self.x);       // X³
+        let x2 = self.x.square(); // X²
+        let x3 = x2.mul(&self.x); // X³
 
         // For P-521: a = -3
         // aXZ⁴ = -3XZ⁴
@@ -167,8 +167,8 @@ impl Point {
         let ret_inf = is_inf | y_zero;
 
         // Compute doubling formula (always, for constant-time)
-        let y_squared = self.y.square();           // Y²
-        let y_fourth = y_squared.square();         // Y⁴
+        let y_squared = self.y.square(); // Y²
+        let y_fourth = y_squared.square(); // Y⁴
 
         // S = 4·X·Y²
         let two = FieldElement::from_limbs([2, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -176,9 +176,9 @@ impl Point {
         let s = self.x.mul(&y_squared).mul(&four);
 
         // M = 3·(X + Z²)·(X - Z²)  [a=-3 optimization]
-        let z_squared = self.z.square();           // Z²
-        let x_plus_z2 = self.x.add(&z_squared);    // X + Z²
-        let x_minus_z2 = self.x.sub(&z_squared);   // X - Z²
+        let z_squared = self.z.square(); // Z²
+        let x_plus_z2 = self.x.add(&z_squared); // X + Z²
+        let x_minus_z2 = self.x.sub(&z_squared); // X - Z²
         let three = FieldElement::from_limbs([3, 0, 0, 0, 0, 0, 0, 0, 0]);
         let m = x_plus_z2.mul(&x_minus_z2).mul(&three);
 
@@ -241,7 +241,11 @@ impl Point {
         let y3 = m.mul(&s_minus_x3).sub(&eight_y4);
 
         let z3 = self.y.mul(&self.z).mul(&two);
-        let result = Point { x: x3, y: y3, z: z3 };
+        let result = Point {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
 
         Point::conditional_select(&result, &Point::infinity(), ret_inf)
     }
@@ -292,12 +296,12 @@ impl Point {
         let points_inverse = h_zero & (!r_zero);
 
         // Compute general addition (even if we might not use it)
-        let h_squared = h.square();           // H²
-        let h_cubed = h_squared.mul(&h);      // H³
+        let h_squared = h.square(); // H²
+        let h_cubed = h_squared.mul(&h); // H³
 
-        let u1_h2 = u1.mul(&h_squared);       // U₁·H²
+        let u1_h2 = u1.mul(&h_squared); // U₁·H²
         let two = FieldElement::from_limbs([2, 0, 0, 0, 0, 0, 0, 0, 0]);
-        let two_u1_h2 = u1_h2.mul(&two);      // 2·U₁·H²
+        let two_u1_h2 = u1_h2.mul(&two); // 2·U₁·H²
 
         // X₃ = R² - H³ - 2·U₁·H²
         let r_squared = r.square();
@@ -311,7 +315,11 @@ impl Point {
         // Z₃ = H·Z₁·Z₂
         let z3 = h.mul(&self.z).mul(&other.z);
 
-        let add_result = Point { x: x3, y: y3, z: z3 };
+        let add_result = Point {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
 
         // Select the appropriate result based on special cases
         let doubled = self.double();
@@ -408,7 +416,11 @@ impl Point {
         // Z₃ = H·Z₁ (simplified because Z₂ = 1)
         let z3 = h.mul(&self.z);
 
-        let add_result = Point { x: x3, y: y3, z: z3 };
+        let add_result = Point {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
 
         // Select the appropriate result based on special cases
 
@@ -566,12 +578,22 @@ mod tests {
         assert!(bool::from(result_double.is_on_curve()));
 
         // Convert both to affine and compare coordinates
-        let affine1 = result_mul.to_affine().expect("scalar_mul(2) should not be infinity");
-        let affine2 = result_double.to_affine().expect("double() should not be infinity");
+        let affine1 = result_mul
+            .to_affine()
+            .expect("scalar_mul(2) should not be infinity");
+        let affine2 = result_double
+            .to_affine()
+            .expect("double() should not be infinity");
 
         // CRITICAL TEST: scalar_mul(2) must equal double()
-        assert_eq!(affine1.x, affine2.x, "X coordinates don't match: scalar_mul(2) != double()");
-        assert_eq!(affine1.y, affine2.y, "Y coordinates don't match: scalar_mul(2) != double()");
+        assert_eq!(
+            affine1.x, affine2.x,
+            "X coordinates don't match: scalar_mul(2) != double()"
+        );
+        assert_eq!(
+            affine1.y, affine2.y,
+            "Y coordinates don't match: scalar_mul(2) != double()"
+        );
     }
 
     #[test]
@@ -595,10 +617,14 @@ mod tests {
         let affine = g.to_affine().expect("Generator should not be infinity");
 
         // Convert back to point
-        let g2 = Point::from_affine(&affine.x, &affine.y).expect("Generator coordinates should create valid point");
+        let g2 = Point::from_affine(&affine.x, &affine.y)
+            .expect("Generator coordinates should create valid point");
 
         // Should be on curve
-        assert!(bool::from(g2.is_on_curve()), "Reconstructed generator not on curve");
+        assert!(
+            bool::from(g2.is_on_curve()),
+            "Reconstructed generator not on curve"
+        );
 
         // Coordinates should match
         let affine2 = g2.to_affine().unwrap();
@@ -616,10 +642,14 @@ mod tests {
         let affine = p.to_affine().expect("Point should not be infinity");
 
         // Convert back to point
-        let p2 = Point::from_affine(&affine.x, &affine.y).expect("Coordinates should create valid point");
+        let p2 = Point::from_affine(&affine.x, &affine.y)
+            .expect("Coordinates should create valid point");
 
         // Should be on curve
-        assert!(bool::from(p2.is_on_curve()), "Reconstructed point not on curve");
+        assert!(
+            bool::from(p2.is_on_curve()),
+            "Reconstructed point not on curve"
+        );
 
         // Coordinates should match
         let affine2 = p2.to_affine().unwrap();
@@ -649,13 +679,29 @@ mod tests {
         let g_plus_g = g.add(&g);
         let manual = g_plus_g.add(&g);
 
-        assert!(bool::from(result.is_on_curve()), "scalar_mul(3) should be on curve");
-        assert!(bool::from(manual.is_on_curve()), "manual G+G+G should be on curve");
+        assert!(
+            bool::from(result.is_on_curve()),
+            "scalar_mul(3) should be on curve"
+        );
+        assert!(
+            bool::from(manual.is_on_curve()),
+            "manual G+G+G should be on curve"
+        );
 
-        let affine1 = result.to_affine().expect("scalar_mul(3) should not be infinity");
+        let affine1 = result
+            .to_affine()
+            .expect("scalar_mul(3) should not be infinity");
         let affine2 = manual.to_affine().expect("manual should not be infinity");
 
-        assert_eq!(affine1.x.to_bytes(), affine2.x.to_bytes(), "X coordinates don't match: scalar_mul(3) != G+G+G");
-        assert_eq!(affine1.y.to_bytes(), affine2.y.to_bytes(), "Y coordinates don't match: scalar_mul(3) != G+G+G");
+        assert_eq!(
+            affine1.x.to_bytes(),
+            affine2.x.to_bytes(),
+            "X coordinates don't match: scalar_mul(3) != G+G+G"
+        );
+        assert_eq!(
+            affine1.y.to_bytes(),
+            affine2.y.to_bytes(),
+            "Y coordinates don't match: scalar_mul(3) != G+G+G"
+        );
     }
 }
