@@ -32,25 +32,15 @@ extern crate alloc;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod aes;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod aes_optimized;  // Phase 1 optimizations (1.2 + 1.3) - FAILED
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod aes_fixslice;  // Fixslicing implementation - constant-time, 4-block parallel
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod ghash;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod ghash_optimized;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod ghash_fast;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod aes_gcm;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod polyval;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod aes_gcm_siv;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod aes_ccm;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod aes_eax;
+#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
+pub mod aes_fixslice; // Fixslicing implementation - constant-time, 4-block parallel
+#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
+pub mod aes_gcm;
+#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
+pub mod aes_gcm_siv;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod aes_ocb;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
@@ -58,11 +48,15 @@ pub mod aes_siv;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod chacha20;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod poly1305;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod chacha20poly1305;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
+pub mod ghash_fast; // Production GHASH implementation (4x faster than baseline)
+#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod gmac;
+#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
+pub mod poly1305;
+#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
+pub mod polyval;
 
 // Ascon is always available
 pub mod ascon;
@@ -70,21 +64,13 @@ pub mod ascon;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use aes::{Aes, AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, BLOCK_SIZE};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use ghash::GHash;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use ghash_optimized::{GHashOptimized, GHashAggregated, ghash_optimized};
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use ghash_fast::{GHashFast, ghash_fast};
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use aes_gcm::{Aes128Gcm, Aes192Gcm, Aes256Gcm, TAG_SIZE, NONCE_SIZE};
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use polyval::Polyval;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use aes_gcm_siv::Aes128GcmSiv;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use aes_ccm::{Aes128Ccm, Aes256Ccm, CcmError};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use aes_eax::{Aes128Eax, Aes256Eax};
+#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
+pub use aes_gcm::{Aes128Gcm, Aes192Gcm, Aes256Gcm, NONCE_SIZE, TAG_SIZE};
+#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
+pub use aes_gcm_siv::Aes128GcmSiv;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use aes_ocb::{Aes128Ocb, Aes256Ocb};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
@@ -92,11 +78,15 @@ pub use aes_siv::{Aes128Siv, Aes256Siv};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use chacha20::ChaCha20;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use poly1305::Poly1305;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use chacha20poly1305::{ChaCha20Poly1305, XChaCha20Poly1305};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use gmac::{Gmac128, Gmac192, Gmac256, gmac128, gmac192, gmac256};
+pub use ghash_fast::{ghash_fast, GHashFast};
+#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
+pub use gmac::{gmac128, gmac192, gmac256, Gmac128, Gmac192, Gmac256};
+#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
+pub use poly1305::Poly1305;
+#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
+pub use polyval::Polyval;
 
 // Ascon is always exported
 pub use ascon::{Ascon128, Ascon128a};
