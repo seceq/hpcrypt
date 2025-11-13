@@ -42,14 +42,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 4. Verify the signature
     println!("3. Verification");
     let is_valid = schnorr::verify(&public_key, message, &signature);
-    println!("   Signature valid: {}", if is_valid { "✅ YES" } else { "❌ NO" });
+    println!("   Signature valid: {}", if is_valid { " YES" } else { " NO" });
 
     // 5. Demonstrate signature malleability resistance
     println!("\n4. Security Properties");
-    println!("   ✅ No signature malleability (unlike ECDSA)");
-    println!("   ✅ Deterministic nonce generation");
-    println!("   ✅ Tagged hashing prevents cross-protocol attacks");
-    println!("   ✅ 64-byte signatures (smaller than ECDSA DER)");
+    println!("    No signature malleability (unlike ECDSA)");
+    println!("    Deterministic nonce generation");
+    println!("    Tagged hashing prevents cross-protocol attacks");
+    println!("    64-byte signatures (smaller than ECDSA DER)");
 
     // 6. Try tampering with the signature
     println!("\n5. Tamper Detection");
@@ -57,12 +57,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tampered_signature[0] ^= 0x01; // Flip one bit
 
     let is_tampered_valid = schnorr::verify(&public_key, message, &tampered_signature);
-    println!("   Tampered signature valid: {}", if is_tampered_valid { "❌ YES (BAD!)" } else { "✅ NO (GOOD!)" });
+    println!("   Tampered signature valid: {}", if is_tampered_valid { " YES (BAD!)" } else { " NO (GOOD!)" });
 
     // 7. Try with wrong message
     let wrong_message = b"Different message";
     let is_wrong_msg_valid = schnorr::verify(&public_key, wrong_message, &signature);
-    println!("   Wrong message valid: {}", if is_wrong_msg_valid { "❌ YES (BAD!)" } else { "✅ NO (GOOD!)" });
+    println!("   Wrong message valid: {}", if is_wrong_msg_valid { " YES (BAD!)" } else { " NO (GOOD!)" });
 
     // 8. Bitcoin Taproot use cases
     println!("\n6. Bitcoin Taproot Use Cases");
@@ -79,7 +79,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Public key: 32 bytes (3% smaller than compressed ECDSA)");
     println!("   Signature: 64 bytes (9% smaller than ECDSA DER)");
 
-    println!("\n✅ Schnorr signatures demonstration complete!");
+    println!("\n Schnorr signatures demonstration complete!");
     Ok(())
 }
 
