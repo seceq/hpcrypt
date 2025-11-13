@@ -44,10 +44,16 @@ impl AesCmac128 {
 
         let (n_blocks, last_block_start) = if last_block_complete {
             // Process all but last block normally, treat last block specially
-            (message.len() / BLOCK_SIZE - 1, (message.len() / BLOCK_SIZE - 1) * BLOCK_SIZE)
+            (
+                message.len() / BLOCK_SIZE - 1,
+                (message.len() / BLOCK_SIZE - 1) * BLOCK_SIZE,
+            )
         } else {
             // Process all complete blocks normally, treat incomplete block specially
-            (message.len() / BLOCK_SIZE, (message.len() / BLOCK_SIZE) * BLOCK_SIZE)
+            (
+                message.len() / BLOCK_SIZE,
+                (message.len() / BLOCK_SIZE) * BLOCK_SIZE,
+            )
         };
 
         // Prepare last block
@@ -128,10 +134,16 @@ impl AesCmac256 {
 
         let (n_blocks, last_block_start) = if last_block_complete {
             // Process all but last block normally, treat last block specially
-            (message.len() / BLOCK_SIZE - 1, (message.len() / BLOCK_SIZE - 1) * BLOCK_SIZE)
+            (
+                message.len() / BLOCK_SIZE - 1,
+                (message.len() / BLOCK_SIZE - 1) * BLOCK_SIZE,
+            )
         } else {
             // Process all complete blocks normally, treat incomplete block specially
-            (message.len() / BLOCK_SIZE, (message.len() / BLOCK_SIZE) * BLOCK_SIZE)
+            (
+                message.len() / BLOCK_SIZE,
+                (message.len() / BLOCK_SIZE) * BLOCK_SIZE,
+            )
         };
 
         // Prepare last block

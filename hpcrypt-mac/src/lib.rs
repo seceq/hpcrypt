@@ -11,4 +11,4 @@ extern crate std;
 
 pub mod cmac;
 
-pub use cmac::{AesCmac128, AesCmac256, aes_cmac_128, aes_cmac_256};
+pub use cmac::{aes_cmac_128, aes_cmac_256, AesCmac128, AesCmac256};
