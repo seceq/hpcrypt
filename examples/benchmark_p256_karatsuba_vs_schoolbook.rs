@@ -223,7 +223,7 @@ fn main() {
         let result_kt = karatsuba_mul(x, y);
         assert_eq!(result_sb, result_kt, "Results must match!");
     }
-    println!("  ✅ Both methods produce identical results");
+    println!("   Both methods produce identical results");
     println!();
 
     // Benchmark Schoolbook
@@ -284,9 +284,9 @@ fn main() {
     let improvement = ((ns_per_sb - ns_per_kt) / ns_per_sb) * 100.0;
 
     if speedup > 1.0 {
-        println!("  🚀 Karatsuba is {:.2}x faster ({:.1}% improvement)", speedup, improvement);
+        println!("   Karatsuba is {:.2}x faster ({:.1}% improvement)", speedup, improvement);
     } else {
-        println!("  ⚠️  Schoolbook is {:.2}x faster ({:.1}% slower)", 1.0/speedup, -improvement);
+        println!("    Schoolbook is {:.2}x faster ({:.1}% slower)", 1.0/speedup, -improvement);
     }
 
     println!();

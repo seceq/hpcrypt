@@ -79,7 +79,7 @@ fn main() {
     let test_result = a.mul(&b);
     let expected = b.mul(&a);
     assert_eq!(test_result.to_bytes(), expected.to_bytes(), "Commutative check");
-    println!("  ✅ Correctness verified");
+    println!("   Correctness verified");
 
     println!();
 
@@ -132,6 +132,6 @@ fn main() {
 
     println!();
     println!("{}", "=".repeat(70));
-    println!("✅ Karatsuba implementation verified and benchmarked!");
+    println!(" Karatsuba implementation verified and benchmarked!");
     println!("{}", "=".repeat(70));
 }

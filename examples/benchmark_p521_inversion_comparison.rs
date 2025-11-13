@@ -63,7 +63,7 @@ fn main() {
     let product = test.mul(&inv);
     let one = FieldElement::one();
     assert_eq!(product.to_bytes(), one.to_bytes(), "SafeGCD: a * a^(-1) = 1");
-    println!("  ✅ Correctness verified");
+    println!("   Correctness verified");
 
     println!();
 
@@ -95,7 +95,7 @@ fn main() {
     let inv = test.invert_fermat();
     let product = test.mul(&inv);
     assert_eq!(product.to_bytes(), one.to_bytes(), "Fermat: a * a^(-1) = 1");
-    println!("  ✅ Correctness verified");
+    println!("   Correctness verified");
 
     println!();
 
@@ -112,9 +112,9 @@ fn main() {
     let improvement = ((us_per_inv_fermat - us_per_inv_gcd) / us_per_inv_fermat) * 100.0;
 
     if speedup > 1.0 {
-        println!("  🚀 SafeGCD is {:.2}x faster ({:.1}% improvement)", speedup, improvement);
+        println!("   SafeGCD is {:.2}x faster ({:.1}% improvement)", speedup, improvement);
     } else {
-        println!("  ⚠️  Fermat is {:.2}x faster ({:.1}% slower)", 1.0/speedup, -improvement);
+        println!("    Fermat is {:.2}x faster ({:.1}% slower)", 1.0/speedup, -improvement);
     }
 
     println!();
@@ -132,6 +132,6 @@ fn main() {
         let inv_fermat = val.invert_fermat();
         assert_eq!(inv_gcd.to_bytes(), inv_fermat.to_bytes(),
                    "Test value {} - SafeGCD and Fermat produce different results!", i);
-        println!("  Test value {}: ✅ Both methods agree", i + 1);
+        println!("  Test value {}:  Both methods agree", i + 1);
     }
 }
