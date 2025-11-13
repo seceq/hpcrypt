@@ -25,10 +25,6 @@ hex = { workspace = true }
 name = "shake_optimization"
 harness = false
 
-[[bench]]
-name = "kmac_optimization_benchmarks"
-harness = false
-
 [features]
 default = ["std", "alloc"]
 std = ["hpcrypt-core/std"]

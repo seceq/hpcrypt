@@ -2,6 +2,7 @@
 name = "hpcrypt-curves"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 hpcrypt-core = { workspace = true }

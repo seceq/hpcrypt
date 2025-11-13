@@ -15,18 +15,15 @@ targets = [
 [advisories]
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
-vulnerability = "deny"
-unmaintained = "warn"
-unsound = "warn"
 yanked = "deny"
-notice = "warn"
 ignore = [
-    # Add specific advisories to ignore here if needed
-    # Example: "RUSTSEC-2020-0001",
+    # Ignoring unmaintained dependencies that are indirect and low-risk
+    "RUSTSEC-2021-0139",  # ansi_term - unmaintained, only used in dev dep
+    "RUSTSEC-2024-0375",  # atty - unmaintained, only used in dev dep
+    "RUSTSEC-2021-0145",  # atty - potential unaligned read, only used in dev dep
 ]
 
 [licenses]
-unlicensed = "deny"
 allow = [
     "MIT",
     "Apache-2.0",
@@ -36,16 +33,10 @@ allow = [
     "Unicode-DFS-2016",
     "Unicode-3.0",
     "0BSD",
+    "Zlib",
 ]
-deny = [
-    "GPL-2.0",
-    "GPL-3.0",
-    "AGPL-3.0",
-]
-copyleft = "deny"
-allow-osi-fsf-free = "neither"
-default = "deny"
 confidence-threshold = 0.8
+unused-allowed-license = "warn"
 
 # Ring uses ISC/MIT/OpenSSL, allow it
 [[licenses.clarify]]
