@@ -3,16 +3,16 @@
 //! This crate provides standard modes of operation for block ciphers,
 //! primarily focused on AES (Advanced Encryption Standard).
 //!
-//! # ⚠️ Security Warning
+//! # Security Warning
 //!
-//! **IMPORTANT:** None of these modes provide authentication. They only provide
+//! IMPORTANT: None of these modes provide authentication. They only provide
 //! confidentiality. An attacker can modify ciphertext without detection.
 //!
-//! **For most applications, use authenticated encryption instead:**
-//! - **Recommended:** `AES-GCM` (from `hpcrypt-aead`) - provides both encryption and authentication
+//! For most applications, use authenticated encryption instead:
+//! - Recommended: `AES-GCM` (from `hpcrypt-aead`) - provides both encryption and authentication
 //! - Alternative: `ChaCha20-Poly1305` (from `hpcrypt-aead`) - faster on systems without AES-NI
 //!
-//! **Only use these modes if:**
+//! Only use these modes if:
 //! 1. You need raw block cipher modes for specific protocols
 //! 2. You will add authentication separately (HMAC, etc.)
 //! 3. You understand the security implications
@@ -21,22 +21,22 @@
 //!
 //! | Mode | Use Case | IV Requirements | Parallel | Streaming |
 //! |------|----------|-----------------|----------|-----------|
-//! | **CTR** | General purpose | Random nonce, never reuse | ✅ Encrypt only | ✅ Yes |
-//! | **CBC** | Legacy protocols | Random, unpredictable | ❌ No | ❌ No |
-//! | **CFB** | Stream encryption | Random, unpredictable | ❌ Decrypt only | ✅ Yes |
-//! | **OFB** | Stream encryption | Random, unpredictable | ❌ No | ✅ Yes |
-//! | **XTS** | Disk encryption | Sector/block number | ✅ Yes | ❌ No |
+//! | **CTR** | General purpose | Random nonce, never reuse | Encrypt only | Yes |
+//! | **CBC** | Legacy protocols | Random, unpredictable | No | No |
+//! | **CFB** | Stream encryption | Random, unpredictable | Decrypt only | Yes |
+//! | **OFB** | Stream encryption | Random, unpredictable | No | Yes |
+//! | **XTS** | Disk encryption | Sector/block number | Yes | No |
 //!
-//! **Recommendation:** Use **CTR mode** for general-purpose encryption (with HMAC for authentication).
+//! Recommendation: Use CTR mode for general-purpose encryption (with HMAC for authentication).
 //!
 //! # Critical: IV/Nonce Management
 //!
 //! ## CBC, CFB, OFB Modes
 //!
-//! **⚠️ CATASTROPHIC FAILURE if IV is reused with the same key!**
+//! CATASTROPHIC FAILURE if IV is reused with the same key!
 //!
-//! - **IV must be unpredictable** (use cryptographically secure random generator)
-//! - **Never reuse an IV** with the same key
+//! - IV must be unpredictable (use cryptographically secure random generator)
+//! - Never reuse an IV with the same key
 //! - IV can be transmitted in plaintext alongside ciphertext
 //! - Generate new random IV for each encryption operation
 //!
@@ -46,18 +46,18 @@
 //!
 //! let cipher = AesCbc128::new(&key);
 //!
-//! // CORRECT: Generate new random IV each time
+//! // Generate new random IV each time
 //! let iv1 = OsRng::generate_bytes::<16>();
 //! let ciphertext1 = cipher.encrypt(&iv1, plaintext1)?;
 //!
-//! let iv2 = OsRng::generate_bytes::<16>();  // New IV!
+//! let iv2 = OsRng::generate_bytes::<16>();
 //! let ciphertext2 = cipher.encrypt(&iv2, plaintext2)?;
 //! # Ok::<(), hpcrypt_core::error::CipherError>(())
 //! ```
 //!
 //! ## CTR Mode
 //!
-//! **⚠️ CATASTROPHIC FAILURE if nonce is reused with the same key!**
+//! CATASTROPHIC FAILURE if nonce is reused with the same key!
 //!
 //! - Nonce must be unique for each encryption
 //! - Nonce can be a counter, random value, or combination
@@ -71,11 +71,11 @@
 //!
 //! # Padding
 //!
-//! **Important:** This crate does **not** handle padding automatically.
+//! Important: This crate does not handle padding automatically.
 //!
-//! - **CBC, ECB:** Require plaintext to be block-aligned (multiple of 16 bytes)
-//! - **CTR, CFB, OFB:** Work with any plaintext length (stream ciphers)
-//! - **XTS:** Minimum 16 bytes, supports ciphertext stealing for non-aligned
+//! - CBC, ECB: Require plaintext to be block-aligned (multiple of 16 bytes)
+//! - CTR, CFB, OFB: Work with any plaintext length (stream ciphers)
+//! - XTS: Minimum 16 bytes, supports ciphertext stealing for non-aligned
 //!
 //! For CBC mode, you must pad plaintext yourself (PKCS#7, ISO/IEC 7816-4, etc.)
 //!
@@ -148,7 +148,7 @@
 //!
 //! # Why Not AES-GCM?
 //!
-//! If you're asking "should I use AES-CBC or AES-GCM?", the answer is **always AES-GCM**.
+//! If you're asking "should I use AES-CBC or AES-GCM?", the answer is always AES-GCM.
 //!
 //! AES-GCM (in `hpcrypt-aead`) provides:
 //! - Encryption (confidentiality)
@@ -179,9 +179,6 @@ extern crate alloc;
 pub mod aes_modes;
 
 pub use aes_modes::{
-    AesCbc128, AesCbc192, AesCbc256,
-    AesCfb128, AesCfb192, AesCfb256,
-    AesCtr128, AesCtr192, AesCtr256,
-    AesOfb128, AesOfb192, AesOfb256,
-    AesXts128, AesXts256,
+    AesCbc128, AesCbc192, AesCbc256, AesCfb128, AesCfb192, AesCfb256, AesCtr128, AesCtr192,
+    AesCtr256, AesOfb128, AesOfb192, AesOfb256, AesXts128, AesXts256,
 };
