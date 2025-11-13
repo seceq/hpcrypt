@@ -98,20 +98,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 8. Use cases
     println!("8. When to Use Compressed Keys");
-    println!("   ✅ Bandwidth-constrained environments");
-    println!("   ✅ Blockchain transactions (Bitcoin/Ethereum)");
-    println!("   ✅ IoT devices with limited memory");
-    println!("   ✅ Mobile applications");
-    println!("   ✅ Storage-constrained systems");
-    println!("   ✅ When compatibility with Bitcoin standards is needed\n");
+    println!("    Bandwidth-constrained environments");
+    println!("    Blockchain transactions (Bitcoin/Ethereum)");
+    println!("    IoT devices with limited memory");
+    println!("    Mobile applications");
+    println!("    Storage-constrained systems");
+    println!("    When compatibility with Bitcoin standards is needed\n");
 
     // 9. Security properties
     println!("9. Security Properties (Same for Both Formats)");
-    println!("   ✅ IND-CCA2 secure");
-    println!("   ✅ Forward secrecy");
-    println!("   ✅ Authenticated encryption");
-    println!("   ✅ Domain separation support");
-    println!("   ✅ Automatic format detection on decrypt\n");
+    println!("    IND-CCA2 secure");
+    println!("    Forward secrecy");
+    println!("    Authenticated encryption");
+    println!("    Domain separation support");
+    println!("    Automatic format detection on decrypt\n");
 
     // 10. Performance note
     println!("10. Performance");
@@ -121,7 +121,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   - Bandwidth savings: 32 bytes per ciphertext");
     println!("   - Trade-off: Slight CPU cost for significant bandwidth reduction\n");
 
-    println!("✅ ECIES compressed keys demonstration complete!");
+    println!(" ECIES compressed keys demonstration complete!");
     println!("\nKey Takeaway: Compressed keys save 32 bytes (35% overhead reduction)");
     println!("with minimal performance impact, making them ideal for Bitcoin/Ethereum applications.");
 

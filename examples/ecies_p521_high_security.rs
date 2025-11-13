@@ -106,7 +106,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Same recipient, different ephemeral keys:");
     println!("   CT1 ephemeral (first 16 bytes): {:02x?}", &ct1[0..16]);
     println!("   CT2 ephemeral (first 16 bytes): {:02x?}", &ct2[0..16]);
-    println!("   Keys are different: {} ✅", ct1[..133] != ct2[..133]);
+    println!("   Keys are different: {} ", ct1[..133] != ct2[..133]);
     println!("   Compromise of one message does NOT affect others\n");
 
     // 9. Context Binding
@@ -130,7 +130,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Encrypted with context: 'classification:secret'");
     println!("   Decrypt with correct context: {}",
         EciesP521::decrypt(&recipient_secret, &ct_classified, b"classification:secret").is_ok());
-    println!("   Decrypt with wrong context: {} ❌", result_wrong_context.is_ok());
+    println!("   Decrypt with wrong context: {} ", result_wrong_context.is_ok());
     println!("   Benefit: Prevents ciphertext from being used in wrong context\n");
 
     // 10. Tampering Detection
@@ -146,28 +146,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Tampered byte {} (flipped 1 bit)", tamper_idx);
     println!("   Decrypt original: {}",
         EciesP521::decrypt(&recipient_secret, &ct_original, &[]).is_ok());
-    println!("   Decrypt tampered: {} ❌",
+    println!("   Decrypt tampered: {} ",
         EciesP521::decrypt(&recipient_secret, &ct_tampered, &[]).is_ok());
     println!("   GCM authentication tag detects ANY modification\n");
 
     // 11. Use Cases
     println!("11. Recommended Use Cases");
-    println!("   ✅ Government Communications");
+    println!("    Government Communications");
     println!("      - TOP SECRET classified data (CNSA 2.0 required)");
     println!("      - Intelligence community (NSA, CIA, DoD)");
     println!("      - Diplomatic communications");
     println!();
-    println!("   ✅ Financial Systems");
+    println!("    Financial Systems");
     println!("      - Central bank communications");
     println!("      - High-value transactions (>$1 billion)");
     println!("      - SWIFT alternatives");
     println!();
-    println!("   ✅ Critical Infrastructure");
+    println!("    Critical Infrastructure");
     println!("      - Power grid SCADA systems");
     println!("      - Nuclear facility controls");
     println!("      - Satellite command and control");
     println!();
-    println!("   ✅ Long-Term Data Protection");
+    println!("    Long-Term Data Protection");
     println!("      - Medical records (50+ year retention)");
     println!("      - Legal documents (attorney-client privilege)");
     println!("      - Intellectual property (patents, trade secrets)\n");
@@ -187,16 +187,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 13. Compliance Summary
     println!("13. Standards Compliance");
-    println!("   ✅ NIST SP 800-56A Rev. 3 (Key Establishment)");
-    println!("   ✅ NIST SP 800-57 Part 1 Rev. 5 (Key Management)");
-    println!("   ✅ NIST FIPS 186-5 (Digital Signatures)");
-    println!("   ✅ CNSA 2.0 (Commercial National Security Algorithm Suite)");
-    println!("   ✅ SEC 1 v2.0 (Elliptic Curve Cryptography)");
-    println!("   ✅ FIPS 140-3 Level 4 compatible");
-    println!("   ✅ Common Criteria EAL7 compatible\n");
+    println!("    NIST SP 800-56A Rev. 3 (Key Establishment)");
+    println!("    NIST SP 800-57 Part 1 Rev. 5 (Key Management)");
+    println!("    NIST FIPS 186-5 (Digital Signatures)");
+    println!("    CNSA 2.0 (Commercial National Security Algorithm Suite)");
+    println!("    SEC 1 v2.0 (Elliptic Curve Cryptography)");
+    println!("    FIPS 140-3 Level 4 compatible");
+    println!("    Common Criteria EAL7 compatible\n");
 
     // 14. Security Warnings
-    println!("14. Security Warnings ⚠️");
+    println!("14. Security Warnings ");
     println!("   CRITICAL: Never reuse nonces");
     println!("   - GCM catastrophically fails with nonce reuse");
     println!("   - Single reuse can leak AES-256 key");
@@ -237,7 +237,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   P-521 with AES-256-GCM provides maximum security for");
     println!("   applications where security is paramount over performance.\n");
 
-    println!("✅ High-security encryption demonstration complete!");
+    println!(" High-security encryption demonstration complete!");
 
     Ok(())
 }

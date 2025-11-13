@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let plaintext = EciesSecp256k1::decrypt(&recipient_secret, &ciphertext, &[])?;
 
     println!("   Decrypted: {:?}", std::str::from_utf8(&plaintext).unwrap());
-    println!("   Match original: {}", if plaintext == message { "✅ YES" } else { "❌ NO" });
+    println!("   Match original: {}", if plaintext == message { " YES" } else { " NO" });
 
     // 4. Demonstrate forward secrecy
     println!("\n4. Forward Secrecy");
@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ciphertext2 = EciesSecp256k1::encrypt(&recipient_public, message2, &[], &mut rng)?;
 
     println!("   Same recipient, different message");
-    println!("   Ciphertext 1 != Ciphertext 2: {}", if ciphertext != ciphertext2 { "✅ YES" } else { "❌ NO" });
+    println!("   Ciphertext 1 != Ciphertext 2: {}", if ciphertext != ciphertext2 { " YES" } else { " NO" });
     println!("   Reason: Fresh ephemeral key for each encryption");
 
     // 5. Domain separation with shared info
@@ -69,11 +69,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Decrypting with wrong context fails
     let wrong_context_result = EciesSecp256k1::decrypt(&recipient_secret, &ct_email, context2);
-    println!("   Decrypt email with chat context: {}", if wrong_context_result.is_err() { "❌ FAILS (GOOD!)" } else { "✅ WORKS (BAD!)" });
+    println!("   Decrypt email with chat context: {}", if wrong_context_result.is_err() { " FAILS (GOOD!)" } else { " WORKS (BAD!)" });
 
     // Decrypting with correct context works
     let correct_result = EciesSecp256k1::decrypt(&recipient_secret, &ct_email, context1)?;
-    println!("   Decrypt email with email context: ✅ WORKS");
+    println!("   Decrypt email with email context:  WORKS");
 
     // 6. Demonstrate tampering detection
     println!("\n6. Tampering Detection");
@@ -82,7 +82,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tampered_ciphertext[len - 1] ^= 0x01; // Flip one bit in the tag
 
     let tamper_result = EciesSecp256k1::decrypt(&recipient_secret, &tampered_ciphertext, &[]);
-    println!("   Tampered ciphertext decryption: {}", if tamper_result.is_err() { "❌ FAILS (GOOD!)" } else { "✅ WORKS (BAD!)" });
+    println!("   Tampered ciphertext decryption: {}", if tamper_result.is_err() { " FAILS (GOOD!)" } else { " WORKS (BAD!)" });
 
     // 7. Empty message support
     println!("\n7. Edge Cases");
@@ -92,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("   Empty message: {:?}", empty_message);
     println!("   Ciphertext size: {} bytes (just overhead)", empty_ct.len());
-    println!("   Decryption works: {}", if empty_pt == empty_message { "✅ YES" } else { "❌ NO" });
+    println!("   Decryption works: {}", if empty_pt == empty_message { " YES" } else { " NO" });
 
     // 8. Use cases
     println!("\n8. Use Cases");
@@ -105,11 +105,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 9. Security properties
     println!("\n9. Security Properties");
-    println!("   ✅ IND-CCA2 secure (indistinguishable under chosen-ciphertext)");
-    println!("   ✅ Forward secrecy (ephemeral keys)");
-    println!("   ✅ Authenticated encryption (AES-GCM)");
-    println!("   ✅ Domain separation (shared info parameter)");
-    println!("   ✅ Tampering detection (authentication tag)");
+    println!("    IND-CCA2 secure (indistinguishable under chosen-ciphertext)");
+    println!("    Forward secrecy (ephemeral keys)");
+    println!("    Authenticated encryption (AES-GCM)");
+    println!("    Domain separation (shared info parameter)");
+    println!("    Tampering detection (authentication tag)");
 
     // 10. Algorithm details
     println!("\n10. Algorithm Details");
@@ -118,6 +118,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   AEAD: AES-128-GCM");
     println!("   Standard: SEC 1 v2.0");
 
-    println!("\n✅ ECIES secp256k1 encryption demonstration complete!");
+    println!("\n ECIES secp256k1 encryption demonstration complete!");
     Ok(())
 }
