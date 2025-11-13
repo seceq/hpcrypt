@@ -7,7 +7,7 @@
 #![allow(clippy::needless_range_loop)]
 #![allow(clippy::needless_borrows_for_generic_args)]
 
-use super::constants::{P256_MODULUS, MONTGOMERY_P_PRIME, MONTGOMERY_R, MONTGOMERY_R2};
+use super::constants::{MONTGOMERY_P_PRIME, MONTGOMERY_R, MONTGOMERY_R2, P256_MODULUS};
 use super::field::FieldElement;
 use crate::ct_utils::{Choice, ConditionallySelectable};
 use core::ops::{Add, AddAssign, Sub, SubAssign};
@@ -263,17 +263,16 @@ impl FieldElement {
     /// The NIST fast reduction with all S-terms verified correct.
     #[inline]
     pub fn mul(&self, rhs: &Self) -> Self {
-        // Use Montgomery multiplication for ~32x speedup and to avoid Karatsuba overflow
+        // Use Montgomery multiplication for now
         //
-        // Performance:
-        //   Karatsuba: ~1,900 ns (and has u128 overflow issues in debug mode)
-        //   Montgomery: ~13 ns multiplication + ~46 ns conversion = ~59 ns total
-        //   Speedup: 32x faster!
+        // TODO: Karatsuba is 1.78x faster per standalone benchmark but fails tests when
+        //       integrated with NIST reduction due to overflow issues in reduction code.
+        //       The reduction function needs wrapping arithmetic before Karatsuba can be used.
         //
-        // Why Montgomery doesn't overflow:
-        //   Montgomery CIOS processes limbs sequentially with careful carry propagation,
-        //   avoiding the large intermediate sums (p01 + p10 ≈ 2^129) that cause Karatsuba
-        //   to overflow u128 even with properly reduced field elements.
+        // Benchmark results:
+        //   - Karatsuba standalone: 1.78x faster than schoolbook
+        //   - Montgomery (P-384): 2.4-7x SLOWER than standard ops
+        //   - Need to fix NIST reduction overflow to enable Karatsuba
         let a_mont = self.to_montgomery();
         let b_mont = rhs.to_montgomery();
         a_mont.montgomery_mul(&b_mont).from_montgomery()
@@ -327,7 +326,7 @@ impl FieldElement {
                         // True value = (temp + carry) mod 2^128 + 2^128
                         let wrapped = temp.wrapping_add(carry);
                         result[1] = wrapped as u64;
-                        (wrapped >> 64) + (1u128 << 64)  // Add 2^128 / 2^64 = 2^64 to high part
+                        (wrapped >> 64) + (1u128 << 64) // Add 2^128 / 2^64 = 2^64 to high part
                     }
                 },
                 None => {
@@ -335,7 +334,7 @@ impl FieldElement {
                     // True value = (p01 + p10) mod 2^128 + 2^128
                     let wrapped = p01.wrapping_add(p10);
                     let sum1 = wrapped.wrapping_add(carry);
-                    let overflow2 = sum1 < wrapped;  // Did adding carry also overflow?
+                    let overflow2 = sum1 < wrapped; // Did adding carry also overflow?
                     result[1] = sum1 as u64;
                     (sum1 >> 64) + (1u128 << 64) + if overflow2 { 1u128 << 64 } else { 0 }
                 }
@@ -408,7 +407,11 @@ impl FieldElement {
         z1[1] = z_mid[1];
         z1[2] = z_mid[2];
         z1[3] = z_mid[3];
-        z1[4] = if a_sum_carry != 0 && b_sum_carry != 0 { 1 } else { 0 };
+        z1[4] = if a_sum_carry != 0 && b_sum_carry != 0 {
+            1
+        } else {
+            0
+        };
 
         // z1 -= z0
         let sub0 = (z1[0] as u128).wrapping_sub(z0[0] as u128);
@@ -608,8 +611,8 @@ impl FieldElement {
         // limbs[i] = c[2i] (low) + c[2i+1] (high) * 2^32
         let mut c = [0u32; 16];
         for i in 0..8 {
-            c[2*i] = limbs[i] as u32;           // Low 32 bits
-            c[2*i + 1] = (limbs[i] >> 32) as u32;  // High 32 bits
+            c[2 * i] = limbs[i] as u32; // Low 32 bits
+            c[2 * i + 1] = (limbs[i] >> 32) as u32; // High 32 bits
         }
 
         // Define S-terms as per FIPS 186-4
@@ -709,7 +712,7 @@ impl FieldElement {
         for i in 0..4 {
             let total = acc[i] + carry;
             result_limbs[i] = (total & 0xFFFFFFFFFFFFFFFF) as u64;
-            carry = total >> 64;  // Arithmetic shift preserves sign
+            carry = total >> 64; // Arithmetic shift preserves sign
         }
 
         let mut result = Self::from_limbs(result_limbs);
@@ -724,10 +727,10 @@ impl FieldElement {
             // Accumulate the adjustment: c * (2^256 mod p)
             // Where 2^256 mod p = [0x0000000000000001, 0xffffffff00000000, 0xffffffffffffffff, 0x00000000fffffffe]
             let mut adj = [0i128; 4];
-            adj[0] = c;                                        // c * 0x0000000000000001
-            adj[1] = c * (0xffffffff00000000u64 as i128);     // c * 0xffffffff00000000
-            adj[2] = c * (0xffffffffffffffffu64 as i128);     // c * 0xffffffffffffffff
-            adj[3] = c * (0x00000000fffffffeu64 as i128);     // c * 0x00000000fffffffe
+            adj[0] = c; // c * 0x0000000000000001
+            adj[1] = c * (0xffffffff00000000u64 as i128); // c * 0xffffffff00000000
+            adj[2] = c * (0xffffffffffffffffu64 as i128); // c * 0xffffffffffffffff
+            adj[3] = c * (0x00000000fffffffeu64 as i128); // c * 0x00000000fffffffe
 
             // Apply adjustment with carry propagation
             let mut c2 = 0i128;
@@ -741,10 +744,10 @@ impl FieldElement {
             // This carry is at position 2^256, so we need to apply the reduction again
             if c2 != 0 {
                 let mut adj2 = [0i128; 4];
-                adj2[0] = c2;                                       // c2 * 0x0000000000000001
-                adj2[1] = c2 * (0xffffffff00000000u64 as i128);    // c2 * 0xffffffff00000000
-                adj2[2] = c2 * (0xffffffffffffffffu64 as i128);    // c2 * 0xffffffffffffffff
-                adj2[3] = c2 * (0x00000000fffffffeu64 as i128);    // c2 * 0x00000000fffffffe
+                adj2[0] = c2; // c2 * 0x0000000000000001
+                adj2[1] = c2 * (0xffffffff00000000u64 as i128); // c2 * 0xffffffff00000000
+                adj2[2] = c2 * (0xffffffffffffffffu64 as i128); // c2 * 0xffffffffffffffff
+                adj2[3] = c2 * (0x00000000fffffffeu64 as i128); // c2 * 0x00000000fffffffe
 
                 let mut c3 = 0i128;
                 for i in 0..4 {
@@ -848,7 +851,8 @@ impl FieldElement {
             if pos192 < 4 {
                 working[pos192] = working[pos192].wrapping_sub(hi << bit_shift_192);
                 if pos192 + 1 < 8 && bit_shift_192 > 0 {
-                    working[pos192 + 1] = working[pos192 + 1].wrapping_sub(hi >> (64 - bit_shift_192));
+                    working[pos192 + 1] =
+                        working[pos192 + 1].wrapping_sub(hi >> (64 - bit_shift_192));
                 }
             }
 
@@ -949,10 +953,10 @@ impl FieldElement {
         // w0=s8, w1=s9, w2=s10, w3-w7=0
         // limbs[0] = [w1,w0], limbs[1] = [w3,w2], limbs[2] = [w5,w4], limbs[3] = [w7,w6]
         let s3 = [
-            s[8] as u64 | ((s[9] as u64) << 32),  // [s9, s8] ✓
-            s[10] as u64,                           // [0, s10] - s10 in low 32 bits
-            0,                                       // [0, 0]
-            0,                                       // [0, 0]
+            s[8] as u64 | ((s[9] as u64) << 32), // [s9, s8] ✓
+            s[10] as u64,                        // [0, s10] - s10 in low 32 bits
+            0,                                   // [0, 0]
+            0,                                   // [0, 0]
         ];
 
         // S4 = [s13, s12, s11, 0, s9, s8, s7, s6]
@@ -960,53 +964,53 @@ impl FieldElement {
         let s4 = [
             s[6] as u64 | ((s[7] as u64) << 32),   // [s7, s6]
             s[8] as u64 | ((s[9] as u64) << 32),   // [s9, s8]
-            (s[11] as u64) << 32,                   // [s11, 0] - s11 in high 32 bits
-            s[12] as u64 | ((s[13] as u64) << 32),  // [s13, s12]
+            (s[11] as u64) << 32,                  // [s11, 0] - s11 in high 32 bits
+            s[12] as u64 | ((s[13] as u64) << 32), // [s13, s12]
         ];
 
         // S5 = [s14, s13, 0, 0, 0, 0, s10, s9]
         // w0=s9, w1=s10, w2-w5=0, w6=s13, w7=s14
         let s5 = [
-            s[9] as u64 | ((s[10] as u64) << 32),   // [s10, s9]
-            0,                                        // [0, 0]
-            0,                                        // [0, 0]
-            s[13] as u64 | ((s[14] as u64) << 32),  // [s14, s13]
+            s[9] as u64 | ((s[10] as u64) << 32),  // [s10, s9]
+            0,                                     // [0, 0]
+            0,                                     // [0, 0]
+            s[13] as u64 | ((s[14] as u64) << 32), // [s14, s13]
         ];
 
         // S6 = [s15, s14, s13, s12, s11, 0, 0, 0]
         // w0-w1=0, w2=0, w3=s11, w4=s12, w5=s13, w6=s14, w7=s15
         let s6 = [
-            0,                                        // [0, 0]
-            (s[11] as u64) << 32,                    // [s11, 0] - s11 in high 32 bits
-            s[12] as u64 | ((s[13] as u64) << 32),  // [s13, s12]
-            s[14] as u64 | ((s[15] as u64) << 32),  // [s15, s14]
+            0,                                     // [0, 0]
+            (s[11] as u64) << 32,                  // [s11, 0] - s11 in high 32 bits
+            s[12] as u64 | ((s[13] as u64) << 32), // [s13, s12]
+            s[14] as u64 | ((s[15] as u64) << 32), // [s15, s14]
         ];
 
         // S7 = [s15, 0, 0, 0, 0, 0, s10, s9]
         // w0=s9, w1=s10, w2-w5=0, w6=0, w7=s15
         let s7 = [
-            s[9] as u64 | ((s[10] as u64) << 32),  // [s10, s9]
-            0,                                       // [0, 0]
-            0,                                       // [0, 0]
-            (s[15] as u64) << 32,                   // [s15, 0] - s15 in high 32 bits
+            s[9] as u64 | ((s[10] as u64) << 32), // [s10, s9]
+            0,                                    // [0, 0]
+            0,                                    // [0, 0]
+            (s[15] as u64) << 32,                 // [s15, 0] - s15 in high 32 bits
         ];
 
         // S8 = [0, s14, s13, 0, 0, s10, s9, s8]
         // w0=s8, w1=s9, w2=s10, w3=0, w4=0, w5=s13, w6=s14, w7=0
         let s8 = [
-            s[8] as u64 | ((s[9] as u64) << 32),   // [s9, s8] = [w1, w0]
-            s[10] as u64,                           // [0, s10] = [w3, w2] - s10 in low 32 bits
-            (s[13] as u64) << 32,                   // [s13, 0] = [w5, w4] - s13 in high 32 bits
-            s[14] as u64,                            // [0, s14] = [w7, w6] - s14 in low 32 bits
+            s[8] as u64 | ((s[9] as u64) << 32), // [s9, s8] = [w1, w0]
+            s[10] as u64,                        // [0, s10] = [w3, w2] - s10 in low 32 bits
+            (s[13] as u64) << 32,                // [s13, 0] = [w5, w4] - s13 in high 32 bits
+            s[14] as u64,                        // [0, s14] = [w7, w6] - s14 in low 32 bits
         ];
 
         // S9 = [s15, s14, 0, 0, s11, 0, 0, s8]
         // w0=s8, w1=0, w2=0, w3=s11, w4=0, w5=0, w6=s14, w7=s15
         let s9 = [
-            s[8] as u64,                              // [0, s8] - s8 in low 32 bits only
-            (s[11] as u64) << 32,                     // [s11, 0] - s11 in high 32 bits
-            0,                                         // [0, 0]
-            s[14] as u64 | ((s[15] as u64) << 32),   // [s15, s14]
+            s[8] as u64,                           // [0, s8] - s8 in low 32 bits only
+            (s[11] as u64) << 32,                  // [s11, 0] - s11 in high 32 bits
+            0,                                     // [0, 0]
+            s[14] as u64 | ((s[15] as u64) << 32), // [s15, s14]
         ];
 
         // Compute: S1 + 2*S2 + 2*S3 + S4 + S5 - S6 - S7 - S8 - S9
@@ -1159,10 +1163,10 @@ impl FieldElement {
         //        = 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFD
 
         self.pow_vartime(&[
-            0xFFFFFFFFFFFFFFFD,  // limb 0
-            0x00000000FFFFFFFF,  // limb 1
-            0x0000000000000000,  // limb 2
-            0xFFFFFFFF00000001,  // limb 3
+            0xFFFFFFFFFFFFFFFD, // limb 0
+            0x00000000FFFFFFFF, // limb 1
+            0x0000000000000000, // limb 2
+            0xFFFFFFFF00000001, // limb 3
         ])
     }
 
@@ -1217,10 +1221,10 @@ impl FieldElement {
 
         // (p+1)/4 = 3FFFFFFFC0000000 4000000000000000 0000000040000000 0000000000000000
         let candidate = self.pow_vartime(&[
-            0x0000000000000000,  // limb 0
-            0x0000000040000000,  // limb 1
-            0x4000000000000000,  // limb 2
-            0x3FFFFFFFC0000000,  // limb 3
+            0x0000000000000000, // limb 0
+            0x0000000040000000, // limb 1
+            0x4000000000000000, // limb 2
+            0x3FFFFFFFC0000000, // limb 3
         ]);
 
         // Verify that candidate^2 = self
@@ -1245,7 +1249,7 @@ impl FieldElement {
         // Standard algorithm: start with base, skip MSB, then for each bit: square, multiply if 1
 
         // Find the position of the most significant set bit
-        let mut bit_pos = 255;  // Start from the highest possible bit
+        let mut bit_pos = 255; // Start from the highest possible bit
         let mut found_msb = false;
 
         // Find the MSB
@@ -1262,9 +1266,9 @@ impl FieldElement {
         // If exponent is 0 or 1
         if !found_msb {
             if exp[0] & 1 == 1 {
-                return *self;  // self^1 = self
+                return *self; // self^1 = self
             } else {
-                return Self::one();  // self^0 = 1
+                return Self::one(); // self^0 = 1
             }
         }
 
@@ -1274,7 +1278,7 @@ impl FieldElement {
         // Process remaining bits from (MSB-1) down to 0
         let mut pos = bit_pos;
         if pos > 0 {
-            pos -= 1;  // Skip the MSB (already accounted for by starting with base)
+            pos -= 1; // Skip the MSB (already accounted for by starting with base)
 
             loop {
                 let limb_idx = pos / 64;
@@ -1290,7 +1294,7 @@ impl FieldElement {
                 }
 
                 if pos == 0 {
-                    break;  // Exit after processing bit 0
+                    break; // Exit after processing bit 0
                 }
                 pos -= 1;
             }
@@ -2128,12 +2132,7 @@ mod tests {
             0x0000000000000000,
         ]);
         let squared = val_2_100.square();
-        let expected = FieldElement::from_limbs([
-            0x0,
-            0x0,
-            0x0,
-            0x100,
-        ]);
+        let expected = FieldElement::from_limbs([0x0, 0x0, 0x0, 0x100]);
         assert_eq!(squared, expected, "(2^100)^2 should equal 2^200");
     }
 
@@ -2186,7 +2185,7 @@ mod tests {
     fn test_pow_2_64_plus_1() {
         // Test 2^(2^64 + 1) mod p - multi-limb with non-zero limb[0]
         let two = FieldElement::from_u64(2);
-        let exp = [1u64, 1, 0, 0];  // 2^64 + 1
+        let exp = [1u64, 1, 0, 0]; // 2^64 + 1
         let result = two.pow_vartime(&exp);
         let expected = FieldElement::from_limbs([
             0x86b76f2ae41d53ae,
@@ -2305,7 +2304,7 @@ mod tests {
         // Test with a multi-limb exponent
         // 2^(2^64) mod p - this should exercise the multi-limb logic
         let two = FieldElement::from_u64(2);
-        let exp = [0u64, 1, 0, 0];  // 2^64
+        let exp = [0u64, 1, 0, 0]; // 2^64
         let result = two.pow_vartime(&exp);
 
         // Expected: 0x090de0be6f3c759d6e7ed2cd53e3a95eb76e11bb215dedab435bb795720ea9d7
@@ -2325,10 +2324,10 @@ mod tests {
 
         // First, let's directly test pow_vartime with p-2
         let exp_p_minus_2 = [
-            0xFFFFFFFFFFFFFFFD,  // limb 0
-            0x00000000FFFFFFFF,  // limb 1
-            0x0000000000000000,  // limb 2
-            0xFFFFFFFF00000001,  // limb 3
+            0xFFFFFFFFFFFFFFFD, // limb 0
+            0x00000000FFFFFFFF, // limb 1
+            0x0000000000000000, // limb 2
+            0xFFFFFFFF00000001, // limb 3
         ];
         let inv_two_direct = two.pow_vartime(&exp_p_minus_2);
 
@@ -2346,10 +2345,16 @@ mod tests {
 
         // Check both approaches
         if inv_two_direct != expected_inv {
-            panic!("pow_vartime with p-2 is wrong!\n  Got:      {:?}\n  Expected: {:?}", inv_two_direct, expected_inv);
+            panic!(
+                "pow_vartime with p-2 is wrong!\n  Got:      {:?}\n  Expected: {:?}",
+                inv_two_direct, expected_inv
+            );
         }
         if inv_two != expected_inv {
-            panic!("Inversion of 2 is wrong!\n  Got:      {:?}\n  Expected: {:?}", inv_two, expected_inv);
+            panic!(
+                "Inversion of 2 is wrong!\n  Got:      {:?}\n  Expected: {:?}",
+                inv_two, expected_inv
+            );
         }
 
         let result = inv_two.mul(&two);
@@ -2410,13 +2415,19 @@ mod tests {
             let inv_fermat = value.invert();
             let inv_gcd = value.invert_gcd();
 
-            assert_eq!(inv_fermat, inv_gcd,
-                "invert_gcd should match invert (Fermat) for value {:?}", value);
+            assert_eq!(
+                inv_fermat, inv_gcd,
+                "invert_gcd should match invert (Fermat) for value {:?}",
+                value
+            );
 
             // Also verify that value * inverse = 1
             let product = value.mul(&inv_gcd);
-            assert_eq!(product, FieldElement::one(),
-                "value * invert_gcd should equal 1");
+            assert_eq!(
+                product,
+                FieldElement::one(),
+                "value * invert_gcd should equal 1"
+            );
         }
     }
 
@@ -2512,7 +2523,11 @@ mod tests {
             let x_squared = x.square();
             let sqrt_result = x_squared.sqrt();
 
-            assert!(sqrt_result.is_some(), "sqrt should exist for perfect square of {}", val);
+            assert!(
+                sqrt_result.is_some(),
+                "sqrt should exist for perfect square of {}",
+                val
+            );
 
             let sqrt_val = sqrt_result.unwrap();
 
@@ -2520,7 +2535,10 @@ mod tests {
             assert!(
                 sqrt_val == x || sqrt_val == x.neg(),
                 "sqrt({})^2 should be {} or -{}, got {:?}",
-                val, val, val, sqrt_val
+                val,
+                val,
+                val,
+                sqrt_val
             );
         }
     }
@@ -2562,22 +2580,24 @@ mod tests {
 
         // Product of (p-3) * (p-3) as 8 x 64-bit limbs
         let product_limbs: [u64; 8] = [
-            0x0000000000000010,  // limb 0
-            0xfffffff800000000,  // limb 1
-            0xffffffffffffffff,  // limb 2
-            0x00000007fffffff8,  // limb 3
-            0x00000001fffffff8,  // limb 4
-            0x00000001fffffffe,  // limb 5
-            0xfffffffe00000001,  // limb 6
-            0xfffffffe00000002,  // limb 7
+            0x0000000000000010, // limb 0
+            0xfffffff800000000, // limb 1
+            0xffffffffffffffff, // limb 2
+            0x00000007fffffff8, // limb 3
+            0x00000001fffffff8, // limb 4
+            0x00000001fffffffe, // limb 5
+            0xfffffffe00000001, // limb 6
+            0xfffffffe00000002, // limb 7
         ];
 
         let result = FieldElement::simple_reduce(&product_limbs);
         let expected = FieldElement::from_u64(9);
 
-        assert_eq!(result, expected,
-                   "simple_reduce((p-3)^2) should equal 9\n  Got: {:?}\n  Expected: {:?}",
-                   result, expected);
+        assert_eq!(
+            result, expected,
+            "simple_reduce((p-3)^2) should equal 9\n  Got: {:?}\n  Expected: {:?}",
+            result, expected
+        );
     }
 
     #[test]
@@ -2708,8 +2728,10 @@ mod tests {
 
         // Result should be properly reduced to < p
         // We don't know the exact value, but we can verify it's in range
-        assert!(result != FieldElement::zero() || result == FieldElement::zero(),
-                "Reduction should produce a valid field element");
+        assert!(
+            result != FieldElement::zero() || result == FieldElement::zero(),
+            "Reduction should produce a valid field element"
+        );
     }
 
     // ============================================================================
@@ -2726,8 +2748,10 @@ mod tests {
         let complete = incomplete.reduce_once();
         let normal = a.add(&b);
 
-        assert_eq!(complete, normal,
-            "Incomplete addition followed by reduction should equal normal addition");
+        assert_eq!(
+            complete, normal,
+            "Incomplete addition followed by reduction should equal normal addition"
+        );
     }
 
     #[test]
@@ -2753,8 +2777,10 @@ mod tests {
         let complete = incomplete.reduce_once();
         let normal = p_minus_1.add(&p_minus_2);
 
-        assert_eq!(complete, normal,
-            "Incomplete addition near p should reduce correctly");
+        assert_eq!(
+            complete, normal,
+            "Incomplete addition near p should reduce correctly"
+        );
     }
 
     #[test]
@@ -2773,8 +2799,10 @@ mod tests {
         let complete = incomplete.reduce_once();
         let expected = FieldElement::zero();
 
-        assert_eq!(complete, expected,
-            "Incomplete (p-1) + 1 should reduce to 0");
+        assert_eq!(
+            complete, expected,
+            "Incomplete (p-1) + 1 should reduce to 0"
+        );
     }
 
     #[test]
@@ -2791,8 +2819,10 @@ mod tests {
         let complete = incomplete.reduce_once();
         let normal = p_minus_1.add(&p_minus_1);
 
-        assert_eq!(complete, normal,
-            "Incomplete (p-1) + (p-1) should reduce correctly");
+        assert_eq!(
+            complete, normal,
+            "Incomplete (p-1) + (p-1) should reduce correctly"
+        );
     }
 
     #[test]
@@ -2803,7 +2833,7 @@ mod tests {
             0xFFFFFFFFFFFFFFFF,
             0xFFFFFFFFFFFFFFFF,
             0xFFFFFFFFFFFFFFFF,
-            0xFFFFFFFF00000000,  // Just under p in top limb
+            0xFFFFFFFF00000000, // Just under p in top limb
         ]);
 
         let large2 = FieldElement::from_limbs([
@@ -2817,8 +2847,10 @@ mod tests {
         let complete = incomplete.reduce_once();
         let normal = large1.add(&large2);
 
-        assert_eq!(complete, normal,
-            "Incomplete addition with overflow should reduce correctly");
+        assert_eq!(
+            complete, normal,
+            "Incomplete addition with overflow should reduce correctly"
+        );
     }
 
     #[test]
@@ -2843,8 +2875,10 @@ mod tests {
         let left = a.add_incomplete(&b).add_incomplete(&c).reduce_once();
         let right = a.add_incomplete(&b.add_incomplete(&c)).reduce_once();
 
-        assert_eq!(left, right,
-            "Incomplete addition should be associative after reduction");
+        assert_eq!(
+            left, right,
+            "Incomplete addition should be associative after reduction"
+        );
     }
 
     #[test]
@@ -2860,8 +2894,10 @@ mod tests {
 
         // Complete should equal normal addition
         let normal = a.add(&b);
-        assert_eq!(complete, normal,
-            "Incomplete result after reduce_once should match normal addition");
+        assert_eq!(
+            complete, normal,
+            "Incomplete result after reduce_once should match normal addition"
+        );
     }
 
     // ============================================================================
@@ -2874,8 +2910,10 @@ mod tests {
         let squared = a.square();
         let via_mul = a.mul(&a);
 
-        assert_eq!(squared, via_mul,
-            "Optimized square should match multiplication: 123^2");
+        assert_eq!(
+            squared, via_mul,
+            "Optimized square should match multiplication: 123^2"
+        );
     }
 
     #[test]
@@ -2890,8 +2928,10 @@ mod tests {
         let squared = a.square();
         let via_mul = a.mul(&a);
 
-        assert_eq!(squared, via_mul,
-            "Optimized square should match multiplication for large values");
+        assert_eq!(
+            squared, via_mul,
+            "Optimized square should match multiplication for large values"
+        );
     }
 
     #[test]
@@ -2907,8 +2947,7 @@ mod tests {
         let squared = p_minus_1.square();
         let expected = FieldElement::from_u64(1);
 
-        assert_eq!(squared, expected,
-            "(p-1)^2 should equal 1 mod p");
+        assert_eq!(squared, expected, "(p-1)^2 should equal 1 mod p");
     }
 
     #[test]
@@ -2924,8 +2963,7 @@ mod tests {
         let squared = p_minus_2.square();
         let expected = FieldElement::from_u64(4);
 
-        assert_eq!(squared, expected,
-            "(p-2)^2 should equal 4 mod p");
+        assert_eq!(squared, expected, "(p-2)^2 should equal 4 mod p");
     }
 
     #[test]
@@ -2933,8 +2971,7 @@ mod tests {
         let zero = FieldElement::zero();
         let squared = zero.square();
 
-        assert_eq!(squared, zero,
-            "0^2 should equal 0");
+        assert_eq!(squared, zero, "0^2 should equal 0");
     }
 
     #[test]
@@ -2942,8 +2979,7 @@ mod tests {
         let one = FieldElement::from_u64(1);
         let squared = one.square();
 
-        assert_eq!(squared, one,
-            "1^2 should equal 1");
+        assert_eq!(squared, one, "1^2 should equal 1");
     }
 
     #[test]
@@ -2952,8 +2988,7 @@ mod tests {
         let squared = two.square();
         let expected = FieldElement::from_u64(4);
 
-        assert_eq!(squared, expected,
-            "2^2 should equal 4");
+        assert_eq!(squared, expected, "2^2 should equal 4");
     }
 
     #[test]
@@ -2964,8 +2999,11 @@ mod tests {
             let squared = a.square();
             let via_mul = a.mul(&a);
 
-            assert_eq!(squared, via_mul,
-                "Square should match multiplication for value {}", i);
+            assert_eq!(
+                squared, via_mul,
+                "Square should match multiplication for value {}",
+                i
+            );
         }
     }
 
@@ -2978,7 +3016,9 @@ mod tests {
         // Verify that R mod p is correct
         // R = 2^256, so R mod p should satisfy certain properties
 
-        use crate::p256::constants::{MONTGOMERY_R, MONTGOMERY_R2, MONTGOMERY_P_PRIME, P256_MODULUS};
+        use crate::p256::constants::{
+            MONTGOMERY_P_PRIME, MONTGOMERY_R, MONTGOMERY_R2, P256_MODULUS,
+        };
 
         // Test 1: Verify R * R^(-1) = 1 (mod p) by converting to and from Montgomery
         let one = FieldElement::one();
@@ -3085,14 +3125,17 @@ mod tests {
             0x0000000000000000,
             0x0000000000000002,
         ]);
-        let expected = a.mul(&b);  // Standard multiplication
+        let expected = a.mul(&b); // Standard multiplication
 
         let a_mont = a.to_montgomery();
         let b_mont = b.to_montgomery();
         let c_mont = a_mont.montgomery_mul(&b_mont);
         let c = c_mont.from_montgomery();
 
-        assert_eq!(c, expected, "Montgomery mul should match standard mul for large values");
+        assert_eq!(
+            c, expected,
+            "Montgomery mul should match standard mul for large values"
+        );
     }
 
     #[test]
@@ -3134,8 +3177,10 @@ mod tests {
         let result_square = via_square.from_montgomery();
         let result_mul = via_mul.from_montgomery();
 
-        assert_eq!(result_square, result_mul,
-            "Montgomery square should match montgomery_mul(a, a)");
+        assert_eq!(
+            result_square, result_mul,
+            "Montgomery square should match montgomery_mul(a, a)"
+        );
 
         // Test 4: Compare with standard squaring
         // TODO: Known issue - there's an off-by-one error for this specific large value
@@ -3220,7 +3265,10 @@ mod tests {
         let abc2_mont = a_mont.montgomery_mul(&bc_mont);
         let abc2 = abc2_mont.from_montgomery();
 
-        assert_eq!(abc1, abc2, "Montgomery multiplication should be associative");
+        assert_eq!(
+            abc1, abc2,
+            "Montgomery multiplication should be associative"
+        );
     }
 
     #[test]
@@ -3239,8 +3287,7 @@ mod tests {
                 let c_mont = a_mont.montgomery_mul(&b_mont);
                 let c = c_mont.from_montgomery();
 
-                assert_eq!(c, expected,
-                    "Montgomery mul failed for i={}, j={}", i, j);
+                assert_eq!(c, expected, "Montgomery mul failed for i={}, j={}", i, j);
             }
         }
     }
@@ -3269,6 +3316,9 @@ mod tests {
         let c_mont = a_mont.montgomery_mul(&b_mont);
         let c = c_mont.from_montgomery();
 
-        assert_eq!(c, expected, "REDC should produce correct results through full pipeline");
+        assert_eq!(
+            c, expected,
+            "REDC should produce correct results through full pipeline"
+        );
     }
 }
