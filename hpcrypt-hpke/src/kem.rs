@@ -71,9 +71,9 @@ impl KemId {
     /// Get Nenc (length of encapsulated key in bytes)
     pub fn nenc(self) -> usize {
         match self {
-            KemId::DhkemP256HkdfSha256 => 65,  // Uncompressed P-256 point
-            KemId::DhkemP384HkdfSha384 => 97,  // Uncompressed P-384 point
-            KemId::DhkemP521HkdfSha512 => 133, // Uncompressed P-521 point
+            KemId::DhkemP256HkdfSha256 => 65,   // Uncompressed P-256 point
+            KemId::DhkemP384HkdfSha384 => 97,   // Uncompressed P-384 point
+            KemId::DhkemP521HkdfSha512 => 133,  // Uncompressed P-521 point
             KemId::DhkemX25519HkdfSha256 => 32, // X25519 public key
         }
     }
@@ -148,7 +148,14 @@ fn extract_and_expand(
     hash_fn: fn(&[u8]) -> Vec<u8>,
 ) -> Vec<u8> {
     let prk = labeled_extract(kem_id, &[], b"eae_prk", dh_output, hash_fn);
-    labeled_expand(kem_id, &prk, b"shared_secret", kem_context, kem_id.nsecret(), hash_fn)
+    labeled_expand(
+        kem_id,
+        &prk,
+        b"shared_secret",
+        kem_context,
+        kem_id.nsecret(),
+        hash_fn,
+    )
 }
 
 /// KEM trait defining the Key Encapsulation Mechanism interface
@@ -184,7 +191,7 @@ impl DhkemP256 {
     }
 
     fn dh(sk: &[u8], pk: &[u8]) -> Result<Vec<u8>> {
-        use hpcrypt_curves::p256::{Point, Scalar, FieldElement, AffinePoint};
+        use hpcrypt_curves::p256::{AffinePoint, FieldElement, Point, Scalar};
 
         // Parse secret key
         if sk.len() != 32 {
@@ -257,12 +264,7 @@ impl Kem for DhkemP256 {
         kem_context.extend_from_slice(pk_r);
 
         // Derive shared secret
-        let shared_secret = extract_and_expand(
-            Self::KEM_ID,
-            &dh_output,
-            &kem_context,
-            Self::hash,
-        );
+        let shared_secret = extract_and_expand(Self::KEM_ID, &dh_output, &kem_context, Self::hash);
 
         Ok((shared_secret, pk_e))
     }
@@ -298,12 +300,7 @@ impl Kem for DhkemP256 {
         kem_context.extend_from_slice(&pk_r);
 
         // Derive shared secret
-        let shared_secret = extract_and_expand(
-            Self::KEM_ID,
-            &dh_output,
-            &kem_context,
-            Self::hash,
-        );
+        let shared_secret = extract_and_expand(Self::KEM_ID, &dh_output, &kem_context, Self::hash);
 
         Ok(shared_secret)
     }
@@ -348,12 +345,7 @@ impl Kem for DhkemP256 {
         kem_context.extend_from_slice(&pk_s);
 
         // Derive shared secret
-        let shared_secret = extract_and_expand(
-            Self::KEM_ID,
-            &dh_output,
-            &kem_context,
-            Self::hash,
-        );
+        let shared_secret = extract_and_expand(Self::KEM_ID, &dh_output, &kem_context, Self::hash);
 
         Ok((shared_secret, pk_e))
     }
@@ -399,12 +391,7 @@ impl Kem for DhkemP256 {
         kem_context.extend_from_slice(pk_s);
 
         // Derive shared secret
-        let shared_secret = extract_and_expand(
-            Self::KEM_ID,
-            &dh_output,
-            &kem_context,
-            Self::hash,
-        );
+        let shared_secret = extract_and_expand(Self::KEM_ID, &dh_output, &kem_context, Self::hash);
 
         Ok(shared_secret)
     }

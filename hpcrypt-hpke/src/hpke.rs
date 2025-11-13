@@ -74,8 +74,8 @@ impl HpkeP256 {
             self.suite,
             &shared_secret,
             info,
-            &[],    // no PSK
-            &[],    // no PSK ID
+            &[], // no PSK
+            &[], // no PSK ID
             Mode::Base,
         )?;
 
@@ -97,8 +97,8 @@ impl HpkeP256 {
             self.suite,
             &shared_secret,
             info,
-            &[],    // no PSK
-            &[],    // no PSK ID
+            &[], // no PSK
+            &[], // no PSK ID
             Mode::Base,
         )
     }
@@ -124,14 +124,7 @@ impl HpkeP256 {
         let (shared_secret, enc) = DhkemP256::encap(pk_r, rng)?;
 
         // Create context with PSK
-        let context = HpkeContext::new(
-            self.suite,
-            &shared_secret,
-            info,
-            psk,
-            psk_id,
-            Mode::Psk,
-        )?;
+        let context = HpkeContext::new(self.suite, &shared_secret, info, psk, psk_id, Mode::Psk)?;
 
         Ok((enc, context))
     }
@@ -153,14 +146,7 @@ impl HpkeP256 {
         let shared_secret = DhkemP256::decap(enc, sk_r)?;
 
         // Create context with PSK
-        HpkeContext::new(
-            self.suite,
-            &shared_secret,
-            info,
-            psk,
-            psk_id,
-            Mode::Psk,
-        )
+        HpkeContext::new(self.suite, &shared_secret, info, psk, psk_id, Mode::Psk)
     }
 
     // ========== AUTH MODE ==========
@@ -183,8 +169,8 @@ impl HpkeP256 {
             self.suite,
             &shared_secret,
             info,
-            &[],    // no PSK
-            &[],    // no PSK ID
+            &[], // no PSK
+            &[], // no PSK ID
             Mode::Auth,
         )?;
 
@@ -207,8 +193,8 @@ impl HpkeP256 {
             self.suite,
             &shared_secret,
             info,
-            &[],    // no PSK
-            &[],    // no PSK ID
+            &[], // no PSK
+            &[], // no PSK ID
             Mode::Auth,
         )
     }
@@ -235,14 +221,8 @@ impl HpkeP256 {
         let (shared_secret, enc) = DhkemP256::auth_encap(pk_r, sk_s, rng)?;
 
         // Create context with PSK
-        let context = HpkeContext::new(
-            self.suite,
-            &shared_secret,
-            info,
-            psk,
-            psk_id,
-            Mode::AuthPsk,
-        )?;
+        let context =
+            HpkeContext::new(self.suite, &shared_secret, info, psk, psk_id, Mode::AuthPsk)?;
 
         Ok((enc, context))
     }
@@ -265,14 +245,7 @@ impl HpkeP256 {
         let shared_secret = DhkemP256::auth_decap(enc, sk_r, pk_s)?;
 
         // Create context with PSK
-        HpkeContext::new(
-            self.suite,
-            &shared_secret,
-            info,
-            psk,
-            psk_id,
-            Mode::AuthPsk,
-        )
+        HpkeContext::new(self.suite, &shared_secret, info, psk, psk_id, Mode::AuthPsk)
     }
 
     // ========== SINGLE-SHOT API ==========
@@ -409,9 +382,7 @@ mod tests {
         let ciphertext = sender_ctx.seal(aad, plaintext).unwrap();
 
         // Recipient setup with sender's public key
-        let mut recipient_ctx = hpke
-            .setup_auth_recipient(&enc, &sk_r, info, &pk_s)
-            .unwrap();
+        let mut recipient_ctx = hpke.setup_auth_recipient(&enc, &sk_r, info, &pk_s).unwrap();
 
         // Decrypt
         let decrypted = recipient_ctx.open(aad, &ciphertext).unwrap();
@@ -465,7 +436,9 @@ mod tests {
         let plaintext = b"confidential data";
 
         // Single-shot seal
-        let enc_and_ct = hpke.seal_base(&pk_r, info, aad, plaintext, &mut rng).unwrap();
+        let enc_and_ct = hpke
+            .seal_base(&pk_r, info, aad, plaintext, &mut rng)
+            .unwrap();
 
         // Single-shot open
         let decrypted = hpke.open_base(&enc_and_ct, &sk_r, info, aad).unwrap();
