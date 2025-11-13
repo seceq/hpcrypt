@@ -209,8 +209,8 @@ where
     let ps_len = em_len - h_len - s_len - 2;
 
     // Verify PS is all zeros
-    for i in 0..ps_len {
-        if db[i] != 0x00 {
+    for &byte in db.iter().take(ps_len) {
+        if byte != 0x00 {
             return Err(RsaError::VerificationFailed);
         }
     }

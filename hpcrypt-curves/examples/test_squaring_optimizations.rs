@@ -47,9 +47,9 @@ fn main() {
     }
 
     if all_pass {
-        println!("\n All 64-bit squaring optimizations CORRECT\n");
+        println!("\n✅ All 64-bit squaring optimizations CORRECT\n");
     } else {
-        println!("\n Some 64-bit squaring optimizations FAILED\n");
+        println!("\n❌ Some 64-bit squaring optimizations FAILED\n");
     }
 
     println!("Testing 52-bit squaring optimizations:\n");
@@ -89,9 +89,9 @@ fn main() {
     }
 
     if all_pass {
-        println!("\n All 52-bit squaring optimizations CORRECT\n");
+        println!("\n✅ All 52-bit squaring optimizations CORRECT\n");
     } else {
-        println!("\n Some 52-bit squaring optimizations FAILED\n");
+        println!("\n❌ Some 52-bit squaring optimizations FAILED\n");
     }
 
     println!("Testing cross-implementation consistency:\n");
@@ -141,9 +141,9 @@ fn main() {
     }
 
     if all_pass {
-        println!("\n All implementations produce consistent results!\n");
+        println!("\n✅ All implementations produce consistent results!\n");
     } else {
-        println!("\n Implementations have inconsistencies!\n");
+        println!("\n❌ Implementations have inconsistencies!\n");
     }
 
     // Test repeated squaring (exponentiation pattern)

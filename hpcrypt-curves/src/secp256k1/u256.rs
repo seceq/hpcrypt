@@ -36,12 +36,14 @@ impl U256 {
     };
 
     /// Create from 4 limbs (little-endian)
+    #[allow(dead_code)]
     #[inline]
     pub const fn from_limbs(limbs: [u64; 4]) -> Self {
         Self { limbs }
     }
 
     /// Create from a u64
+    #[allow(dead_code)]
     #[inline]
     pub const fn from_u64(value: u64) -> Self {
         Self {
@@ -96,6 +98,7 @@ impl U256 {
     /// Convert to bytes (big-endian)
     ///
     /// This matches BigUint::to_bytes_be() API for compatibility.
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_bytes_be(&self) -> [u8; 32] {
         let mut bytes = [0u8; 32];
 
@@ -116,6 +119,7 @@ impl U256 {
     }
 
     /// Get a reference to the limbs
+    #[allow(dead_code)]
     #[inline]
     pub const fn limbs(&self) -> &[u64; 4] {
         &self.limbs
@@ -181,6 +185,7 @@ impl U256 {
             }
 
             // Add final carry if within bounds
+            #[allow(clippy::panicking_overflow_checks)]
             if i + 4 < 4 && carry != 0 {
                 result[i + 4] = carry;
             }
@@ -192,6 +197,7 @@ impl U256 {
     /// Multiply and get full 512-bit result
     ///
     /// Returns (low 256 bits, high 256 bits)
+    #[allow(dead_code)]
     pub fn mul_wide(&self, rhs: &U256) -> (U256, U256) {
         let mut result = [0u64; 8];
 
@@ -295,15 +301,13 @@ impl U256 {
         }
 
         let limb_shift = (bits / 64) as usize;
-        let bit_shift = (bits % 64) as u32;
+        let bit_shift = bits % 64;
 
         let mut result = [0u64; 4];
 
         if bit_shift == 0 {
             // Simple limb shift
-            for i in limb_shift..4 {
-                result[i] = self.limbs[i - limb_shift];
-            }
+            result[limb_shift..4].copy_from_slice(&self.limbs[..(4 - limb_shift)]);
         } else {
             // Shift with bit offset
             for i in limb_shift..4 {
@@ -320,6 +324,7 @@ impl U256 {
     }
 
     /// Right shift: self >> bits
+    #[allow(dead_code)]
     pub fn shr(&self, bits: u32) -> U256 {
         if bits == 0 {
             return *self;
@@ -330,15 +335,13 @@ impl U256 {
         }
 
         let limb_shift = (bits / 64) as usize;
-        let bit_shift = (bits % 64) as u32;
+        let bit_shift = bits % 64;
 
         let mut result = [0u64; 4];
 
         if bit_shift == 0 {
             // Simple limb shift
-            for i in 0..(4 - limb_shift) {
-                result[i] = self.limbs[i + limb_shift];
-            }
+            result[..(4 - limb_shift)].copy_from_slice(&self.limbs[limb_shift..((4 - limb_shift) + limb_shift)]);
         } else {
             // Shift with bit offset
             for i in 0..(4 - limb_shift) {
@@ -373,18 +376,21 @@ impl U256 {
     }
 
     /// Less than
+    #[allow(dead_code)]
     #[inline]
     pub fn lt(&self, other: &U256) -> bool {
         self.cmp(other) == Ordering::Less
     }
 
     /// Greater than or equal
+    #[allow(dead_code)]
     #[inline]
     pub fn ge(&self, other: &U256) -> bool {
         self.cmp(other) != Ordering::Less
     }
 
     /// Less than or equal
+    #[allow(dead_code)]
     #[inline]
     pub fn le(&self, other: &U256) -> bool {
         self.cmp(other) != Ordering::Greater
@@ -394,7 +400,7 @@ impl U256 {
 // Implement Ord and PartialOrd for convenience
 impl PartialOrd for U256 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+        Some(core::cmp::Ord::cmp(self, other))
     }
 }
 

@@ -205,15 +205,15 @@ fn eme_pkcs1v15_decode(em: &[u8]) -> Result<Vec<u8>> {
     let mut separator_index = None;
     let mut found_nonzero = false;
 
-    for i in 2..em.len() {
-        if em[i] == 0x00 && !found_nonzero {
+    for (i, &byte) in em.iter().enumerate().skip(2) {
+        if byte == 0x00 && !found_nonzero {
             // Skip leading zeros in PS (shouldn't happen with proper encoding)
             continue;
         }
 
         found_nonzero = true;
 
-        if em[i] == 0x00 {
+        if byte == 0x00 {
             separator_index = Some(i);
             break;
         }
@@ -320,8 +320,11 @@ pub fn create_digest_info(hash_algorithm: HashAlgorithm, digest: &[u8]) -> Vec<u
 /// Hash algorithms with their ASN.1 DigestInfo prefixes
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HashAlgorithm {
+    /// SHA-256 hash algorithm
     Sha256,
+    /// SHA-384 hash algorithm
     Sha384,
+    /// SHA-512 hash algorithm
     Sha512,
 }
 

@@ -32,6 +32,7 @@ use num_traits::One;
 /// - `dp` = d mod (p-1) (CRT exponent)
 /// - `dq` = d mod (q-1) (CRT exponent)
 /// - `qinv` = q^-1 mod p (CRT coefficient)
+#[allow(clippy::type_complexity)]
 pub fn generate_keypair(
     bits: usize,
     public_exponent: Option<u64>,
@@ -141,6 +142,7 @@ pub fn generate_keypair(
 }
 
 /// Generate an RSA key pair with default public exponent (65537)
+#[allow(clippy::type_complexity)]
 pub fn generate_keypair_default(
     bits: usize,
 ) -> Result<(

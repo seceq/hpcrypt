@@ -34,8 +34,11 @@
 pub mod constants;
 pub mod field;
 pub mod field_ops;
-pub mod field_lazy; // Lazy reduction for optimized add/sub chains
-pub mod field_montgomery_native; // Native high-performance Montgomery implementation
+// pub mod field_montgomery; // fiat-crypto Montgomery implementation (deprecated, kept for reference)
+pub mod field_lazy;
+pub mod field_montgomery_native; // Native high-performance Montgomery implementation // Lazy reduction for optimized add/sub chains
+
+// SIMD modules removed - see /home/maamoun/hpcrypt_simd_work/ for SIMD implementations
 
 /// Elliptic curve point operations for P-256.
 ///

@@ -584,7 +584,7 @@ impl Point {
     /// This is significantly faster than computing k1*P and k2*Q separately
     /// and then adding them **when both points are arbitrary**.
     ///
-    /// #  Important: DO NOT Use for P-384 ECDSA Verification!
+    /// # ⚠️ Important: DO NOT Use for P-384 ECDSA Verification!
     ///
     /// **For ECDSA verification (u1*G + u2*Q), this function is SLOWER than the optimal approach!**
     ///
@@ -598,7 +598,7 @@ impl Point {
     ///
     /// **Using this function** (SLOWER):
     /// ```ignore
-    /// let result = Point::double_scalar_mul(&u1, &g, &u2, &q);  //  Don't do this!
+    /// let result = Point::double_scalar_mul(&u1, &g, &u2, &q);  // ❌ Don't do this!
     /// // Problem: Can't use precomputed tables, forces wNAF for both points
     /// ```
     ///
@@ -607,13 +607,13 @@ impl Point {
     /// simultaneously using wNAF for both points.
     ///
     /// **When to use this function:**
-    /// -  **Two arbitrary points** (neither is the generator): ~30-40% speedup
-    /// -  **Curves without fast generator tables** (like Ed448)
-    /// -  **Constant-time operations** (see `double_scalar_mul_constant_time`)
+    /// - ✅ **Two arbitrary points** (neither is the generator): ~30-40% speedup
+    /// - ✅ **Curves without fast generator tables** (like Ed448)
+    /// - ✅ **Constant-time operations** (see `double_scalar_mul_constant_time`)
     ///
     /// **When NOT to use:**
-    /// -  **P-384 ECDSA verification** (one point is generator)
-    /// -  **Any operation involving the generator point** (use `scalar_mul_generator_fast` instead)
+    /// - ❌ **P-384 ECDSA verification** (one point is generator)
+    /// - ❌ **Any operation involving the generator point** (use `scalar_mul_generator_fast` instead)
     ///
     /// Same performance characteristics as P-256. See P-256's documentation for detailed analysis.
     ///

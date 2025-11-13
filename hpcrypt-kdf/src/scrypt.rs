@@ -296,7 +296,7 @@ fn integerify(b: &[u8], r: usize) -> usize {
 /// Simple PBKDF2-HMAC-SHA256 implementation for scrypt
 fn pbkdf2_hmac_sha256(password: &[u8], salt: &[u8], iterations: usize, output: &mut [u8]) {
     let hlen = 32; // SHA-256 output length
-    let blocks_needed = (output.len() + hlen - 1) / hlen;
+    let blocks_needed = output.len().div_ceil(hlen);
 
     for block_index in 1..=blocks_needed {
         let mut block = [0u8; 32];

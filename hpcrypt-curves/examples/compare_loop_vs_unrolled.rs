@@ -213,22 +213,22 @@ fn main() {
 
     if speedup_manual > 5.0 {
         println!(
-            " Loop unrolling provides significant benefit ({:.1}% speedup)",
+            "✅ Loop unrolling provides significant benefit ({:.1}% speedup)",
             speedup_manual
         );
     } else if speedup_manual > 0.0 {
         println!(
-            "  Loop unrolling provides modest benefit ({:.1}% speedup)",
+            "⚠️  Loop unrolling provides modest benefit ({:.1}% speedup)",
             speedup_manual
         );
     } else {
-        println!(" Loop unrolling provides no benefit (compiler optimized loop)");
+        println!("❌ Loop unrolling provides no benefit (compiler optimized loop)");
     }
 
     if macro_vs_manual.abs() < 2.0 {
-        println!(" Macro and manual unrolling have identical performance");
+        println!("✅ Macro and manual unrolling have identical performance");
     } else {
-        println!("  Macro differs from manual by {:.1}%", macro_vs_manual);
+        println!("⚠️  Macro differs from manual by {:.1}%", macro_vs_manual);
     }
 
     // Prevent optimizing away

@@ -1,6 +1,6 @@
 //! Digital Signature Algorithms
 //!
-//! This crate implements ECDSA (Elliptic Curve
+//! This crate provides production-ready implementations of ECDSA (Elliptic Curve
 //! Digital Signature Algorithm) for multiple curves.
 //!
 //! # Supported Algorithms
@@ -137,8 +137,8 @@
 #[cfg(feature = "std")]
 extern crate std;
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
+//#[cfg(feature = "alloc")]
+//extern crate alloc;
 
 /// ECDSA signatures for NIST P-256
 pub mod ecdsa;

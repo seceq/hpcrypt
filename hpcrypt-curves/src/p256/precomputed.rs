@@ -250,11 +250,11 @@ impl CompressedPrecomputedTable {
 ///
 /// Using `once_cell::sync::Lazy` provides thread-safe initialization without
 /// requiring `unsafe` code.
-static PRECOMPUTED_TABLE: Lazy<PrecomputedTable> = Lazy::new(|| PrecomputedTable::generate());
+static PRECOMPUTED_TABLE: Lazy<PrecomputedTable> = Lazy::new(PrecomputedTable::generate);
 
 /// Compressed table (odd multiples only) - 50% smaller but requires computation
 static COMPRESSED_TABLE: Lazy<CompressedPrecomputedTable> =
-    Lazy::new(|| CompressedPrecomputedTable::generate());
+    Lazy::new(CompressedPrecomputedTable::generate);
 
 /// Performance-optimized table with 5-bit windows (fewer iterations, more memory)
 ///
@@ -269,6 +269,25 @@ pub struct WideWindowTable {
 }
 
 impl WideWindowTable {
+    /// Generates a precomputed table for wide-window scalar multiplication
+    ///
+    /// Creates 52 windows with 32 precomputed points each (5-bit windows) for
+    /// the P-256 base point. This allows efficient scalar multiplication with
+    /// a 15-20% performance improvement over standard 4-bit windows at the cost
+    /// of 66% more memory usage (~104 KB total).
+    ///
+    /// # Performance
+    ///
+    /// - Generation time: One-time cost during initialization
+    /// - Memory usage: ~104 KB (52 windows × 32 points × 64 bytes)
+    /// - Speedup: ~15-20% faster scalar multiplication
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use hpcrypt_curves::p256::precomputed::WideWindowTable;
+    /// let table = WideWindowTable::generate();
+    /// ```
     pub fn generate() -> Self {
         let g = Point::generator();
         let mut tables = [[AffinePoint::infinity_sentinel(); 32]; 52];
@@ -304,6 +323,7 @@ impl WideWindowTable {
         Self { tables }
     }
 
+    /// Perform scalar multiplication with the generator using precomputed tables
     pub fn scalar_mul_generator(&self, scalar: &[u8; 32]) -> Point {
         let mut result = Point::infinity();
 
@@ -348,7 +368,7 @@ impl WideWindowTable {
     }
 }
 
-static WIDE_WINDOW_TABLE: Lazy<WideWindowTable> = Lazy::new(|| WideWindowTable::generate());
+static WIDE_WINDOW_TABLE: Lazy<WideWindowTable> = Lazy::new(WideWindowTable::generate);
 
 /// Ultra-performance table with 6-bit windows (maximum speed, larger memory)
 ///
@@ -442,7 +462,7 @@ impl UltraWideWindowTable {
 }
 
 static ULTRA_WIDE_TABLE: Lazy<UltraWideWindowTable> =
-    Lazy::new(|| UltraWideWindowTable::generate());
+    Lazy::new(UltraWideWindowTable::generate);
 
 /// Fast scalar multiplication with the generator using precomputed tables
 ///

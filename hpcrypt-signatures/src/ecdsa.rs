@@ -205,42 +205,6 @@ impl Signature {
     }
 }
 
-/// P-256 curve order n in big-endian bytes
-/// n = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
-const P256_ORDER_BE: [u8; 32] = [
-    0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xFF, 0xFF, 0xBC, 0xE6, 0xFA, 0xAD, 0xA7, 0x17, 0x9E, 0x84, 0xF3, 0xB9, 0xCA, 0xC2,
-    0xFC, 0x63, 0x25, 0x51,
-];
-
-/// Check if a value is in the range [1, n-1] where n is the P-256 curve order
-///
-/// This is used to validate signature components (r, s) and private keys.
-/// Per FIPS 186-4, signature verification must reject r or s values that are
-/// not in the valid range to prevent weak signatures.
-fn is_in_valid_range(value: &[u8; 32]) -> bool {
-    // Check if all zeros (invalid - must be in range [1, n-1])
-    let is_zero = value.iter().all(|&b| b == 0);
-    if is_zero {
-        return false;
-    }
-
-    // Check if >= n by comparing in big-endian order (most significant first)
-    for i in 0..32 {
-        if value[i] < P256_ORDER_BE[i] {
-            // Less than n, valid
-            return true;
-        } else if value[i] > P256_ORDER_BE[i] {
-            // Greater than or equal to n, invalid
-            return false;
-        }
-        // Equal, continue to next byte
-    }
-
-    // If we get here, value == n, which is invalid (must be < n)
-    false
-}
-
 /// ECDSA signing key (private key)
 ///
 /// This holds the secret scalar used for signing messages.
@@ -261,15 +225,51 @@ impl SigningKey {
     /// - In the range [1, n-1] where n is the curve order
     /// - Never reused or exposed
     pub fn from_bytes(bytes: &[u8; 32]) -> Result<Self, CurveError> {
-        // Validate that scalar is in range [1, n-1]
-        if !is_in_valid_range(bytes) {
+        // Validate that scalar is in range [1, n-1] where n is the P-256 curve order
+        // n = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
+
+        // Check if all zeros (invalid - must be in range [1, n-1])
+        let is_zero = bytes.iter().all(|&b| b == 0);
+        if is_zero {
             return Err(CurveError::InvalidEncoding {
                 expected: "scalar in range [1, n-1] for P-256",
                 actual: 32,
             });
         }
 
-        Ok(Self { secret: *bytes })
+        // Check if >= n by comparing in big-endian order
+        // P-256 order n in big-endian bytes
+        const P256_ORDER_BE: [u8; 32] = [
+            0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xBC, 0xE6, 0xFA, 0xAD, 0xA7, 0x17, 0x9E, 0x84, 0xF3, 0xB9, 0xCA, 0xC2,
+            0xFC, 0x63, 0x25, 0x51,
+        ];
+
+        // Compare bytes in big-endian order (most significant first)
+        for i in 0..32 {
+            match bytes[i].cmp(&P256_ORDER_BE[i]) {
+                core::cmp::Ordering::Less => {
+                    // Less than n, valid
+                    return Ok(Self { secret: *bytes });
+                }
+                core::cmp::Ordering::Greater => {
+                    // Greater than or equal to n, invalid
+                    return Err(CurveError::InvalidEncoding {
+                        expected: "scalar in range [1, n-1] for P-256",
+                        actual: 32,
+                    });
+                }
+                core::cmp::Ordering::Equal => {
+                    // Equal, continue to next byte
+                }
+            }
+        }
+
+        // If we get here, scalar == n, which is invalid (must be < n)
+        Err(CurveError::InvalidEncoding {
+            expected: "scalar in range [1, n-1] for P-256",
+            actual: 32,
+        })
     }
 
     /// Generate a new random signing key
@@ -547,41 +547,34 @@ impl VerifyingKey {
     ///
     /// `true` if the signature is valid, `false` otherwise.
     pub fn verify(&self, message: &[u8], signature: &Signature) -> bool {
-        // Step 1: Validate that r and s are in the valid range [1, n-1]
-        // Per FIPS 186-4 Section 4.7: "Verify that r and s are integers in the interval [1, n-1]"
-        // This check must be done BEFORE reducing modulo n to prevent accepting invalid signatures
-        if !is_in_valid_range(&signature.r) || !is_in_valid_range(&signature.s) {
-            return false;
-        }
-
-        // Step 2: Convert r and s to scalars (reduction happens here, but we've already validated)
+        // Step 1: Convert r and s to scalars and verify they're in [1, n-1]
         let r = Scalar::from_bytes(&signature.r);
         let s = Scalar::from_bytes(&signature.s);
 
-        // Additional safety check (should not be needed after range validation above)
+        // Check r and s are not zero
         if bool::from(r.is_zero()) || bool::from(s.is_zero()) {
             return false;
         }
 
-        // Step 3: Hash the message
+        // Step 2: Hash the message
         let mut hasher = Sha256::new();
         hasher.update(message);
         let hash = hasher.finalize();
         let h = Scalar::from_bytes(&hash);
 
-        // Step 4: Compute w = s^(-1) mod n
+        // Step 3: Compute w = s^(-1) mod n
         let w = match s.invert() {
             Some(inv) => inv,
             None => return false, // s is not invertible (shouldn't happen if s != 0)
         };
 
-        // Step 5: Compute u1 = h * w mod n
+        // Step 4: Compute u1 = h * w mod n
         let u1 = h.mul(&w);
 
-        // Step 6: Compute u2 = r * w mod n
+        // Step 5: Compute u2 = r * w mod n
         let u2 = r.mul(&w);
 
-        // Step 7: Compute R = u1 * G + u2 * Q
+        // Step 6: Compute R = u1 * G + u2 * Q
         let u1_bytes = u1.to_bytes();
         let u2_bytes = u2.to_bytes();
 
@@ -610,7 +603,7 @@ impl VerifyingKey {
         // Compute R = u1 * G + u2 * Q
         let r_point = u1_g.add(&u2_q);
 
-        // Step 8: Verify r == R.x mod n
+        // Step 7: Verify r == R.x mod n
         let r_affine = match r_point.to_affine() {
             Some(affine) => affine,
             None => return false, // Point at infinity is invalid

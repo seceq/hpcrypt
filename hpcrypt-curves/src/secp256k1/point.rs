@@ -658,7 +658,9 @@ impl Point {
 /// A point in affine coordinates (x, y)
 #[derive(Clone, Copy, Debug)]
 pub struct AffinePoint {
+    /// The x-coordinate
     pub x: FieldElement,
+    /// The y-coordinate
     pub y: FieldElement,
 }
 

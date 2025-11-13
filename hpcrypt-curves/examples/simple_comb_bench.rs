@@ -46,5 +46,5 @@ fn main() {
 
     // Verify correctness
     assert_eq!(result1, result2, "First and second calls should match");
-    println!(" Correctness verified");
+    println!("✅ Correctness verified");
 }

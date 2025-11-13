@@ -124,7 +124,7 @@ impl SrpServer {
 
         // Parse verifier
         let v = BigUint::from_bytes_be(&self.verifier);
-        if v.is_zero() || &v >= &n {
+        if v.is_zero() || v >= n {
             return Err(SrpError::InvalidVerifier);
         }
 

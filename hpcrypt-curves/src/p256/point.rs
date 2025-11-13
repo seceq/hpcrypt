@@ -10,6 +10,10 @@ use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 // Common field element constants used in point arithmetic
 const FE_TWO: FieldElement = FieldElement::from_u64(2);
 const FE_THREE: FieldElement = FieldElement::from_u64(3);
+#[allow(dead_code)]
+const FE_FOUR: FieldElement = FieldElement::from_u64(4);
+#[allow(dead_code)]
+const FE_EIGHT: FieldElement = FieldElement::from_u64(8);
 
 // Montgomery-form constants for PointMontgomery operations
 // These are computed lazily during runtime (to_montgomery() is not const)
@@ -852,6 +856,25 @@ impl Point {
         }
     }
 
+    /// Adds two points in Jacobian coordinates using Montgomery optimization
+    ///
+    /// This method provides ~100x speedup over standard addition by using
+    /// Montgomery form arithmetic. The conversion overhead is minimal compared
+    /// to the savings from faster modular multiplication.
+    ///
+    /// # Performance
+    ///
+    /// - Conversion overhead: ~81 ns (to/from Montgomery)
+    /// - Net speedup: ~100x faster than standard Karatsuba addition
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use hpcrypt_curves::p256::Point;
+    /// let p = Point::generator();
+    /// let q = p.double();
+    /// let r = p.add(&q);
+    /// ```
     pub fn add(&self, other: &Self) -> Self {
         // Use Montgomery-optimized addition for ~100x speedup
         // Conversion overhead: ~70 ns (2 points to Montgomery) + ~11 ns back = ~81 ns
@@ -1100,7 +1123,7 @@ impl Point {
     /// This is significantly faster than computing k1*P and k2*Q separately
     /// and then adding them **when both points are arbitrary**.
     ///
-    /// #  Important: DO NOT Use for P-256 ECDSA Verification!
+    /// # ⚠️ Important: DO NOT Use for P-256 ECDSA Verification!
     ///
     /// **For ECDSA verification (u1*G + u2*Q), this function is SLOWER than the optimal approach!**
     ///
@@ -1114,7 +1137,7 @@ impl Point {
     ///
     /// **Using this function** (~149 µs - **11.6% SLOWER**):
     /// ```ignore
-    /// let result = Point::double_scalar_mul(&u1, &g, &u2, &q);  //  Slower!
+    /// let result = Point::double_scalar_mul(&u1, &g, &u2, &q);  // ❌ Slower!
     /// // Problem: Can't use precomputed tables, forces wNAF for both points
     /// ```
     ///
@@ -1123,13 +1146,13 @@ impl Point {
     /// simultaneously using wNAF for both points.
     ///
     /// **When to use this function:**
-    /// -  **Two arbitrary points** (neither is the generator): ~30-40% speedup
-    /// -  **Curves without fast generator tables** (like Ed448)
-    /// -  **Constant-time operations** (see `double_scalar_mul_constant_time`)
+    /// - ✅ **Two arbitrary points** (neither is the generator): ~30-40% speedup
+    /// - ✅ **Curves without fast generator tables** (like Ed448)
+    /// - ✅ **Constant-time operations** (see `double_scalar_mul_constant_time`)
     ///
     /// **When NOT to use:**
-    /// -  **P-256 ECDSA verification** (one point is generator)
-    /// -  **Any operation involving the generator point** (use `scalar_mul_generator` instead)
+    /// - ❌ **P-256 ECDSA verification** (one point is generator)
+    /// - ❌ **Any operation involving the generator point** (use `scalar_mul_generator` instead)
     ///
     /// See: [`docs/P256_SHAMIR_ANALYSIS_COMPLETE.md`](../../docs/P256_SHAMIR_ANALYSIS_COMPLETE.md)
     /// for detailed performance analysis.

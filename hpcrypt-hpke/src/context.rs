@@ -151,8 +151,11 @@ impl Mode {
 /// Cipher suite configuration
 #[derive(Debug, Clone, Copy)]
 pub struct CipherSuite {
+    /// Key Encapsulation Mechanism identifier
     pub kem: KemId,
+    /// Key Derivation Function identifier
     pub kdf: KdfId,
+    /// Authenticated Encryption with Associated Data identifier
     pub aead: AeadId,
 }
 

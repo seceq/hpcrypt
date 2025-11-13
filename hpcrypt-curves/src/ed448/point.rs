@@ -1042,7 +1042,7 @@ impl Point {
         // Select optimal window size based on batch size
         let window_size = Self::optimal_window_size(n);
         let num_buckets = 1usize << window_size; // 2^window_size
-        let num_windows = (448 + window_size - 1) / window_size; // Ceiling division
+        let num_windows = 448_usize.div_ceil(window_size); // Ceiling division
 
         // Result accumulator
         let mut result = Point::identity();
@@ -1060,8 +1060,7 @@ impl Point {
             extern crate std;
             #[cfg(feature = "std")]
             use std::vec;
-            
-
+            #[cfg(feature = "std")]
             let mut buckets = vec![Point::identity(); num_buckets];
 
             // Assign points to buckets based on their digit value at this window
@@ -1281,7 +1280,7 @@ impl CombTable {
                 // Select the appropriate table entry
                 // table[i][j] = (j+1) * 256^i * B
                 // We need digit * 256^i * B
-                let mut abs_digit = digit.abs() as usize;
+                let mut abs_digit = digit.unsigned_abs() as usize;
                 let is_negative = digit < 0;
 
                 // Handle digits > 8 by repeated addition
@@ -1313,7 +1312,7 @@ impl CombTable {
             let digit = digits[digit_idx];
 
             if digit != 0 {
-                let mut abs_digit = digit.abs() as usize;
+                let mut abs_digit = digit.unsigned_abs() as usize;
                 let is_negative = digit < 0;
 
                 // Handle digits > 8 by repeated addition
@@ -1342,7 +1341,7 @@ impl CombTable {
 use once_cell::sync::Lazy;
 
 #[cfg(feature = "std")]
-static COMB_TABLE: Lazy<CombTable> = Lazy::new(|| CombTable::generate());
+static COMB_TABLE: Lazy<CombTable> = Lazy::new(CombTable::generate);
 
 /// Fast scalar multiplication with the base point using Comb method
 ///

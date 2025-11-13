@@ -26,18 +26,23 @@
 pub mod constants;
 pub mod field;
 pub mod field_ops;
+// pub mod field_montgomery; // fiat-crypto Montgomery implementation (deprecated, kept for reference)
 pub mod batch;
-pub mod field_lazy; // Lazy reduction for optimized add/sub chains
+pub mod field_lazy;
+pub mod field_montgomery_native;
 pub mod msm;
 pub mod point;
 pub mod precomputed;
 pub mod scalar;
 pub mod wnaf;
 
+// SIMD modules removed - see /home/maamoun/hpcrypt_simd_work/ for SIMD implementations
+
 // Re-export commonly used types
 pub use constants::*;
 pub use field::FieldElement;
 pub use field_lazy::LazyFieldElement;
+pub use field_montgomery_native::MontgomeryFieldElement;
 pub use msm::msm_2_points;
 pub use point::{AffinePoint, Point};
 pub use precomputed::scalar_mul_generator_fast;
@@ -47,15 +52,15 @@ pub use scalar::Scalar;
 ///
 /// # Implementation Status
 ///
-///  Field operations (384-bit arithmetic) - Complete
-///  Point arithmetic (Jacobian coordinates) - Complete
-///  Scalar arithmetic - Complete
-///  Precomputed tables for generator multiplication - Complete
-///  ECDH key exchange - Complete
-///  ECDSA signature verification - Complete
-///  Batch verification - Complete
-///  Multi-scalar multiplication (MSM) - Complete
-///  Windowed NAF (wNAF) optimization - Complete
+/// ✅ Field operations (384-bit arithmetic) - Complete
+/// ✅ Point arithmetic (Jacobian coordinates) - Complete
+/// ✅ Scalar arithmetic - Complete
+/// ✅ Precomputed tables for generator multiplication - Complete
+/// ✅ ECDH key exchange - Complete
+/// ✅ ECDSA signature verification - Complete
+/// ✅ Batch verification - Complete
+/// ✅ Multi-scalar multiplication (MSM) - Complete
+/// ✅ Windowed NAF (wNAF) optimization - Complete
 ///
 /// # Performance Notes
 ///

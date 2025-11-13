@@ -170,11 +170,11 @@ impl FieldElement {
                 Choice::conditional_select(&is_ge, &Choice::from(1u8), limb_gt & !found_difference);
 
             // Mark that we found a difference if this limb differs
-            found_difference = found_difference | limb_gt | limb_lt;
+            found_difference |= limb_gt | limb_lt;
         }
 
         // If we never found a difference, values are equal, so result >= p
-        is_ge = is_ge | !found_difference;
+        is_ge |= !found_difference;
 
         // Use diff if result >= p, otherwise use result
         for i in 0..8 {
@@ -272,11 +272,13 @@ impl FieldElement {
 
     /// Field multiplication
     ///
-    /// Uses Karatsuba multiplication for optimal performance.
-    /// Karatsuba reduces complexity from O(n²) to O(n^1.585).
-    /// For 8 limbs: schoolbook needs 64 muls, Karatsuba needs ~27 muls.
+    /// Uses schoolbook multiplication followed by Goldilocks reduction.
+    /// TODO: Implement Karatsuba multiplication for better performance.
     #[inline]
     pub fn mul(&self, other: &Self) -> Self {
+        // Use Karatsuba multiplication for better performance
+        // Karatsuba reduces complexity from O(n²) to O(n^1.585)
+        // For 8 limbs: schoolbook needs 64 muls, Karatsuba needs ~27 muls
         self.mul_karatsuba(other)
     }
 

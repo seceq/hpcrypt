@@ -170,7 +170,7 @@ impl PrecomputedTable {
 ///
 /// Uses `once_cell::Lazy` to ensure thread-safe initialization.
 /// The table is computed once and cached for the lifetime of the program.
-pub static PRECOMPUTED_TABLE: Lazy<PrecomputedTable> = Lazy::new(|| PrecomputedTable::generate());
+pub static PRECOMPUTED_TABLE: Lazy<PrecomputedTable> = Lazy::new(PrecomputedTable::generate);
 
 #[cfg(test)]
 mod tests {

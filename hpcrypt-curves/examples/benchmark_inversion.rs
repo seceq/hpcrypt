@@ -75,7 +75,7 @@ fn benchmark_p256() {
     let product = test.mul(&inv);
     let one = P256FieldElement::one();
     assert_eq!(product, one, "Sanity check: a * a^(-1) = 1");
-    println!("   Correctness verified");
+    println!("  ✅ Correctness verified");
 }
 
 fn benchmark_p384() {
@@ -129,7 +129,7 @@ fn benchmark_p384() {
     let product = test.mul(&inv);
     let one = P384FieldElement::one();
     assert_eq!(product, one, "Sanity check: a * a^(-1) = 1");
-    println!("   Correctness verified");
+    println!("  ✅ Correctness verified");
 }
 
 fn benchmark_p521() {
@@ -183,5 +183,5 @@ fn benchmark_p521() {
     let product = test.mul(&inv);
     let one = P521FieldElement::one();
     assert_eq!(product, one, "Sanity check: a * a^(-1) = 1");
-    println!("   Correctness verified");
+    println!("  ✅ Correctness verified");
 }

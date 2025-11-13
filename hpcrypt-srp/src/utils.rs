@@ -103,6 +103,7 @@ pub fn compute_k_from_s(s: &BigUint, group_byte_len: usize, hash_fn: SrpHashFunc
 /// Compute M1 = H(H(N) XOR H(g) | H(I) | s | A | B | K)
 ///
 /// Where H can be SHA-1 (RFC 5054), SHA-256, or SHA-512
+#[allow(clippy::too_many_arguments)]
 pub fn compute_m1(
     n: &BigUint,
     g: &BigUint,

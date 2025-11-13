@@ -48,6 +48,8 @@ pub mod scalar;
 pub mod sign;
 pub mod sliding;
 
+// SIMD modules removed - see /home/maamoun/hpcrypt_simd_work/ for SIMD implementations
+
 pub use constants::*;
 pub use field::FieldElement;
 pub use point::{scalar_mul_base_comb, NielsPoint, Point};

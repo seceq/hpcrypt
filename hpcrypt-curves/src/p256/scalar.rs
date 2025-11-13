@@ -1656,7 +1656,7 @@ mod barrett_tests {
     fn test_barrett_at_1203_to_1204() {
         // This test uses exact values from Python for iteration 1203->1204
         // Python confirms the algorithm works correctly for this case
-        //  THIS TEST PASSES - Barrett reduction itself is CORRECT!
+        // ✅ THIS TEST PASSES - Barrett reduction itself is CORRECT!
 
         // Input: (7^1203)^2 unreduced
         let input_limbs = [

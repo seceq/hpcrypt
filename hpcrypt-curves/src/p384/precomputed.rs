@@ -269,7 +269,7 @@ impl Point {
 ///
 /// This is computed once on first use and cached for the lifetime of the program.
 /// Uses `Lazy` for thread-safe lazy initialization.
-pub static PRECOMPUTED_TABLE: Lazy<PrecomputedTable> = Lazy::new(|| PrecomputedTable::new());
+pub static PRECOMPUTED_TABLE: Lazy<PrecomputedTable> = Lazy::new(PrecomputedTable::new);
 
 /// Fast scalar multiplication with the P-384 generator using precomputed tables
 ///

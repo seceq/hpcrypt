@@ -38,8 +38,8 @@
 //!
 //! - Koç, Acar, Kaliski: "Analyzing and Comparing Montgomery Multiplication Algorithms"
 
-use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 use super::constants::SECP256K1_MODULUS;
+use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 /// Montgomery constant R = 2^256 mod p (precomputed)
 const MONTGOMERY_R: [u64; 4] = [
@@ -75,10 +75,14 @@ impl MontgomeryFieldElement {
     pub const BYTES: usize = 32;
 
     /// The zero element (constant)
-    pub const ZERO: Self = Self { limbs: [0, 0, 0, 0] };
+    pub const ZERO: Self = Self {
+        limbs: [0, 0, 0, 0],
+    };
 
     /// The multiplicative identity (constant, in Montgomery form)
-    pub const ONE: Self = Self { limbs: MONTGOMERY_R };
+    pub const ONE: Self = Self {
+        limbs: MONTGOMERY_R,
+    };
 
     /// Creates a field element representing zero in Montgomery form.
     #[inline(always)]
@@ -151,7 +155,7 @@ impl MontgomeryFieldElement {
                 let prod = (a[i] as u128) * (b[j] as u128);
                 t[j] = t[j].wrapping_add(prod).wrapping_add(c);
                 c = t[j] >> 64;
-                t[j] &= MASK_64;  // Keep only low 64 bits
+                t[j] &= MASK_64; // Keep only low 64 bits
             }
             t[4] = c;
 
@@ -166,7 +170,7 @@ impl MontgomeryFieldElement {
                 let prod = m * (SECP256K1_MODULUS[j] as u128);
                 t[j] = t[j].wrapping_add(prod).wrapping_add(c);
                 c = t[j] >> 64;
-                t[j] &= MASK_64;  // Keep only low 64 bits
+                t[j] &= MASK_64; // Keep only low 64 bits
             }
             t[4] = t[4].wrapping_add(c);
 
@@ -179,12 +183,7 @@ impl MontgomeryFieldElement {
         }
 
         // Extract result (take low 64 bits of each limb)
-        let mut result = [
-            t[0] as u64,
-            t[1] as u64,
-            t[2] as u64,
-            t[3] as u64,
-        ];
+        let mut result = [t[0] as u64, t[1] as u64, t[2] as u64, t[3] as u64];
 
         // Handle potential overflow in t[4] (which was shifted into t[3])
         // If t[3] had overflow (high bits set), we need additional reduction
@@ -331,6 +330,7 @@ impl MontgomeryFieldElement {
     }
 
     /// Compute a^exp using square-and-multiply (binary method)
+    #[allow(dead_code)]
     fn pow(&self, exp: &[u64; 4]) -> Self {
         let mut result = Self::ONE;
 
@@ -349,7 +349,6 @@ impl MontgomeryFieldElement {
 
         result
     }
-
 }
 
 // Helper functions
@@ -518,8 +517,12 @@ mod tests {
     #[test]
     fn test_montgomery_roundtrip() {
         // Test that to_montgomery() and from_montgomery() are inverses
-        let a_limbs = [0x1234567890ABCDEF, 0xFEDCBA0987654321,
-                       0x1111222233334444, 0x5555666677778888];
+        let a_limbs = [
+            0x1234567890ABCDEF,
+            0xFEDCBA0987654321,
+            0x1111222233334444,
+            0x5555666677778888,
+        ];
 
         let a_mont = MontgomeryFieldElement::to_montgomery(&a_limbs);
         let a_back = a_mont.from_montgomery();

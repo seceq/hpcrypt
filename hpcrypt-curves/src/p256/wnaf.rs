@@ -48,9 +48,11 @@ use alloc::vec::Vec;
 #[cfg(not(any(feature = "scalar-mul-fast", feature = "scalar-mul-very-fast")))]
 pub const WINDOW_WIDTH: usize = 4;
 
+/// Window width for wNAF scalar multiplication (fast mode)
 #[cfg(all(feature = "scalar-mul-fast", not(feature = "scalar-mul-very-fast")))]
 pub const WINDOW_WIDTH: usize = 5;
 
+/// Window width for wNAF scalar multiplication (very fast mode)
 #[cfg(feature = "scalar-mul-very-fast")]
 pub const WINDOW_WIDTH: usize = 6;
 
@@ -528,7 +530,7 @@ fn shift_right_1(k: &mut [u64; 4]) {
     k[0] = (k[0] >> 1) | (k[1] << 63);
     k[1] = (k[1] >> 1) | (k[2] << 63);
     k[2] = (k[2] >> 1) | (k[3] << 63);
-    k[3] = k[3] >> 1;
+    k[3] >>= 1;
 }
 
 /// Subtract a small value (used in wNAF computation)

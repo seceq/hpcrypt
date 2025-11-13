@@ -529,7 +529,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Experimental secp256k1 GLV decomposition - incomplete"]
     fn test_glv_decomposition_bounds() {
         // Test that decomposition actually produces values < 2^128
         let scalar = [0x01u8; 32]; // The problematic scalar

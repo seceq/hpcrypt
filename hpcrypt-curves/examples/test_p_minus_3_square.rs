@@ -27,9 +27,9 @@ fn main() {
     println!();
 
     if result == expected {
-        println!(" CORRECT!");
+        println!("✅ CORRECT!");
     } else {
-        println!(" WRONG!");
+        println!("❌ WRONG!");
 
         // Show result in a different format
         println!("Result: {:?}", result);

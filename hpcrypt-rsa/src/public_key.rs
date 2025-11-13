@@ -34,7 +34,7 @@ impl RsaPublicKey {
             return Err(RsaError::InvalidPublicExponent);
         }
 
-        if e.bit(0) == false {
+        if !e.bit(0) {
             // e must be odd
             return Err(RsaError::InvalidPublicExponent);
         }
@@ -106,6 +106,7 @@ impl RsaPublicKey {
     /// # Arguments
     ///
     /// * `data` - Data to encrypt (length must be < key size in bytes)
+    #[allow(dead_code)]
     pub(crate) fn encrypt_raw(&self, data: &[u8]) -> Result<Vec<u8>> {
         let k = self.size_bytes();
 
@@ -123,6 +124,7 @@ impl RsaPublicKey {
     /// # Warning
     ///
     /// This is a low-level operation. Use the signature scheme wrappers instead.
+    #[allow(dead_code)]
     pub(crate) fn verify_raw(&self, signature: &[u8]) -> Result<Vec<u8>> {
         let k = self.size_bytes();
 

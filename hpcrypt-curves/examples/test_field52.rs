@@ -80,5 +80,5 @@ fn main() {
     assert_eq!(original, recovered);
     println!("✓ Bytes roundtrip successful");
 
-    println!("\n All tests passed!");
+    println!("\n✅ All tests passed!");
 }

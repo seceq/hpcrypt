@@ -236,8 +236,8 @@ impl SigningKey {
             });
         }
 
-        // Note: Scalar::from_bytes automatically reduces modulo n
-        // We only need to reject zero
+        // Scalar is automatically reduced mod n during from_bytes, so no need to check
+
         Ok(Self { secret: *bytes })
     }
 
@@ -634,12 +634,12 @@ impl VerifyingKey {
         y_bytes.copy_from_slice(&bytes[49..97]);
 
         // Parse field elements (validates they're < p)
-        let x = FieldElement::from_bytes(&x_bytes).ok_or_else(|| CurveError::InvalidEncoding {
+        let x = FieldElement::from_bytes(&x_bytes).ok_or(CurveError::InvalidEncoding {
             expected: "x-coordinate < p",
             actual: 97,
         })?;
 
-        let y = FieldElement::from_bytes(&y_bytes).ok_or_else(|| CurveError::InvalidEncoding {
+        let y = FieldElement::from_bytes(&y_bytes).ok_or(CurveError::InvalidEncoding {
             expected: "y-coordinate < p",
             actual: 97,
         })?;

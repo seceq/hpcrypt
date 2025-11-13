@@ -356,11 +356,13 @@ impl Scalar {
                 // r[4] == 0, compare lower 4 limbs with n
                 let mut gte = true;
                 for i in (0..4).rev() {
-                    if r[i] < SECP256K1_ORDER[i] {
-                        gte = false;
-                        break;
-                    } else if r[i] > SECP256K1_ORDER[i] {
-                        break;
+                    match r[i].cmp(&SECP256K1_ORDER[i]) {
+                        core::cmp::Ordering::Less => {
+                            gte = false;
+                            break;
+                        }
+                        core::cmp::Ordering::Greater => break,
+                        core::cmp::Ordering::Equal => {}
                     }
                 }
 
@@ -393,11 +395,13 @@ impl Scalar {
         // Compare with n
         let mut gte = true;
         for i in (0..4).rev() {
-            if self.limbs[i] < SECP256K1_ORDER[i] {
-                gte = false;
-                break;
-            } else if self.limbs[i] > SECP256K1_ORDER[i] {
-                break;
+            match self.limbs[i].cmp(&SECP256K1_ORDER[i]) {
+                core::cmp::Ordering::Less => {
+                    gte = false;
+                    break;
+                }
+                core::cmp::Ordering::Greater => break,
+                core::cmp::Ordering::Equal => {}
             }
         }
 

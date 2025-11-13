@@ -630,6 +630,74 @@ impl FieldElement {
         result
     }
 
+    /// Optimized squaring: computes self * self -> 1042-bit result.
+    ///
+    /// This exploits symmetry: since a[i] * a[j] == a[j] * a[i], we only compute
+    /// each unique product once and double the off-diagonal products.
+    ///
+    /// Algorithm:
+    /// 1. Compute all off-diagonal products a[i]*a[j] where i < j
+    /// 2. Double the entire result (shift left by 1)
+    /// 3. Add diagonal products a[i]*a[i]
+    ///
+    /// For 9 limbs: 45 multiplications instead of 81 (~44% fewer muls)
+    ///
+    /// Expected speedup: 20-30% faster than schoolbook_mul(a, a)
+    #[allow(dead_code)]
+    #[inline]
+    fn schoolbook_square(a: &Self) -> [u64; 18] {
+        let mut result = [0u64; 18];
+
+        // Step 1: Compute off-diagonal products (i < j)
+        for i in 0..9 {
+            let mut carry = 0u128;
+            for j in (i + 1)..9 {
+                let product = (a.limbs[i] as u128) * (a.limbs[j] as u128);
+                let sum = (result[i + j] as u128) + product + carry;
+                result[i + j] = sum as u64;
+                carry = sum >> 64;
+            }
+            // Propagate carry
+            let mut k = i + 9;
+            while carry != 0 && k < 18 {
+                let sum = (result[k] as u128) + carry;
+                result[k] = sum as u64;
+                carry = sum >> 64;
+                k += 1;
+            }
+        }
+
+        // Step 2: Double the off-diagonal sum (left shift by 1)
+        let mut carry = 0u64;
+        for i in 0..18 {
+            let tmp = result[i];
+            result[i] = (tmp << 1) | carry;
+            carry = tmp >> 63;
+        }
+
+        // Step 3: Add diagonal products a[i] * a[i]
+        for i in 0..9 {
+            let product = (a.limbs[i] as u128) * (a.limbs[i] as u128);
+            let sum = (result[2 * i] as u128) + (product as u64) as u128;
+            result[2 * i] = sum as u64;
+
+            let sum = (result[2 * i + 1] as u128) + (product >> 64) as u128 + (sum >> 64);
+            result[2 * i + 1] = sum as u64;
+
+            // Propagate carry from diagonal addition
+            let mut carry = (sum >> 64) as u64;
+            let mut k = 2 * i + 2;
+            while carry != 0 && k < 18 {
+                let sum = (result[k] as u128) + (carry as u128);
+                result[k] = sum as u64;
+                carry = (sum >> 64) as u64;
+                k += 1;
+            }
+        }
+
+        result
+    }
+
     /// Reduces 1042-bit product to 521-bit using Mersenne reduction.
     ///
     /// For p = 2^521 - 1, we have x mod p = (x mod 2^521) + (x / 2^521) mod p.

@@ -105,9 +105,9 @@ fn main() {
     println!();
 
     if p_plus_q_affine.x != q_plus_p_affine.x {
-        println!(" COMMUTATIVITY VIOLATED: P+Q ≠ Q+P");
+        println!("❌ COMMUTATIVITY VIOLATED: P+Q ≠ Q+P");
         std::process::exit(1);
     } else {
-        println!(" COMMUTATIVITY OK: P+Q = Q+P");
+        println!("✅ COMMUTATIVITY OK: P+Q = Q+P");
     }
 }

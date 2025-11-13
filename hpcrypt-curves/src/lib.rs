@@ -1,7 +1,16 @@
 //! Elliptic Curve Cryptography
 //!
-//! This crate implements modern elliptic curves
+//! This crate provides production-ready implementations of modern elliptic curves
 //! with a focus on security, performance, and usability.
+
+#![allow(clippy::comparison_chain)]
+#![allow(clippy::manual_memcpy)]
+#![allow(clippy::unnecessary_cast)]
+#![allow(clippy::manual_range_contains)]
+#![allow(clippy::vec_init_then_push)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::doc_lazy_continuation)]
+#![allow(clippy::cast_abs_to_unsigned)]
 //!
 //! # Supported Curves
 //!
@@ -188,6 +197,9 @@ pub mod ed25519;
 pub mod ed448;
 pub mod field25519;
 pub mod field25519_lazy;
+
+// SIMD modules removed - see /home/maamoun/hpcrypt_simd_work/ for SIMD implementations
+
 pub mod p256;
 pub mod p384;
 pub mod p521;

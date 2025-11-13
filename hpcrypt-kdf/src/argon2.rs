@@ -219,8 +219,8 @@ impl Argon2 {
             memory[(self.params.lanes as usize - 1) * lane_length + lane_length - 1].clone();
         for lane in 0..(self.params.lanes as usize - 1) {
             let last_idx = lane * lane_length + lane_length - 1;
-            for i in 0..QWORDS_IN_BLOCK {
-                final_block[i] ^= memory[last_idx][i];
+            for (i, item) in final_block.iter_mut().enumerate().take(QWORDS_IN_BLOCK) {
+                *item ^= memory[last_idx][i];
             }
         }
 
@@ -321,6 +321,7 @@ impl Argon2 {
     }
 
     /// Compute reference block index
+    #[allow(clippy::too_many_arguments)]
     fn index_alpha(
         &self,
         pass: u32,

@@ -62,6 +62,7 @@ impl SafeGcdInt {
     }
 
     /// Convert to u64 limbs (takes low 4 limbs, used for final result)
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_limbs(&self) -> [u64; 4] {
         [self.limbs[0], self.limbs[1], self.limbs[2], self.limbs[3]]
     }
@@ -77,6 +78,7 @@ impl SafeGcdInt {
     }
 
     /// Convert to 6 u64 limbs (for P-384 results)
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_limbs_extended(&self) -> [u64; 6] {
         [
             self.limbs[0],
@@ -99,6 +101,7 @@ impl SafeGcdInt {
     }
 
     /// Convert to 9 u64 limbs (for P-521 results)
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_limbs_p521(&self) -> [u64; 9] {
         [
             self.limbs[0],
@@ -251,25 +254,28 @@ impl SafeGcdInt {
         // Compare magnitudes: check if result >= modulus
         while !result.is_zero() {
             // Check if result >= modulus by comparing limbs
-            let mut is_gte = false;
-
-            // First check high limbs are zero (otherwise definitely >= modulus)
-            if result.limbs[4..10].iter().any(|&x| x != 0) {
-                is_gte = true;
+            let is_gte = if result.limbs[4..10].iter().any(|&x| x != 0) {
+                // First check high limbs are zero (otherwise definitely >= modulus)
+                true
             } else {
                 // Compare low 4 limbs
-                is_gte = true;
+                let mut gte = true;
                 for i in (0..4).rev() {
-                    if result.limbs[i] < modulus[i] {
-                        is_gte = false;
-                        break;
-                    } else if result.limbs[i] > modulus[i] {
-                        is_gte = true;
-                        break;
+                    match result.limbs[i].cmp(&modulus[i]) {
+                        core::cmp::Ordering::Less => {
+                            gte = false;
+                            break;
+                        }
+                        core::cmp::Ordering::Greater => {
+                            gte = true;
+                            break;
+                        }
+                        core::cmp::Ordering::Equal => {}
                     }
                     // If equal, continue to next limb
                 }
-            }
+                gte
+            };
 
             if is_gte {
                 result = result.sub(&mod_int);
@@ -299,25 +305,28 @@ impl SafeGcdInt {
 
         // Reduce: subtract modulus while result >= modulus
         while !result.is_zero() {
-            let mut is_gte = false;
-
-            // First check high limbs are zero (otherwise definitely >= modulus)
-            if result.limbs[6..10].iter().any(|&x| x != 0) {
-                is_gte = true;
+            let is_gte = if result.limbs[6..10].iter().any(|&x| x != 0) {
+                // First check high limbs are zero (otherwise definitely >= modulus)
+                true
             } else {
                 // Compare low 6 limbs
-                is_gte = true;
+                let mut gte = true;
                 for i in (0..6).rev() {
-                    if result.limbs[i] < modulus[i] {
-                        is_gte = false;
-                        break;
-                    } else if result.limbs[i] > modulus[i] {
-                        is_gte = true;
-                        break;
+                    match result.limbs[i].cmp(&modulus[i]) {
+                        core::cmp::Ordering::Less => {
+                            gte = false;
+                            break;
+                        }
+                        core::cmp::Ordering::Greater => {
+                            gte = true;
+                            break;
+                        }
+                        core::cmp::Ordering::Equal => {}
                     }
                     // If equal, continue to next limb
                 }
-            }
+                gte
+            };
 
             if is_gte {
                 result = result.sub(&mod_int);
@@ -347,25 +356,28 @@ impl SafeGcdInt {
 
         // Reduce: subtract modulus while result >= modulus
         while !result.is_zero() {
-            let mut is_gte = false;
-
-            // First check high limb (limb[9]) is zero (otherwise definitely >= modulus)
-            if result.limbs[9] != 0 {
-                is_gte = true;
+            let is_gte = if result.limbs[9] != 0 {
+                // First check high limb (limb[9]) is zero (otherwise definitely >= modulus)
+                true
             } else {
                 // Compare low 9 limbs
-                is_gte = true;
+                let mut gte = true;
                 for i in (0..9).rev() {
-                    if result.limbs[i] < modulus[i] {
-                        is_gte = false;
-                        break;
-                    } else if result.limbs[i] > modulus[i] {
-                        is_gte = true;
-                        break;
+                    match result.limbs[i].cmp(&modulus[i]) {
+                        core::cmp::Ordering::Less => {
+                            gte = false;
+                            break;
+                        }
+                        core::cmp::Ordering::Greater => {
+                            gte = true;
+                            break;
+                        }
+                        core::cmp::Ordering::Equal => {}
                     }
                     // If equal, continue to next limb
                 }
-            }
+                gte
+            };
 
             if is_gte {
                 result = result.sub(&mod_int);
@@ -402,6 +414,7 @@ impl SafeGcdInt {
 /// else:
 ///     return (1 + delta, f, g / 2)
 /// ```
+#[allow(dead_code)]
 fn divstep(delta: i64, f: &SafeGcdInt, g: &SafeGcdInt) -> (i64, SafeGcdInt, SafeGcdInt) {
     if delta > 0 && g.is_odd() {
         // Case 1: delta > 0 and g is odd
@@ -445,6 +458,7 @@ fn divstep(delta: i64, f: &SafeGcdInt, g: &SafeGcdInt) -> (i64, SafeGcdInt, Safe
 /// # Returns
 ///
 /// `(new_d, new_e)`
+#[allow(dead_code)]
 fn update_de(
     _delta: i64,
     d: &SafeGcdInt,
@@ -520,9 +534,9 @@ fn update_de(
 /// # Implementation Status
 ///
 /// **Phase 1**: Basic variable-time version (IN PROGRESS - Session 2)
-/// - Two's complement arithmetic 
-/// - 640-bit precision 
-/// - Improved mod_reduce 
+/// - Two's complement arithmetic ✅
+/// - 640-bit precision ✅
+/// - Improved mod_reduce ✅
 /// - Testing in progress
 pub fn safegcd_invert_vartime(value: &[u64; 4], modulus: &[u64; 4]) -> [u64; 4] {
     // Binary Extended GCD algorithm for modular inversion

@@ -35,9 +35,9 @@ fn main() {
     // result[3] appears to be 0xFFFFFFFC00000000 based on the output format
 
     if result == expected {
-        println!(" CORRECT!");
+        println!("✅ CORRECT!");
     } else {
-        println!(" WRONG!");
+        println!("❌ WRONG!");
         println!();
 
         // Try to compare with modulus manually

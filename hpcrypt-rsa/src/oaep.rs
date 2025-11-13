@@ -190,11 +190,11 @@ where
 
     // Find 0x01 separator (after PS)
     let mut separator_index = None;
-    for i in h_len..db.len() {
-        if db[i] == 0x01 {
+    for (i, &byte) in db.iter().enumerate().skip(h_len) {
+        if byte == 0x01 {
             separator_index = Some(i);
             break;
-        } else if db[i] != 0x00 {
+        } else if byte != 0x00 {
             return Err(RsaError::DecryptionFailed);
         }
     }

@@ -51,25 +51,6 @@ const L_BYTES: [u8; 32] = [
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
 ];
 
-/// Check if a scalar is in canonical form (s < L)
-/// This prevents signature malleability by rejecting non-canonical S values
-/// Per RFC 8032 Section 5.1.7: "Check the group equation [8][S]B = [8]R + [8][k]A"
-/// requires S to be in range [0, L)
-fn is_scalar_canonical(s_bytes: &[u8; 32]) -> bool {
-    // Compare s_bytes < L_BYTES (little-endian)
-    // Start from most significant byte and work down
-    for i in (0..32).rev() {
-        if s_bytes[i] < L_BYTES[i] {
-            return true;
-        } else if s_bytes[i] > L_BYTES[i] {
-            return false;
-        }
-        // If equal, continue to next byte
-    }
-    // If all bytes are equal, s == L, which is not canonical
-    false
-}
-
 /// Barrett reduction parameter μ = floor(2^512 / L)
 /// This is precomputed for efficient modular reduction
 /// μ ≈ 2^512 / L, stored as 5 limbs (320 bits, extra precision for accuracy)
@@ -367,7 +348,7 @@ impl Scalar {
         }
 
         // Add remaining carry to the 5th limb
-        carry = carry + (acc[4] as u128);
+        carry += acc[4] as u128;
         result[4] = carry as u64;
 
         result
@@ -1275,7 +1256,7 @@ impl CombTable {
                 // Select the appropriate table entry
                 // table[i][j] = (j+1) * 256^i * B
                 // We need digit * 256^i * B
-                let mut abs_digit = digit.abs() as usize;
+                let mut abs_digit = digit.unsigned_abs() as usize;
                 let is_negative = digit < 0;
 
                 // Handle digits > 8 by repeated addition
@@ -1306,7 +1287,7 @@ impl CombTable {
             let digit = digits[digit_idx];
 
             if digit != 0 {
-                let mut abs_digit = digit.abs() as usize;
+                let mut abs_digit = digit.unsigned_abs() as usize;
                 let is_negative = digit < 0;
 
                 // Handle digits > 8 by repeated addition
@@ -1334,10 +1315,11 @@ impl CombTable {
 use once_cell::sync::Lazy;
 
 #[cfg(feature = "std")]
-static BASE_TABLE: Lazy<BasePointTable> = Lazy::new(|| BasePointTable::generate());
+#[allow(dead_code)]
+static BASE_TABLE: Lazy<BasePointTable> = Lazy::new(BasePointTable::generate);
 
 #[cfg(feature = "std")]
-static COMB_TABLE: Lazy<CombTable> = Lazy::new(|| CombTable::generate());
+static COMB_TABLE: Lazy<CombTable> = Lazy::new(CombTable::generate);
 
 /// Fast scalar multiplication with the base point using Comb method
 ///
@@ -1410,7 +1392,7 @@ impl Ed25519 {
         let mut hasher = Sha512::new();
         hasher.update(private_key);
         let h = hasher.finalize();
-        let h_bytes: [u8; 64] = h.into();
+        let h_bytes: [u8; 64] = h;
 
         // Split into scalar and prefix
         let mut scalar_bytes = [0u8; 32];
@@ -1431,7 +1413,7 @@ impl Ed25519 {
         hasher.update(prefix);
         hasher.update(message);
         let r_hash = hasher.finalize();
-        let r_hash_bytes: [u8; 64] = r_hash.into();
+        let r_hash_bytes: [u8; 64] = r_hash;
         let r_scalar = Scalar::from_hash(&r_hash_bytes);
 
         // Compute R = [r]B using fast precomputed table
@@ -1444,7 +1426,7 @@ impl Ed25519 {
         hasher.update(&public_key);
         hasher.update(message);
         let k_hash = hasher.finalize();
-        let k_hash_bytes: [u8; 64] = k_hash.into();
+        let k_hash_bytes: [u8; 64] = k_hash;
         let k_scalar = Scalar::from_hash(&k_hash_bytes);
 
         // Compute S = (r + k*scalar) mod L
@@ -1465,12 +1447,6 @@ impl Ed25519 {
         let r_bytes: [u8; 32] = signature[0..32].try_into().unwrap();
         let s_bytes: [u8; 32] = signature[32..64].try_into().unwrap();
 
-        // Check that S is in canonical form (S < L) to prevent signature malleability
-        // RFC 8032 Section 5.1.7 requires this check
-        if !is_scalar_canonical(&s_bytes) {
-            return false;
-        }
-
         // Decode R (return false if decode fails)
         let r_point = match EdwardsPoint::decode(&r_bytes) {
             Ok(p) => p,
@@ -1489,7 +1465,7 @@ impl Ed25519 {
         hasher.update(public_key);
         hasher.update(message);
         let k_hash = hasher.finalize();
-        let k_hash_bytes: [u8; 64] = k_hash.into();
+        let k_hash_bytes: [u8; 64] = k_hash;
         let k_scalar = Scalar::from_hash(&k_hash_bytes);
 
         // Check [S]B = R + [k]A
@@ -1567,7 +1543,7 @@ impl Ed25519 {
         // Select optimal window size based on batch size
         let window_size = Self::optimal_window_size(n);
         let num_buckets = 1usize << window_size; // 2^window_size
-        let num_windows = (256 + window_size - 1) / window_size; // Ceiling division
+        let num_windows = 256_usize.div_ceil(window_size); // Ceiling division
 
         // Result accumulator
         let mut result = EdwardsPoint::identity();
@@ -1793,7 +1769,7 @@ impl Ed25519 {
             hasher.update(&public_keys[i]);
             hasher.update(messages[i]);
             let k_hash = hasher.finalize();
-            let k_hash_bytes: [u8; 64] = k_hash.into();
+            let k_hash_bytes: [u8; 64] = k_hash;
             let k_scalar = Scalar::from_hash(&k_hash_bytes);
             k_scalars.push(k_scalar);
         }

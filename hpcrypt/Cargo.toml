@@ -1,61 +1,348 @@
 [package]
 name = "hpcrypt"
-version = "0.1.0"
-edition = "2021"
-rust-version = "1.70"
-authors = ["HPCrypt Contributors"]
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourusername/hpcrypt"
-homepage = "https://github.com/yourusername/hpcrypt"
-documentation = "https://docs.rs/hpcrypt"
-readme = "README.md"
-description = "High-performance cryptography library - Unified interface to HPCrypt components"
-keywords = ["cryptography", "crypto", "post-quantum", "security", "no-std"]
-categories = ["cryptography", "no-std"]
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "High-performance cryptography library in pure Rust"
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
-# Core dependencies (always included)
 hpcrypt-core = { workspace = true }
-hpcrypt-hash = { workspace = true }
-hpcrypt-rng = { workspace = true }
-
-# Optional components
+hpcrypt-hash = { workspace = true, optional = true }
+hpcrypt-mac = { workspace = true, optional = true }
+hpcrypt-aead = { workspace = true, optional = true }
+hpcrypt-cipher = { path = "../hpcrypt-cipher", version = "0.1.0", optional = true }
+hpcrypt-kdf = { workspace = true, optional = true }
 hpcrypt-curves = { workspace = true, optional = true }
 hpcrypt-signatures = { workspace = true, optional = true }
-hpcrypt-mlkem = { workspace = true, optional = true }
-hpcrypt-mldsa = { workspace = true, optional = true }
-hpcrypt-slhdsa = { workspace = true, optional = true }
+hpcrypt-kex = { workspace = true, optional = true }
+hpcrypt-rng = { workspace = true, optional = true }
+hpcrypt-ecies = { path = "../hpcrypt-ecies", version = "0.1.0", optional = true }
+hpcrypt-hpke = { path = "../hpcrypt-hpke", version = "0.1.0", optional = true }
+hpcrypt-srp = { path = "../hpcrypt-srp", version = "0.1.0", optional = true }
 
 [features]
-default = ["std", "curves", "signatures"]
-
-# Standard library support
+default = ["std", "hash", "mac", "aead"]
 std = [
     "hpcrypt-core/std",
-    "hpcrypt-hash/std",
-    "hpcrypt-rng/std",
+    "hpcrypt-hash?/std",
+    "hpcrypt-mac?/std",
+    "hpcrypt-aead?/std",
+    "hpcrypt-cipher?/std",
+    "hpcrypt-kdf?/std",
     "hpcrypt-curves?/std",
     "hpcrypt-signatures?/std",
-    "hpcrypt-mlkem?/std",
-    "hpcrypt-mldsa?/std",
-    "hpcrypt-slhdsa?/std",
+    "hpcrypt-kex?/std",
+    "hpcrypt-rng?/std",
+    "hpcrypt-ecies?/std",
+    "hpcrypt-hpke?/std",
+    "hpcrypt-srp?/std",
+]
+alloc = [
+    "hpcrypt-core/alloc",
+    "hpcrypt-hash?/alloc",
+    "hpcrypt-mac?/alloc",
+    "hpcrypt-aead?/alloc",
+    "hpcrypt-cipher?/alloc",
+    "hpcrypt-kdf?/alloc",
+    "hpcrypt-curves?/alloc",
+    "hpcrypt-signatures?/alloc",
+    "hpcrypt-kex?/alloc",
+    "hpcrypt-rng?/alloc",
+    "hpcrypt-ecies?/alloc",
+    "hpcrypt-hpke?/alloc",
+    "hpcrypt-srp?/alloc",
 ]
 
-# Cryptographic primitives
+# Algorithm categories
+hash = ["dep:hpcrypt-hash"]
+mac = ["dep:hpcrypt-mac"]
+aead = ["dep:hpcrypt-aead"]
+cipher = ["dep:hpcrypt-cipher"]
+kdf = ["dep:hpcrypt-kdf"]
 curves = ["dep:hpcrypt-curves"]
-signatures = ["dep:hpcrypt-signatures", "curves"]
+signatures = ["dep:hpcrypt-signatures"]
+kex = ["dep:hpcrypt-kex"]
+rng = ["dep:hpcrypt-rng", "hpcrypt-rng?/os-rng"]
+ecies = ["dep:hpcrypt-ecies", "curves", "aead", "kdf"]
+hpke = ["dep:hpcrypt-hpke", "curves", "aead", "kdf", "hash"]
+srp = ["dep:hpcrypt-srp", "hash"]
 
-# Post-quantum cryptography
-pq-kem = ["dep:hpcrypt-mlkem"]
-pq-sig-mldsa = ["dep:hpcrypt-mldsa"]
-pq-sig-slhdsa = ["dep:hpcrypt-slhdsa"]
-pq-sig = ["pq-sig-mldsa", "pq-sig-slhdsa"]
-pq = ["pq-kem", "pq-sig"]
+[[example]]
+name = "ed25519_signatures"
+path = "../examples/ed25519_signatures.rs"
+required-features = ["curves"]
 
-# Convenience features
-classical = ["curves", "signatures"]
-full = ["classical", "pq"]
+[[example]]
+name = "x25519_key_exchange"
+path = "../examples/x25519_key_exchange.rs"
+required-features = ["curves"]
 
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
+[[example]]
+name = "aes_gcm_encryption"
+path = "../examples/aes_gcm_encryption.rs"
+required-features = ["aead"]
+
+[[example]]
+name = "argon2_password_hash"
+path = "../examples/password_hashing.rs"
+required-features = ["kdf"]
+
+[[example]]
+name = "blake3_file_hash"
+path = "../examples/file_hashing.rs"
+required-features = ["hash"]
+
+[[example]]
+name = "chacha20_poly1305"
+path = "../examples/chacha20_poly1305.rs"
+required-features = ["aead"]
+
+[[example]]
+name = "random_generation"
+path = "../examples/random_generation.rs"
+required-features = ["rng"]
+
+[[example]]
+name = "ecdsa_signatures"
+path = "../examples/ecdsa_signatures.rs"
+required-features = ["signatures"]
+
+[[example]]
+name = "ecies_basic"
+path = "../examples/ecies_basic.rs"
+required-features = ["ecies"]
+
+[[example]]
+name = "ecies_advanced"
+path = "../examples/ecies_advanced.rs"
+required-features = ["ecies"]
+
+[[example]]
+name = "hpke_basic"
+path = "../examples/hpke_basic.rs"
+required-features = ["hpke"]
+
+[[example]]
+name = "srp_authentication"
+path = "../examples/srp_authentication.rs"
+required-features = ["srp"]
+
+[[example]]
+name = "aes_ccm_example"
+path = "../examples/aes_ccm_example.rs"
+required-features = ["aead"]
+
+[[example]]
+name = "hkdf_variants_example"
+path = "../examples/hkdf_variants_example.rs"
+required-features = ["kdf"]
+
+[[example]]
+name = "ff1_example"
+path = "../examples/ff1_example.rs"
+required-features = ["cipher"]
+
+[[example]]
+name = "block_cipher_modes"
+path = "../examples/block_cipher_modes.rs"
+required-features = ["cipher"]
+
+[[example]]
+name = "advanced_aead_modes"
+path = "../examples/advanced_aead_modes.rs"
+required-features = ["aead"]
+
+[[example]]
+name = "opaque_example"
+path = "../examples/opaque_example.rs"
+required-features = ["kex", "curves", "kdf", "hash"]
+
+[[example]]
+name = "opaque_storage_example"
+path = "../examples/opaque_storage_example.rs"
+required-features = ["kex"]
+
+[[example]]
+name = "opaque_production_example"
+path = "../examples/opaque_production_example.rs"
+required-features = ["kex", "curves", "kdf", "hash", "rng"]
+
+[[example]]
+name = "opaque_file_storage_example"
+path = "../examples/opaque_file_storage_example.rs"
+required-features = ["kex", "curves", "kdf", "hash", "rng"]
+
+[[example]]
+name = "kmac_example"
+path = "../examples/kmac_example.rs"
+required-features = ["hash"]
+
+[[example]]
+name = "gmac_example"
+path = "../examples/gmac_example.rs"
+required-features = ["aead", "hash"]
+
+[[example]]
+name = "schnorr_bitcoin"
+path = "../examples/schnorr_bitcoin.rs"
+required-features = ["curves"]
+
+[[example]]
+name = "ecies_secp256k1"
+path = "../examples/ecies_secp256k1.rs"
+required-features = ["ecies"]
+
+[[example]]
+name = "ecies_compressed"
+path = "../examples/ecies_compressed.rs"
+required-features = ["ecies"]
+
+[[example]]
+name = "ecies_p521_high_security"
+path = "../examples/ecies_p521_high_security.rs"
+required-features = ["ecies"]
+
+[[example]]
+name = "sha1_pgo_workload"
+path = "../examples/sha1_pgo_workload.rs"
+required-features = ["hash"]
+
+[[example]]
+name = "aes_comparison"
+path = "../examples/aes_comparison.rs"
+required-features = ["aead"]
+
+[[bench]]
+name = "secp256k1_benchmarks"
+path = "../benches/secp256k1_benchmarks.rs"
+harness = false
+required-features = ["curves", "signatures"]
+
+[[bench]]
+name = "p384_benchmarks"
+path = "../benches/p384_benchmarks.rs"
+harness = false
+required-features = ["curves", "signatures"]
+
+[[bench]]
+name = "p256_benchmarks"
+path = "../benches/p256_benchmarks.rs"
+harness = false
+required-features = ["curves", "signatures"]
+
+[[bench]]
+name = "hash_benchmarks"
+path = "../benches/hash_benchmarks.rs"
+harness = false
+required-features = ["hash"]
+
+[[bench]]
+name = "aead_benchmarks"
+path = "../benches/aead_benchmarks.rs"
+harness = false
+required-features = ["aead"]
+
+[[bench]]
+name = "cipher_benchmarks"
+path = "../benches/cipher_benchmarks.rs"
+harness = false
+
+[[bench]]
+name = "kdf_benchmarks"
+path = "../benches/kdf_benchmarks.rs"
+harness = false
+required-features = ["kdf"]
+
+[[bench]]
+name = "ed25519_benchmarks"
+path = "../benches/ed25519_benchmarks.rs"
+harness = false
+required-features = ["curves"]
+
+[[bench]]
+name = "ecdsa_benchmarks"
+path = "../benches/ecdsa_benchmarks.rs"
+harness = false
+required-features = ["curves", "signatures"]
+
+[[bench]]
+name = "x25519_benchmarks"
+path = "../benches/x25519_benchmarks.rs"
+harness = false
+required-features = ["curves"]
+
+[[bench]]
+name = "optimization_baseline"
+path = "../benches/optimization_baseline.rs"
+harness = false
+required-features = ["curves", "signatures", "hash"]
+
+[[bench]]
+name = "batch_inversion"
+path = "../benches/batch_inversion.rs"
+harness = false
+required-features = ["curves"]
+
+[[bench]]
+name = "incomplete_reduction"
+path = "../benches/incomplete_reduction.rs"
+harness = false
+required-features = ["curves"]
+
+[[bench]]
+name = "secp256k1_glv_benchmark"
+path = "../benches/secp256k1_glv_benchmark.rs"
+harness = false
+required-features = ["curves", "signatures"]
+
+[[bench]]
+name = "ed25519_optimization_benchmarks"
+path = "../benches/ed25519_optimization_benchmarks.rs"
+harness = false
+required-features = ["curves"]
+
+[[bench]]
+name = "ed448_optimization_benchmarks"
+path = "../benches/ed448_optimization_benchmarks.rs"
+harness = false
+required-features = ["curves"]
+
+[[bench]]
+name = "sha1_optimization_benchmarks"
+path = "../benches/sha1_optimization_benchmarks.rs"
+harness = false
+required-features = ["hash"]
+
+[[bench]]
+name = "sha2_optimization_benchmarks"
+path = "../benches/sha2_optimization_benchmarks.rs"
+harness = false
+required-features = ["hash"]
+
+[[bench]]
+name = "sha2_quick_bench"
+path = "../benches/sha2_quick_bench.rs"
+harness = false
+required-features = ["hash"]
+
+[[bench]]
+name = "sha2_final_bench"
+path = "../benches/sha2_final_bench.rs"
+harness = false
+required-features = ["hash"]
+
+[[bench]]
+name = "aes_optimization_benchmarks"
+path = "../benches/aes_optimization_benchmarks.rs"
+harness = false
+required-features = ["aead"]
+
+[dev-dependencies]
+criterion = { workspace = true }
+rand = "0.8"
+hex = "0.4"

@@ -142,7 +142,7 @@ fn is_probably_prime<R: rand::Rng>(n: &BigUint, rng: &mut R, k: usize) -> bool {
     if n == &BigUint::from(2u32) || n == &BigUint::from(3u32) {
         return true;
     }
-    if n.bit(0) == false {
+    if !n.bit(0) {
         // Even number
         return false;
     }
@@ -152,7 +152,7 @@ fn is_probably_prime<R: rand::Rng>(n: &BigUint, rng: &mut R, k: usize) -> bool {
     let mut d = n_minus_1.clone();
     let mut r = 0u64;
 
-    while d.bit(0) == false {
+    while !d.bit(0) {
         d >>= 1;
         r += 1;
     }

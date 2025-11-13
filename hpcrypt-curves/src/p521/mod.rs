@@ -47,11 +47,14 @@
 pub mod batch;
 pub mod constants;
 pub mod field;
+pub mod field_montgomery_native;
 pub mod field_ops;
 pub mod point;
 pub mod precomputed;
 pub mod scalar;
 pub mod wnaf;
+
+// SIMD modules removed - see /home/maamoun/hpcrypt_simd_work/ for SIMD implementations
 
 pub use constants::*;
 pub use field::FieldElement;

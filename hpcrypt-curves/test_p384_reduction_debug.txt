@@ -1,0 +1,38 @@
+Testing P-384 reduction with simple input
+===========================================
+
+Formula: 2^384 ≡ 2^128 + 2^96 - 2^32 + 1 (mod p)
+
+For limb i (where i >= 6):
+- Position: 2^(i*64)  
+- Shift amount: (i-6)*64 bits beyond 2^384
+
+Each limb value "hi" gets distributed as:
+1. hi * 1 at shift_amount
+2. hi * (-2^32) at shift_amount + 32
+3. hi * 2^96 at shift_amount + 96
+4. hi * 2^128 at shift_amount + 128
+
+Let me trace through limb 6 with hi=0x0001000000010000:
+- shift_amount = 0
+- Term 1: pos=0, shift=0 → working[0] += 0x0001000000010000
+- Term 2: pos=0, shift=32 → working[0] -= (hi << 32), working[1] -= (hi >> 32)
+- Term 3: pos=1, shift=32 → working[1] += (hi << 32), working[2] += (hi >> 32) 
+- Term 4: pos=2, shift=0 → working[2] += 0x0001000000010000
+
+Wait, this means working[0] gets BOTH +hi and -(hi << 32)!
+Let me compute:
+  working[0] += hi = 0x0001000000010000
+  working[0] -= (hi << 32) = working[0] -= 0x000100000001000000000000
+  
+The second term is MUCH larger! It overflows u128!
+
+THIS IS THE BUG!!!
+
+When hi << 32 on a u128, I'm shifting the ENTIRE u128 left by 32 bits!
+But what I WANT is to shift the 64-bit value left by 32 bits and place it at the right position!
+
+In P-256, this works because the values are small enough. But in my test case, I have 
+larger values that cause the u128 shifts to produce huge numbers!
+
+The fix: I need to ensure hi stays as u64 when appropriate, OR handle the arithmetic differently!

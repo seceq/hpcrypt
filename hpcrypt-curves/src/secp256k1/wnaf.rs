@@ -203,7 +203,7 @@ impl WNafTable {
 /// - wNAF: [1, 0, -1, 0, 1] (2 non-zero digits, using 11 = 16 - 4 - 1)
 pub fn compute_wnaf(scalar: &[u8; 32], width: usize) -> Vec<i8> {
     debug_assert!(
-        width >= 2 && width <= 8,
+        (2..=8).contains(&width),
         "Window width must be in range [2, 8]"
     );
 
@@ -317,19 +317,23 @@ pub fn wnaf_scalar_mul(point: &Point, scalar: &[u8; 32], width: usize) -> Point 
         result = result.double();
 
         // Add if non-zero (using MIXED ADDITION for 33% speedup per addition!)
-        if digit > 0 {
-            // Positive: add digit×P using mixed Jacobian-Affine addition (8M + 3S)
-            let affine_point = table.lookup(digit as usize);
-            result = result.add_affine(affine_point);
-        } else if digit < 0 {
-            // Negative: subtract |digit|×P by adding its negation
-            let affine_point = table.lookup((-digit) as usize);
-            // Negate affine point: (x, y) -> (x, -y)
-            let negated = AffinePoint {
-                x: affine_point.x,
-                y: affine_point.y.neg(),
-            };
-            result = result.add_affine(&negated);
+        match digit.cmp(&0) {
+            core::cmp::Ordering::Greater => {
+                // Positive: add digit×P using mixed Jacobian-Affine addition (8M + 3S)
+                let affine_point = table.lookup(digit as usize);
+                result = result.add_affine(affine_point);
+            }
+            core::cmp::Ordering::Less => {
+                // Negative: subtract |digit|×P by adding its negation
+                let affine_point = table.lookup((-digit) as usize);
+                // Negate affine point: (x, y) -> (x, -y)
+                let negated = AffinePoint {
+                    x: affine_point.x,
+                    y: affine_point.y.neg(),
+                };
+                result = result.add_affine(&negated);
+            }
+            core::cmp::Ordering::Equal => {}
         }
         // If digit == 0, just double (no addition)
     }
@@ -359,7 +363,7 @@ fn shift_right_1(k: &mut [u64; 4]) {
     k[0] = (k[0] >> 1) | (k[1] << 63);
     k[1] = (k[1] >> 1) | (k[2] << 63);
     k[2] = (k[2] >> 1) | (k[3] << 63);
-    k[3] = k[3] >> 1;
+    k[3] >>= 1;
 }
 
 /// Subtract a small value (used in wNAF computation)

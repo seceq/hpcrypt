@@ -137,6 +137,7 @@ impl MontgomeryContext {
     /// Convert a number from Montgomery domain: a' → a' * R^-1 mod N
     ///
     /// This is simply REDC(a')
+    #[allow(clippy::wrong_self_convention)]
     pub fn from_montgomery(&self, a: &BigUint) -> BigUint {
         self.redc(a)
     }

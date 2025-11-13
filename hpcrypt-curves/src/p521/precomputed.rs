@@ -163,7 +163,7 @@ impl PrecomputedTable {
 /// The table is generated once on first access and reused.
 /// Uses ~270 KB of memory for 131 windows of P-521 generator multiples.
 pub static PRECOMPUTED_TABLE: once_cell::sync::Lazy<PrecomputedTable> =
-    once_cell::sync::Lazy::new(|| PrecomputedTable::generate());
+    once_cell::sync::Lazy::new(PrecomputedTable::generate);
 
 /// Fast generator multiplication using precomputed tables
 ///

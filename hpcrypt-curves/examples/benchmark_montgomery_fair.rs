@@ -114,10 +114,10 @@ fn main() {
         montgomery_mul_only
     );
     println!(
-        "    MISLEADING SPEEDUP: {:.0}x",
+        "  ⚠️  MISLEADING SPEEDUP: {:.0}x",
         karatsuba_time as f64 / montgomery_mul_only as f64
     );
-    println!("    This comparison is UNFAIR!");
+    println!("  ⚠️  This comparison is UNFAIR!");
     println!("  (Montgomery values are already converted)");
     println!("└──────────────────────────────────────────────────────────────┘");
 
