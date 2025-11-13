@@ -53,13 +53,13 @@ fn main() {
 
 /// Example: ECDSA with NIST P-256 curve
 fn p256_example() {
-    println!("📝 ECDSA P-256 (NIST) Example");
+    println!(" ECDSA P-256 (NIST) Example");
     println!("   Curve: secp256r1 / prime256v1");
     println!("   Hash: SHA-256");
     println!("   Use case: TLS, general-purpose signatures\n");
 
     // 1. Generate a signing key
-    println!("1️⃣  Generating P-256 keypair...");
+    println!("1.  Generating P-256 keypair...");
     let signing_key = P256SigningKey::generate()
         .expect("Failed to generate P-256 signing key");
 
@@ -69,29 +69,29 @@ fn p256_example() {
 
     // 2. Prepare message to sign
     let message = b"Hello, P-256! This message will be signed.";
-    println!("\n2️⃣  Message to sign:");
+    println!("\n2.  Message to sign:");
     println!("   \"{}\"", String::from_utf8_lossy(message));
 
     // 3. Sign the message (uses RFC 6979 deterministic nonces)
-    println!("\n3️⃣  Signing message with RFC 6979...");
+    println!("\n3.  Signing message with RFC 6979...");
     let signature = signing_key.sign(message);
     println!("   ✓ Signature generated (64 bytes)");
     println!("   r: {:02x?}...", &signature.to_bytes()[..8]);
     println!("   s: {:02x?}...", &signature.to_bytes()[32..40]);
 
     // 4. Verify the signature
-    println!("\n4️⃣  Verifying signature...");
+    println!("\n4.  Verifying signature...");
     let is_valid = verifying_key.verify(message, &signature);
     println!("   ✓ Signature verification: {}",
         if is_valid { "✓ VALID" } else { "✗ INVALID" });
 
     // 5. DER encoding (for interoperability)
-    println!("\n5️⃣  DER encoding signature...");
+    println!("\n5.  DER encoding signature...");
     let (der_bytes, len) = signature.to_der();
     println!("   ✓ DER encoded ({} bytes): {:02x?}...", len, &der_bytes[..16]);
 
     // 6. Public key serialization
-    println!("\n6️⃣  Public key serialization:");
+    println!("\n6.  Public key serialization:");
     let pub_uncompressed = verifying_key.to_bytes_uncompressed();
     println!("   Uncompressed (65 bytes): {:02x?}...", &pub_uncompressed[..10]);
 
@@ -99,14 +99,14 @@ fn p256_example() {
     println!("   Compressed (33 bytes):   {:02x?}...", &pub_compressed[..10]);
 
     // 7. Deterministic signing (same message = same signature)
-    println!("\n7️⃣  Testing RFC 6979 determinism...");
+    println!("\n7.  Testing RFC 6979 determinism...");
     let signature2 = signing_key.sign(message);
     println!("   First signature:  {:02x?}...", &signature.to_bytes()[..8]);
     println!("   Second signature: {:02x?}...", &signature2.to_bytes()[..8]);
     println!("   ✓ Signatures match: {}", signature.to_bytes() == signature2.to_bytes());
 
     // 8. Invalid signature detection
-    println!("\n8️⃣  Testing invalid signature detection...");
+    println!("\n8.  Testing invalid signature detection...");
     let wrong_message = b"Different message";
     let is_invalid = verifying_key.verify(wrong_message, &signature);
     println!("   ✓ Wrong message rejected: {}", !is_invalid);
@@ -114,13 +114,13 @@ fn p256_example() {
 
 /// Example: ECDSA with NIST P-384 curve
 fn p384_example() {
-    println!("📝 ECDSA P-384 (NIST) Example");
+    println!(" ECDSA P-384 (NIST) Example");
     println!("   Curve: secp384r1");
     println!("   Hash: SHA-384");
     println!("   Use case: High-security applications, Suite B\n");
 
     // 1. Generate a signing key
-    println!("1️⃣  Generating P-384 keypair...");
+    println!("1.  Generating P-384 keypair...");
     let signing_key = P384SigningKey::generate()
         .expect("Failed to generate P-384 signing key");
     let verifying_key = signing_key.verifying_key();
@@ -128,20 +128,20 @@ fn p384_example() {
 
     // 2. Sign a message
     let message = b"High-security message for P-384";
-    println!("\n2️⃣  Message: \"{}\"", String::from_utf8_lossy(message));
+    println!("\n2.  Message: \"{}\"", String::from_utf8_lossy(message));
 
-    println!("\n3️⃣  Signing with P-384...");
+    println!("\n3.  Signing with P-384...");
     let signature = signing_key.sign(message);
     println!("   ✓ Signature generated (96 bytes)");
 
     // 3. Verify
-    println!("\n4️⃣  Verifying signature...");
+    println!("\n4.  Verifying signature...");
     let is_valid = verifying_key.verify(message, &signature);
     println!("   ✓ Signature verification: {}",
         if is_valid { "✓ VALID" } else { "✗ INVALID" });
 
     // 4. Show larger key sizes
-    println!("\n5️⃣  P-384 key sizes:");
+    println!("\n5.  P-384 key sizes:");
     let pub_uncompressed = verifying_key.to_bytes_uncompressed();
     println!("   Uncompressed public key: {} bytes", pub_uncompressed.len());
     let pub_compressed = verifying_key.to_bytes_compressed();
@@ -151,13 +151,13 @@ fn p384_example() {
 
 /// Example: ECDSA with secp256k1 curve (Bitcoin/Ethereum)
 fn secp256k1_example() {
-    println!("📝 ECDSA secp256k1 (Bitcoin/Ethereum) Example");
+    println!(" ECDSA secp256k1 (Bitcoin/Ethereum) Example");
     println!("   Curve: secp256k1");
     println!("   Hash: SHA-256");
     println!("   Use case: Bitcoin, Ethereum, blockchain applications\n");
 
     // 1. Generate a signing key
-    println!("1️⃣  Generating secp256k1 keypair...");
+    println!("1.  Generating secp256k1 keypair...");
     let signing_key = Secp256k1SigningKey::generate()
         .expect("Failed to generate secp256k1 signing key");
     let verifying_key = signing_key.verifying_key();
@@ -165,29 +165,29 @@ fn secp256k1_example() {
 
     // 2. Bitcoin-style transaction signing simulation
     let transaction = b"Bitcoin TX: Send 0.1 BTC to address xyz";
-    println!("\n2️⃣  Transaction to sign:");
+    println!("\n2.  Transaction to sign:");
     println!("   \"{}\"", String::from_utf8_lossy(transaction));
 
-    println!("\n3️⃣  Signing transaction...");
+    println!("\n3.  Signing transaction...");
     let signature = signing_key.sign(transaction);
     println!("   ✓ Transaction signed (64 bytes)");
     println!("   r: {:02x?}...", &signature.to_bytes()[..8]);
     println!("   s: {:02x?}...", &signature.to_bytes()[32..40]);
 
     // 3. Verify the transaction signature
-    println!("\n4️⃣  Verifying transaction signature...");
+    println!("\n4.  Verifying transaction signature...");
     let is_valid = verifying_key.verify(transaction, &signature);
     println!("   ✓ Signature verification: {}",
         if is_valid { "✓ VALID" } else { "✗ INVALID" });
 
     // 4. DER encoding (used in Bitcoin)
-    println!("\n5️⃣  DER encoding (Bitcoin format)...");
+    println!("\n5.  DER encoding (Bitcoin format)...");
     let (der_bytes, len) = signature.to_der();
     println!("   ✓ DER encoded ({} bytes)", len);
     println!("   DER: {:02x?}...", &der_bytes[..min(len, 20)]);
 
     // 5. Public key formats
-    println!("\n6️⃣  Public key formats:");
+    println!("\n6.  Public key formats:");
     let pub_uncompressed = verifying_key.to_bytes_uncompressed();
     println!("   Uncompressed (65 bytes): {:02x?}...", &pub_uncompressed[..10]);
     let pub_compressed = verifying_key.to_bytes_compressed();
@@ -197,11 +197,11 @@ fn secp256k1_example() {
 
 /// Example: Batch signature verification
 fn batch_verification_example() {
-    println!("📝 Batch Signature Verification Example");
+    println!(" Batch Signature Verification Example");
     println!("   Verify multiple signatures efficiently\n");
 
     // Create multiple signers and signatures
-    println!("1️⃣  Creating 5 P-256 signatures...");
+    println!("1.  Creating 5 P-256 signatures...");
     let messages = [
         b"Message 1".as_slice(),
         b"Message 2".as_slice(),
@@ -226,7 +226,7 @@ fn batch_verification_example() {
     }
 
     // Verify all signatures
-    println!("\n2️⃣  Verifying all signatures...");
+    println!("\n2.  Verifying all signatures...");
     for (i, ((key, sig), msg)) in keys.iter().zip(&signatures).zip(&messages).enumerate() {
         let valid = key.verify(msg, sig);
         println!("   Signature {}: {}", i + 1, if valid { "✓ VALID" } else { "✗ INVALID" });
@@ -235,7 +235,7 @@ fn batch_verification_example() {
     println!("\n   ✓ Batch verification: All {} signatures valid", messages.len());
 
     // Test with one invalid signature
-    println!("\n3️⃣  Testing with one tampered signature...");
+    println!("\n3.  Testing with one tampered signature...");
     let is_valid = keys[0].verify(b"Wrong message", &signatures[0]);
     println!("   ✓ Invalid signature detected: {}", !is_valid);
 }
