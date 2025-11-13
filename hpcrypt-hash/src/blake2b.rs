@@ -78,7 +78,6 @@ fn compress(h: &mut [u64; 8], m: &[u64; 16], t: u64, f: bool) {
 
     // 12 rounds
     for s in &SIGMA[0..12] {
-
         // Column step
         g(&mut v, 0, 4, 8, 12, m[s[0]], m[s[1]]);
         g(&mut v, 1, 5, 9, 13, m[s[2]], m[s[3]]);

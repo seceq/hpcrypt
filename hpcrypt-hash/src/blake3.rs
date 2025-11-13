@@ -182,7 +182,6 @@ impl Output {
 
         // 7 rounds of mixing
         for schedule in &MSG_SCHEDULE[0..7] {
-
             // Column step
             Self::g(
                 &mut v,

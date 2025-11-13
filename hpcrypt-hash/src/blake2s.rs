@@ -243,7 +243,6 @@ impl Blake2s {
 
         // 10 rounds for BLAKE2s
         for s in &SIGMA[0..10] {
-
             Self::g(&mut v, 0, 4, 8, 12, m[s[0]], m[s[1]]);
             Self::g(&mut v, 1, 5, 9, 13, m[s[2]], m[s[3]]);
             Self::g(&mut v, 2, 6, 10, 14, m[s[4]], m[s[5]]);
