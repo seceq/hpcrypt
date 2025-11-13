@@ -17,7 +17,7 @@
 //!
 //! Total table size: 96 windows × 16 points × 96 bytes = 147,456 bytes (~144 KB)
 
-use super::{Point, AffinePoint};
+use super::{AffinePoint, Point};
 use once_cell::sync::Lazy;
 
 /// Window size for precomputed tables (in bits)
@@ -226,38 +226,42 @@ impl Point {
         }
 
         // Mixed addition (affine + Jacobian)
-        let z1_squared = self.z.square();          // Z₁²
-        let z1_cubed = z1_squared.mul(&self.z);    // Z₁³
+        let z1_squared = self.z.square(); // Z₁²
+        let z1_cubed = z1_squared.mul(&self.z); // Z₁³
 
-        let u2 = other.x.mul(&z1_squared);         // U₂ = x₂*Z₁²
-        let s2 = other.y.mul(&z1_cubed);           // S₂ = y₂*Z₁³
+        let u2 = other.x.mul(&z1_squared); // U₂ = x₂*Z₁²
+        let s2 = other.y.mul(&z1_cubed); // S₂ = y₂*Z₁³
 
-        let h = u2.sub(&self.x);                   // H = U₂ - X₁
-        let r = s2.sub(&self.y);                   // R = S₂ - Y₁
+        let h = u2.sub(&self.x); // H = U₂ - X₁
+        let r = s2.sub(&self.y); // R = S₂ - Y₁
 
         // Check for point doubling (same point)
         if bool::from(h.is_zero() & r.is_zero()) {
             return self.double();
         }
 
-        let h_squared = h.square();                // H²
-        let h_cubed = h_squared.mul(&h);           // H³
+        let h_squared = h.square(); // H²
+        let h_cubed = h_squared.mul(&h); // H³
         let x1_h_squared = self.x.mul(&h_squared); // X₁*H²
 
         // X₃ = R² - H³ - 2*X₁*H²
-        let x3 = r.square()
+        let x3 = r
+            .square()
             .sub(&h_cubed)
             .sub(&x1_h_squared)
             .sub(&x1_h_squared);
 
         // Y₃ = R*(X₁*H² - X₃) - Y₁*H³
-        let y3 = r.mul(&x1_h_squared.sub(&x3))
-            .sub(&self.y.mul(&h_cubed));
+        let y3 = r.mul(&x1_h_squared.sub(&x3)).sub(&self.y.mul(&h_cubed));
 
         // Z₃ = Z₁ * H
         let z3 = self.z.mul(&h);
 
-        Point { x: x3, y: y3, z: z3 }
+        Point {
+            x: x3,
+            y: y3,
+            z: z3,
+        }
     }
 }
 
@@ -265,9 +269,7 @@ impl Point {
 ///
 /// This is computed once on first use and cached for the lifetime of the program.
 /// Uses `Lazy` for thread-safe lazy initialization.
-pub static PRECOMPUTED_TABLE: Lazy<PrecomputedTable> = Lazy::new(|| {
-    PrecomputedTable::new()
-});
+pub static PRECOMPUTED_TABLE: Lazy<PrecomputedTable> = Lazy::new(|| PrecomputedTable::new());
 
 /// Fast scalar multiplication with the P-384 generator using precomputed tables
 ///
@@ -334,9 +336,22 @@ mod tests {
             let expected_affine = expected.to_affine().expect("Point should be valid");
             let from_table_affine = from_table.to_affine().expect("Point should be valid");
 
-            println!("  {}*G: match = {}", mult, expected_affine.x == from_table_affine.x && expected_affine.y == from_table_affine.y);
-            assert_eq!(expected_affine.x, from_table_affine.x, "tables[0][{}] x mismatch", mult);
-            assert_eq!(expected_affine.y, from_table_affine.y, "tables[0][{}] y mismatch", mult);
+            println!(
+                "  {}*G: match = {}",
+                mult,
+                expected_affine.x == from_table_affine.x
+                    && expected_affine.y == from_table_affine.y
+            );
+            assert_eq!(
+                expected_affine.x, from_table_affine.x,
+                "tables[0][{}] x mismatch",
+                mult
+            );
+            assert_eq!(
+                expected_affine.y, from_table_affine.y,
+                "tables[0][{}] y mismatch",
+                mult
+            );
         }
 
         // Check tables[1] which should be multiples of 2^4 * G = 16*G
@@ -363,9 +378,22 @@ mod tests {
             let expected_affine = expected.to_affine().expect("Point should be valid");
             let from_table_affine = from_table.to_affine().expect("Point should be valid");
 
-            println!("  {}*16G: match = {}", mult, expected_affine.x == from_table_affine.x && expected_affine.y == from_table_affine.y);
-            assert_eq!(expected_affine.x, from_table_affine.x, "tables[1][{}] x mismatch", mult);
-            assert_eq!(expected_affine.y, from_table_affine.y, "tables[1][{}] y mismatch", mult);
+            println!(
+                "  {}*16G: match = {}",
+                mult,
+                expected_affine.x == from_table_affine.x
+                    && expected_affine.y == from_table_affine.y
+            );
+            assert_eq!(
+                expected_affine.x, from_table_affine.x,
+                "tables[1][{}] x mismatch",
+                mult
+            );
+            assert_eq!(
+                expected_affine.y, from_table_affine.y,
+                "tables[1][{}] y mismatch",
+                mult
+            );
         }
 
         println!("\nTable construction verified!");
@@ -430,34 +458,34 @@ mod tests {
 
         // Test several scalar values
         let test_scalars = [
-            [0x00; 48],  // Zero (edge case)
+            [0x00; 48], // Zero (edge case)
             {
                 let mut s = [0x00; 48];
-                s[47] = 0x01;  // One
+                s[47] = 0x01; // One
                 s
             },
             {
                 let mut s = [0x00; 48];
-                s[47] = 0x02;  // Two
+                s[47] = 0x02; // Two
                 s
             },
             {
                 let mut s = [0x00; 48];
-                s[47] = 0x0F;  // 15
+                s[47] = 0x0F; // 15
                 s
             },
             {
                 let mut s = [0x00; 48];
-                s[47] = 0x10;  // 16
+                s[47] = 0x10; // 16
                 s
             },
             {
                 let mut s = [0x00; 48];
-                s[47] = 0xFF;  // 255
+                s[47] = 0xFF; // 255
                 s
             },
-            [0x42; 48],  // Arbitrary value
-            [0xFF; 48],  // Maximum value (edge case)
+            [0x42; 48], // Arbitrary value
+            [0xFF; 48], // Maximum value (edge case)
         ];
 
         for scalar in &test_scalars {
@@ -466,22 +494,30 @@ mod tests {
 
             // Compare using affine coordinates (normalize before comparison)
             if bool::from(result_precomputed.is_infinity()) {
-                assert!(bool::from(result_regular.is_infinity()),
-                        "Precomputed is infinity but regular is not for scalar {:?}", scalar);
+                assert!(
+                    bool::from(result_regular.is_infinity()),
+                    "Precomputed is infinity but regular is not for scalar {:?}",
+                    scalar
+                );
             } else if bool::from(result_regular.is_infinity()) {
-                assert!(bool::from(result_precomputed.is_infinity()),
-                        "Regular is infinity but precomputed is not for scalar {:?}", scalar);
+                assert!(
+                    bool::from(result_precomputed.is_infinity()),
+                    "Regular is infinity but precomputed is not for scalar {:?}",
+                    scalar
+                );
             } else {
                 let precomputed_affine = result_precomputed.to_affine().expect("Valid point");
                 let regular_affine = result_regular.to_affine().expect("Valid point");
 
                 assert_eq!(
                     precomputed_affine.x, regular_affine.x,
-                    "X coordinates differ for scalar {:?}", scalar
+                    "X coordinates differ for scalar {:?}",
+                    scalar
                 );
                 assert_eq!(
                     precomputed_affine.y, regular_affine.y,
-                    "Y coordinates differ for scalar {:?}", scalar
+                    "Y coordinates differ for scalar {:?}",
+                    scalar
                 );
             }
         }
@@ -554,6 +590,9 @@ mod tests {
     #[test]
     fn test_infinity_to_affine() {
         let inf = Point::infinity();
-        assert!(inf.to_affine().is_none(), "Infinity should not convert to affine");
+        assert!(
+            inf.to_affine().is_none(),
+            "Infinity should not convert to affine"
+        );
     }
 }
