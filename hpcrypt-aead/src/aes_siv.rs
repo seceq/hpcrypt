@@ -51,12 +51,7 @@ impl Aes128Siv {
     ///
     /// IV || Ciphertext (IV is the synthetic IV/tag)
     #[cfg(feature = "alloc")]
-    pub fn encrypt(
-        key: &[u8; 32],
-        nonce: &[u8],
-        plaintext: &[u8],
-        aad: &[u8],
-    ) -> Vec<u8> {
+    pub fn encrypt(key: &[u8; 32], nonce: &[u8], plaintext: &[u8], aad: &[u8]) -> Vec<u8> {
         let k1: [u8; 16] = key[..16].try_into().unwrap();
         let k2: [u8; 16] = key[16..].try_into().unwrap();
 
@@ -96,12 +91,7 @@ pub struct Aes256Siv;
 impl Aes256Siv {
     /// Encrypt and authenticate data
     #[cfg(feature = "alloc")]
-    pub fn encrypt(
-        key: &[u8; 64],
-        nonce: &[u8],
-        plaintext: &[u8],
-        aad: &[u8],
-    ) -> Vec<u8> {
+    pub fn encrypt(key: &[u8; 64], nonce: &[u8], plaintext: &[u8], aad: &[u8]) -> Vec<u8> {
         let k1: [u8; 32] = key[..32].try_into().unwrap();
         let k2: [u8; 32] = key[32..].try_into().unwrap();
 
