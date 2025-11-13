@@ -45,12 +45,7 @@ impl Aes128Eax {
     ///
     /// Ciphertext || Tag (tag appended to ciphertext)
     #[cfg(feature = "alloc")]
-    pub fn encrypt(
-        key: &[u8; 16],
-        nonce: &[u8],
-        plaintext: &[u8],
-        aad: &[u8],
-    ) -> Vec<u8> {
+    pub fn encrypt(key: &[u8; 16], nonce: &[u8], plaintext: &[u8], aad: &[u8]) -> Vec<u8> {
         let cipher = Aes::new_128(key);
         eax_encrypt(&cipher, nonce, plaintext, aad)
     }
@@ -86,12 +81,7 @@ pub struct Aes256Eax;
 impl Aes256Eax {
     /// Encrypt and authenticate data
     #[cfg(feature = "alloc")]
-    pub fn encrypt(
-        key: &[u8; 32],
-        nonce: &[u8],
-        plaintext: &[u8],
-        aad: &[u8],
-    ) -> Vec<u8> {
+    pub fn encrypt(key: &[u8; 32], nonce: &[u8], plaintext: &[u8], aad: &[u8]) -> Vec<u8> {
         let cipher = Aes::new_256(key);
         eax_encrypt(&cipher, nonce, plaintext, aad)
     }
@@ -304,8 +294,10 @@ mod tests {
     #[test]
     fn test_aes256_eax_roundtrip() {
         let key = [0x42; 32];
-        let nonce = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                     0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10];
+        let nonce = [
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+            0x0f, 0x10,
+        ];
         let plaintext = b"EAX mode test with AES-256";
         let aad = b"some AAD";
 
