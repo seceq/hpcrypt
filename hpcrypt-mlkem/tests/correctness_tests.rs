@@ -3,7 +3,7 @@
 //! These tests verify the correctness of the ML-KEM implementation
 //! by testing various properties and edge cases.
 
-use hpcrypt_mlkem::{KeyPair, MlKem512, MlKem768, MlKem1024};
+use hpcrypt_mlkem::{KeyPair, MlKem1024, MlKem512, MlKem768};
 
 #[test]
 fn test_encaps_decaps_correctness_mlkem512() {

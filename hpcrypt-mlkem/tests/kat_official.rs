@@ -12,7 +12,7 @@
 //! 3. Decapsulation correctness
 //! 4. Intermediate value consistency (for debugging)
 
-use hpcrypt_mlkem::{KeyPair, MlKem512, MlKem768, MlKem1024};
+use hpcrypt_mlkem::{KeyPair, MlKem1024, MlKem512, MlKem768};
 
 /// Test vector structure matching C2SP/CCTV format
 #[derive(Debug)]
@@ -41,10 +41,9 @@ fn official_mlkem512_test_vector_1() {
     // Test vector derived from FIPS 203 examples
     // Seed: First 32 bytes from deterministic sequence
     let d = [
-        0x7c, 0x99, 0x35, 0xa0, 0xb0, 0x76, 0x94, 0xaa,
-        0x0c, 0x6d, 0x10, 0xe4, 0xdb, 0x6b, 0x1a, 0xdd,
-        0x28, 0x13, 0xbe, 0x0a, 0x0e, 0x95, 0x4f, 0x20,
-        0x93, 0xc5, 0xba, 0x15, 0xb1, 0x03, 0x95, 0xbb,
+        0x7c, 0x99, 0x35, 0xa0, 0xb0, 0x76, 0x94, 0xaa, 0x0c, 0x6d, 0x10, 0xe4, 0xdb, 0x6b, 0x1a,
+        0xdd, 0x28, 0x13, 0xbe, 0x0a, 0x0e, 0x95, 0x4f, 0x20, 0x93, 0xc5, 0xba, 0x15, 0xb1, 0x03,
+        0x95, 0xbb,
     ];
 
     // Generate keypair with known seed
@@ -96,10 +95,9 @@ fn official_mlkem512_deterministic_encaps() {
 fn official_mlkem768_test_vector_1() {
     // FIPS 203 reference test vector
     let d = [
-        0xd9, 0x87, 0xae, 0xd1, 0x07, 0x6f, 0x3d, 0x8d,
-        0xc1, 0x70, 0x35, 0x95, 0xf8, 0x3f, 0x2e, 0x7e,
-        0xb9, 0x4c, 0x7f, 0x08, 0x9b, 0x43, 0x0e, 0x19,
-        0x04, 0x7b, 0x0e, 0x8f, 0xcf, 0x3c, 0x2a, 0x9f,
+        0xd9, 0x87, 0xae, 0xd1, 0x07, 0x6f, 0x3d, 0x8d, 0xc1, 0x70, 0x35, 0x95, 0xf8, 0x3f, 0x2e,
+        0x7e, 0xb9, 0x4c, 0x7f, 0x08, 0x9b, 0x43, 0x0e, 0x19, 0x04, 0x7b, 0x0e, 0x8f, 0xcf, 0x3c,
+        0x2a, 0x9f,
     ];
 
     let keypair = KeyPair::from_seed::<MlKem768>(&d);
@@ -119,13 +117,7 @@ fn official_mlkem768_test_vector_1() {
 #[test]
 fn official_mlkem768_key_uniqueness() {
     // Test that different seeds produce different keys
-    let seeds = [
-        [0x00; 32],
-        [0x01; 32],
-        [0xFF; 32],
-        [0xAA; 32],
-        [0x55; 32],
-    ];
+    let seeds = [[0x00; 32], [0x01; 32], [0xFF; 32], [0xAA; 32], [0x55; 32]];
 
     let mut keys = Vec::new();
     for seed in &seeds {
@@ -135,10 +127,12 @@ fn official_mlkem768_key_uniqueness() {
 
     // All keys should be unique
     for i in 0..keys.len() {
-        for j in (i+1)..keys.len() {
-            assert_ne!(keys[i], keys[j],
+        for j in (i + 1)..keys.len() {
+            assert_ne!(
+                keys[i], keys[j],
                 "Seeds {:?} and {:?} produced identical keys",
-                seeds[i][0], seeds[j][0]);
+                seeds[i][0], seeds[j][0]
+            );
         }
     }
 }
@@ -157,7 +151,10 @@ fn official_mlkem768_zero_message_encaps() {
         assert_eq!(ss1.len(), 32);
 
         // Shared secret should not be all zeros
-        assert!(ss1.iter().any(|&b| b != 0), "Shared secret must not be all zeros");
+        assert!(
+            ss1.iter().any(|&b| b != 0),
+            "Shared secret must not be all zeros"
+        );
     }
 }
 
@@ -169,10 +166,9 @@ fn official_mlkem768_zero_message_encaps() {
 fn official_mlkem1024_test_vector_1() {
     // FIPS 203 reference test vector
     let d = [
-        0x1c, 0x2d, 0x8b, 0x8f, 0xf9, 0x0e, 0x3e, 0x94,
-        0x1a, 0x36, 0x85, 0x24, 0x3f, 0x45, 0x11, 0x7c,
-        0xc1, 0xc7, 0xf0, 0x5d, 0x0b, 0x53, 0xaa, 0x85,
-        0xa5, 0xea, 0x6e, 0xd6, 0x11, 0x86, 0xa4, 0x50,
+        0x1c, 0x2d, 0x8b, 0x8f, 0xf9, 0x0e, 0x3e, 0x94, 0x1a, 0x36, 0x85, 0x24, 0x3f, 0x45, 0x11,
+        0x7c, 0xc1, 0xc7, 0xf0, 0x5d, 0x0b, 0x53, 0xaa, 0x85, 0xa5, 0xea, 0x6e, 0xd6, 0x11, 0x86,
+        0xa4, 0x50,
     ];
 
     let keypair = KeyPair::from_seed::<MlKem1024>(&d);
@@ -248,13 +244,17 @@ fn official_implicit_rejection_test() {
     let ss_corrupted = keypair.decapsulate::<MlKem768>(&ct);
 
     // The corrupted SS should differ from the valid one
-    assert_ne!(ss_valid, ss_corrupted,
-        "Implicit rejection must produce different shared secret");
+    assert_ne!(
+        ss_valid, ss_corrupted,
+        "Implicit rejection must produce different shared secret"
+    );
 
     // But it should be deterministic
     let ss_corrupted2 = keypair.decapsulate::<MlKem768>(&ct);
-    assert_eq!(ss_corrupted, ss_corrupted2,
-        "Implicit rejection must be deterministic");
+    assert_eq!(
+        ss_corrupted, ss_corrupted2,
+        "Implicit rejection must be deterministic"
+    );
 }
 
 // ============================================================================

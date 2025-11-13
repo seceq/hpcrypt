@@ -25,8 +25,8 @@
 
 #[cfg(test)]
 mod tests {
-    use hpcrypt_mlkem::{KeyPair, MlKem768};
     use hpcrypt_mlkem::timing::TimingAnalyzer;
+    use hpcrypt_mlkem::{KeyPair, MlKem768};
     use std::hint::black_box;
 
     // Note: These tests are statistical and may occasionally produce false positives
@@ -56,12 +56,17 @@ mod tests {
             },
         );
 
-        println!("Constant-time comparison: t = {:.2}, confidence = {:.1}%",
-            result.t_statistic, result.confidence());
+        println!(
+            "Constant-time comparison: t = {:.2}, confidence = {:.1}%",
+            result.t_statistic,
+            result.confidence()
+        );
 
-        assert!(!result.is_leaking(),
+        assert!(
+            !result.is_leaking(),
             "Constant-time comparison leaked: t = {:.2}",
-            result.t_statistic);
+            result.t_statistic
+        );
     }
 
     #[test]
@@ -93,15 +98,22 @@ mod tests {
             },
         );
 
-        println!("Decapsulation (valid vs invalid): t = {:.2}, confidence = {:.1}%",
-            result.t_statistic, result.confidence());
+        println!(
+            "Decapsulation (valid vs invalid): t = {:.2}, confidence = {:.1}%",
+            result.t_statistic,
+            result.confidence()
+        );
 
         // This is a critical test - decapsulation must be constant-time
         // to prevent timing attacks
-        assert!(!result.is_leaking(),
+        assert!(
+            !result.is_leaking(),
             "Decapsulation timing depends on ciphertext validity: t = {:.2}\n\
              Mean valid: {:.0} ns, Mean invalid: {:.0} ns",
-            result.t_statistic, result.mean_a, result.mean_b);
+            result.t_statistic,
+            result.mean_a,
+            result.mean_b
+        );
     }
 
     #[test]
@@ -128,12 +140,17 @@ mod tests {
             },
         );
 
-        println!("Decapsulation (correct vs wrong key): t = {:.2}, confidence = {:.1}%",
-            result.t_statistic, result.confidence());
+        println!(
+            "Decapsulation (correct vs wrong key): t = {:.2}, confidence = {:.1}%",
+            result.t_statistic,
+            result.confidence()
+        );
 
-        assert!(!result.is_leaking(),
+        assert!(
+            !result.is_leaking(),
             "Decapsulation timing depends on key correctness: t = {:.2}",
-            result.t_statistic);
+            result.t_statistic
+        );
     }
 
     #[test]
@@ -157,13 +174,18 @@ mod tests {
             },
         );
 
-        println!("Encapsulation timing: t = {:.2}, confidence = {:.1}%",
-            result.t_statistic, result.confidence());
+        println!(
+            "Encapsulation timing: t = {:.2}, confidence = {:.1}%",
+            result.t_statistic,
+            result.confidence()
+        );
 
         // Encapsulation should be constant-time
-        assert!(!result.is_leaking(),
+        assert!(
+            !result.is_leaking(),
             "Encapsulation timing varies: t = {:.2}",
-            result.t_statistic);
+            result.t_statistic
+        );
     }
 
     #[test]
@@ -187,14 +209,19 @@ mod tests {
             },
         );
 
-        println!("Key generation timing: t = {:.2}, confidence = {:.1}%",
-            result.t_statistic, result.confidence());
+        println!(
+            "Key generation timing: t = {:.2}, confidence = {:.1}%",
+            result.t_statistic,
+            result.confidence()
+        );
 
         // Key generation timing can vary slightly due to rejection sampling
         // but shouldn't have huge differences
-        assert!(result.t_statistic.abs() < 10.0,
+        assert!(
+            result.t_statistic.abs() < 10.0,
             "Key generation timing varies significantly: t = {:.2}",
-            result.t_statistic);
+            result.t_statistic
+        );
     }
 
     #[test]
@@ -220,12 +247,17 @@ mod tests {
             },
         );
 
-        println!("Constant-time select: t = {:.2}, confidence = {:.1}%",
-            result.t_statistic, result.confidence());
+        println!(
+            "Constant-time select: t = {:.2}, confidence = {:.1}%",
+            result.t_statistic,
+            result.confidence()
+        );
 
-        assert!(!result.is_leaking(),
+        assert!(
+            !result.is_leaking(),
             "Constant-time select leaked: t = {:.2}",
-            result.t_statistic);
+            result.t_statistic
+        );
     }
 
     #[test]
@@ -251,12 +283,17 @@ mod tests {
             },
         );
 
-        println!("Batch decapsulation consistency: t = {:.2}, confidence = {:.1}%",
-            result.t_statistic, result.confidence());
+        println!(
+            "Batch decapsulation consistency: t = {:.2}, confidence = {:.1}%",
+            result.t_statistic,
+            result.confidence()
+        );
 
-        assert!(!result.is_leaking(),
+        assert!(
+            !result.is_leaking(),
             "Decapsulation timing varies between ciphertexts: t = {:.2}",
-            result.t_statistic);
+            result.t_statistic
+        );
     }
 
     // Negative test: Verify our timing analysis can detect obvious leaks
@@ -282,12 +319,13 @@ mod tests {
             },
         );
 
-        println!("Sanity check (obvious leak): t = {:.2}",
-            result.t_statistic);
+        println!("Sanity check (obvious leak): t = {:.2}", result.t_statistic);
 
         // This SHOULD be flagged as leaking
-        assert!(result.is_leaking(),
+        assert!(
+            result.is_leaking(),
             "Timing analysis failed to detect obvious leak: t = {:.2}",
-            result.t_statistic);
+            result.t_statistic
+        );
     }
 }
