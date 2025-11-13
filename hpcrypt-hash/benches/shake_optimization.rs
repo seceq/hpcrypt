@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use hpcrypt_hash::{Shake128, Shake256, TurboShake128, TurboShake256};
 
 /// Benchmark SHAKE128 with 32-byte output (common use case)

@@ -1,7 +1,7 @@
 // KMAC Optimization Benchmarks
 // Tests each optimization technique individually to measure performance gains
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use hpcrypt_hash::{Kmac128, Kmac256};
 
 // Benchmark KMAC128 with various message sizes
@@ -173,20 +173,16 @@ fn bench_kmac_key_sizes(c: &mut Criterion) {
 
     for &key_len in &[16, 32, 64, 128] {
         let key = vec![0u8; key_len];
-        group.bench_with_input(
-            BenchmarkId::new("kmac128", key_len),
-            &key,
-            |b, k| {
-                b.iter(|| {
-                    black_box(Kmac128::mac(
-                        black_box(k),
-                        black_box(&message),
-                        black_box(customization),
-                        black_box(32),
-                    ))
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("kmac128", key_len), &key, |b, k| {
+            b.iter(|| {
+                black_box(Kmac128::mac(
+                    black_box(k),
+                    black_box(&message),
+                    black_box(customization),
+                    black_box(32),
+                ))
+            });
+        });
     }
 
     group.finish();
