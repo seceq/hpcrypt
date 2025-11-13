@@ -1,9 +1,9 @@
 //! RSA public key operations
 
+use crate::error::{Result, RsaError};
+use crate::primitives::{i2osp, os2ip, rsaep, rsavp1};
 use alloc::vec::Vec;
 use num_bigint::BigUint;
-use crate::error::{RsaError, Result};
-use crate::primitives::{rsaep, rsavp1, i2osp, os2ip};
 
 /// RSA public key
 ///
@@ -139,8 +139,8 @@ impl RsaPublicKey {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::vec;
     use crate::keygen::generate_keypair_default;
+    use alloc::vec;
 
     #[test]
     fn test_public_key_creation() {

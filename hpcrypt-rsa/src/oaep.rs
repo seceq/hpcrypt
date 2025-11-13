@@ -4,12 +4,12 @@
 //!
 //! OAEP (Optimal Asymmetric Encryption Padding) provides semantic security.
 
-use alloc::vec::Vec;
-use alloc::vec;
-use crate::error::{RsaError, Result};
-use crate::primitives::{os2ip, i2osp};
-use crate::public_key::RsaPublicKey;
+use crate::error::{Result, RsaError};
+use crate::primitives::{i2osp, os2ip};
 use crate::private_key::RsaPrivateKey;
+use crate::public_key::RsaPublicKey;
+use alloc::vec;
+use alloc::vec::Vec;
 
 /// RSA-OAEP encryption
 ///
@@ -29,11 +29,7 @@ use crate::private_key::RsaPrivateKey;
 /// # Returns
 ///
 /// Ciphertext of length k (key size in bytes)
-pub fn encrypt_oaep<H>(
-    public_key: &RsaPublicKey,
-    message: &[u8],
-    label: &[u8],
-) -> Result<Vec<u8>>
+pub fn encrypt_oaep<H>(public_key: &RsaPublicKey, message: &[u8], label: &[u8]) -> Result<Vec<u8>>
 where
     H: OaepHash,
 {
@@ -305,7 +301,7 @@ impl OaepHash for Sha256 {
     }
 
     fn hash(input: &[u8]) -> Vec<u8> {
-        use sha2::{Sha256 as Sha256Hash, Digest};
+        use sha2::{Digest, Sha256 as Sha256Hash};
         let mut hasher = Sha256Hash::new();
         hasher.update(input);
         hasher.finalize().to_vec()
@@ -323,7 +319,7 @@ impl OaepHash for Sha384 {
     }
 
     fn hash(input: &[u8]) -> Vec<u8> {
-        use sha2::{Sha384 as Sha384Hash, Digest};
+        use sha2::{Digest, Sha384 as Sha384Hash};
         let mut hasher = Sha384Hash::new();
         hasher.update(input);
         hasher.finalize().to_vec()
@@ -341,7 +337,7 @@ impl OaepHash for Sha512 {
     }
 
     fn hash(input: &[u8]) -> Vec<u8> {
-        use sha2::{Sha512 as Sha512Hash, Digest};
+        use sha2::{Digest, Sha512 as Sha512Hash};
         let mut hasher = Sha512Hash::new();
         hasher.update(input);
         hasher.finalize().to_vec()
@@ -368,7 +364,9 @@ mod tests {
 
             // Create pseudo-random pattern based on input
             for (i, byte) in result.iter_mut().enumerate() {
-                *byte = xor_val.wrapping_add(i as u8).wrapping_mul(input.len() as u8);
+                *byte = xor_val
+                    .wrapping_add(i as u8)
+                    .wrapping_mul(input.len() as u8);
             }
             result
         }

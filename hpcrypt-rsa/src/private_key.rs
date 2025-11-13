@@ -1,11 +1,12 @@
 //! RSA private key operations
 
-use alloc::vec::Vec;
-use num_bigint::BigUint;
-use crate::error::{RsaError, Result};
+use crate::error::{Result, RsaError};
+use crate::keygen::{generate_keypair, generate_keypair_default};
 use crate::primitives::{i2osp, os2ip};
 use crate::public_key::RsaPublicKey;
-use crate::keygen::{generate_keypair, generate_keypair_default};
+use alloc::vec::Vec;
+use num_bigint::BigUint;
+use num_traits::One;
 
 /// RSA private key
 ///
@@ -87,6 +88,55 @@ impl RsaPrivateKey {
             d,
             p,
             q,
+            dp,
+            dq,
+            qinv,
+        })
+    }
+
+    /// Create an RSA private key from components
+    ///
+    /// # Arguments
+    ///
+    /// * `n` - Modulus (product of primes)
+    /// * `e` - Public exponent
+    /// * `d` - Private exponent
+    /// * `primes` - Prime factors (must be at least [p, q])
+    ///
+    /// # Security Warning
+    ///
+    /// This method does NOT validate that the key components are correct.
+    /// Use only with trusted key material (e.g., from Wycheproof test vectors).
+    /// For production use, always use `generate()` or `generate_with_exponent()`.
+    pub fn from_components(
+        n: BigUint,
+        e: BigUint,
+        d: BigUint,
+        primes: Vec<BigUint>,
+    ) -> Result<Self> {
+        if primes.len() < 2 {
+            return Err(RsaError::InvalidKeySize);
+        }
+
+        let p = &primes[0];
+        let q = &primes[1];
+
+        // Compute CRT parameters
+        let dp = &d % &(p - BigUint::one());
+        let dq = &d % &(q - BigUint::one());
+
+        // Compute qinv = q^-1 mod p
+        let qinv = q
+            .modinv(p)
+            .ok_or(RsaError::InvalidPublicExponent)?;
+
+        let public_key = RsaPublicKey::new(n, e)?;
+
+        Ok(Self {
+            public_key,
+            d,
+            p: p.clone(),
+            q: q.clone(),
             dp,
             dq,
             qinv,

@@ -95,14 +95,14 @@ mod keygen;
 mod montgomery;
 pub mod oaep;
 pub mod pkcs1v15;
-pub mod pss;
 mod primitives;
-mod public_key;
 mod private_key;
+pub mod pss;
+mod public_key;
 
-pub use error::{RsaError, Result};
-pub use public_key::RsaPublicKey;
+pub use error::{Result, RsaError};
 pub use private_key::RsaPrivateKey;
+pub use public_key::RsaPublicKey;
 
 /// Minimum supported RSA key size in bits
 ///

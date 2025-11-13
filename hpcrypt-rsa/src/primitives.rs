@@ -2,12 +2,12 @@
 //!
 //! Low-level operations for RSA: modular exponentiation, conversions, etc.
 
+use crate::error::{Result, RsaError};
+use crate::montgomery::MontgomeryContext;
 use alloc::vec;
 use alloc::vec::Vec;
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
-use crate::error::{RsaError, Result};
-use crate::montgomery::MontgomeryContext;
 
 /// RSA encryption primitive (RSAEP)
 ///
@@ -253,8 +253,14 @@ mod tests {
 
     #[test]
     fn test_gcd() {
-        assert_eq!(gcd(&BigUint::from(12u32), &BigUint::from(18u32)), BigUint::from(6u32));
-        assert_eq!(gcd(&BigUint::from(17u32), &BigUint::from(19u32)), BigUint::one());
+        assert_eq!(
+            gcd(&BigUint::from(12u32), &BigUint::from(18u32)),
+            BigUint::from(6u32)
+        );
+        assert_eq!(
+            gcd(&BigUint::from(17u32), &BigUint::from(19u32)),
+            BigUint::one()
+        );
     }
 
     #[test]

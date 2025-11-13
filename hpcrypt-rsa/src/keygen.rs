@@ -2,11 +2,11 @@
 //!
 //! Implements secure RSA key pair generation according to FIPS 186-4 and PKCS#1 v2.2
 
+use crate::error::{Result, RsaError};
+use crate::primitives::{gcd, generate_prime, mod_inverse};
+use crate::{DEFAULT_PUBLIC_EXPONENT, MAX_KEY_SIZE, MIN_KEY_SIZE};
 use num_bigint::BigUint;
 use num_traits::One;
-use crate::error::{RsaError, Result};
-use crate::primitives::{generate_prime, mod_inverse, gcd};
-use crate::{MIN_KEY_SIZE, MAX_KEY_SIZE, DEFAULT_PUBLIC_EXPONENT};
 
 /// Generate an RSA key pair
 ///
@@ -35,7 +35,16 @@ use crate::{MIN_KEY_SIZE, MAX_KEY_SIZE, DEFAULT_PUBLIC_EXPONENT};
 pub fn generate_keypair(
     bits: usize,
     public_exponent: Option<u64>,
-) -> Result<(BigUint, BigUint, BigUint, BigUint, BigUint, BigUint, BigUint, BigUint)> {
+) -> Result<(
+    BigUint,
+    BigUint,
+    BigUint,
+    BigUint,
+    BigUint,
+    BigUint,
+    BigUint,
+    BigUint,
+)> {
     // Validate key size
     if bits < MIN_KEY_SIZE {
         return Err(RsaError::InvalidKeySize);
@@ -132,7 +141,18 @@ pub fn generate_keypair(
 }
 
 /// Generate an RSA key pair with default public exponent (65537)
-pub fn generate_keypair_default(bits: usize) -> Result<(BigUint, BigUint, BigUint, BigUint, BigUint, BigUint, BigUint, BigUint)> {
+pub fn generate_keypair_default(
+    bits: usize,
+) -> Result<(
+    BigUint,
+    BigUint,
+    BigUint,
+    BigUint,
+    BigUint,
+    BigUint,
+    BigUint,
+    BigUint,
+)> {
     generate_keypair(bits, None)
 }
 
@@ -196,10 +216,16 @@ mod tests {
     #[test]
     fn test_invalid_key_size() {
         // Too small
-        assert_eq!(generate_keypair_default(1024), Err(RsaError::InvalidKeySize));
+        assert_eq!(
+            generate_keypair_default(1024),
+            Err(RsaError::InvalidKeySize)
+        );
 
         // Odd number
-        assert_eq!(generate_keypair_default(2049), Err(RsaError::InvalidKeySize));
+        assert_eq!(
+            generate_keypair_default(2049),
+            Err(RsaError::InvalidKeySize)
+        );
     }
 
     #[test]

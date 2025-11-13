@@ -67,7 +67,7 @@ impl MontgomeryContext {
         // Choose k = bit length of N, rounded up to nearest multiple of 64
         // This ensures R = 2^k is larger than N
         let n_bits = n.bits() as usize;
-        let k = ((n_bits + 63) / 64) * 64;  // Round up to 64-bit boundary
+        let k = ((n_bits + 63) / 64) * 64; // Round up to 64-bit boundary
 
         // Compute R = 2^k (done implicitly via bit operations)
         // Compute R mod N
@@ -93,8 +93,8 @@ impl MontgomeryContext {
     ///
     /// Uses the extended Euclidean algorithm to find the modular inverse.
     fn compute_n_prime(n: &BigUint, k: usize) -> BigUint {
-        use num_integer::Integer;
         use num_bigint::BigInt;
+        use num_integer::Integer;
 
         // We need to find n_prime such that: n * n_prime ≡ -1 (mod R)
         // Equivalently: n * n_prime + R * k = -1 for some k
@@ -213,7 +213,7 @@ impl MontgomeryContext {
 
         // Binary exponentiation in Montgomery domain
         // Start with 1 in Montgomery domain (which is R mod N)
-        let mut result = self.to_montgomery(&BigUint::one());  // 1 * R mod N
+        let mut result = self.to_montgomery(&BigUint::one()); // 1 * R mod N
 
         // Process exponent bits from MSB to LSB
         let exp_bits = exp.bits();
@@ -301,7 +301,7 @@ mod tests {
         // Test with larger numbers (simulating RSA)
         let p = BigUint::from(61u32);
         let q = BigUint::from(53u32);
-        let n = &p * &q;  // 3233
+        let n = &p * &q; // 3233
 
         let ctx = MontgomeryContext::new(&n);
 
@@ -319,13 +319,13 @@ mod tests {
         // Simple RSA encryption/decryption test
         let p = BigUint::from(61u32);
         let q = BigUint::from(53u32);
-        let n = &p * &q;  // 3233
+        let n = &p * &q; // 3233
         let e = BigUint::from(17u32);
 
         // Compute d (private exponent) using extended Euclidean algorithm
-        use num_integer::Integer;
         use num_bigint::BigInt;
-        let phi = (p - 1u32) * (q - 1u32);  // 3120
+        use num_integer::Integer;
+        let phi = (p - 1u32) * (q - 1u32); // 3120
         let phi_int = BigInt::from(phi);
         let e_int = BigInt::from(e.clone());
         let ext_gcd = e_int.extended_gcd(&phi_int);
