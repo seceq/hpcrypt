@@ -68,11 +68,8 @@
 #[cfg(feature = "std")]
 extern crate std;
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
-
 mod error;
-pub use error::{RngError, Result};
+pub use error::{Result, RngError};
 
 #[cfg(feature = "os-rng")]
 mod os_rng;

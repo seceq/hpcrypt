@@ -37,7 +37,10 @@ impl fmt::Display for RngError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             RngError::OsRngFailed => {
-                write!(f, "Operating system RNG failed - insufficient entropy or unavailable")
+                write!(
+                    f,
+                    "Operating system RNG failed - insufficient entropy or unavailable"
+                )
             }
             RngError::NotSeeded => {
                 write!(f, "Deterministic RNG not seeded - call seed() first")
