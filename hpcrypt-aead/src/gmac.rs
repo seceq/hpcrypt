@@ -104,7 +104,7 @@ use alloc::vec::Vec;
 use subtle::ConstantTimeEq;
 
 use crate::aes::{Aes, AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, BLOCK_SIZE};
-use crate::ghash::GHash;
+use crate::ghash_fast::GHashFast;
 
 /// GMAC tag size (128 bits)
 pub const TAG_SIZE: usize = 16;
@@ -118,7 +118,7 @@ pub const NONCE_SIZE: usize = 12;
 /// authentication component.
 #[derive(Debug)]
 pub struct Gmac128 {
-    ghash: GHash,
+    ghash: GHashFast,
     j0: [u8; BLOCK_SIZE],
     data_len: usize,
     buffer: [u8; BLOCK_SIZE],
@@ -152,7 +152,8 @@ impl Gmac128 {
         // If we have buffered data, try to fill the buffer first
         if self.buffer_len > 0 {
             let to_copy = (BLOCK_SIZE - self.buffer_len).min(data.len());
-            self.buffer[self.buffer_len..self.buffer_len + to_copy].copy_from_slice(&data[..to_copy]);
+            self.buffer[self.buffer_len..self.buffer_len + to_copy]
+                .copy_from_slice(&data[..to_copy]);
             self.buffer_len += to_copy;
             pos += to_copy;
 
@@ -221,7 +222,11 @@ impl Gmac128 {
     /// # Returns
     ///
     /// 128-bit authentication tag
-    pub fn mac(key: &[u8; AES128_KEY_SIZE], nonce: &[u8; NONCE_SIZE], data: &[u8]) -> [u8; TAG_SIZE] {
+    pub fn mac(
+        key: &[u8; AES128_KEY_SIZE],
+        nonce: &[u8; NONCE_SIZE],
+        data: &[u8],
+    ) -> [u8; TAG_SIZE] {
         let cipher = Aes::new_128(key);
         gmac_internal(&cipher, nonce, data)
     }
@@ -257,7 +262,7 @@ impl Gmac128 {
         let h = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
 
         // Create GHASH instance
-        let ghash = GHash::new(&h);
+        let ghash = GHashFast::new_default(&h);
 
         // Derive J0 = AES(K, nonce || 0x00000001)
         let mut counter_block = [0u8; BLOCK_SIZE];
@@ -278,7 +283,7 @@ impl Gmac128 {
 /// GMAC-192 - Message Authentication Code using AES-192
 #[derive(Debug)]
 pub struct Gmac192 {
-    ghash: GHash,
+    ghash: GHashFast,
     j0: [u8; BLOCK_SIZE],
     data_len: usize,
     buffer: [u8; BLOCK_SIZE],
@@ -301,7 +306,8 @@ impl Gmac192 {
         // If we have buffered data, try to fill the buffer first
         if self.buffer_len > 0 {
             let to_copy = (BLOCK_SIZE - self.buffer_len).min(data.len());
-            self.buffer[self.buffer_len..self.buffer_len + to_copy].copy_from_slice(&data[..to_copy]);
+            self.buffer[self.buffer_len..self.buffer_len + to_copy]
+                .copy_from_slice(&data[..to_copy]);
             self.buffer_len += to_copy;
             pos += to_copy;
 
@@ -353,7 +359,11 @@ impl Gmac192 {
     }
 
     /// Compute GMAC in one shot
-    pub fn mac(key: &[u8; AES192_KEY_SIZE], nonce: &[u8; NONCE_SIZE], data: &[u8]) -> [u8; TAG_SIZE] {
+    pub fn mac(
+        key: &[u8; AES192_KEY_SIZE],
+        nonce: &[u8; NONCE_SIZE],
+        data: &[u8],
+    ) -> [u8; TAG_SIZE] {
         let cipher = Aes::new_192(key);
         gmac_internal(&cipher, nonce, data)
     }
@@ -371,7 +381,7 @@ impl Gmac192 {
 
     fn new_internal(cipher: &Aes, nonce: &[u8; NONCE_SIZE]) -> Self {
         let h = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
-        let ghash = GHash::new(&h);
+        let ghash = GHashFast::new_default(&h);
 
         let mut counter_block = [0u8; BLOCK_SIZE];
         counter_block[..NONCE_SIZE].copy_from_slice(nonce);
@@ -391,7 +401,7 @@ impl Gmac192 {
 /// GMAC-256 - Message Authentication Code using AES-256
 #[derive(Debug)]
 pub struct Gmac256 {
-    ghash: GHash,
+    ghash: GHashFast,
     j0: [u8; BLOCK_SIZE],
     data_len: usize,
     buffer: [u8; BLOCK_SIZE],
@@ -414,7 +424,8 @@ impl Gmac256 {
         // If we have buffered data, try to fill the buffer first
         if self.buffer_len > 0 {
             let to_copy = (BLOCK_SIZE - self.buffer_len).min(data.len());
-            self.buffer[self.buffer_len..self.buffer_len + to_copy].copy_from_slice(&data[..to_copy]);
+            self.buffer[self.buffer_len..self.buffer_len + to_copy]
+                .copy_from_slice(&data[..to_copy]);
             self.buffer_len += to_copy;
             pos += to_copy;
 
@@ -466,7 +477,11 @@ impl Gmac256 {
     }
 
     /// Compute GMAC in one shot
-    pub fn mac(key: &[u8; AES256_KEY_SIZE], nonce: &[u8; NONCE_SIZE], data: &[u8]) -> [u8; TAG_SIZE] {
+    pub fn mac(
+        key: &[u8; AES256_KEY_SIZE],
+        nonce: &[u8; NONCE_SIZE],
+        data: &[u8],
+    ) -> [u8; TAG_SIZE] {
         let cipher = Aes::new_256(key);
         gmac_internal(&cipher, nonce, data)
     }
@@ -484,7 +499,7 @@ impl Gmac256 {
 
     fn new_internal(cipher: &Aes, nonce: &[u8; NONCE_SIZE]) -> Self {
         let h = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
-        let ghash = GHash::new(&h);
+        let ghash = GHashFast::new_default(&h);
 
         let mut counter_block = [0u8; BLOCK_SIZE];
         counter_block[..NONCE_SIZE].copy_from_slice(nonce);
@@ -510,7 +525,7 @@ fn gmac_internal(cipher: &Aes, nonce: &[u8; NONCE_SIZE], data: &[u8]) -> [u8; TA
     let h = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
 
     // Create GHASH instance
-    let mut ghash = GHash::new(&h);
+    let mut ghash = GHashFast::new_default(&h);
 
     // Process data (treated as AAD in GCM terminology)
     for chunk in data.chunks(BLOCK_SIZE) {
@@ -545,17 +560,29 @@ fn gmac_internal(cipher: &Aes, nonce: &[u8; NONCE_SIZE], data: &[u8]) -> [u8; TA
 }
 
 /// Convenience function for GMAC-128
-pub fn gmac128(key: &[u8; AES128_KEY_SIZE], nonce: &[u8; NONCE_SIZE], data: &[u8]) -> [u8; TAG_SIZE] {
+pub fn gmac128(
+    key: &[u8; AES128_KEY_SIZE],
+    nonce: &[u8; NONCE_SIZE],
+    data: &[u8],
+) -> [u8; TAG_SIZE] {
     Gmac128::mac(key, nonce, data)
 }
 
 /// Convenience function for GMAC-192
-pub fn gmac192(key: &[u8; AES192_KEY_SIZE], nonce: &[u8; NONCE_SIZE], data: &[u8]) -> [u8; TAG_SIZE] {
+pub fn gmac192(
+    key: &[u8; AES192_KEY_SIZE],
+    nonce: &[u8; NONCE_SIZE],
+    data: &[u8],
+) -> [u8; TAG_SIZE] {
     Gmac192::mac(key, nonce, data)
 }
 
 /// Convenience function for GMAC-256
-pub fn gmac256(key: &[u8; AES256_KEY_SIZE], nonce: &[u8; NONCE_SIZE], data: &[u8]) -> [u8; TAG_SIZE] {
+pub fn gmac256(
+    key: &[u8; AES256_KEY_SIZE],
+    nonce: &[u8; NONCE_SIZE],
+    data: &[u8],
+) -> [u8; TAG_SIZE] {
     Gmac256::mac(key, nonce, data)
 }
 
