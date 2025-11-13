@@ -175,7 +175,8 @@ impl XChaCha20Poly1305 {
         xchacha.encrypt(&mut output[..plaintext.len()]);
 
         // Compute Poly1305 MAC
-        let tag = ChaCha20Poly1305::compute_mac(&poly_key, associated_data, &output[..plaintext.len()]);
+        let tag =
+            ChaCha20Poly1305::compute_mac(&poly_key, associated_data, &output[..plaintext.len()]);
         output[plaintext.len()..].copy_from_slice(&tag);
 
         poly_key.zeroize();
