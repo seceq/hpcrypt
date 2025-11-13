@@ -10,8 +10,6 @@ use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 // Common field element constants used in point arithmetic
 const FE_TWO: FieldElement = FieldElement::from_u64(2);
 const FE_THREE: FieldElement = FieldElement::from_u64(3);
-const FE_FOUR: FieldElement = FieldElement::from_u64(4);
-const FE_EIGHT: FieldElement = FieldElement::from_u64(8);
 
 // Montgomery-form constants for PointMontgomery operations
 // These are computed lazily during runtime (to_montgomery() is not const)
@@ -251,32 +249,36 @@ impl PointMontgomery {
         // Note: montgomery_mul keeps result in Montgomery form
         let xy2 = self.x.montgomery_mul(&y_squared);
         // Multiply by 4 using doubling (faster than multiplication for small constants)
-        let s = xy2.add(&xy2).add(&xy2).add(&xy2);  // 4 * xy2
+        let s = xy2.add(&xy2).add(&xy2).add(&xy2); // 4 * xy2
 
         // M = 3·(X₁ + Z₁²)·(X₁ - Z₁²)  [a=-3 optimization]
-        let z_squared = self.z.montgomery_square();  // Z²
-        let x_plus_z2 = self.x.add(&z_squared);      // X + Z² (addition works in Montgomery)
-        let x_minus_z2 = self.x.sub(&z_squared);     // X - Z² (subtraction works in Montgomery)
+        let z_squared = self.z.montgomery_square(); // Z²
+        let x_plus_z2 = self.x.add(&z_squared); // X + Z² (addition works in Montgomery)
+        let x_minus_z2 = self.x.sub(&z_squared); // X - Z² (subtraction works in Montgomery)
         let prod = x_plus_z2.montgomery_mul(&x_minus_z2);
         // Multiply by 3 using addition (faster than multiplication)
-        let m = prod.add(&prod).add(&prod);  // 3 * prod
+        let m = prod.add(&prod).add(&prod); // 3 * prod
 
         // X₃ = M² - 2·S
         let m_squared = m.montgomery_square();
-        let two_s = s.add(&s);  // 2 * s (using addition)
+        let two_s = s.add(&s); // 2 * s (using addition)
         let x3 = m_squared.sub(&two_s);
 
         // Y₃ = M·(S - X₃) - 8·Y⁴
-        let four_y4 = y_fourth.add(&y_fourth).add(&y_fourth).add(&y_fourth);  // 4 * y⁴
-        let eight_y4 = four_y4.add(&four_y4);  // 8 * y⁴
+        let four_y4 = y_fourth.add(&y_fourth).add(&y_fourth).add(&y_fourth); // 4 * y⁴
+        let eight_y4 = four_y4.add(&four_y4); // 8 * y⁴
         let s_minus_x3 = s.sub(&x3);
         let y3 = m.montgomery_mul(&s_minus_x3).sub(&eight_y4);
 
         // Z₃ = 2·Y₁·Z₁
         let yz = self.y.montgomery_mul(&self.z);
-        let z3 = yz.add(&yz);  // 2 * yz
+        let z3 = yz.add(&yz); // 2 * yz
 
-        let result = Self { x: x3, y: y3, z: z3 };
+        let result = Self {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
 
         // Constant-time select: return infinity if ret_inf is true, else result
         Self::conditional_select(&result, &Self::infinity(), ret_inf)
@@ -369,11 +371,11 @@ impl PointMontgomery {
         let points_inverse = h_zero & (!r_zero);
 
         // Compute general addition (even if we might not use it)
-        let h_squared = h.montgomery_square();            // H²
-        let h_cubed = h_squared.montgomery_mul(&h);       // H³
+        let h_squared = h.montgomery_square(); // H²
+        let h_cubed = h_squared.montgomery_mul(&h); // H³
 
-        let u1_h2 = u1.montgomery_mul(&h_squared);        // U₁·H²
-        let two_u1_h2 = u1_h2.add(&u1_h2);                // 2·U₁·H²
+        let u1_h2 = u1.montgomery_mul(&h_squared); // U₁·H²
+        let two_u1_h2 = u1_h2.add(&u1_h2); // 2·U₁·H²
 
         // X₃ = R² - H³ - 2·U₁·H²
         let r_squared = r.montgomery_square();
@@ -387,7 +389,11 @@ impl PointMontgomery {
         // Z₃ = H·Z₁·Z₂
         let z3 = h.montgomery_mul(&self.z).montgomery_mul(&other.z);
 
-        let add_result = Self { x: x3, y: y3, z: z3 };
+        let add_result = Self {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
 
         // Select the appropriate result based on special cases
 
@@ -503,7 +509,7 @@ impl PointMontgomery {
         let h_cubed = h_squared.montgomery_mul(&h);
 
         let u1_h2 = u1.montgomery_mul(&h_squared);
-        let two_u1_h2 = u1_h2.add(&u1_h2);  // 2·U₁·H²
+        let two_u1_h2 = u1_h2.add(&u1_h2); // 2·U₁·H²
 
         // X₃ = R² - H³ - 2·U₁·H²
         let r_squared = r.montgomery_square();
@@ -517,7 +523,11 @@ impl PointMontgomery {
         // Z₃ = H·Z₁ (simplified because Z₂ = 1)
         let z3 = h.montgomery_mul(&self.z);
 
-        let add_result = Self { x: x3, y: y3, z: z3 };
+        let add_result = Self {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
 
         // Select the appropriate result based on special cases
 
@@ -724,14 +734,14 @@ impl Point {
         }
 
         // Compute intermediate values
-        let z2 = self.z.square();       // Z²
-        let z4 = z2.square();           // Z⁴
-        let z6 = z4.mul(&z2);           // Z⁶
+        let z2 = self.z.square(); // Z²
+        let z4 = z2.square(); // Z⁴
+        let z6 = z4.mul(&z2); // Z⁶
 
-        let y2 = self.y.square();       // Y²
+        let y2 = self.y.square(); // Y²
 
-        let x2 = self.x.square();       // X²
-        let x3 = x2.mul(&self.x);       // X³
+        let x2 = self.x.square(); // X²
+        let x3 = x2.mul(&self.x); // X³
 
         // For P-256: a = -3
         // aXZ⁴ = -3XZ⁴
@@ -837,7 +847,7 @@ impl Point {
         use crate::p256::field::FieldElement;
         Self {
             x: self.x,
-            y: FieldElement::zero() - self.y,  // Negate y-coordinate
+            y: FieldElement::zero() - self.y, // Negate y-coordinate
             z: self.z,
         }
     }
@@ -947,7 +957,11 @@ impl Point {
         // Z₃ = H·Z₁ (simplified because Z₂ = 1)
         let z3 = h.mul(&self.z);
 
-        let add_result = Point { x: x3, y: y3, z: z3 };
+        let add_result = Point {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
 
         // Select the appropriate result based on special cases
 
@@ -1058,8 +1072,10 @@ impl Point {
 
         // Process each bit from most significant to least significant
         // Scalar is in big-endian format: byte[0] is MSB, byte[31] is LSB
-        for byte in scalar.iter() {  // Process from byte[0] to byte[31]
-            for bit_index in (0..8).rev() {  // Process each byte's MSB first
+        for byte in scalar.iter() {
+            // Process from byte[0] to byte[31]
+            for bit_index in (0..8).rev() {
+                // Process each byte's MSB first
                 let bit = Choice::from(((byte >> bit_index) & 1) as u8);
 
                 // Montgomery ladder step (using incomplete reduction for ~1% speedup)
@@ -1084,7 +1100,7 @@ impl Point {
     /// This is significantly faster than computing k1*P and k2*Q separately
     /// and then adding them **when both points are arbitrary**.
     ///
-    /// # ⚠️ Important: DO NOT Use for P-256 ECDSA Verification!
+    /// #  Important: DO NOT Use for P-256 ECDSA Verification!
     ///
     /// **For ECDSA verification (u1*G + u2*Q), this function is SLOWER than the optimal approach!**
     ///
@@ -1098,7 +1114,7 @@ impl Point {
     ///
     /// **Using this function** (~149 µs - **11.6% SLOWER**):
     /// ```ignore
-    /// let result = Point::double_scalar_mul(&u1, &g, &u2, &q);  // ❌ Slower!
+    /// let result = Point::double_scalar_mul(&u1, &g, &u2, &q);  //  Slower!
     /// // Problem: Can't use precomputed tables, forces wNAF for both points
     /// ```
     ///
@@ -1107,13 +1123,13 @@ impl Point {
     /// simultaneously using wNAF for both points.
     ///
     /// **When to use this function:**
-    /// - ✅ **Two arbitrary points** (neither is the generator): ~30-40% speedup
-    /// - ✅ **Curves without fast generator tables** (like Ed448)
-    /// - ✅ **Constant-time operations** (see `double_scalar_mul_constant_time`)
+    /// -  **Two arbitrary points** (neither is the generator): ~30-40% speedup
+    /// -  **Curves without fast generator tables** (like Ed448)
+    /// -  **Constant-time operations** (see `double_scalar_mul_constant_time`)
     ///
     /// **When NOT to use:**
-    /// - ❌ **P-256 ECDSA verification** (one point is generator)
-    /// - ❌ **Any operation involving the generator point** (use `scalar_mul_generator` instead)
+    /// -  **P-256 ECDSA verification** (one point is generator)
+    /// -  **Any operation involving the generator point** (use `scalar_mul_generator` instead)
     ///
     /// See: [`docs/P256_SHAMIR_ANALYSIS_COMPLETE.md`](../../docs/P256_SHAMIR_ANALYSIS_COMPLETE.md)
     /// for detailed performance analysis.
@@ -1163,10 +1179,10 @@ impl Point {
         // 2: 10 = k1 only -> P
         // 3: 11 = both -> P+Q
         let table = [
-            Point::infinity(),  // 00: neither
-            *q,                  // 01: k2 only
-            *p,                  // 10: k1 only
-            p.add(q),            // 11: both
+            Point::infinity(), // 00: neither
+            *q,                // 01: k2 only
+            *p,                // 10: k1 only
+            p.add(q),          // 11: both
         ];
 
         let mut result = Point::infinity();
@@ -1210,15 +1226,20 @@ impl Point {
     ///
     /// Slower than the variable-time version due to constant-time operations,
     /// but still faster than two separate constant-time scalar multiplications.
-    pub fn double_scalar_mul_constant_time(k1: &[u8; 32], p: &Point, k2: &[u8; 32], q: &Point) -> Point {
+    pub fn double_scalar_mul_constant_time(
+        k1: &[u8; 32],
+        p: &Point,
+        k2: &[u8; 32],
+        q: &Point,
+    ) -> Point {
         use crate::ct_utils::ConditionallySelectable;
 
         // Precompute lookup table
         let table = [
-            Point::infinity(),  // 00: neither
-            *q,                  // 01: k2 only
-            *p,                  // 10: k1 only
-            p.add(q),            // 11: both
+            Point::infinity(), // 00: neither
+            *q,                // 01: k2 only
+            *p,                // 10: k1 only
+            p.add(q),          // 11: both
         ];
 
         let mut result = Point::infinity();
@@ -1301,9 +1322,9 @@ impl Eq for Point {}
 #[cfg(test)]
 mod tests {
     extern crate alloc;
-    use alloc::vec;
     use super::*;
     use crate::p256::constants::{P256_GX, P256_GY};
+    use alloc::vec;
 
     #[test]
     fn test_infinity_is_infinity() {
@@ -1692,7 +1713,7 @@ mod tests {
         // 1 * G = G
         let g = Point::generator();
         let mut one = [0u8; 32];
-        one[31] = 1;  // Big-endian: LSB at index 31
+        one[31] = 1; // Big-endian: LSB at index 31
 
         let result = g.scalar_mul(&one);
 
@@ -1704,7 +1725,7 @@ mod tests {
         // 2 * G = G + G = double(G)
         let g = Point::generator();
         let mut two = [0u8; 32];
-        two[31] = 2;  // Big-endian: LSB at index 31
+        two[31] = 2; // Big-endian: LSB at index 31
 
         let result = g.scalar_mul(&two);
         let expected = g.double();
@@ -1717,7 +1738,7 @@ mod tests {
         // 3 * G = 2*G + G
         let g = Point::generator();
         let mut three = [0u8; 32];
-        three[31] = 3;  // Big-endian: LSB at index 31
+        three[31] = 3; // Big-endian: LSB at index 31
 
         let result = g.scalar_mul(&three);
         let expected = g.double().add(&g);
@@ -1732,30 +1753,37 @@ mod tests {
 
         // Test with several different scalars
         let test_scalars = [
-            [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // 1
-            [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // 2
-            [0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // 255
-            [0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE,
-             0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
-             0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
-             0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF], // Random
+            [
+                0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+            ], // 1
+            [
+                0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+            ], // 2
+            [
+                0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+            ], // 255
+            [
+                0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE, 0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC,
+                0xDE, 0xF0, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10, 0x01, 0x23, 0x45, 0x67,
+                0x89, 0xAB, 0xCD, 0xEF,
+            ], // Random
         ];
 
         for scalar in &test_scalars {
             let var_time_result = g.scalar_mul(scalar);
             let const_time_result = g.scalar_mul_constant_time(scalar);
 
-            assert_eq!(var_time_result, const_time_result,
-                       "Constant-time and variable-time results should match for scalar {:?}", scalar);
+            assert_eq!(
+                var_time_result, const_time_result,
+                "Constant-time and variable-time results should match for scalar {:?}",
+                scalar
+            );
         }
     }
 
@@ -1784,17 +1812,19 @@ mod tests {
         // Test that scalar_mul and scalar_mul_constant_time give the same result
         let g = Point::generator();
         let scalar = [
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
-            0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
-            0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
+            0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C,
+            0x1D, 0x1E, 0x1F, 0x20,
         ];
 
         let result1 = g.scalar_mul(&scalar);
         let result2 = g.scalar_mul_constant_time(&scalar);
 
         // They should produce the same result
-        assert_eq!(result1, result2, "scalar_mul and scalar_mul_constant_time should give same result");
+        assert_eq!(
+            result1, result2,
+            "scalar_mul and scalar_mul_constant_time should give same result"
+        );
     }
 
     #[test]
@@ -1810,16 +1840,22 @@ mod tests {
         // Test 2: Point with non-trivial Z
         let mut bytes_5 = [0u8; 32];
         bytes_5[31] = 5;
-        let p = g.scalar_mul(&bytes_5);  // P = 5*G (has Z != 1)
+        let p = g.scalar_mul(&bytes_5); // P = 5*G (has Z != 1)
 
-        let doubled = p.double();  // 2*P using double()
-        let added = p.add(&p);      // P + P using add()
+        let doubled = p.double(); // 2*P using double()
+        let added = p.add(&p); // P + P using add()
 
         let doubled_affine = doubled.to_affine().expect("doubled not infinity");
         let added_affine = added.to_affine().expect("added not infinity");
 
-        assert_eq!(doubled_affine.x, added_affine.x, "P.double() and P.add(P) have different x!");
-        assert_eq!(doubled_affine.y, added_affine.y, "P.double() and P.add(P) have different y!");
+        assert_eq!(
+            doubled_affine.x, added_affine.x,
+            "P.double() and P.add(P) have different x!"
+        );
+        assert_eq!(
+            doubled_affine.y, added_affine.y,
+            "P.double() and P.add(P) have different y!"
+        );
     }
 
     #[test]
@@ -1828,11 +1864,11 @@ mod tests {
         let g = Point::generator();
 
         let mut bytes_5 = [0u8; 32];
-        bytes_5[31] = 5;  // LSB is at index 31 for big-endian (value is just 5)
+        bytes_5[31] = 5; // LSB is at index 31 for big-endian (value is just 5)
         let p = g.scalar_mul(&bytes_5);
 
         let mut bytes_1 = [0u8; 32];
-        bytes_1[31] = 1;  // LSB is at index 31 (value is just 1)
+        bytes_1[31] = 1; // LSB is at index 31 (value is just 1)
         let one_p = p.scalar_mul(&bytes_1);
 
         let p_affine = p.to_affine().expect("p not infinity");
@@ -1869,7 +1905,10 @@ mod tests {
         let m3_affine = method3.to_affine().expect("method3 not infinity");
 
         // First check: does 2*P == P+P?
-        assert_eq!(m1_affine.x, m2_affine.x, "2*(5*G) scalar_mul != (5*G)+(5*G) point add");
+        assert_eq!(
+            m1_affine.x, m2_affine.x,
+            "2*(5*G) scalar_mul != (5*G)+(5*G) point add"
+        );
 
         // Second check: does 2*(5*G) == 10*G?
         assert_eq!(m1_affine.x, m3_affine.x, "2*(5*G) != 10*G");
@@ -1903,24 +1942,45 @@ mod tests {
         let mut bytes_3 = [0u8; 32];
         bytes_3[31] = 3;
         let three_g = g.scalar_mul(&bytes_3);
-        let method3 = three_g.add(&three_g).add(&three_g).add(&three_g).add(&three_g);
+        let method3 = three_g
+            .add(&three_g)
+            .add(&three_g)
+            .add(&three_g)
+            .add(&three_g);
 
         // Convert to affine for comparison
         let m1_affine = method1.to_affine().expect("method1 should not be infinity");
         let m2_affine = method2.to_affine().expect("method2 should not be infinity");
-        let m2b_affine = method2b.to_affine().expect("method2b should not be infinity");
+        let m2b_affine = method2b
+            .to_affine()
+            .expect("method2b should not be infinity");
         let m3_affine = method3.to_affine().expect("method3 should not be infinity");
 
         // Check method 1 vs method 3
-        assert_eq!(m1_affine.x, m3_affine.x, "15*G (direct) and 3*G+3*G+3*G+3*G+3*G have different x");
-        assert_eq!(m1_affine.y, m3_affine.y, "15*G (direct) and 3*G+3*G+3*G+3*G+3*G have different y");
+        assert_eq!(
+            m1_affine.x, m3_affine.x,
+            "15*G (direct) and 3*G+3*G+3*G+3*G+3*G have different x"
+        );
+        assert_eq!(
+            m1_affine.y, m3_affine.y,
+            "15*G (direct) and 3*G+3*G+3*G+3*G+3*G have different y"
+        );
 
         // Check if normalizing Z fixes the issue
-        assert_eq!(m1_affine.x, m2b_affine.x, "15*G and 3*(5*G normalized) have different x - Z normalization didn't help!");
+        assert_eq!(
+            m1_affine.x, m2b_affine.x,
+            "15*G and 3*(5*G normalized) have different x - Z normalization didn't help!"
+        );
 
         // Check method 1 vs method 2
-        assert_eq!(m1_affine.x, m2_affine.x, "15*G (direct) and 3*(5*G) have different x");
-        assert_eq!(m1_affine.y, m2_affine.y, "15*G (direct) and 3*(5*G) have different y");
+        assert_eq!(
+            m1_affine.x, m2_affine.x,
+            "15*G (direct) and 3*(5*G) have different x"
+        );
+        assert_eq!(
+            m1_affine.y, m2_affine.y,
+            "15*G (direct) and 3*(5*G) have different y"
+        );
     }
 
     #[test]
@@ -1932,7 +1992,7 @@ mod tests {
 
         // Use small values: a=3, b=5
         let mut a_bytes = [0u8; 32];
-        a_bytes[31] = 3;  // Little-endian in memory, but from_bytes expects big-endian
+        a_bytes[31] = 3; // Little-endian in memory, but from_bytes expects big-endian
 
         let mut b_bytes = [0u8; 32];
         b_bytes[31] = 5;
@@ -1955,8 +2015,14 @@ mod tests {
         let left_affine = left.to_affine().expect("left should not be infinity");
         let right_affine = right.to_affine().expect("right should not be infinity");
 
-        assert_eq!(left_affine.x, right_affine.x, "3*(5*G) and 15*G have different x coordinates");
-        assert_eq!(left_affine.y, right_affine.y, "3*(5*G) and 15*G have different y coordinates");
+        assert_eq!(
+            left_affine.x, right_affine.x,
+            "3*(5*G) and 15*G have different x coordinates"
+        );
+        assert_eq!(
+            left_affine.y, right_affine.y,
+            "3*(5*G) and 15*G have different y coordinates"
+        );
     }
 
     #[test]
@@ -1968,17 +2034,15 @@ mod tests {
         let g = Point::generator();
 
         let a_bytes = [
-            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
-            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
-            0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00,
-            0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89,
+            0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
+            0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0xAB, 0xCD, 0xEF, 0x01,
+            0x23, 0x45, 0x67, 0x89,
         ];
 
         let b_bytes = [
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-            0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
-            0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
-            0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
+            0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C,
+            0x1D, 0x1E, 0x1F, 0x20,
         ];
 
         // Compute b*G
@@ -2001,8 +2065,14 @@ mod tests {
         let left_affine = left.to_affine().expect("left should not be infinity");
         let right_affine = right.to_affine().expect("right should not be infinity");
 
-        assert_eq!(left_affine.x, right_affine.x, "a*(b*G) and (a*b)*G have different x coordinates");
-        assert_eq!(left_affine.y, right_affine.y, "a*(b*G) and (a*b)*G have different y coordinates");
+        assert_eq!(
+            left_affine.x, right_affine.x,
+            "a*(b*G) and (a*b)*G have different x coordinates"
+        );
+        assert_eq!(
+            left_affine.y, right_affine.y,
+            "a*(b*G) and (a*b)*G have different y coordinates"
+        );
     }
 
     #[test]
@@ -2012,10 +2082,10 @@ mod tests {
         let two_g = g.double();
 
         let mut k1 = [0u8; 32];
-        k1[31] = 3;  // k1 = 3
+        k1[31] = 3; // k1 = 3
 
         let mut k2 = [0u8; 32];
-        k2[31] = 5;  // k2 = 5
+        k2[31] = 5; // k2 = 5
 
         // Compute 3*G + 5*(2G) = 3*G + 10*G = 13*G
         let result_shamir = Point::double_scalar_mul(&k1, &g, &k2, &two_g);
@@ -2039,11 +2109,12 @@ mod tests {
         let k1 = [0x42; 32];
         let k2 = [0x13; 32];
 
-        let p = g.double();  // 2*G
-        let q = g.scalar_mul(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03]);  // 3*G
+        let p = g.double(); // 2*G
+        let q = g.scalar_mul(&[
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x03,
+        ]); // 3*G
 
         // Compute k1*P + k2*Q using Shamir's trick
         let result_shamir = Point::double_scalar_mul(&k1, &p, &k2, &q);
@@ -2138,25 +2209,28 @@ mod tests {
         let result_normal = g.double();
         let result_incomplete = g.double_incomplete();
 
-        assert_eq!(result_normal, result_incomplete,
-            "double_incomplete should produce same result as double");
+        assert_eq!(
+            result_normal, result_incomplete,
+            "double_incomplete should produce same result as double"
+        );
     }
 
     #[test]
     fn test_double_incomplete_random_point() {
         // Test with a random non-generator point
         let p = Point::generator().scalar_mul(&[
-            0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0,
-            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
-            0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11,
-            0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99,
+            0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
+            0x77, 0x88, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55,
+            0x66, 0x77, 0x88, 0x99,
         ]);
 
         let result_normal = p.double();
         let result_incomplete = p.double_incomplete();
 
-        assert_eq!(result_normal, result_incomplete,
-            "double_incomplete should work for arbitrary points");
+        assert_eq!(
+            result_normal, result_incomplete,
+            "double_incomplete should work for arbitrary points"
+        );
     }
 
     #[test]
@@ -2167,10 +2241,14 @@ mod tests {
         let result_normal = inf.double();
         let result_incomplete = inf.double_incomplete();
 
-        assert_eq!(result_normal, result_incomplete,
-            "double_incomplete should handle infinity correctly");
-        assert!(bool::from(result_incomplete.is_infinity()),
-            "Doubling infinity should return infinity");
+        assert_eq!(
+            result_normal, result_incomplete,
+            "double_incomplete should handle infinity correctly"
+        );
+        assert!(
+            bool::from(result_incomplete.is_infinity()),
+            "Doubling infinity should return infinity"
+        );
     }
 
     #[test]
@@ -2186,8 +2264,10 @@ mod tests {
             result_incomplete = result_incomplete.double_incomplete();
         }
 
-        assert_eq!(result_normal, result_incomplete,
-            "Repeated double_incomplete should match repeated double");
+        assert_eq!(
+            result_normal, result_incomplete,
+            "Repeated double_incomplete should match repeated double"
+        );
     }
 
     #[test]
@@ -2195,17 +2275,17 @@ mod tests {
         // Verify double_incomplete gives same result as scalar_mul by 2
         let g = Point::generator();
         let two = [
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 2,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 2,
         ];
 
         let doubled = g.double_incomplete();
         let scalar_mul_2 = g.scalar_mul(&two);
 
-        assert_eq!(doubled, scalar_mul_2,
-            "double_incomplete should equal scalar_mul by 2");
+        assert_eq!(
+            doubled, scalar_mul_2,
+            "double_incomplete should equal scalar_mul by 2"
+        );
     }
 
     // ========================================
@@ -2228,13 +2308,21 @@ mod tests {
         let two_m = two.to_montgomery();
         let four_m = two_m.add(&two_m);
         let four_from_m = four_m.from_montgomery();
-        assert_eq!(four_from_m, FieldElement::from_u64(4), "Montgomery addition failed");
+        assert_eq!(
+            four_from_m,
+            FieldElement::from_u64(4),
+            "Montgomery addition failed"
+        );
 
         // Test: (2_m * 3_m) + (2_m * 3_m) = 12
         let two_times_three_m = two_m.montgomery_mul(&three.to_montgomery());
         let double_it_m = two_times_three_m.add(&two_times_three_m);
         let result = double_it_m.from_montgomery();
-        assert_eq!(result, FieldElement::from_u64(12), "Montgomery mul + add failed");
+        assert_eq!(
+            result,
+            FieldElement::from_u64(12),
+            "Montgomery mul + add failed"
+        );
     }
 
     #[test]
@@ -2257,10 +2345,16 @@ mod tests {
     #[test]
     fn test_montgomery_infinity() {
         let inf_mont = PointMontgomery::infinity();
-        assert!(bool::from(inf_mont.is_infinity()), "Montgomery infinity check failed");
+        assert!(
+            bool::from(inf_mont.is_infinity()),
+            "Montgomery infinity check failed"
+        );
 
         let inf_standard = inf_mont.to_point();
-        assert!(bool::from(inf_standard.is_infinity()), "Converted infinity check failed");
+        assert!(
+            bool::from(inf_standard.is_infinity()),
+            "Converted infinity check failed"
+        );
     }
 
     #[test]
@@ -2279,7 +2373,10 @@ mod tests {
         let g_mont = PointMontgomery::from_point(&g);
         let y_squared_mont2 = g_mont.y.montgomery_square();
         let y_squared_from_mont2 = y_squared_mont2.from_montgomery();
-        assert_eq!(y_squared_std, y_squared_from_mont2, "Y² from PointMontgomery doesn't match!");
+        assert_eq!(
+            y_squared_std, y_squared_from_mont2,
+            "Y² from PointMontgomery doesn't match!"
+        );
 
         // Test 3: Y⁴
         let y_fourth_std = y_squared_std.square();
@@ -2294,10 +2391,10 @@ mod tests {
         let test_points = vec![
             Point::generator(),
             Point::generator().double(),
-            Point::generator().scalar_mul(&[0, 0, 0, 0, 0, 0, 0, 0,
-                                            0, 0, 0, 0, 0, 0, 0, 0,
-                                            0, 0, 0, 0, 0, 0, 0, 0,
-                                            0, 0, 0, 0, 0, 0, 0, 42]),
+            Point::generator().scalar_mul(&[
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 42,
+            ]),
         ];
 
         for point in test_points {
@@ -2309,8 +2406,10 @@ mod tests {
             let doubled_mont = mont.double();
             let doubled_from_mont = doubled_mont.to_point();
 
-            assert_eq!(doubled_standard, doubled_from_mont,
-                "Montgomery double doesn't match standard double");
+            assert_eq!(
+                doubled_standard, doubled_from_mont,
+                "Montgomery double doesn't match standard double"
+            );
         }
     }
 
@@ -2319,7 +2418,10 @@ mod tests {
         // Doubling infinity should give infinity
         let inf_mont = PointMontgomery::infinity();
         let doubled = inf_mont.double();
-        assert!(bool::from(doubled.is_infinity()), "Double of infinity should be infinity");
+        assert!(
+            bool::from(doubled.is_infinity()),
+            "Double of infinity should be infinity"
+        );
     }
 
     #[test]
@@ -2328,17 +2430,12 @@ mod tests {
         let g = Point::generator();
         let p1 = g.double();
         let p2 = g.double().double();
-        let p3 = g.scalar_mul(&[0, 0, 0, 0, 0, 0, 0, 0,
-                                0, 0, 0, 0, 0, 0, 0, 0,
-                                0, 0, 0, 0, 0, 0, 0, 0,
-                                0, 0, 0, 0, 0, 0, 0, 7]);
+        let p3 = g.scalar_mul(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 7,
+        ]);
 
-        let test_pairs = vec![
-            (p1, p2),
-            (p2, p3),
-            (g, p1),
-            (g, p3),
-        ];
+        let test_pairs = vec![(p1, p2), (p2, p3), (g, p1), (g, p3)];
 
         for (point1, point2) in test_pairs {
             // Standard addition
@@ -2350,8 +2447,10 @@ mod tests {
             let sum_mont = mont1.add(&mont2);
             let sum_from_mont = sum_mont.to_point();
 
-            assert_eq!(sum_standard, sum_from_mont,
-                "Montgomery add doesn't match standard add");
+            assert_eq!(
+                sum_standard, sum_from_mont,
+                "Montgomery add doesn't match standard add"
+            );
         }
     }
 
@@ -2371,7 +2470,10 @@ mod tests {
 
         // infinity + infinity = infinity
         let sum3 = inf_mont.add(&inf_mont);
-        assert!(bool::from(sum3.is_infinity()), "Infinity + infinity should be infinity");
+        assert!(
+            bool::from(sum3.is_infinity()),
+            "Infinity + infinity should be infinity"
+        );
     }
 
     #[test]
@@ -2384,7 +2486,10 @@ mod tests {
         let neg_g_mont = PointMontgomery::from_point(&neg_g);
 
         let sum = g_mont.add(&neg_g_mont);
-        assert!(bool::from(sum.is_infinity()), "Point + (-point) should be infinity");
+        assert!(
+            bool::from(sum.is_infinity()),
+            "Point + (-point) should be infinity"
+        );
     }
 
     #[test]
@@ -2418,8 +2523,10 @@ mod tests {
         let sum_mont = p_mont.add_affine(&q_affine);
         let sum_from_mont = sum_mont.to_point();
 
-        assert_eq!(sum_standard, sum_from_mont,
-            "Montgomery add_affine doesn't match standard add_affine");
+        assert_eq!(
+            sum_standard, sum_from_mont,
+            "Montgomery add_affine doesn't match standard add_affine"
+        );
     }
 
     #[test]
@@ -2493,10 +2600,10 @@ mod tests {
         let g = Point::generator();
         let p = g.double();
         let q = g.double().double();
-        let r = g.scalar_mul(&[0, 0, 0, 0, 0, 0, 0, 0,
-                               0, 0, 0, 0, 0, 0, 0, 0,
-                               0, 0, 0, 0, 0, 0, 0, 0,
-                               0, 0, 0, 0, 0, 0, 0, 7]);
+        let r = g.scalar_mul(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 7,
+        ]);
 
         let p_mont = PointMontgomery::from_point(&p);
         let q_mont = PointMontgomery::from_point(&q);
@@ -2529,8 +2636,11 @@ mod tests {
         let four_g_mont = two_g_mont.double();
         let six_g_mont = two_g_mont.add(&four_g_mont);
 
-        assert_eq!(six_g_standard, six_g_mont.to_point(),
-            "Double and add sequence doesn't match");
+        assert_eq!(
+            six_g_standard,
+            six_g_mont.to_point(),
+            "Double and add sequence doesn't match"
+        );
     }
 
     #[test]
@@ -2543,11 +2653,19 @@ mod tests {
 
         // Select p1 when choice is 0
         let selected_0 = PointMontgomery::conditional_select(&p1_mont, &p2_mont, Choice::from(0));
-        assert_eq!(g, selected_0.to_point(), "Should select first point when choice=0");
+        assert_eq!(
+            g,
+            selected_0.to_point(),
+            "Should select first point when choice=0"
+        );
 
         // Select p2 when choice is 1
         let selected_1 = PointMontgomery::conditional_select(&p1_mont, &p2_mont, Choice::from(1));
-        assert_eq!(g.double(), selected_1.to_point(), "Should select second point when choice=1");
+        assert_eq!(
+            g.double(),
+            selected_1.to_point(),
+            "Should select second point when choice=1"
+        );
     }
 
     #[test]
@@ -2555,7 +2673,7 @@ mod tests {
         // This test diagnoses whether from_montgomery() produces values that cause overflow
         // If this test passes, the Montgomery operations don't cause overflow in Karatsuba
         let g = Point::generator();
-        let g2 = g.double();  // Uses Montgomery internally
+        let g2 = g.double(); // Uses Montgomery internally
 
         // Try the sequence of operations that occurs in to_affine()
         // This is where overflow occurs
