@@ -15,12 +15,12 @@
 //! loop by pre-applying its inverse to all round keys. This saves operations
 //! during encryption at the cost of slightly more complex key schedule.
 
-use alloc::vec;
-use alloc::vec::Vec;
-use super::State;
 use super::bitslice::bitslice_4blocks;
 use super::sbox::sub_bytes_nots;
+use super::State;
 use super::{NR_128, NR_192, NR_256};
+use alloc::vec;
+use alloc::vec::Vec;
 
 /// AES S-box for key expansion
 const SBOX: [u8; 256] = [
@@ -44,8 +44,8 @@ const SBOX: [u8; 256] = [
 
 /// Round constants for AES key expansion
 const RCON: [u32; 10] = [
-    0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000,
-    0x20000000, 0x40000000, 0x80000000, 0x1b000000, 0x36000000,
+    0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000, 0x20000000, 0x40000000, 0x80000000,
+    0x1b000000, 0x36000000,
 ];
 
 /// Apply S-box to a 32-bit word
@@ -68,12 +68,7 @@ fn key_expansion(key: &[u8], nk: usize, nr: usize) -> Vec<u32> {
 
     // First Nk words are the key itself
     for i in 0..nk {
-        w[i] = u32::from_be_bytes([
-            key[4 * i],
-            key[4 * i + 1],
-            key[4 * i + 2],
-            key[4 * i + 3],
-        ]);
+        w[i] = u32::from_be_bytes([key[4 * i], key[4 * i + 1], key[4 * i + 2], key[4 * i + 3]]);
     }
 
     // Expand the key
@@ -97,7 +92,6 @@ fn key_expansion(key: &[u8], nk: usize, nr: usize) -> Vec<u32> {
 
     w
 }
-
 
 /// Convert standard round keys to fixsliced format with embedded ShiftRows
 ///
@@ -203,8 +197,10 @@ mod tests {
     #[test]
     fn test_key_expansion_produces_correct_round_keys() {
         // NIST test vector
-        let key = [0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
-                   0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c];
+        let key = [
+            0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf,
+            0x4f, 0x3c,
+        ];
 
         // Test the raw key_expansion function before bitslicing
         let words = key_expansion(&key, 4, NR_128);
