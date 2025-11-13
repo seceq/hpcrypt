@@ -3,7 +3,6 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 
-
 /// Convert byte to bits (LSB first)
 #[inline]
 #[allow(dead_code)]

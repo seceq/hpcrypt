@@ -10,19 +10,16 @@
 //! 3. Encrypts m under the public key to produce ciphertext c
 //! 4. Derives the shared secret from m and c using a KDF
 extern crate alloc;
-use alloc::vec::Vec;
 use alloc::vec;
+use alloc::vec::Vec;
 
-
-use crate::params::{Params, N};
-use crate::poly::{Poly, PolyVec, PolyMat};
-use crate::sampling::{sample_ntt, sample_poly_cbd, sample_ntt_x4, sample_poly_cbd_x4};
-use crate::serialize::{
-    decode_polyvec_12, encode_poly_compressed, encode_polyvec_compressed,
-};
 use crate::compress::decompress;
+use crate::ntt::{intt_after_basemul, ntt, PolyMulcache};
+use crate::params::{Params, N};
+use crate::poly::{Poly, PolyMat, PolyVec};
+use crate::sampling::{sample_ntt, sample_ntt_x4, sample_poly_cbd, sample_poly_cbd_x4};
+use crate::serialize::{decode_polyvec_12, encode_poly_compressed, encode_polyvec_compressed};
 use crate::symmetric::{g, h, j, prf, Xof};
-use crate::ntt::{ntt, intt_after_basemul, PolyMulcache};
 
 /// Encapsulation result
 pub struct EncapsResult {
@@ -43,7 +40,15 @@ pub struct EncapsResult {
 ///
 /// # Returns
 /// Ciphertext
-fn kpke_encrypt_impl<const K: usize>(ek: &[u8], m: &[u8; 32], r: &[u8; 32], eta1: usize, eta2: usize, du: u32, dv: u32) -> Vec<u8> {
+fn kpke_encrypt_impl<const K: usize>(
+    ek: &[u8],
+    m: &[u8; 32],
+    r: &[u8; 32],
+    eta1: usize,
+    eta2: usize,
+    du: u32,
+    dv: u32,
+) -> Vec<u8> {
     debug_assert_eq!(ek.len(), 384 * K + 32);
 
     // 1. Decode public key: ek = (t, ρ)
@@ -137,9 +142,7 @@ fn kpke_encrypt_impl<const K: usize>(ek: &[u8], m: &[u8; 32], r: &[u8; 32], eta1
     }
 
     // Pre-compute mulcaches for r_ntt
-    let r_caches: Vec<PolyMulcache> = r_ntt.polys.iter()
-        .map(PolyMulcache::compute)
-        .collect();
+    let r_caches: Vec<PolyMulcache> = r_ntt.polys.iter().map(PolyMulcache::compute).collect();
 
     // Compute A^T * r in NTT domain using optimized mulcache accumulation
     let atr_ntt = at_mat.mul_vec_ntt_cached(&r_ntt, &r_caches);
@@ -259,9 +262,9 @@ pub fn ml_kem_encaps<P: Params>(ek: &[u8], m: Option<&[u8; 32]>) -> EncapsResult
     debug_assert_eq!(ek.len(), P::EK_SIZE);
 
     // 1. Generate or use provided random message
-    let message = m.cloned().unwrap_or_else(|| {
-        crate::random_bytes_32().expect("Failed to generate random message")
-    });
+    let message = m
+        .cloned()
+        .unwrap_or_else(|| crate::random_bytes_32().expect("Failed to generate random message"));
 
     // 2. Compute (K̄, r) = G(m || H(ek))
     let ek_hash = h(ek);
@@ -289,8 +292,8 @@ pub fn ml_kem_encaps<P: Params>(ek: &[u8], m: Option<&[u8; 32]>) -> EncapsResult
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::params::{MlKem512, MlKem768, MlKem1024};
     use crate::keygen::ml_kem_keygen;
+    use crate::params::{MlKem1024, MlKem512, MlKem768};
 
     #[test]
     fn test_kpke_encrypt_mlkem512() {

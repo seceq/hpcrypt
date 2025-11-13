@@ -10,10 +10,7 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-use sha3::{
-    Digest, Shake128, Shake256, Sha3_256, Sha3_512,
-    digest::{ExtendableOutput, Update, XofReader},
-};
+use hpcrypt_hash::{xof_reader::XofReader, Sha3_256, Sha3_512, Shake128, Shake256};
 
 /// Extendable Output Function (XOF)
 ///
@@ -34,7 +31,7 @@ impl Xof {
     /// # Returns
     /// A new XOF instance ready to produce output
     pub fn new(seed: &[u8]) -> Self {
-        let mut state = Shake128::default();
+        let mut state = Shake128::new();
         state.update(seed);
         Self { state }
     }
@@ -50,7 +47,7 @@ impl Xof {
     }
 
     /// Create a new reader for this XOF
-    pub fn reader(&self) -> impl XofReader {
+    pub fn reader(&self) -> XofReader<168, 24> {
         self.state.clone().finalize_xof()
     }
 }
@@ -66,7 +63,7 @@ impl Xof {
 /// * `b` - Counter byte
 /// * `output` - Output buffer (length determines output size)
 pub fn prf(s: &[u8], b: u8, output: &mut [u8]) {
-    let mut hasher = Shake256::default();
+    let mut hasher = Shake256::new();
     hasher.update(s);
     hasher.update(&[b]);
     let mut reader = hasher.finalize_xof();
@@ -86,8 +83,8 @@ pub fn prf(s: &[u8], b: u8, output: &mut [u8]) {
 /// 32-byte hash output
 pub fn h(input: &[u8]) -> [u8; 32] {
     let mut hasher = Sha3_256::new();
-    Digest::update(&mut hasher, input);
-    hasher.finalize().into()
+    hasher.update(input);
+    hasher.finalize()
 }
 
 /// Hash function G
@@ -103,8 +100,8 @@ pub fn h(input: &[u8]) -> [u8; 32] {
 /// 64-byte hash output
 pub fn g(input: &[u8]) -> [u8; 64] {
     let mut hasher = Sha3_512::new();
-    Digest::update(&mut hasher, input);
-    hasher.finalize().into()
+    hasher.update(input);
+    hasher.finalize()
 }
 
 /// Key Derivation Function (KDF)
@@ -120,7 +117,7 @@ pub fn g(input: &[u8]) -> [u8; 64] {
 /// 32-byte derived key
 pub fn kdf(input: &[u8]) -> [u8; 32] {
     let mut output = [0u8; 32];
-    let mut hasher = Shake256::default();
+    let mut hasher = Shake256::new();
     hasher.update(input);
     let mut reader = hasher.finalize_xof();
     reader.read(&mut output);
@@ -166,10 +163,10 @@ pub fn xof_x4(seeds: &[[u8; 34]; 4], outputs: &mut [[u8; 168]; 4]) {
     // Even without SIMD Keccak, this provides benefits through better ILP
 
     let mut xofs = [
-        Shake128::default(),
-        Shake128::default(),
-        Shake128::default(),
-        Shake128::default(),
+        Shake128::new(),
+        Shake128::new(),
+        Shake128::new(),
+        Shake128::new(),
     ];
 
     // Absorb phase for all 4 in parallel
@@ -200,10 +197,10 @@ pub fn xof_x4(seeds: &[[u8; 34]; 4], outputs: &mut [[u8; 168]; 4]) {
 pub fn prf_x4(s: &[u8; 32], counters: [u8; 4], outputs: &mut [Vec<u8>; 4]) {
     // Process all 4 PRF operations in parallel
     let mut prfs = [
-        Shake256::default(),
-        Shake256::default(),
-        Shake256::default(),
-        Shake256::default(),
+        Shake256::new(),
+        Shake256::new(),
+        Shake256::new(),
+        Shake256::new(),
     ];
 
     // Absorb phase for all 4 in parallel
@@ -336,12 +333,7 @@ mod tests {
     #[test]
     fn test_xof_x4_matches_sequential() {
         // Test that x4 batched XOF produces same results as sequential XOF
-        let seeds = [
-            [1u8; 34],
-            [2u8; 34],
-            [3u8; 34],
-            [4u8; 34],
-        ];
+        let seeds = [[1u8; 34], [2u8; 34], [3u8; 34], [4u8; 34]];
 
         // Batched version
         let mut outputs_batch = [[0u8; 168]; 4];
@@ -356,8 +348,11 @@ mod tests {
 
         // Should produce identical results
         for i in 0..4 {
-            assert_eq!(outputs_batch[i], outputs_seq[i],
-                "Batched XOF output {} doesn't match sequential", i);
+            assert_eq!(
+                outputs_batch[i], outputs_seq[i],
+                "Batched XOF output {} doesn't match sequential",
+                i
+            );
         }
     }
 
@@ -389,8 +384,11 @@ mod tests {
 
         // Should produce identical results
         for i in 0..4 {
-            assert_eq!(outputs_batch[i], outputs_seq[i],
-                "Batched PRF output {} doesn't match sequential", i);
+            assert_eq!(
+                outputs_batch[i], outputs_seq[i],
+                "Batched PRF output {} doesn't match sequential",
+                i
+            );
         }
     }
 }

@@ -63,7 +63,7 @@ pub fn ct_eq(a: &[u8], b: &[u8]) -> u8 {
     // Better: use (1 ^ ((diff | (!diff & diff.wrapping_neg())) >> 7))
     // Simplest: ((diff as u16 - 1) >> 15) as u8 inverted
     // Best constant-time way: check if diff is zero
-    
+
     ((diff | diff.wrapping_neg()) >> 7) ^ 1
 }
 
@@ -385,7 +385,12 @@ mod tests {
             let mut b = [0x00u8; 32];
             b[pos] = 0x01;
 
-            assert_eq!(ct_eq(&a, &b), 0, "Failed to detect difference at position {}", pos);
+            assert_eq!(
+                ct_eq(&a, &b),
+                0,
+                "Failed to detect difference at position {}",
+                pos
+            );
 
             a[pos] = 0x01;
             assert_eq!(ct_eq(&a, &b), 1, "False negative at position {}", pos);

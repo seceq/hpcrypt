@@ -6,7 +6,6 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 
-
 use crate::compress::{compress, decompress};
 use crate::params::{N, Q};
 use crate::poly::{Poly, PolyVec};
@@ -65,8 +64,16 @@ pub fn decode_poly_12(bytes: &[u8; 384]) -> Poly {
         let c1 = ((bytes[3 * i + 1] as u16) >> 4) | ((bytes[3 * i + 2] as u16) << 4);
 
         // Only reduce if needed (most values are already < Q)
-        poly.coeffs[2 * i] = if c0 < Q_U16 { c0 as i16 } else { (c0 % Q_U16) as i16 };
-        poly.coeffs[2 * i + 1] = if c1 < Q_U16 { c1 as i16 } else { (c1 % Q_U16) as i16 };
+        poly.coeffs[2 * i] = if c0 < Q_U16 {
+            c0 as i16
+        } else {
+            (c0 % Q_U16) as i16
+        };
+        poly.coeffs[2 * i + 1] = if c1 < Q_U16 {
+            c1 as i16
+        } else {
+            (c1 % Q_U16) as i16
+        };
     }
 
     poly
@@ -356,11 +363,18 @@ mod tests {
         // Check approximate equality (lossy compression, accounting for wraparound)
         for i in 0..N {
             let diff = (poly.coeffs[i] - decoded.coeffs[i]).abs();
-            let diff_wrapped = ((poly.coeffs[i] - decoded.coeffs[i] + Q) % Q).min((decoded.coeffs[i] - poly.coeffs[i] + Q) % Q);
+            let diff_wrapped = ((poly.coeffs[i] - decoded.coeffs[i] + Q) % Q)
+                .min((decoded.coeffs[i] - poly.coeffs[i] + Q) % Q);
             let max_error = Q / (1 << 4) + 1;
-            assert!(diff <= max_error || diff_wrapped <= max_error,
+            assert!(
+                diff <= max_error || diff_wrapped <= max_error,
                 "i={}, orig={}, decoded={}, diff={}, diff_wrapped={}",
-                i, poly.coeffs[i], decoded.coeffs[i], diff, diff_wrapped);
+                i,
+                poly.coeffs[i],
+                decoded.coeffs[i],
+                diff,
+                diff_wrapped
+            );
         }
     }
 

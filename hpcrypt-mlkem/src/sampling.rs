@@ -4,14 +4,14 @@
 //! - SampleNTT: Uniform sampling using rejection sampling
 //! - SamplePolyCBD: Sampling from Centered Binomial Distribution
 
-use sha3::digest::XofReader;
+use hpcrypt_hash::xof_reader::XofReader;
 
 extern crate alloc;
 use alloc::vec;
 
 use crate::params::{N, Q};
 use crate::poly::Poly;
-use crate::symmetric::{Xof, xof_x4, prf_x4};
+use crate::symmetric::{prf_x4, xof_x4, Xof};
 
 /// Sample a polynomial uniformly from Z_q using rejection sampling
 ///
@@ -35,12 +35,12 @@ use crate::symmetric::{Xof, xof_x4, prf_x4};
 /// Optimized with batch processing (24 bytes/iteration) and sequential
 /// memory writes for better CPU cache utilization and prefetching.
 pub fn sample_ntt(xof: &mut Xof) -> Poly {
-    let mut coeffs = [0i16; N];  // Temporary buffer for sequential writes
+    let mut coeffs = [0i16; N]; // Temporary buffer for sequential writes
     let mut reader = xof.reader();
     let mut idx = 0;
 
     while idx < N {
-        let mut buf = [0u8; 24];  // Process 24 bytes (8×3) at a time
+        let mut buf = [0u8; 24]; // Process 24 bytes (8×3) at a time
         reader.read(&mut buf);
 
         // Process 8 groups of 3 bytes (up to 16 coefficients per batch)
@@ -128,7 +128,7 @@ fn sample_poly_cbd2(bytes: &[u8]) -> Poly {
         // Extract 8 coefficients (each uses 4 bits = 2 bits for a-sum + 2 bits for b-sum)
         for j in 0..8 {
             let bits = (d >> (4 * j)) & 0xF;
-            let a = (bits & 0x3) as i16;        // Sum of a₀ + a₁ (bits 0-1)
+            let a = (bits & 0x3) as i16; // Sum of a₀ + a₁ (bits 0-1)
             let b = ((bits >> 2) & 0x3) as i16; // Sum of b₀ + b₁ (bits 2-3)
             coeffs[idx] = a - b;
             idx += 1;
@@ -166,14 +166,14 @@ fn sample_poly_cbd3(bytes: &[u8]) -> Poly {
         // Magic constant 0x00249249 = 0b00000000_00100100_10010010_01001001
         // Masks bits at positions: 0,3,6,9,12,15,18,21 (every 3rd bit)
         let d = t & 0x00249249;
-        let d = d + ((t >> 1) & 0x00249249);  // Add bits at positions 1,4,7,10,...
-        let d = d + ((t >> 2) & 0x00249249);  // Add bits at positions 2,5,8,11,...
+        let d = d + ((t >> 1) & 0x00249249); // Add bits at positions 1,4,7,10,...
+        let d = d + ((t >> 2) & 0x00249249); // Add bits at positions 2,5,8,11,...
 
         // Now d contains 3-bit sums in each 6-bit position
         // Extract 4 coefficients (each uses 6 bits = 3 bits for a-sum + 3 bits for b-sum)
         for j in 0..4 {
             let bits = (d >> (6 * j)) & 0x3F;
-            let a = (bits & 0x7) as i16;        // Sum of a₀ + a₁ + a₂ (bits 0-2)
+            let a = (bits & 0x7) as i16; // Sum of a₀ + a₁ + a₂ (bits 0-2)
             let b = ((bits >> 3) & 0x7) as i16; // Sum of b₀ + b₁ + b₂ (bits 3-5)
             coeffs[idx] = a - b;
             idx += 1;
@@ -198,7 +198,7 @@ fn sample_poly_cbd3(bytes: &[u8]) -> Poly {
 /// This is significantly faster than calling `sample_ntt` 4 times sequentially.
 pub fn sample_ntt_x4(seeds: &[[u8; 34]; 4]) -> [Poly; 4] {
     let mut polys = [Poly::new(); 4];
-    let mut outputs = [[0u8; 168]; 4];  // SHAKE-128 rate is 168 bytes
+    let mut outputs = [[0u8; 168]; 4]; // SHAKE-128 rate is 168 bytes
     let mut indices = [0usize; 4];
 
     // Keep sampling until all 4 polynomials are complete
@@ -214,10 +214,10 @@ pub fn sample_ntt_x4(seeds: &[[u8; 34]; 4]) -> [Poly; 4] {
 
             let mut buf_idx = 0;
             while buf_idx + 2 < outputs[i].len() && indices[i] < N {
-                let d1 = (outputs[i][buf_idx] as u16) |
-                        ((outputs[i][buf_idx + 1] as u16 & 0x0F) << 8);
-                let d2 = ((outputs[i][buf_idx + 1] as u16) >> 4) |
-                        ((outputs[i][buf_idx + 2] as u16) << 4);
+                let d1 =
+                    (outputs[i][buf_idx] as u16) | ((outputs[i][buf_idx + 1] as u16 & 0x0F) << 8);
+                let d2 = ((outputs[i][buf_idx + 1] as u16) >> 4)
+                    | ((outputs[i][buf_idx + 2] as u16) << 4);
                 buf_idx += 3;
 
                 // Rejection sampling

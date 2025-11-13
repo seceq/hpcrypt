@@ -114,7 +114,13 @@ impl TimingAnalyzer {
     /// # Returns
     ///
     /// Timing measurement with statistical analysis
-    pub fn analyze<F, G>(&mut self, iterations: usize, warmup: usize, mut class_a: F, mut class_b: G) -> TimingMeasurement
+    pub fn analyze<F, G>(
+        &mut self,
+        iterations: usize,
+        warmup: usize,
+        mut class_a: F,
+        mut class_b: G,
+    ) -> TimingMeasurement
     where
         F: FnMut(),
         G: FnMut(),
@@ -198,9 +204,7 @@ fn variance(samples: &[f64], mean: f64) -> f64 {
     if samples.len() <= 1 {
         return 0.0;
     }
-    samples.iter()
-        .map(|&x| (x - mean).powi(2))
-        .sum::<f64>() / (samples.len() - 1) as f64
+    samples.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (samples.len() - 1) as f64
 }
 
 /// Welch's t-test statistic
@@ -248,14 +252,20 @@ mod tests {
         let result = analyzer.analyze(
             1000,
             10,
-            || { black_box(1 + 1); },
-            || { black_box(1 + 1); },
+            || {
+                black_box(1 + 1);
+            },
+            || {
+                black_box(1 + 1);
+            },
         );
 
         // T-statistic should be small for identical operations
-        assert!(result.t_statistic.abs() < 10.0,
+        assert!(
+            result.t_statistic.abs() < 10.0,
             "Identical operations should have small t-statistic, got {}",
-            result.t_statistic);
+            result.t_statistic
+        );
     }
 
     #[test]
@@ -279,12 +289,16 @@ mod tests {
         );
 
         // Should detect timing difference
-        assert!(result.t_statistic.abs() > 4.5,
+        assert!(
+            result.t_statistic.abs() > 4.5,
             "Different operations should be detected, got t={}",
-            result.t_statistic);
+            result.t_statistic
+        );
 
-        assert!(result.is_leaking(),
-            "Different operations should be flagged as leaking");
+        assert!(
+            result.is_leaking(),
+            "Different operations should be flagged as leaking"
+        );
     }
 
     #[test]
@@ -332,7 +346,11 @@ mod tests {
         let v = variance(&samples, m);
 
         // Variance should be 10.0 for this sequence
-        assert!((v - 10.0).abs() < 0.01, "Expected variance ~10.0, got {}", v);
+        assert!(
+            (v - 10.0).abs() < 0.01,
+            "Expected variance ~10.0, got {}",
+            v
+        );
     }
 
     #[test]

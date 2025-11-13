@@ -63,25 +63,25 @@ extern crate alloc;
 use alloc::vec::Vec;
 
 #[doc(hidden)]
-pub mod params;  // Public for benchmarks
-#[doc(hidden)]
-pub mod poly;  // Public for benchmarks
-#[doc(hidden)]
-pub mod ntt;   // Public for benchmarks
-#[doc(hidden)]
-pub mod symmetric;  // Public for benchmarks
-#[doc(hidden)]
-pub mod sampling;  // Public for benchmarks
-#[doc(hidden)]
-pub mod compress;  // Public for benchmarks
-#[doc(hidden)]
-pub mod serialize;  // Public for benchmarks
-mod utils;
-#[doc(hidden)]
-pub mod keygen;  // Public for benchmarks
-#[doc(hidden)]
-pub mod encaps;  // Public for benchmarks
+pub mod compress; // Public for benchmarks
 mod decaps;
+#[doc(hidden)]
+pub mod encaps; // Public for benchmarks
+#[doc(hidden)]
+pub mod keygen; // Public for benchmarks
+#[doc(hidden)]
+pub mod ntt; // Public for benchmarks
+#[doc(hidden)]
+pub mod params; // Public for benchmarks
+#[doc(hidden)]
+pub mod poly; // Public for benchmarks
+#[doc(hidden)]
+pub mod sampling; // Public for benchmarks
+#[doc(hidden)]
+pub mod serialize; // Public for benchmarks
+#[doc(hidden)]
+pub mod symmetric; // Public for benchmarks
+mod utils;
 
 /// Constant-time operation verification utilities
 ///
@@ -148,7 +148,7 @@ pub use hpcrypt_rng::generate_key as random_bytes_32;
 pub mod timing;
 
 // Re-export parameter sets
-pub use params::{MlKem512, MlKem768, MlKem1024, Params};
+pub use params::{MlKem1024, MlKem512, MlKem768, Params};
 
 /// ML-KEM key pair
 ///

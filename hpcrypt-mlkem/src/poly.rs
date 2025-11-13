@@ -232,7 +232,11 @@ impl<const K: usize> PolyVec<K> {
     /// # Returns
     /// Dot product in NTT representation
     #[inline(always)]
-    pub fn dot_ntt_cached(&self, other: &PolyVec<K>, other_caches: &[crate::ntt::PolyMulcache]) -> Poly {
+    pub fn dot_ntt_cached(
+        &self,
+        other: &PolyVec<K>,
+        other_caches: &[crate::ntt::PolyMulcache],
+    ) -> Poly {
         debug_assert_eq!(other_caches.len(), K);
         crate::ntt::polyvec_basemul_acc_cached(&self.polys, &other.polys, other_caches)
     }
@@ -252,7 +256,11 @@ impl PolyVec<2> {
     /// # Returns
     /// Dot product in NTT representation
     #[inline(always)]
-    pub fn dot_ntt_cached_k2(&self, other: &PolyVec<2>, other_caches: &[crate::ntt::PolyMulcache; 2]) -> Poly {
+    pub fn dot_ntt_cached_k2(
+        &self,
+        other: &PolyVec<2>,
+        other_caches: &[crate::ntt::PolyMulcache; 2],
+    ) -> Poly {
         crate::ntt::polyvec_basemul_acc_cached_k2(&self.polys, &other.polys, other_caches)
     }
 }
@@ -271,7 +279,11 @@ impl PolyVec<3> {
     /// # Returns
     /// Dot product in NTT representation
     #[inline(always)]
-    pub fn dot_ntt_cached_k3(&self, other: &PolyVec<3>, other_caches: &[crate::ntt::PolyMulcache; 3]) -> Poly {
+    pub fn dot_ntt_cached_k3(
+        &self,
+        other: &PolyVec<3>,
+        other_caches: &[crate::ntt::PolyMulcache; 3],
+    ) -> Poly {
         crate::ntt::polyvec_basemul_acc_cached_k3(&self.polys, &other.polys, other_caches)
     }
 }
@@ -290,7 +302,11 @@ impl PolyVec<4> {
     /// # Returns
     /// Dot product in NTT representation
     #[inline(always)]
-    pub fn dot_ntt_cached_k4(&self, other: &PolyVec<4>, other_caches: &[crate::ntt::PolyMulcache; 4]) -> Poly {
+    pub fn dot_ntt_cached_k4(
+        &self,
+        other: &PolyVec<4>,
+        other_caches: &[crate::ntt::PolyMulcache; 4],
+    ) -> Poly {
         crate::ntt::polyvec_basemul_acc_cached_k4(&self.polys, &other.polys, other_caches)
     }
 }
@@ -344,7 +360,11 @@ impl<const K: usize> PolyMat<K> {
     ///
     /// # Returns
     /// Result polynomial vector in NTT representation
-    pub fn mul_vec_ntt_cached(&self, vec: &PolyVec<K>, vec_caches: &[crate::ntt::PolyMulcache]) -> PolyVec<K> {
+    pub fn mul_vec_ntt_cached(
+        &self,
+        vec: &PolyVec<K>,
+        vec_caches: &[crate::ntt::PolyMulcache],
+    ) -> PolyVec<K> {
         debug_assert_eq!(vec_caches.len(), K);
         let mut result = PolyVec::new();
         for i in 0..K {

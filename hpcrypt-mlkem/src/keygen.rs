@@ -10,16 +10,15 @@
 //! 3. Computing the public key as t = A·s + e (in NTT domain)
 //! 4. Serializing keys with additional validation data for CCA security
 extern crate alloc;
-use alloc::vec::Vec;
 use alloc::vec;
+use alloc::vec::Vec;
 
-
+use crate::ntt::{intt, ntt, PolyMulcache};
 use crate::params::Params;
-use crate::poly::{PolyVec, PolyMat};
-use crate::sampling::{sample_ntt, sample_poly_cbd, sample_ntt_x4, sample_poly_cbd_x4};
+use crate::poly::{PolyMat, PolyVec};
+use crate::sampling::{sample_ntt, sample_ntt_x4, sample_poly_cbd, sample_poly_cbd_x4};
 use crate::serialize::encode_polyvec_12;
 use crate::symmetric::{g, h, prf, Xof};
-use crate::ntt::{ntt, intt, PolyMulcache};
 
 /// K-PKE (CPA-secure) key pair
 ///
@@ -63,8 +62,8 @@ fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
             let mut seeds = [[0u8; 34]; 4];
             for (k, seed) in seeds.iter_mut().enumerate() {
                 seed[0..32].copy_from_slice(rho);
-                seed[32] = (j + k) as u8;  // j index
-                seed[33] = i as u8;         // i index
+                seed[32] = (j + k) as u8; // j index
+                seed[33] = i as u8; // i index
             }
 
             let polys = sample_ntt_x4(&seeds);
@@ -135,9 +134,7 @@ fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
     }
 
     // Pre-compute mulcaches for s_ntt
-    let s_caches: Vec<PolyMulcache> = s_ntt.polys.iter()
-        .map(PolyMulcache::compute)
-        .collect();
+    let s_caches: Vec<PolyMulcache> = s_ntt.polys.iter().map(PolyMulcache::compute).collect();
 
     // Compute A * s in NTT domain using optimized mulcache accumulation
     let as_ntt = a_mat.mul_vec_ntt_cached(&s_ntt, &s_caches);
@@ -232,9 +229,9 @@ pub struct KeyPair {
 /// [`MlKem1024`]: crate::MlKem1024
 pub fn ml_kem_keygen<P: Params>(d: Option<&[u8; 32]>) -> KeyPair {
     // Generate or use provided seed
-    let seed = d.cloned().unwrap_or_else(|| {
-        crate::random_bytes_32().expect("Failed to generate random seed")
-    });
+    let seed = d
+        .cloned()
+        .unwrap_or_else(|| crate::random_bytes_32().expect("Failed to generate random seed"));
 
     // 1. Generate K-PKE key pair
     let kpke_keys = kpke_keygen::<P>(&seed);
@@ -263,7 +260,7 @@ pub fn ml_kem_keygen<P: Params>(d: Option<&[u8; 32]>) -> KeyPair {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::params::{MlKem512, MlKem768, MlKem1024};
+    use crate::params::{MlKem1024, MlKem512, MlKem768};
 
     #[test]
     fn test_kpke_keygen_mlkem512() {

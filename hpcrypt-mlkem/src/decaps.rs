@@ -10,13 +10,13 @@
 //! 3. Performs constant-time comparison of c and c'
 //! 4. Returns KDF(m', c) if valid, or KDF(z, c) if invalid (implicit rejection)
 
-use crate::params::Params;
-use crate::serialize::{decode_polyvec_12, decode_polyvec_compressed, decode_poly_compressed};
 use crate::compress::compress_d1;
+use crate::encaps::kpke_encrypt;
+use crate::ntt::{intt, intt_after_basemul, ntt_inplace, PolyMulcache};
+use crate::params::Params;
+use crate::serialize::{decode_poly_compressed, decode_polyvec_12, decode_polyvec_compressed};
 use crate::symmetric::{g, h, j, kdf};
 use crate::utils::ct_compare;
-use crate::encaps::kpke_encrypt;
-use crate::ntt::{ntt_inplace, intt, intt_after_basemul, PolyMulcache};
 
 /// K-PKE Decrypt
 ///
@@ -30,7 +30,13 @@ use crate::ntt::{ntt_inplace, intt, intt_after_basemul, PolyMulcache};
 /// Decrypted message (32 bytes)
 #[inline(always)]
 #[allow(dead_code)]
-fn kpke_decrypt_impl<const K: usize>(dk: &[u8], ciphertext: &[u8], du: u32, dv: u32, ct_size: usize) -> [u8; 32] {
+fn kpke_decrypt_impl<const K: usize>(
+    dk: &[u8],
+    ciphertext: &[u8],
+    du: u32,
+    dv: u32,
+    ct_size: usize,
+) -> [u8; 32] {
     debug_assert_eq!(dk.len(), 384 * K);
     debug_assert_eq!(ciphertext.len(), ct_size);
 
@@ -84,7 +90,13 @@ fn kpke_decrypt_impl<const K: usize>(dk: &[u8], ciphertext: &[u8], du: u32, dv: 
 /// This version uses polyvec_basemul_acc_cached_k2 which manually unrolls
 /// the inner k loop, reducing branch overhead by ~64 instructions.
 #[inline(always)]
-fn kpke_decrypt_impl_k2(dk: &[u8], ciphertext: &[u8], du: u32, dv: u32, ct_size: usize) -> [u8; 32] {
+fn kpke_decrypt_impl_k2(
+    dk: &[u8],
+    ciphertext: &[u8],
+    du: u32,
+    dv: u32,
+    ct_size: usize,
+) -> [u8; 32] {
     const K: usize = 2;
     debug_assert_eq!(dk.len(), 384 * K);
     debug_assert_eq!(ciphertext.len(), ct_size);
@@ -101,7 +113,7 @@ fn kpke_decrypt_impl_k2(dk: &[u8], ciphertext: &[u8], du: u32, dv: u32, ct_size:
     }
 
     let su_ntt = s_ntt.dot_ntt_cached_k2(&u, &u_caches);
-    let su = intt_after_basemul(&su_ntt);  // 18.2% faster lazy INTT for basemul outputs
+    let su = intt_after_basemul(&su_ntt); // 18.2% faster lazy INTT for basemul outputs
     let m_poly = v.sub(&su);
 
     let mut m = [0u8; 32];
@@ -122,7 +134,13 @@ fn kpke_decrypt_impl_k2(dk: &[u8], ciphertext: &[u8], du: u32, dv: u32, ct_size:
 /// This version uses polyvec_basemul_acc_cached_k3 which manually unrolls
 /// the inner k loop, reducing branch overhead by ~128 instructions.
 #[inline(always)]
-fn kpke_decrypt_impl_k3(dk: &[u8], ciphertext: &[u8], du: u32, dv: u32, ct_size: usize) -> [u8; 32] {
+fn kpke_decrypt_impl_k3(
+    dk: &[u8],
+    ciphertext: &[u8],
+    du: u32,
+    dv: u32,
+    ct_size: usize,
+) -> [u8; 32] {
     const K: usize = 3;
     debug_assert_eq!(dk.len(), 384 * K);
     debug_assert_eq!(ciphertext.len(), ct_size);
@@ -139,7 +157,7 @@ fn kpke_decrypt_impl_k3(dk: &[u8], ciphertext: &[u8], du: u32, dv: u32, ct_size:
     }
 
     let su_ntt = s_ntt.dot_ntt_cached_k3(&u, &u_caches);
-    let su = intt_after_basemul(&su_ntt);  // 18.2% faster lazy INTT for basemul outputs
+    let su = intt_after_basemul(&su_ntt); // 18.2% faster lazy INTT for basemul outputs
     let m_poly = v.sub(&su);
 
     let mut m = [0u8; 32];
@@ -160,7 +178,13 @@ fn kpke_decrypt_impl_k3(dk: &[u8], ciphertext: &[u8], du: u32, dv: u32, ct_size:
 /// This version uses polyvec_basemul_acc_cached_k4 which manually unrolls
 /// the inner k loop, reducing branch overhead by ~192 instructions.
 #[inline(always)]
-fn kpke_decrypt_impl_k4(dk: &[u8], ciphertext: &[u8], du: u32, dv: u32, ct_size: usize) -> [u8; 32] {
+fn kpke_decrypt_impl_k4(
+    dk: &[u8],
+    ciphertext: &[u8],
+    du: u32,
+    dv: u32,
+    ct_size: usize,
+) -> [u8; 32] {
     const K: usize = 4;
     debug_assert_eq!(dk.len(), 384 * K);
     debug_assert_eq!(ciphertext.len(), ct_size);
@@ -184,7 +208,7 @@ fn kpke_decrypt_impl_k4(dk: &[u8], ciphertext: &[u8], du: u32, dv: u32, ct_size:
 
     // Use optimized K=4 dot product with manual loop unrolling
     let su_ntt = s_ntt.dot_ntt_cached_k4(&u, &u_caches);
-    let su = intt_after_basemul(&su_ntt);  // 18.2% faster lazy INTT for basemul outputs
+    let su = intt_after_basemul(&su_ntt); // 18.2% faster lazy INTT for basemul outputs
 
     let m_poly = v.sub(&su);
 
@@ -302,8 +326,6 @@ pub fn ml_kem_decaps<P: Params>(dk: &[u8], ciphertext: &[u8]) -> [u8; 32] {
 
     let c_hash = h(ciphertext);
 
-    
-
     if valid {
         // Valid ciphertext: use K̄
         let kdf_input: [u8; 64] = j(k_bar, &c_hash);
@@ -318,9 +340,9 @@ pub fn ml_kem_decaps<P: Params>(dk: &[u8], ciphertext: &[u8]) -> [u8; 32] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::params::{MlKem512, MlKem768, MlKem1024};
-    use crate::keygen::ml_kem_keygen;
     use crate::encaps::ml_kem_encaps;
+    use crate::keygen::ml_kem_keygen;
+    use crate::params::{MlKem1024, MlKem512, MlKem768};
 
     #[test]
     fn test_kpke_encrypt_decrypt_roundtrip_mlkem512() {

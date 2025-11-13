@@ -55,12 +55,18 @@ pub fn compress_d1(x: i16) -> u16 {
     // Constant-time method: if 833 <= x <= 2496, return 1, else 0
     // This avoids division entirely for the d=1 case
 
-    const Q_HALF: i16 = Q / 2;  // 1664
-    const Q_QUARTER: i16 = Q / 4;  // 832
+    const Q_HALF: i16 = Q / 2; // 1664
+    const Q_QUARTER: i16 = Q / 4; // 832
 
     // Coefficients from NTT are already in valid range [0, Q)
     // Only reduce if needed (handles both positive and potential negative values)
-    let x = if x >= Q { x % Q } else if x < 0 { ((x % Q) + Q) % Q } else { x };
+    let x = if x >= Q {
+        x % Q
+    } else if x < 0 {
+        ((x % Q) + Q) % Q
+    } else {
+        x
+    };
 
     // If 833 <= x <= 2496, then -832 <= shifted <= 831
     let shifted = Q_HALF - x;
@@ -153,7 +159,7 @@ pub fn compress_fast(x: i16, d: u32) -> u16 {
     // libcrux-style: no branches, direct computation
     // Formula: ((x << d) + q/2) * MAGIC_DIVISOR >> 35
     let mut compressed = (x as u64) << d;
-    compressed += 1664;  // q/2 = 3329/2 = 1664
+    compressed += 1664; // q/2 = 3329/2 = 1664
     compressed *= MAGIC_DIVISOR;
     compressed >>= 35;
 
@@ -393,7 +399,7 @@ macro_rules! decompress_vec16_unrolled {
 pub fn decompress_vec16_d10_unrolled(compressed: [u16; 16]) -> [i16; 16] {
     const D: u32 = 10;
     const Q: u32 = crate::params::Q as u32;
-    const HALF: u32 = 1u32 << (D - 1);  // 2^(d-1) = 512
+    const HALF: u32 = 1u32 << (D - 1); // 2^(d-1) = 512
 
     decompress_vec16_unrolled!(compressed, Q, HALF, D)
 }
@@ -566,7 +572,11 @@ mod tests {
                 assert!(
                     diff <= 2,
                     "decompress_fast mismatch at d={}, y={}: original={}, fast={}, diff={}",
-                    d, y, original, fast, diff
+                    d,
+                    y,
+                    original,
+                    fast,
+                    diff
                 );
             }
         }
@@ -588,7 +598,11 @@ mod tests {
                 assert!(
                     diff <= max_error || diff_wrapped <= max_error,
                     "Roundtrip failed: d={}, x={}, compressed={}, decompressed={}, diff={}",
-                    d, x, compressed, decompressed, diff
+                    d,
+                    x,
+                    compressed,
+                    decompressed,
+                    diff
                 );
             }
         }
@@ -605,7 +619,9 @@ mod tests {
                 assert!(
                     result < (1 << d),
                     "compress_fast out of range: d={}, x={}, result={}",
-                    d, x, result
+                    d,
+                    x,
+                    result
                 );
             }
         }
@@ -621,7 +637,9 @@ mod tests {
                 assert!(
                     (0..Q).contains(&result),
                     "decompress_fast out of range: d={}, y={}, result={}",
-                    d, y, result
+                    d,
+                    y,
+                    result
                 );
             }
         }
