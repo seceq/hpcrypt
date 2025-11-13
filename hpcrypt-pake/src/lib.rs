@@ -14,19 +14,16 @@ extern crate std;
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-pub mod oprf;
 pub mod opaque;
 mod opaque_impl;
+pub mod oprf;
 
 pub use oprf::{
-    OprfClient, OprfServer, OprfError, OprfKey, Blind,
-    BlindedElement, EvaluatedElement,
+    Blind, BlindedElement, EvaluatedElement, OprfClient, OprfError, OprfKey, OprfServer,
 };
 
 pub use opaque::{
-    Config, Group, HashFunction, KdfFunction, MacFunction, KsfFunction,
-    OpaqueClient, OpaqueServer, OpaqueError,
-    RegistrationRequest, RegistrationResponse, RegistrationRecord,
-    KE1, KE2, KE3,
-    ServerKeyStorage, InMemoryStorage,
+    Config, Group, HashFunction, InMemoryStorage, KdfFunction, KsfFunction, MacFunction,
+    OpaqueClient, OpaqueError, OpaqueServer, RegistrationRecord, RegistrationRequest,
+    RegistrationResponse, ServerKeyStorage, KE1, KE2, KE3,
 };

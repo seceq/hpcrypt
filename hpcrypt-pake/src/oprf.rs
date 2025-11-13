@@ -46,7 +46,7 @@
 //! # }
 //! ```
 
-use hpcrypt_curves::ed25519::{EdwardsPoint, Scalar, base_point};
+use hpcrypt_curves::ed25519::{base_point, EdwardsPoint, Scalar};
 use hpcrypt_hash::sha512;
 
 #[cfg(feature = "alloc")]
@@ -149,8 +149,12 @@ impl OprfClient {
         let blinded_point = input_point.scalar_mul(&blind_scalar.to_bytes());
 
         Ok((
-            Blind { scalar: blind_scalar },
-            BlindedElement { point: blinded_point },
+            Blind {
+                scalar: blind_scalar,
+            },
+            BlindedElement {
+                point: blinded_point,
+            },
         ))
     }
 
@@ -212,8 +216,7 @@ impl OprfClient {
     fn random_scalar() -> Result<Scalar, OprfError> {
         use hpcrypt_rng::generate_key;
 
-        let bytes: [u8; 32] = generate_key()
-            .map_err(|_| OprfError::RandomGenerationFailed)?;
+        let bytes: [u8; 32] = generate_key().map_err(|_| OprfError::RandomGenerationFailed)?;
         Ok(Scalar::from_bytes(bytes))
     }
 
@@ -225,10 +228,9 @@ impl OprfClient {
 
         // L - 2 in little-endian bytes
         let l_minus_2 = [
-            0xeb, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
-            0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
+            0xeb, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9,
+            0xde, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x10,
         ];
 
         // Perform scalar exponentiation
@@ -239,8 +241,10 @@ impl OprfClient {
 
     /// Scalar exponentiation (scalar^exp mod L)
     fn scalar_pow(scalar: &Scalar, exp: &[u8; 32]) -> Result<Scalar, OprfError> {
-        let mut result = Scalar::from_bytes([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let mut result = Scalar::from_bytes([
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ]);
         let mut base = *scalar;
 
         // Square-and-multiply algorithm
@@ -287,8 +291,7 @@ impl OprfServer {
         use hpcrypt_rng::generate_key;
 
         // Generate random scalar
-        let bytes: [u8; 32] = generate_key()
-            .map_err(|_| OprfError::RandomGenerationFailed)?;
+        let bytes: [u8; 32] = generate_key().map_err(|_| OprfError::RandomGenerationFailed)?;
         let scalar = Scalar::from_bytes(bytes);
 
         Ok(OprfKey { scalar })
@@ -332,7 +335,9 @@ impl OprfServer {
         // Evaluate: evaluated = blinded * key
         let evaluated_point = blinded.point.scalar_mul(&key.scalar.to_bytes());
 
-        Ok(EvaluatedElement { point: evaluated_point })
+        Ok(EvaluatedElement {
+            point: evaluated_point,
+        })
     }
 
     /// Blind evaluate (combined derive + evaluate)
@@ -368,8 +373,7 @@ impl BlindedElement {
         let mut arr = [0u8; 32];
         arr.copy_from_slice(bytes);
 
-        let point = EdwardsPoint::decode(&arr)
-            .map_err(|_| OprfError::InvalidPoint)?;
+        let point = EdwardsPoint::decode(&arr).map_err(|_| OprfError::InvalidPoint)?;
 
         Ok(BlindedElement { point })
     }
@@ -390,8 +394,7 @@ impl EvaluatedElement {
         let mut arr = [0u8; 32];
         arr.copy_from_slice(bytes);
 
-        let point = EdwardsPoint::decode(&arr)
-            .map_err(|_| OprfError::InvalidPoint)?;
+        let point = EdwardsPoint::decode(&arr).map_err(|_| OprfError::InvalidPoint)?;
 
         Ok(EvaluatedElement { point })
     }

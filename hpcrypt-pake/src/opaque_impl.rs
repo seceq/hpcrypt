@@ -3,19 +3,19 @@
 //! This module contains the actual implementations of the placeholder functions
 //! in the OPAQUE protocol.
 
-use crate::opaque::{Config, HashFunction, KdfFunction, MacFunction, KsfFunction, OpaqueError};
+use crate::opaque::{Config, HashFunction, KdfFunction, KsfFunction, MacFunction, OpaqueError};
 use crate::oprf::{EvaluatedElement, OprfError};
 
-use hpcrypt_curves::ed25519::{EdwardsPoint, Scalar, base_point};
+use hpcrypt_curves::ed25519::{base_point, EdwardsPoint, Scalar};
 use hpcrypt_hash::{sha512, HmacSha256, HmacSha512};
 use hpcrypt_kdf::{HkdfSha256, HkdfSha512};
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-#[cfg(feature = "alloc")]
 use alloc::vec;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
 // ================================
 // Random Number Generation
@@ -23,16 +23,14 @@ use alloc::vec;
 
 /// Generate a random scalar for use in OPRF
 pub fn generate_random_scalar() -> Result<Scalar, OpaqueError> {
-    let bytes: [u8; 32] = hpcrypt_rng::generate_key()
-        .map_err(|_| OpaqueError::InternalError)?;
+    let bytes: [u8; 32] = hpcrypt_rng::generate_key().map_err(|_| OpaqueError::InternalError)?;
     Ok(Scalar::from_bytes(bytes))
 }
 
 /// Generate random bytes of specified length
 pub fn generate_random_bytes_len(len: usize) -> Result<Vec<u8>, OpaqueError> {
     let mut bytes = vec![0u8; len];
-    hpcrypt_rng::fill_random(&mut bytes)
-        .map_err(|_| OpaqueError::InternalError)?;
+    hpcrypt_rng::fill_random(&mut bytes).map_err(|_| OpaqueError::InternalError)?;
     Ok(bytes)
 }
 
@@ -55,8 +53,7 @@ pub fn oprf_blind(
     let blind = Scalar::from_bytes(blind_arr);
 
     // Hash password to curve point
-    let input_point = hash_to_curve(password)
-        .map_err(|_| OpaqueError::OprfError)?;
+    let input_point = hash_to_curve(password).map_err(|_| OpaqueError::OprfError)?;
 
     // Blind the point
     let blinded_point = input_point.scalar_mul(&blind.to_bytes());
@@ -70,19 +67,17 @@ pub fn oprf_evaluate(
     seed: &[u8],
     info: &[u8],
 ) -> Result<Vec<u8>, OpaqueError> {
-    use crate::oprf::{OprfServer, BlindedElement};
+    use crate::oprf::{BlindedElement, OprfServer};
 
     // Deserialize blinded element
-    let blinded = BlindedElement::from_bytes(blinded_bytes)
-        .map_err(|_| OpaqueError::InvalidPoint)?;
+    let blinded =
+        BlindedElement::from_bytes(blinded_bytes).map_err(|_| OpaqueError::InvalidPoint)?;
 
     // Derive OPRF key from seed and info
-    let key = OprfServer::derive_key(seed, info)
-        .map_err(|_| OpaqueError::OprfError)?;
+    let key = OprfServer::derive_key(seed, info).map_err(|_| OpaqueError::OprfError)?;
 
     // Evaluate blinded element with key
-    let evaluated = OprfServer::evaluate(&blinded, &key)
-        .map_err(|_| OpaqueError::OprfError)?;
+    let evaluated = OprfServer::evaluate(&blinded, &key).map_err(|_| OpaqueError::OprfError)?;
 
     Ok(evaluated.to_bytes().to_vec())
 }
@@ -103,21 +98,19 @@ pub fn oprf_finalize(
     let blind = Scalar::from_bytes(blind_arr);
 
     // Deserialize evaluated element
-    let evaluated = EvaluatedElement::from_bytes(evaluated_bytes)
-        .map_err(|_| OpaqueError::InvalidPoint)?;
+    let evaluated =
+        EvaluatedElement::from_bytes(evaluated_bytes).map_err(|_| OpaqueError::InvalidPoint)?;
 
     // Compute blind inverse
-    let blind_inv = scalar_inverse(&blind)
-        .map_err(|_| OpaqueError::OprfError)?;
+    let blind_inv = scalar_inverse(&blind).map_err(|_| OpaqueError::OprfError)?;
 
     // Unblind
-    let evaluated_point = EdwardsPoint::decode(&evaluated.to_bytes())
-        .map_err(|_| OpaqueError::InvalidPoint)?;
+    let evaluated_point =
+        EdwardsPoint::decode(&evaluated.to_bytes()).map_err(|_| OpaqueError::InvalidPoint)?;
     let unblinded_point = evaluated_point.scalar_mul(&blind_inv.to_bytes());
 
     // Finalize hash
-    finalize_hash(password, &unblinded_point)
-        .map_err(|_| OpaqueError::OprfError)
+    finalize_hash(password, &unblinded_point).map_err(|_| OpaqueError::OprfError)
 }
 
 /// Hash arbitrary input to curve point
@@ -142,10 +135,9 @@ fn hash_to_curve(input: &[u8]) -> Result<EdwardsPoint, OprfError> {
 fn scalar_inverse(scalar: &Scalar) -> Result<Scalar, OprfError> {
     // L - 2 in little-endian
     let l_minus_2 = [
-        0xeb, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
-        0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
+        0xeb, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde,
+        0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x10,
     ];
 
     Ok(scalar_pow(scalar, &l_minus_2))
@@ -154,8 +146,8 @@ fn scalar_inverse(scalar: &Scalar) -> Result<Scalar, OprfError> {
 /// Scalar exponentiation
 fn scalar_pow(scalar: &Scalar, exp: &[u8; 32]) -> Scalar {
     let mut result = Scalar::from_bytes([
-        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0,
     ]);
     let mut base = *scalar;
 
@@ -191,11 +183,7 @@ fn finalize_hash(input: &[u8], unblinded: &EdwardsPoint) -> Result<[u8; 64], Opr
 
 /// Extract step of HKDF
 #[allow(dead_code)]
-pub fn kdf_extract(
-    input: &[u8],
-    info: &[u8],
-    config: &Config,
-) -> Result<Vec<u8>, OpaqueError> {
+pub fn kdf_extract(input: &[u8], info: &[u8], config: &Config) -> Result<Vec<u8>, OpaqueError> {
     match config.kdf {
         KdfFunction::HkdfSha256 => {
             let hkdf = HkdfSha256::new(&[], input);
@@ -252,11 +240,10 @@ pub fn key_stretch(input: &[u8], config: &Config) -> Result<Vec<u8>, OpaqueError
             // Argon2id parameters as per RFC 9807 recommendation
             let salt = [0u8; 16]; // In real implementation, this should be derived
 
-            let params = Params::new(64, 1 << 21, 1, 4)
-                .map_err(|_| OpaqueError::InternalError)?;
+            let params = Params::new(64, 1 << 21, 1, 4).map_err(|_| OpaqueError::InternalError)?;
 
-            let output = Argon2id::hash(input, &salt, &params)
-                .map_err(|_| OpaqueError::InternalError)?;
+            let output =
+                Argon2id::hash(input, &salt, &params).map_err(|_| OpaqueError::InternalError)?;
 
             Ok(output)
         }
@@ -266,8 +253,7 @@ pub fn key_stretch(input: &[u8], config: &Config) -> Result<Vec<u8>, OpaqueError
             // scrypt parameters as per RFC 9807 recommendation
             let salt = [0u8; 16];
 
-            let params = ScryptParams::new(15, 8, 1)
-                .map_err(|_| OpaqueError::InternalError)?;
+            let params = ScryptParams::new(15, 8, 1).map_err(|_| OpaqueError::InternalError)?;
 
             let output = scrypt(input, &salt, &params, 64);
 
@@ -285,11 +271,7 @@ pub fn key_stretch(input: &[u8], config: &Config) -> Result<Vec<u8>, OpaqueError
 // ================================
 
 /// Compute HMAC
-pub fn compute_mac(
-    key: &[u8],
-    message: &[u8],
-    config: &Config,
-) -> Result<Vec<u8>, OpaqueError> {
+pub fn compute_mac(key: &[u8], message: &[u8], config: &Config) -> Result<Vec<u8>, OpaqueError> {
     match config.mac {
         MacFunction::HmacSha256 => {
             let hmac = HmacSha256::new(key);
@@ -331,8 +313,8 @@ pub fn generate_keypair(config: &Config) -> Result<(Vec<u8>, Vec<u8>), OpaqueErr
             {
                 // PRODUCTION: Generate cryptographically secure random key
                 use hpcrypt_rng::generate_key;
-                let private_key: [u8; 32] = generate_key()
-                    .map_err(|_| OpaqueError::InternalError)?;
+                let private_key: [u8; 32] =
+                    generate_key().map_err(|_| OpaqueError::InternalError)?;
 
                 // Derive public key using X25519 (for DH key agreement)
                 use hpcrypt_curves::X25519;
@@ -374,8 +356,8 @@ pub fn generate_ephemeral_keypair(config: &Config) -> Result<(Vec<u8>, Vec<u8>),
                 // PRODUCTION: Generate cryptographically secure random ephemeral key
                 // CRITICAL: Each session MUST use a fresh random key for forward secrecy!
                 use hpcrypt_rng::generate_key;
-                let private_key: [u8; 32] = generate_key()
-                    .map_err(|_| OpaqueError::InternalError)?;
+                let private_key: [u8; 32] =
+                    generate_key().map_err(|_| OpaqueError::InternalError)?;
 
                 // Derive public key using X25519 (for DH key agreement)
                 use hpcrypt_curves::X25519;
@@ -408,9 +390,7 @@ pub fn generate_ephemeral_keypair(config: &Config) -> Result<(Vec<u8>, Vec<u8>),
                 Ok((private_key.to_vec(), public_key.to_vec()))
             }
         }
-        crate::opaque::Group::P256 => {
-            Err(OpaqueError::InvalidConfiguration)
-        }
+        crate::opaque::Group::P256 => Err(OpaqueError::InvalidConfiguration),
     }
 }
 
@@ -430,9 +410,7 @@ pub fn derive_keypair(seed: &[u8], config: &Config) -> Result<(Vec<u8>, Vec<u8>)
 
             Ok((private_key.to_vec(), public_key.to_vec()))
         }
-        crate::opaque::Group::P256 => {
-            Err(OpaqueError::InvalidConfiguration)
-        }
+        crate::opaque::Group::P256 => Err(OpaqueError::InvalidConfiguration),
     }
 }
 
@@ -453,8 +431,11 @@ pub fn triple_dh(
             use hpcrypt_curves::X25519;
 
             // Ensure inputs are 32 bytes
-            if ephemeral_private.len() != 32 || static_private.len() != 32 ||
-               peer_ephemeral_public.len() != 32 || peer_static_public.len() != 32 {
+            if ephemeral_private.len() != 32
+                || static_private.len() != 32
+                || peer_ephemeral_public.len() != 32
+                || peer_static_public.len() != 32
+            {
                 return Err(OpaqueError::InvalidLength);
             }
 
@@ -495,9 +476,7 @@ pub fn triple_dh(
 
             Ok(session_key)
         }
-        crate::opaque::Group::P256 => {
-            Err(OpaqueError::InvalidConfiguration)
-        }
+        crate::opaque::Group::P256 => Err(OpaqueError::InvalidConfiguration),
     }
 }
 
@@ -506,9 +485,22 @@ pub fn triple_dh(
 // ================================
 
 /// Derive Km2 and Km3 MAC keys from session key
-pub fn derive_mac_keys(session_key: &[u8], config: &Config) -> Result<(Vec<u8>, Vec<u8>), OpaqueError> {
-    let km2 = kdf_expand(session_key, b"OPAQUE-ServerMAC", hash_output_len(&config.hash), config)?;
-    let km3 = kdf_expand(session_key, b"OPAQUE-ClientMAC", hash_output_len(&config.hash), config)?;
+pub fn derive_mac_keys(
+    session_key: &[u8],
+    config: &Config,
+) -> Result<(Vec<u8>, Vec<u8>), OpaqueError> {
+    let km2 = kdf_expand(
+        session_key,
+        b"OPAQUE-ServerMAC",
+        hash_output_len(&config.hash),
+        config,
+    )?;
+    let km3 = kdf_expand(
+        session_key,
+        b"OPAQUE-ClientMAC",
+        hash_output_len(&config.hash),
+        config,
+    )?;
     Ok((km2, km3))
 }
 
@@ -549,12 +541,7 @@ pub fn create_envelope(
     config: &Config,
 ) -> Result<Vec<u8>, OpaqueError> {
     // Derive envelope encryption key from randomized password
-    let envelope_key = kdf_expand(
-        randomized_pwd,
-        b"OPAQUE-EnvelopeKey",
-        32,
-        config,
-    )?;
+    let envelope_key = kdf_expand(randomized_pwd, b"OPAQUE-EnvelopeKey", 32, config)?;
 
     // Serialize cleartext credentials with length prefixes for variable-length fields
     let mut cleartext = Vec::new();
@@ -597,12 +584,7 @@ pub fn recover_envelope(
     config: &Config,
 ) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>), OpaqueError> {
     // Derive envelope encryption key
-    let envelope_key = kdf_expand(
-        randomized_pwd,
-        b"OPAQUE-EnvelopeKey",
-        32,
-        config,
-    )?;
+    let envelope_key = kdf_expand(randomized_pwd, b"OPAQUE-EnvelopeKey", 32, config)?;
 
     // Deserialize envelope
     let (nonce, ciphertext, auth_tag) = deserialize_envelope(envelope_bytes)?;
@@ -665,7 +647,12 @@ pub fn recover_envelope(
     }
     let client_private_key = cleartext[offset..offset + 32].to_vec();
 
-    Ok((client_private_key, server_public_key, server_identity, client_identity))
+    Ok((
+        client_private_key,
+        server_public_key,
+        server_identity,
+        client_identity,
+    ))
 }
 
 /// Deserialize envelope
@@ -730,11 +717,11 @@ fn encrypt_then_mac(
 ) -> Result<Vec<u8>, OpaqueError> {
     // Derive encryption and MAC keys
     let enc_key = kdf_expand(key, b"Encrypt", 32, config)?;
-    
+
     // Simple XOR-based encryption (for now - could use AES-CTR in production)
     let mut ciphertext = plaintext.to_vec();
     let keystream = kdf_expand(&enc_key, nonce, ciphertext.len(), config)?;
-    
+
     for (i, byte) in ciphertext.iter_mut().enumerate() {
         *byte ^= keystream[i];
     }
@@ -756,12 +743,12 @@ fn decrypt_and_verify(
 /// Mask envelope for transmission
 pub fn mask_envelope(envelope: &[u8], masking_key: &[u8]) -> Result<Vec<u8>, OpaqueError> {
     let mut masked = envelope.to_vec();
-    
+
     // XOR with masking key (repeated as needed)
     for (i, byte) in masked.iter_mut().enumerate() {
         *byte ^= masking_key[i % masking_key.len()];
     }
-    
+
     Ok(masked)
 }
 
@@ -786,25 +773,25 @@ pub fn build_mac_input(
     server_identity: &[u8],
 ) -> Vec<u8> {
     let mut input = Vec::new();
-    
+
     // Concatenate all transcript elements
     input.extend_from_slice(&(client_nonce.len() as u32).to_be_bytes());
     input.extend_from_slice(client_nonce);
-    
+
     input.extend_from_slice(&(server_nonce.len() as u32).to_be_bytes());
     input.extend_from_slice(server_nonce);
-    
+
     input.extend_from_slice(&(client_ephemeral_public.len() as u32).to_be_bytes());
     input.extend_from_slice(client_ephemeral_public);
-    
+
     input.extend_from_slice(&(server_ephemeral_public.len() as u32).to_be_bytes());
     input.extend_from_slice(server_ephemeral_public);
-    
+
     input.extend_from_slice(&(client_identity.len() as u32).to_be_bytes());
     input.extend_from_slice(client_identity);
-    
+
     input.extend_from_slice(&(server_identity.len() as u32).to_be_bytes());
     input.extend_from_slice(server_identity);
-    
+
     input
 }

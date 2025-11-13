@@ -115,12 +115,11 @@
 
 #![allow(dead_code)] // Allow during development
 
-
 #[cfg(feature = "alloc")]
 extern crate alloc;
+use alloc::vec;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
-use alloc::vec;
 
 use subtle::ConstantTimeEq;
 use zeroize::ZeroizeOnDrop;
@@ -306,7 +305,9 @@ impl ServerKeyStorage for InMemoryStorage {
     }
 
     fn get_server_private_key(&self) -> Result<Vec<u8>, OpaqueError> {
-        self.server_private_key.clone().ok_or(OpaqueError::StorageError)
+        self.server_private_key
+            .clone()
+            .ok_or(OpaqueError::StorageError)
     }
 
     fn store_oprf_seed(&mut self, seed: &[u8]) -> Result<(), OpaqueError> {
@@ -588,18 +589,15 @@ impl OpaqueClient {
         config: &Config,
     ) -> Result<RegistrationRecord, OpaqueError> {
         // Finalize OPRF to get randomized password
-        let oprf_output = Self::oprf_finalize(
-            password,
-            &state.blind,
-            &response.evaluated_element,
-            config,
-        )?;
+        let oprf_output =
+            Self::oprf_finalize(password, &state.blind, &response.evaluated_element, config)?;
 
         // Stretch the OPRF output
         let stretched_pwd = Self::key_stretch(&oprf_output, config)?;
 
         // Derive randomized_password from stretched output
-        let randomized_password = Self::kdf_extract(&stretched_pwd, b"randomized_password", config)?;
+        let randomized_password =
+            Self::kdf_extract(&stretched_pwd, b"randomized_password", config)?;
 
         // Generate client keypair from randomized_password
         let (client_private_key, client_public_key) =
@@ -688,7 +686,7 @@ impl OpaqueClient {
     pub fn generate_ke3(
         state: &ClientAuthState,
         ke2: &KE2,
-        _client_identity: &[u8],  // Not used in current OPAQUE mode (identity in envelope)
+        _client_identity: &[u8], // Not used in current OPAQUE mode (identity in envelope)
         server_identity: &[u8],
         config: &Config,
     ) -> Result<(KE3, Vec<u8>), OpaqueError> {
@@ -702,7 +700,8 @@ impl OpaqueClient {
 
         // Stretch password
         let stretched_pwd = Self::key_stretch(&oprf_output, config)?;
-        let randomized_password = Self::kdf_extract(&stretched_pwd, b"randomized_password", config)?;
+        let randomized_password =
+            Self::kdf_extract(&stretched_pwd, b"randomized_password", config)?;
 
         // Derive masking key (same derivation as in registration)
         let masking_key = Self::kdf_extract(&randomized_password, b"MaskingKey", config)?;
@@ -711,11 +710,8 @@ impl OpaqueClient {
         let envelope = Self::unmask_envelope(&ke2.masked_envelope, &masking_key)?;
 
         // Recover envelope
-        let (client_private_key, cleartext_credentials) = Self::recover_envelope(
-            &randomized_password,
-            &envelope,
-            config,
-        )?;
+        let (client_private_key, cleartext_credentials) =
+            Self::recover_envelope(&randomized_password, &envelope, config)?;
 
         // Verify server identity matches
         if cleartext_credentials.server_identity != server_identity {
@@ -737,14 +733,15 @@ impl OpaqueClient {
         // Verify server MAC
         // NOTE: Must use PUBLIC keys in MAC, not private keys!
         // NOTE: Server computed MAC without client_identity (it's in encrypted envelope)
-        let client_ephemeral_public = Self::derive_public_key(&state.client_ephemeral_private, config)?;
+        let client_ephemeral_public =
+            Self::derive_public_key(&state.client_ephemeral_private, config)?;
         let server_mac_input = Self::build_mac_input(
             &state.client_nonce,
             &ke2.server_nonce,
-            &client_ephemeral_public,  // Use PUBLIC key, not private!
+            &client_ephemeral_public, // Use PUBLIC key, not private!
             &ke2.server_ephemeral_public,
             server_identity,
-            &[],  // Client identity is empty (server doesn't know it yet)
+            &[], // Client identity is empty (server doesn't know it yet)
         );
 
         Self::verify_mac(&km2, &server_mac_input, &ke2.server_mac, config)?;
@@ -756,8 +753,8 @@ impl OpaqueClient {
             &ke2.server_nonce,
             &state.client_nonce,
             &ke2.server_ephemeral_public,
-            &client_ephemeral_public,  // Use PUBLIC key, not private!
-            &[],  // Client identity is empty (it's in encrypted envelope)
+            &client_ephemeral_public, // Use PUBLIC key, not private!
+            &[],                      // Client identity is empty (it's in encrypted envelope)
             server_identity,
         );
 
@@ -781,11 +778,7 @@ impl OpaqueClient {
         opaque_impl::generate_random_bytes_len(len)
     }
 
-    fn oprf_blind(
-        password: &[u8],
-        blind: &[u8],
-        config: &Config,
-    ) -> Result<Vec<u8>, OpaqueError> {
+    fn oprf_blind(password: &[u8], blind: &[u8], config: &Config) -> Result<Vec<u8>, OpaqueError> {
         use crate::opaque_impl;
         opaque_impl::oprf_blind(password, blind, config)
     }
@@ -808,7 +801,12 @@ impl OpaqueClient {
 
     fn kdf_extract(input: &[u8], info: &[u8], config: &Config) -> Result<Vec<u8>, OpaqueError> {
         use crate::opaque_impl;
-        opaque_impl::kdf_expand(input, info, opaque_impl::hash_output_len(&config.hash), config)
+        opaque_impl::kdf_expand(
+            input,
+            info,
+            opaque_impl::hash_output_len(&config.hash),
+            config,
+        )
     }
 
     fn derive_keypair(seed: &[u8], config: &Config) -> Result<(Vec<u8>, Vec<u8>), OpaqueError> {
@@ -900,7 +898,10 @@ impl OpaqueClient {
         )
     }
 
-    fn derive_mac_keys(session_key: &[u8], config: &Config) -> Result<(Vec<u8>, Vec<u8>), OpaqueError> {
+    fn derive_mac_keys(
+        session_key: &[u8],
+        config: &Config,
+    ) -> Result<(Vec<u8>, Vec<u8>), OpaqueError> {
         use crate::opaque_impl;
         opaque_impl::derive_mac_keys(session_key, config)
     }
@@ -927,11 +928,7 @@ impl OpaqueClient {
         opaque_impl::verify_mac(key, message, mac, config)
     }
 
-    fn compute_mac(
-        key: &[u8],
-        message: &[u8],
-        config: &Config,
-    ) -> Result<Vec<u8>, OpaqueError> {
+    fn compute_mac(key: &[u8], message: &[u8], config: &Config) -> Result<Vec<u8>, OpaqueError> {
         use crate::opaque_impl;
         opaque_impl::compute_mac(key, message, config)
     }
@@ -1117,7 +1114,14 @@ impl OpaqueServer {
         let oprf_seed = Self::load_oprf_seed()?;
         let server_private_key = Self::load_server_private_key()?;
 
-        Self::generate_ke2_with_keys(ke1, record, server_identity, &oprf_seed, &server_private_key, config)
+        Self::generate_ke2_with_keys(
+            ke1,
+            record,
+            server_identity,
+            &oprf_seed,
+            &server_private_key,
+            config,
+        )
     }
 
     /// Generate KE2 with explicit keys (internal method used by both stateless and stateful APIs)
@@ -1132,14 +1136,9 @@ impl OpaqueServer {
         server_private_key: &[u8],
         config: &Config,
     ) -> Result<(ServerAuthState, KE2), OpaqueError> {
-
         // Evaluate OPRF
-        let credential_response = Self::oprf_evaluate(
-            &ke1.credential_request,
-            &oprf_seed,
-            server_identity,
-            config,
-        )?;
+        let credential_response =
+            Self::oprf_evaluate(&ke1.credential_request, &oprf_seed, server_identity, config)?;
 
         // Generate server ephemeral keypair (use ephemeral version!)
         let (server_ephemeral_private, server_ephemeral_public) =
@@ -1236,8 +1235,7 @@ impl OpaqueServer {
     fn generate_oprf_seed() -> Result<Vec<u8>, OpaqueError> {
         // Generate cryptographically secure random seed
         use hpcrypt_rng::generate_key;
-        let seed: [u8; 32] = generate_key()
-            .map_err(|_| OpaqueError::InternalError)?;
+        let seed: [u8; 32] = generate_key().map_err(|_| OpaqueError::InternalError)?;
         Ok(seed.to_vec())
     }
 
@@ -1365,7 +1363,10 @@ impl OpaqueServer {
         )
     }
 
-    fn derive_mac_keys(session_key: &[u8], config: &Config) -> Result<(Vec<u8>, Vec<u8>), OpaqueError> {
+    fn derive_mac_keys(
+        session_key: &[u8],
+        config: &Config,
+    ) -> Result<(Vec<u8>, Vec<u8>), OpaqueError> {
         use crate::opaque_impl;
         opaque_impl::derive_mac_keys(session_key, config)
     }
@@ -1382,11 +1383,7 @@ impl OpaqueServer {
         opaque_impl::build_mac_input(nonce1, nonce2, key1, key2, id1, id2)
     }
 
-    fn compute_mac(
-        key: &[u8],
-        message: &[u8],
-        config: &Config,
-    ) -> Result<Vec<u8>, OpaqueError> {
+    fn compute_mac(key: &[u8], message: &[u8], config: &Config) -> Result<Vec<u8>, OpaqueError> {
         use crate::opaque_impl;
         opaque_impl::compute_mac(key, message, config)
     }
@@ -1435,17 +1432,19 @@ mod tests {
 
         // Client creates registration request
         let result = OpaqueClient::create_registration_request(password, &config);
-        assert!(result.is_ok(), "Registration request creation should succeed");
+        assert!(
+            result.is_ok(),
+            "Registration request creation should succeed"
+        );
 
         let (client_state, reg_request) = result.unwrap();
 
         // Server processes registration request
-        let result = OpaqueServer::create_registration_response(
-            &reg_request,
-            server_id,
-            &config
+        let result = OpaqueServer::create_registration_response(&reg_request, server_id, &config);
+        assert!(
+            result.is_ok(),
+            "Registration response creation should succeed"
         );
-        assert!(result.is_ok(), "Registration response creation should succeed");
 
         let (_server_state, reg_response) = result.unwrap();
 
@@ -1456,7 +1455,7 @@ mod tests {
             &reg_response,
             client_id,
             server_id,
-            &config
+            &config,
         );
         assert!(result.is_ok(), "Registration finalization should succeed");
     }
@@ -1473,9 +1472,18 @@ mod tests {
         let (_client_state, ke1) = result.unwrap();
 
         // Verify KE1 has non-empty fields
-        assert!(!ke1.credential_request.is_empty(), "Credential request should not be empty");
-        assert!(!ke1.client_nonce.is_empty(), "Client nonce should not be empty");
-        assert!(!ke1.client_ephemeral_public.is_empty(), "Client ephemeral public key should not be empty");
+        assert!(
+            !ke1.credential_request.is_empty(),
+            "Credential request should not be empty"
+        );
+        assert!(
+            !ke1.client_nonce.is_empty(),
+            "Client nonce should not be empty"
+        );
+        assert!(
+            !ke1.client_ephemeral_public.is_empty(),
+            "Client ephemeral public key should not be empty"
+        );
     }
 
     #[test]
@@ -1501,7 +1509,10 @@ mod tests {
         let output2 = OprfClient::finalize(password, &blind2, &evaluated2).expect("finalize 2");
 
         // Outputs should be identical even with different blinds
-        assert_eq!(output1, output2, "OPRF output must be deterministic for same password");
+        assert_eq!(
+            output1, output2,
+            "OPRF output must be deterministic for same password"
+        );
     }
 
     #[test]
@@ -1524,7 +1535,8 @@ mod tests {
             server_identity,
             client_identity,
             &config,
-        ).expect("create envelope");
+        )
+        .expect("create envelope");
 
         // Derive masking key
         let masking_key = opaque_impl::kdf_expand(
@@ -1532,22 +1544,22 @@ mod tests {
             b"MaskingKey",
             opaque_impl::hash_output_len(&config.hash),
             &config,
-        ).expect("derive masking key");
+        )
+        .expect("derive masking key");
 
         // Mask envelope
-        let masked = opaque_impl::mask_envelope(&envelope, &masking_key)
-            .expect("mask envelope");
+        let masked = opaque_impl::mask_envelope(&envelope, &masking_key).expect("mask envelope");
 
         // Unmask envelope
-        let unmasked = opaque_impl::unmask_envelope(&masked, &masking_key)
-            .expect("unmask envelope");
+        let unmasked =
+            opaque_impl::unmask_envelope(&masked, &masking_key).expect("unmask envelope");
 
         assert_eq!(envelope, unmasked, "Unmask should reverse mask");
 
         // Recover envelope
         let (recovered_private, recovered_server_pub, recovered_server_id, recovered_client_id) =
             opaque_impl::recover_envelope(randomized_pwd, &unmasked, &config)
-            .expect("recover envelope");
+                .expect("recover envelope");
 
         assert_eq!(client_private_key, recovered_private);
         assert_eq!(server_public_key, recovered_server_pub);
@@ -1584,11 +1596,11 @@ mod tests {
         // REGISTRATION: Get OPRF output
         let (client_reg_state, reg_request) =
             OpaqueClient::create_registration_request(password, &config)
-            .expect("create registration request");
+                .expect("create registration request");
 
         let (_server_reg_state, reg_response) =
             OpaqueServer::create_registration_response(&reg_request, server_id, &config)
-            .expect("create registration response");
+                .expect("create registration response");
 
         // Finalize OPRF in registration
         let reg_oprf_output = opaque_impl::oprf_finalize(
@@ -1596,7 +1608,8 @@ mod tests {
             &client_reg_state.blind,
             &reg_response.evaluated_element,
             &config,
-        ).expect("registration OPRF finalize");
+        )
+        .expect("registration OPRF finalize");
 
         // AUTHENTICATION: Get OPRF output
         let (client_auth_state, ke1) =
@@ -1605,18 +1618,17 @@ mod tests {
         // Server evaluates (simulating with same seed/info as registration)
         // Need to use same OPRF seed!
         let oprf_seed = OpaqueServer::load_oprf_seed().expect("load seed");
-        let credential_response = opaque_impl::oprf_evaluate(
-            &ke1.credential_request,
-            &oprf_seed,
-            server_id,
-        ).expect("evaluate OPRF");
+        let credential_response =
+            opaque_impl::oprf_evaluate(&ke1.credential_request, &oprf_seed, server_id)
+                .expect("evaluate OPRF");
 
         let auth_oprf_output = opaque_impl::oprf_finalize(
             password,
             &client_auth_state.blind,
             &credential_response,
             &config,
-        ).expect("authentication OPRF finalize");
+        )
+        .expect("authentication OPRF finalize");
 
         // Compare OPRF outputs
         assert_eq!(
@@ -1641,19 +1653,26 @@ mod tests {
         // Complete registration
         let (client_reg_state, reg_request) =
             OpaqueClient::create_registration_request(password, &config)
-            .expect("create registration request");
+                .expect("create registration request");
         let (_server_reg_state, reg_response) =
             OpaqueServer::create_registration_response(&reg_request, server_id, &config)
-            .expect("create registration response");
+                .expect("create registration response");
         let reg_record = OpaqueClient::finalize_registration_request(
-            password, &client_reg_state, &reg_response, client_id, server_id, &config,
-        ).expect("finalize registration");
+            password,
+            &client_reg_state,
+            &reg_response,
+            client_id,
+            server_id,
+            &config,
+        )
+        .expect("finalize registration");
 
         // Start authentication
         let (client_auth_state, ke1) =
             OpaqueClient::generate_ke1(password, &config).expect("generate KE1");
         let (_server_auth_state, ke2) =
-            OpaqueServer::generate_ke2(&ke1, &reg_record, server_id, &config).expect("generate KE2");
+            OpaqueServer::generate_ke2(&ke1, &reg_record, server_id, &config)
+                .expect("generate KE2");
 
         // Test each step of generate_ke3 individually
         // Step 1: OPRF finalize
@@ -1677,37 +1696,55 @@ mod tests {
 
         // Step 3: KDF extract randomized_password
         let rand_pwd_result = opaque_impl::kdf_expand(
-            &stretched_pwd, b"randomized_password",
-            opaque_impl::hash_output_len(&config.hash), &config,
+            &stretched_pwd,
+            b"randomized_password",
+            opaque_impl::hash_output_len(&config.hash),
+            &config,
         );
         if rand_pwd_result.is_err() {
-            panic!("KDF extract randomized_password failed at step 3: {:?}", rand_pwd_result.err());
+            panic!(
+                "KDF extract randomized_password failed at step 3: {:?}",
+                rand_pwd_result.err()
+            );
         }
         let randomized_password = rand_pwd_result.unwrap();
 
         // Step 4: Derive masking key
         let mask_key_result = opaque_impl::kdf_expand(
-            &randomized_password, b"MaskingKey",
-            opaque_impl::hash_output_len(&config.hash), &config,
+            &randomized_password,
+            b"MaskingKey",
+            opaque_impl::hash_output_len(&config.hash),
+            &config,
         );
         if mask_key_result.is_err() {
-            panic!("Derive masking key failed at step 4: {:?}", mask_key_result.err());
+            panic!(
+                "Derive masking key failed at step 4: {:?}",
+                mask_key_result.err()
+            );
         }
         let masking_key = mask_key_result.unwrap();
 
         // Step 5: Unmask envelope
         let unmask_result = opaque_impl::unmask_envelope(&ke2.masked_envelope, &masking_key);
         if unmask_result.is_err() {
-            panic!("Unmask envelope failed at step 5: {:?}", unmask_result.err());
+            panic!(
+                "Unmask envelope failed at step 5: {:?}",
+                unmask_result.err()
+            );
         }
         let envelope = unmask_result.unwrap();
 
         // Step 6: Recover envelope
-        let recover_result = opaque_impl::recover_envelope(&randomized_password, &envelope, &config);
+        let recover_result =
+            opaque_impl::recover_envelope(&randomized_password, &envelope, &config);
         if recover_result.is_err() {
-            panic!("Recover envelope failed at step 6: {:?}", recover_result.err());
+            panic!(
+                "Recover envelope failed at step 6: {:?}",
+                recover_result.err()
+            );
         }
-        let (client_private_key, server_public_key, _server_id, _client_id) = recover_result.unwrap();
+        let (client_private_key, server_public_key, _server_id, _client_id) =
+            recover_result.unwrap();
 
         // Step 7: Triple DH
         let tdh_result = opaque_impl::triple_dh(
@@ -1739,12 +1776,12 @@ mod tests {
         // Step 1: Client creates registration request
         let (client_reg_state, reg_request) =
             OpaqueClient::create_registration_request(password, &config)
-            .expect("Client should create registration request");
+                .expect("Client should create registration request");
 
         // Step 2: Server processes registration request
         let (_server_reg_state, reg_response) =
             OpaqueServer::create_registration_response(&reg_request, server_id, &config)
-            .expect("Server should create registration response");
+                .expect("Server should create registration response");
 
         // Step 3: Client finalizes registration
         let reg_record = OpaqueClient::finalize_registration_request(
@@ -1754,33 +1791,38 @@ mod tests {
             client_id,
             server_id,
             &config,
-        ).expect("Client should finalize registration");
+        )
+        .expect("Client should finalize registration");
 
         // ===== AUTHENTICATION PHASE =====
 
         // Step 1: Client generates KE1
         let (client_auth_state, ke1) =
-            OpaqueClient::generate_ke1(password, &config)
-            .expect("Client should generate KE1");
+            OpaqueClient::generate_ke1(password, &config).expect("Client should generate KE1");
 
         // Step 2: Server generates KE2
         let (server_auth_state, ke2) =
             OpaqueServer::generate_ke2(&ke1, &reg_record, server_id, &config)
-            .expect("Server should generate KE2");
+                .expect("Server should generate KE2");
 
         // Step 3: Client processes KE2 and generates KE3
         let (ke3, client_session_key) =
             OpaqueClient::generate_ke3(&client_auth_state, &ke2, client_id, server_id, &config)
-            .expect("Client should generate KE3 and session key");
+                .expect("Client should generate KE3 and session key");
 
         // Step 4: Server verifies KE3
-        let server_session_key =
-            OpaqueServer::server_finish(&server_auth_state, &ke3, &config)
+        let server_session_key = OpaqueServer::server_finish(&server_auth_state, &ke3, &config)
             .expect("Server should verify KE3 and get session key");
 
         // Verify session keys match
-        assert_eq!(client_session_key, server_session_key, "Session keys should match");
-        assert!(!client_session_key.is_empty(), "Session key should not be empty");
+        assert_eq!(
+            client_session_key, server_session_key,
+            "Session keys should match"
+        );
+        assert!(
+            !client_session_key.is_empty(),
+            "Session key should not be empty"
+        );
     }
 
     #[test]
@@ -1799,20 +1841,26 @@ mod tests {
         // Step 1: Client creates registration request
         let (client_reg_state, reg_request) =
             OpaqueClient::create_registration_request(password, &config)
-            .expect("Client should create registration request");
+                .expect("Client should create registration request");
 
-        assert!(!reg_request.blinded_element.is_empty(),
-                "Registration request should have blinded element");
+        assert!(
+            !reg_request.blinded_element.is_empty(),
+            "Registration request should have blinded element"
+        );
 
         // Step 2: Server processes registration request
         let (_server_reg_state, reg_response) =
             OpaqueServer::create_registration_response(&reg_request, server_id, &config)
-            .expect("Server should create registration response");
+                .expect("Server should create registration response");
 
-        assert!(!reg_response.evaluated_element.is_empty(),
-                "Registration response should have evaluated element");
-        assert!(!reg_response.server_public_key.is_empty(),
-                "Registration response should have server public key");
+        assert!(
+            !reg_response.evaluated_element.is_empty(),
+            "Registration response should have evaluated element"
+        );
+        assert!(
+            !reg_response.server_public_key.is_empty(),
+            "Registration response should have server public key"
+        );
 
         // Step 3: Client finalizes registration
         let reg_record = OpaqueClient::finalize_registration_request(
@@ -1821,15 +1869,22 @@ mod tests {
             &reg_response,
             client_id,
             server_id,
-            &config
-        ).expect("Client should finalize registration");
+            &config,
+        )
+        .expect("Client should finalize registration");
 
-        assert!(!reg_record.client_public_key.is_empty(),
-                "Registration record should have client public key");
-        assert!(!reg_record.masking_key.is_empty(),
-                "Registration record should have masking key");
-        assert!(!reg_record.envelope.is_empty(),
-                "Registration record should have envelope");
+        assert!(
+            !reg_record.client_public_key.is_empty(),
+            "Registration record should have client public key"
+        );
+        assert!(
+            !reg_record.masking_key.is_empty(),
+            "Registration record should have masking key"
+        );
+        assert!(
+            !reg_record.envelope.is_empty(),
+            "Registration record should have envelope"
+        );
 
         // Server would store reg_record associated with client_id here
         // For this test, we just keep it in memory
@@ -1838,43 +1893,65 @@ mod tests {
 
         // Step 1: Client initiates authentication with KE1
         let (client_auth_state, ke1) =
-            OpaqueClient::generate_ke1(password, &config)
-            .expect("Client should generate KE1");
+            OpaqueClient::generate_ke1(password, &config).expect("Client should generate KE1");
 
-        assert!(!ke1.credential_request.is_empty(), "KE1 should have credential request");
+        assert!(
+            !ke1.credential_request.is_empty(),
+            "KE1 should have credential request"
+        );
         assert!(!ke1.client_nonce.is_empty(), "KE1 should have client nonce");
-        assert!(!ke1.client_ephemeral_public.is_empty(), "KE1 should have ephemeral public key");
+        assert!(
+            !ke1.client_ephemeral_public.is_empty(),
+            "KE1 should have ephemeral public key"
+        );
 
         // Step 2: Server responds with KE2
         let (server_auth_state, ke2) =
             OpaqueServer::generate_ke2(&ke1, &reg_record, server_id, &config)
-            .expect("Server should generate KE2");
+                .expect("Server should generate KE2");
 
-        assert!(!ke2.credential_response.is_empty(), "KE2 should have credential response");
+        assert!(
+            !ke2.credential_response.is_empty(),
+            "KE2 should have credential response"
+        );
         assert!(!ke2.server_nonce.is_empty(), "KE2 should have server nonce");
-        assert!(!ke2.server_ephemeral_public.is_empty(), "KE2 should have ephemeral public key");
-        assert!(!ke2.masked_envelope.is_empty(), "KE2 should have masked envelope");
+        assert!(
+            !ke2.server_ephemeral_public.is_empty(),
+            "KE2 should have ephemeral public key"
+        );
+        assert!(
+            !ke2.masked_envelope.is_empty(),
+            "KE2 should have masked envelope"
+        );
         assert!(!ke2.server_mac.is_empty(), "KE2 should have server MAC");
 
         // Step 3: Client processes KE2 and generates KE3
         let (ke3, client_session_key) =
             OpaqueClient::generate_ke3(&client_auth_state, &ke2, client_id, server_id, &config)
-            .expect("Client should generate KE3 and session key");
+                .expect("Client should generate KE3 and session key");
 
         assert!(!ke3.client_mac.is_empty(), "KE3 should have client MAC");
-        assert!(!client_session_key.is_empty(), "Client should have session key");
+        assert!(
+            !client_session_key.is_empty(),
+            "Client should have session key"
+        );
 
         // Step 4: Server verifies KE3 and extracts session key
-        let server_session_key =
-            OpaqueServer::server_finish(&server_auth_state, &ke3, &config)
+        let server_session_key = OpaqueServer::server_finish(&server_auth_state, &ke3, &config)
             .expect("Server should verify KE3 and get session key");
 
-        assert!(!server_session_key.is_empty(), "Server should have session key");
+        assert!(
+            !server_session_key.is_empty(),
+            "Server should have session key"
+        );
 
         // ===== VERIFICATION =====
         // The critical test: both sides should have the same session key
-        assert_eq!(client_session_key.len(), server_session_key.len(),
-                   "Session keys should have same length");
+        assert_eq!(
+            client_session_key.len(),
+            server_session_key.len(),
+            "Session keys should have same length"
+        );
 
         // Note: We can't directly compare session keys because the current implementation
         // has placeholder values for load_oprf_seed() and load_server_private_key()
@@ -1898,11 +1975,11 @@ mod tests {
         // Registration with correct password
         let (client_reg_state, reg_request) =
             OpaqueClient::create_registration_request(correct_password, &config)
-            .expect("Registration request should succeed");
+                .expect("Registration request should succeed");
 
         let (_server_reg_state, reg_response) =
             OpaqueServer::create_registration_response(&reg_request, server_id, &config)
-            .expect("Registration response should succeed");
+                .expect("Registration response should succeed");
 
         let reg_record = OpaqueClient::finalize_registration_request(
             correct_password,
@@ -1910,26 +1987,21 @@ mod tests {
             &reg_response,
             client_id,
             server_id,
-            &config
-        ).expect("Registration should succeed");
+            &config,
+        )
+        .expect("Registration should succeed");
 
         // Try to authenticate with wrong password
-        let (client_auth_state, ke1) =
-            OpaqueClient::generate_ke1(wrong_password, &config)
+        let (client_auth_state, ke1) = OpaqueClient::generate_ke1(wrong_password, &config)
             .expect("KE1 generation should succeed even with wrong password");
 
         let (server_auth_state, ke2) =
             OpaqueServer::generate_ke2(&ke1, &reg_record, server_id, &config)
-            .expect("KE2 generation should succeed");
+                .expect("KE2 generation should succeed");
 
         // This should fail because the wrong password will lead to wrong envelope decryption
-        let result = OpaqueClient::generate_ke3(
-            &client_auth_state,
-            &ke2,
-            client_id,
-            server_id,
-            &config
-        );
+        let result =
+            OpaqueClient::generate_ke3(&client_auth_state, &ke2, client_id, server_id, &config);
 
         // The authentication should fail (though it might succeed to decrypt but produce wrong keys)
         // In a full implementation with proper envelope auth tags, this would return an error
