@@ -18,8 +18,8 @@
 #![allow(clippy::needless_range_loop)]
 
 use super::constants::P521_MODULUS;
-use core::fmt;
 use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
+use core::fmt;
 
 /// A field element in the P-521 prime field.
 ///
