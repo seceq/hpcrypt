@@ -66,7 +66,7 @@ impl Polyval {
 
             // If we completed a block, process it
             if self.buffer_len == 16 {
-                let block = self.buffer;  // Copy the buffer
+                let block = self.buffer; // Copy the buffer
                 self.update_block(&block);
                 self.buffer_len = 0;
             }
@@ -97,7 +97,7 @@ impl Polyval {
         if self.buffer_len > 0 {
             // Pad remaining bytes with zeros
             self.buffer[self.buffer_len..].fill(0);
-            let block = self.buffer;  // Copy the buffer
+            let block = self.buffer; // Copy the buffer
             self.update_block(&block);
         }
 
@@ -227,12 +227,16 @@ mod tests {
 
     #[test]
     fn test_polyval_block() {
-        let h = [0x25, 0x62, 0x93, 0x47, 0xA0, 0xF8, 0xCB, 0x41,
-                 0xD5, 0x21, 0x34, 0x7B, 0x8A, 0x9F, 0x02, 0x16];
+        let h = [
+            0x25, 0x62, 0x93, 0x47, 0xA0, 0xF8, 0xCB, 0x41, 0xD5, 0x21, 0x34, 0x7B, 0x8A, 0x9F,
+            0x02, 0x16,
+        ];
 
         let mut poly = Polyval::new(&h);
-        let block = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                     0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10];
+        let block = [
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
+            0x0F, 0x10,
+        ];
         poly.update_block(&block);
 
         let result = poly.finalize();
