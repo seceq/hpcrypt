@@ -4,44 +4,44 @@ use hpcrypt_core::error::*;
 
 #[test]
 fn test_curve_error_display() {
-    let err = CurveError::InvalidPoint;
-    assert_eq!(format!("{}", err), "Invalid point");
+    let err = CurveError::NotOnCurve;
+    let msg = format!("{}", err);
+    assert!(msg.contains("not on the curve"));
 
-    let err = CurveError::InvalidScalar;
-    assert_eq!(format!("{}", err), "Invalid scalar");
+    let err = CurveError::InvalidScalar {
+        expected: 32,
+        actual: 16,
+    };
+    let msg = format!("{}", err);
+    assert!(msg.contains("32 bytes"));
+    assert!(msg.contains("16 bytes"));
 }
 
 #[test]
-fn test_signature_error_display() {
-    let err = SignatureError::InvalidSignature;
-    assert_eq!(format!("{}", err), "Invalid signature");
-
-    let err = SignatureError::VerificationFailed;
-    assert_eq!(format!("{}", err), "Signature verification failed");
+fn test_curve_signature_error_display() {
+    let err = CurveError::InvalidSignature;
+    let msg = format!("{}", err);
+    assert!(msg.contains("Signature verification failed"));
 }
 
 #[test]
 fn test_hash_error_display() {
-    let err = HashError::InvalidLength;
-    assert_eq!(format!("{}", err), "Invalid length");
+    let err = HashError::InvalidOutputLength {
+        expected: Some(32),
+        actual: 16,
+    };
+    let msg = format!("{}", err);
+    assert!(msg.contains("32 bytes"));
+    assert!(msg.contains("16 bytes"));
 }
 
 #[test]
 fn test_error_from_conversions() {
-    let curve_err = CurveError::InvalidPoint;
-    let general_err: Error = curve_err.into();
-    assert!(matches!(general_err, Error::Curve(_)));
+    let curve_err = CurveError::NotOnCurve;
+    let general_err: CryptoError = curve_err.into();
+    assert!(matches!(general_err, CryptoError::Curve(_)));
 
-    let sig_err = SignatureError::InvalidSignature;
-    let general_err: Error = sig_err.into();
-    assert!(matches!(general_err, Error::Signature(_)));
-}
-
-#[test]
-#[cfg(feature = "std")]
-fn test_error_source() {
-    use std::error::Error as StdError;
-
-    let err = Error::Curve(CurveError::InvalidPoint);
-    assert!(err.source().is_none());
+    let aead_err = AeadError::AuthenticationFailed;
+    let general_err: CryptoError = aead_err.into();
+    assert!(matches!(general_err, CryptoError::Aead(_)));
 }
