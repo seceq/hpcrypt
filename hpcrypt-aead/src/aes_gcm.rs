@@ -11,7 +11,7 @@ use hpcrypt_core::traits::AeadError;
 use subtle::ConstantTimeEq;
 
 use crate::aes::{Aes, AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, BLOCK_SIZE};
-use crate::ghash::GHash;
+use crate::ghash_fast::GHashFast;
 
 /// AES-128-GCM tag size (128 bits)
 pub const TAG_SIZE: usize = 16;
@@ -118,6 +118,8 @@ fn gcm_encrypt(cipher: &Aes, nonce: &[u8; NONCE_SIZE], plaintext: &[u8], aad: &[
     counter_block[BLOCK_SIZE - 1] = 1;
 
     // Encrypt plaintext using CTR mode
+    // Note: GCM uses counter J0 (nonce||1) for tag encryption
+    // Data encryption starts with J1 (nonce||2)
     let mut ciphertext = vec![0u8; plaintext.len()];
     let mut counter = u32::from_be_bytes([
         counter_block[12],
@@ -127,11 +129,9 @@ fn gcm_encrypt(cipher: &Aes, nonce: &[u8; NONCE_SIZE], plaintext: &[u8], aad: &[
     ]);
 
     for (i, chunk) in plaintext.chunks(BLOCK_SIZE).enumerate() {
-        // Increment counter
-        if i > 0 {
-            counter = counter.wrapping_add(1);
-            counter_block[12..].copy_from_slice(&counter.to_be_bytes());
-        }
+        // Increment counter for each block (starts at 2 for first plaintext block)
+        counter = counter.wrapping_add(1);
+        counter_block[12..].copy_from_slice(&counter.to_be_bytes());
 
         // Encrypt counter block
         let keystream = cipher.encrypt_block(&counter_block);
@@ -200,6 +200,8 @@ fn gcm_decrypt(
     // Verify tag in constant time
     if computed_tag.ct_eq(received_tag).into() {
         // Decrypt ciphertext using CTR mode
+        // Note: GCM uses counter J0 (nonce||1) for tag encryption
+        // Data decryption starts with J1 (nonce||2)
         let mut plaintext = vec![0u8; ciphertext_len];
         let mut counter_block = counter_block_0;
         let mut counter = u32::from_be_bytes([
@@ -210,11 +212,9 @@ fn gcm_decrypt(
         ]);
 
         for (i, chunk) in ciphertext.chunks(BLOCK_SIZE).enumerate() {
-            // Increment counter
-            if i > 0 {
-                counter = counter.wrapping_add(1);
-                counter_block[12..].copy_from_slice(&counter.to_be_bytes());
-            }
+            // Increment counter for each block (starts at 2 for first ciphertext block)
+            counter = counter.wrapping_add(1);
+            counter_block[12..].copy_from_slice(&counter.to_be_bytes());
 
             // Encrypt counter block
             let keystream = cipher.encrypt_block(&counter_block);
@@ -233,7 +233,7 @@ fn gcm_decrypt(
 
 /// Compute GHASH(H, A, C) as specified in GCM
 fn compute_ghash(h: &[u8; BLOCK_SIZE], aad: &[u8], ciphertext: &[u8]) -> [u8; BLOCK_SIZE] {
-    let mut ghash = GHash::new(h);
+    let mut ghash = GHashFast::new_default(h);
 
     // Process AAD
     for chunk in aad.chunks(BLOCK_SIZE) {
