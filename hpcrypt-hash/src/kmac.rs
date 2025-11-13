@@ -1150,7 +1150,12 @@ mod tests {
         // Verify with corrupted MAC (flip one bit)
         let mut corrupted_mac = mac.clone();
         corrupted_mac[0] ^= 1;
-        assert!(!Kmac128::verify(key, message, customization, &corrupted_mac));
+        assert!(!Kmac128::verify(
+            key,
+            message,
+            customization,
+            &corrupted_mac
+        ));
 
         // Verify with wrong MAC length
         let short_mac = &mac[..16];
@@ -1181,7 +1186,12 @@ mod tests {
         // Verify with corrupted MAC (flip one bit)
         let mut corrupted_mac = mac.clone();
         corrupted_mac[0] ^= 1;
-        assert!(!Kmac256::verify(key, message, customization, &corrupted_mac));
+        assert!(!Kmac256::verify(
+            key,
+            message,
+            customization,
+            &corrupted_mac
+        ));
 
         // Verify with wrong MAC length
         let short_mac = &mac[..32];
