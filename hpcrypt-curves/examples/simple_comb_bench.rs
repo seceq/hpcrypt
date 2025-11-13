@@ -1,5 +1,5 @@
+use hpcrypt_curves::ed448::{scalar_mul_base_comb, Point, Scalar};
 use std::time::Instant;
-use hpcrypt_curves::ed448::{Point, Scalar, scalar_mul_base_comb};
 
 fn main() {
     println!("=== Simple Ed448 Comb Benchmark (No Criterion) ===\n");
@@ -46,5 +46,5 @@ fn main() {
 
     // Verify correctness
     assert_eq!(result1, result2, "First and second calls should match");
-    println!("✅ Correctness verified");
+    println!(" Correctness verified");
 }

@@ -4,7 +4,7 @@
 // Python shows both should be equal (commutativity)
 
 use hpcrypt_curves::p256::field::FieldElement;
-use hpcrypt_curves::p256::point::{Point, AffinePoint};
+use hpcrypt_curves::p256::point::{AffinePoint, Point};
 
 fn print_limbs(name: &str, fe: &FieldElement) {
     let bytes = fe.to_bytes();
@@ -53,8 +53,14 @@ fn main() {
 
     // Compare
     println!("=== Comparison ===");
-    println!("Affine X coordinates match: {}", p_plus_q_affine.x == q_plus_p_affine.x);
-    println!("Affine Y coordinates match: {}", p_plus_q_affine.y == q_plus_p_affine.y);
+    println!(
+        "Affine X coordinates match: {}",
+        p_plus_q_affine.x == q_plus_p_affine.x
+    );
+    println!(
+        "Affine Y coordinates match: {}",
+        p_plus_q_affine.y == q_plus_p_affine.y
+    );
     println!();
 
     // Expected from Python:
@@ -92,15 +98,16 @@ fn main() {
 
     // Expected: (p-3)^2 = p^2 - 6p + 9 ≡ 9 (mod p)
     println!("Expected: 9");
-    println!("Equals 9: {}", p_minus_3_squared == FieldElement::from_u64(9));
+    println!(
+        "Equals 9: {}",
+        p_minus_3_squared == FieldElement::from_u64(9)
+    );
     println!();
 
-
-
     if p_plus_q_affine.x != q_plus_p_affine.x {
-        println!("❌ COMMUTATIVITY VIOLATED: P+Q ≠ Q+P");
+        println!(" COMMUTATIVITY VIOLATED: P+Q ≠ Q+P");
         std::process::exit(1);
     } else {
-        println!("✅ COMMUTATIVITY OK: P+Q = Q+P");
+        println!(" COMMUTATIVITY OK: P+Q = Q+P");
     }
 }

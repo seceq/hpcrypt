@@ -6,10 +6,10 @@ fn main() {
 
     // p - 3
     let p_minus_3 = FieldElement::from_limbs([
-        0xFFFFFFFFFFFFFFFC,  // limb 0
-        0xFFFFFFFFFFFFFFFF,  // limb 1
-        0x0000000000000000,  // limb 2
-        0xFFFFFFFF00000001,  // limb 3
+        0xFFFFFFFFFFFFFFFC, // limb 0
+        0xFFFFFFFFFFFFFFFF, // limb 1
+        0x0000000000000000, // limb 2
+        0xFFFFFFFF00000001, // limb 3
     ]);
 
     println!("p - 3 = {:?}", p_minus_3);
@@ -27,9 +27,9 @@ fn main() {
     println!();
 
     if result == expected {
-        println!("✅ CORRECT!");
+        println!(" CORRECT!");
     } else {
-        println!("❌ WRONG!");
+        println!(" WRONG!");
 
         // Show result in a different format
         println!("Result: {:?}", result);

@@ -7,9 +7,22 @@ fn main() {
 
     // Test values
     let test_values = vec![
-        2u64, 7, 13, 42, 100, 255, 256, 1000,
-        12345, 67890, 0xFFFF, 0x10000, 0xFFFFFFFF,
-        0x100000000, 0xFFFFFFFFFFFF, 0x123456789ABCDEF0,
+        2u64,
+        7,
+        13,
+        42,
+        100,
+        255,
+        256,
+        1000,
+        12345,
+        67890,
+        0xFFFF,
+        0x10000,
+        0xFFFFFFFF,
+        0x100000000,
+        0xFFFFFFFFFFFF,
+        0x123456789ABCDEF0,
     ];
 
     println!("Testing 64-bit squaring optimizations:\n");
@@ -34,9 +47,9 @@ fn main() {
     }
 
     if all_pass {
-        println!("\n✅ All 64-bit squaring optimizations CORRECT\n");
+        println!("\n All 64-bit squaring optimizations CORRECT\n");
     } else {
-        println!("\n❌ Some 64-bit squaring optimizations FAILED\n");
+        println!("\n Some 64-bit squaring optimizations FAILED\n");
     }
 
     println!("Testing 52-bit squaring optimizations:\n");
@@ -76,9 +89,9 @@ fn main() {
     }
 
     if all_pass {
-        println!("\n✅ All 52-bit squaring optimizations CORRECT\n");
+        println!("\n All 52-bit squaring optimizations CORRECT\n");
     } else {
-        println!("\n❌ Some 52-bit squaring optimizations FAILED\n");
+        println!("\n Some 52-bit squaring optimizations FAILED\n");
     }
 
     println!("Testing cross-implementation consistency:\n");
@@ -128,9 +141,9 @@ fn main() {
     }
 
     if all_pass {
-        println!("\n✅ All implementations produce consistent results!\n");
+        println!("\n All implementations produce consistent results!\n");
     } else {
-        println!("\n❌ Implementations have inconsistencies!\n");
+        println!("\n Implementations have inconsistencies!\n");
     }
 
     // Test repeated squaring (exponentiation pattern)
@@ -163,7 +176,11 @@ fn main() {
             && bytes_64_current == bytes_52_unrolled
             && bytes_64_current == bytes_52_karatsuba
         {
-            println!("✓ Iteration {}: 13^(2^{}) - all methods match", i + 1, i + 1);
+            println!(
+                "✓ Iteration {}: 13^(2^{}) - all methods match",
+                i + 1,
+                i + 1
+            );
         } else {
             println!("✗ Iteration {}: MISMATCH in repeated squaring", i + 1);
         }

@@ -62,7 +62,10 @@ fn main() {
     ]);
     let p_minus_2_squared = p_minus_2.mul(&p_minus_2);
     println!("Expected: 4 (since (p-2)^2 = p^2 - 4p + 4 ≡ 4 mod p)");
-    println!("Equals 4: {}", p_minus_2_squared == FieldElement::from_u64(4));
+    println!(
+        "Equals 4: {}",
+        p_minus_2_squared == FieldElement::from_u64(4)
+    );
 
     // Try multiplying p-3 by small numbers
     println!("\n=== Testing (p-3) * 2 ===");

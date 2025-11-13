@@ -6,11 +6,11 @@
 //!
 //! Run with: cargo run --release --example benchmark_montgomery_fair
 
-use std::time::Instant;
 use std::hint::black_box;
+use std::time::Instant;
 
-use hpcrypt_curves::p256::{FieldElement};
 use hpcrypt_curves::p256::field_montgomery_native::MontgomeryFieldElement as NativeMontgomery;
+use hpcrypt_curves::p256::FieldElement;
 
 const ITERATIONS: usize = 100_000;
 
@@ -96,7 +96,10 @@ fn benchmark_montgomery_mul_only() -> u128 {
 fn main() {
     println!("╔════════════════════════════════════════════════════════════════╗");
     println!("║  Fair P-256 Montgomery Performance Comparison                  ║");
-    println!("║  Iterations: {:>6}                                           ║", ITERATIONS);
+    println!(
+        "║  Iterations: {:>6}                                           ║",
+        ITERATIONS
+    );
     println!("╚════════════════════════════════════════════════════════════════╝");
 
     println!("\n┌─ BASELINE: KARATSUBA ────────────────────────────────────────┐");
@@ -106,18 +109,25 @@ fn main() {
 
     println!("\n┌─ MONTGOMERY: JUST MULTIPLICATION (Original Benchmark) ──────┐");
     let montgomery_mul_only = benchmark_montgomery_mul_only();
-    println!("  Montgomery mul (no conversion): {} ns", montgomery_mul_only);
-    println!("  ⚠️  MISLEADING SPEEDUP: {:.0}x",
-             karatsuba_time as f64 / montgomery_mul_only as f64);
-    println!("  ⚠️  This comparison is UNFAIR!");
+    println!(
+        "  Montgomery mul (no conversion): {} ns",
+        montgomery_mul_only
+    );
+    println!(
+        "    MISLEADING SPEEDUP: {:.0}x",
+        karatsuba_time as f64 / montgomery_mul_only as f64
+    );
+    println!("    This comparison is UNFAIR!");
     println!("  (Montgomery values are already converted)");
     println!("└──────────────────────────────────────────────────────────────┘");
 
     println!("\n┌─ MONTGOMERY: SINGLE OPERATION (Fair Comparison) ────────────┐");
     let montgomery_single = benchmark_montgomery_single_with_conversion();
     println!("  Montgomery with conversion: {} ns", montgomery_single);
-    println!("  ✓ ACTUAL SPEEDUP: {:.1}x",
-             karatsuba_time as f64 / montgomery_single as f64);
+    println!(
+        "  ✓ ACTUAL SPEEDUP: {:.1}x",
+        karatsuba_time as f64 / montgomery_single as f64
+    );
     println!("  (Includes: to_montgomery + mul + from_montgomery)");
     println!("└──────────────────────────────────────────────────────────────┘");
 
@@ -129,8 +139,10 @@ fn main() {
     for &size in &batch_sizes {
         let batch_time = benchmark_montgomery_batch(size);
         let speedup = karatsuba_time as f64 / batch_time as f64;
-        println!("  Batch of {:>2} multiplications: {} ns/op  ({:.0}x speedup)",
-                 size, batch_time, speedup);
+        println!(
+            "  Batch of {:>2} multiplications: {} ns/op  ({:.0}x speedup)",
+            size, batch_time, speedup
+        );
     }
     println!("└──────────────────────────────────────────────────────────────┘");
 
@@ -144,12 +156,18 @@ fn main() {
     println!("  • This is not an apples-to-apples comparison");
     println!();
     println!("ACCURATE performance analysis:");
-    println!("  • Single operation:  ~{:.0}x speedup",
-             karatsuba_time as f64 / montgomery_single as f64);
-    println!("  • Batch of 10:       ~{:.0}x speedup",
-             karatsuba_time as f64 / benchmark_montgomery_batch(10) as f64);
-    println!("  • Batch of 20:       ~{:.0}x speedup",
-             karatsuba_time as f64 / benchmark_montgomery_batch(20) as f64);
+    println!(
+        "  • Single operation:  ~{:.0}x speedup",
+        karatsuba_time as f64 / montgomery_single as f64
+    );
+    println!(
+        "  • Batch of 10:       ~{:.0}x speedup",
+        karatsuba_time as f64 / benchmark_montgomery_batch(10) as f64
+    );
+    println!(
+        "  • Batch of 20:       ~{:.0}x speedup",
+        karatsuba_time as f64 / benchmark_montgomery_batch(20) as f64
+    );
     println!();
     println!("Montgomery is STILL a huge win, but the speedup is more like");
     println!("30-40x for single ops, 100-130x for batches.");

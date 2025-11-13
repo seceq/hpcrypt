@@ -8,8 +8,8 @@
 //!
 //! Goal: Validate that current implementation is near-optimal
 
+use hpcrypt_curves::p256::{AffinePoint, Point, Scalar};
 use std::time::Instant;
-use hpcrypt_curves::p256::{Point, Scalar, AffinePoint};
 
 const ITERATIONS: usize = 1_000;
 
@@ -82,8 +82,11 @@ fn benchmark_current_precomputed(scalars: &[Scalar]) {
     let result2 = g.scalar_mul(&scalar);
     let affine1 = result1.to_affine().unwrap();
     let affine2 = result2.to_affine().unwrap();
-    assert_eq!(affine1.x, affine2.x, "Precomputed result should match standard");
-    println!("  ✅ Correctness verified");
+    assert_eq!(
+        affine1.x, affine2.x,
+        "Precomputed result should match standard"
+    );
+    println!("   Correctness verified");
 }
 
 fn benchmark_true_comb(scalars: &[Scalar]) {
@@ -124,7 +127,7 @@ fn benchmark_true_comb(scalars: &[Scalar]) {
     let affine1 = result1.to_affine().unwrap();
     let affine2 = result2.to_affine().unwrap();
     assert_eq!(affine1.x, affine2.x, "Comb result should match standard");
-    println!("  ✅ Correctness verified");
+    println!("   Correctness verified");
 }
 
 fn benchmark_wnaf(scalars: &[Scalar]) {
@@ -165,7 +168,7 @@ fn benchmark_wnaf(scalars: &[Scalar]) {
     let affine1 = result1.to_affine().unwrap();
     let affine2 = result2.to_affine().unwrap();
     assert_eq!(affine1.x, affine2.x, "wNAF result should match standard");
-    println!("  ✅ Correctness verified");
+    println!("   Correctness verified");
 }
 
 fn benchmark_binary(scalars: &[Scalar]) {
@@ -196,7 +199,7 @@ fn benchmark_binary(scalars: &[Scalar]) {
     println!("  Operations: 256 doublings + ~128 additions");
     println!("  Time per scalar mult: {:.2} μs", us_per_op);
     println!("  Throughput: {:.0} ops/sec", ops_per_sec);
-    println!("  ✅ Baseline method");
+    println!("   Baseline method");
 }
 
 fn print_summary() {
@@ -305,7 +308,7 @@ fn extract_column(scalar: &[u8; 32], row: usize) -> usize {
     for tooth in 0..4 {
         let bit_pos = row + tooth * 64;
         if bit_pos < 256 {
-            let byte_idx = 31 - (bit_pos / 8);  // Big-endian
+            let byte_idx = 31 - (bit_pos / 8); // Big-endian
             let bit_offset = bit_pos % 8;
             let bit = (scalar[byte_idx] >> bit_offset) & 1;
             c |= (bit as usize) << tooth;
