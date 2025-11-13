@@ -73,8 +73,7 @@ fn rotate_rows_2(x: u64) -> u64 {
 #[inline(always)]
 pub fn mix_columns(state: &mut State) {
     let (a0, a1, a2, a3, a4, a5, a6, a7) = (
-        state[0], state[1], state[2], state[3],
-        state[4], state[5], state[6], state[7],
+        state[0], state[1], state[2], state[3], state[4], state[5], state[6], state[7],
     );
 
     // First rotation: rotate rows by 1
@@ -132,8 +131,7 @@ pub fn mix_columns(state: &mut State) {
 #[inline(always)]
 pub fn inv_mix_columns(state: &mut State) {
     let (a0, a1, a2, a3, a4, a5, a6, a7) = (
-        state[0], state[1], state[2], state[3],
-        state[4], state[5], state[6], state[7],
+        state[0], state[1], state[2], state[3], state[4], state[5], state[6], state[7],
     );
 
     // First rotation: rotate rows by 1
