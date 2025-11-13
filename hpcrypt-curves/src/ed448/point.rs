@@ -418,12 +418,7 @@ impl Point {
         // Compute T = X * Y
         let t = x * y;
 
-        Some(Self {
-            x,
-            y,
-            z: one,
-            t,
-        })
+        Some(Self { x, y, z: one, t })
     }
 
     /// Convert to bytes (57 bytes, little-endian)
@@ -579,9 +574,15 @@ impl NielsPoint {
 
     /// Constant identity (for use in const contexts)
     pub const IDENTITY: Self = NielsPoint {
-        y_plus_x: FieldElement { limbs: [1, 0, 0, 0, 0, 0, 0, 0] },
-        y_minus_x: FieldElement { limbs: [1, 0, 0, 0, 0, 0, 0, 0] },
-        t2d: FieldElement { limbs: [0, 0, 0, 0, 0, 0, 0, 0] },
+        y_plus_x: FieldElement {
+            limbs: [1, 0, 0, 0, 0, 0, 0, 0],
+        },
+        y_minus_x: FieldElement {
+            limbs: [1, 0, 0, 0, 0, 0, 0, 0],
+        },
+        t2d: FieldElement {
+            limbs: [0, 0, 0, 0, 0, 0, 0, 0],
+        },
     };
 
     /// Convert from extended coordinates to Niels
@@ -607,8 +608,8 @@ impl NielsPoint {
 
         // Compute Niels coordinates from affine
         let y_minus_x = y - x;
-        let y_plus_x = x + y;  // Note: OpenSSL does X + Y
-        let t2d = x * y * d2;  // t = x*y in affine
+        let y_plus_x = x + y; // Note: OpenSSL does X + Y
+        let t2d = x * y * d2; // t = x*y in affine
 
         NielsPoint {
             y_plus_x,
@@ -640,12 +641,12 @@ const INV_TWO: FieldElement = FieldElement {
         0,
         0,
         0,
-        36028797018963968,    // 2^55
-        72057594037927935,    // 2^56 - 1
-        72057594037927935,    // 2^56 - 1
-        72057594037927935,    // 2^56 - 1
-        36028797018963967,    // 2^55 - 1
-    ]
+        36028797018963968, // 2^55
+        72057594037927935, // 2^56 - 1
+        72057594037927935, // 2^56 - 1
+        72057594037927935, // 2^56 - 1
+        36028797018963967, // 2^55 - 1
+    ],
 };
 
 impl Point {
@@ -708,12 +709,12 @@ impl Point {
         let two = FieldElement::from_limbs([2, 0, 0, 0, 0, 0, 0, 0]);
 
         // Compute 2*A and 2*B to avoid division
-        let two_a = self.x * (other.y_plus_x - other.y_minus_x);  // M1
-        let two_b = self.y * (other.y_plus_x + other.y_minus_x);  // M2
+        let two_a = self.x * (other.y_plus_x - other.y_minus_x); // M1
+        let two_b = self.y * (other.y_plus_x + other.y_minus_x); // M2
 
         // For C: T1 * d * T2, but we have 2*d*T2, so:
         // C = T1 * (2*d*T2) / 2
-        let two_c = self.t * other.t2d;  // M3
+        let two_c = self.t * other.t2d; // M3
 
         // OPTIMIZATION: Use precomputed inverse of 2 instead of 4 expensive inversions
         // This transforms O(4*112) inversions into O(4*112) multiplications
@@ -724,7 +725,7 @@ impl Point {
 
         // E = (X1+Y1)*(X2+Y2) - A - B
         let xy_sum = self.x + self.y;
-        let two_e = two * xy_sum * other.y_plus_x - two_a - two_b;  // M4
+        let two_e = two * xy_sum * other.y_plus_x - two_a - two_b; // M4
         let e = two_e * INV_TWO;
 
         // F, G, H are computed from A, B, C, D
@@ -733,14 +734,14 @@ impl Point {
 
         let f = d - c;
         let g = d + c;
-        let h = b - a;  // For a=1 curve
+        let h = b - a; // For a=1 curve
 
         // Output
         Point {
-            x: e * f,  // M5
-            y: g * h,  // M6
-            z: f * g,  // M7
-            t: e * h,  // M8
+            x: e * f, // M5
+            y: g * h, // M6
+            z: f * g, // M7
+            t: e * h, // M8
         }
     }
 
@@ -926,14 +927,20 @@ mod tests {
 
         let result_regular = g.scalar_mul(&scalar);
         let result_naf = g.scalar_mul_naf(&scalar);
-        assert_eq!(result_regular, result_naf, "NAF failed for consecutive 1s pattern");
+        assert_eq!(
+            result_regular, result_naf,
+            "NAF failed for consecutive 1s pattern"
+        );
 
         // Another pattern: 0b...11110 (four consecutive 1s)
         scalar_bytes[0] = 0b00011110;
         let scalar2 = Scalar::from_bytes(&scalar_bytes);
         let result_regular2 = g.scalar_mul(&scalar2);
         let result_naf2 = g.scalar_mul_naf(&scalar2);
-        assert_eq!(result_regular2, result_naf2, "NAF failed for 4 consecutive 1s");
+        assert_eq!(
+            result_regular2, result_naf2,
+            "NAF failed for 4 consecutive 1s"
+        );
     }
 
     #[test]
@@ -946,7 +953,11 @@ mod tests {
         // Verify no adjacent non-zeros
         for i in 0..447 {
             if naf[i] != 0 && naf[i + 1] != 0 {
-                panic!("NAF has adjacent non-zeros at positions {} and {}", i, i + 1);
+                panic!(
+                    "NAF has adjacent non-zeros at positions {} and {}",
+                    i,
+                    i + 1
+                );
             }
         }
 
@@ -1011,7 +1022,11 @@ impl Point {
     /// Panics if scalars.len() != points.len()
     #[cfg(feature = "std")]
     pub fn pippenger_msm(scalars: &[[u8; 57]], points: &[Point]) -> Point {
-        assert_eq!(scalars.len(), points.len(), "Scalars and points must have same length");
+        assert_eq!(
+            scalars.len(),
+            points.len(),
+            "Scalars and points must have same length"
+        );
 
         let n = scalars.len();
 
@@ -1045,8 +1060,7 @@ impl Point {
             extern crate std;
             #[cfg(feature = "std")]
             use std::vec;
-            #[cfg(feature = "std")]
-            use std::vec::Vec;
+            
 
             let mut buckets = vec![Point::identity(); num_buckets];
 
@@ -1084,10 +1098,10 @@ impl Point {
     /// Select optimal window size for Pippenger's algorithm based on batch size
     fn optimal_window_size(n: usize) -> usize {
         match n {
-            0..=4 => 2,      // 4 buckets
-            5..=32 => 3,     // 8 buckets
-            33..=128 => 4,   // 16 buckets
-            _ => 5,          // 32 buckets
+            0..=4 => 2,    // 4 buckets
+            5..=32 => 3,   // 8 buckets
+            33..=128 => 4, // 16 buckets
+            _ => 5,        // 32 buckets
         }
     }
 
@@ -1244,7 +1258,8 @@ impl CombTable {
         // Convert to signed representation (values in range [-8, 7])
         // This reduces the number of non-zero digits (fewer additions)
         let mut carry = 0i8;
-        for i in 0..111 {  // Process digits 0-110
+        for i in 0..111 {
+            // Process digits 0-110
             digits[i] += carry;
             carry = (digits[i] + 8) >> 4;
             digits[i] -= carry << 4;
@@ -1378,7 +1393,10 @@ mod comb_tests {
         let mut scalar_one = [0u8; 57];
         scalar_one[0] = 1;
         let result = table.scalar_mul(&scalar_one);
-        assert_eq!(result, base, "Comb table scalar_mul(1) should equal base point");
+        assert_eq!(
+            result, base,
+            "Comb table scalar_mul(1) should equal base point"
+        );
 
         // Additional verification: Check that table[0] entries are correct by
         // converting back to Extended and comparing
@@ -1389,12 +1407,18 @@ mod comb_tests {
         // table[0][1] should be [2]B
         let expected_2b = base.double();
         let expected_2b_niels = NielsPoint::from_extended(&expected_2b);
-        assert_eq!(table.table[0][1], expected_2b_niels, "table[0][1] should be [2]B");
+        assert_eq!(
+            table.table[0][1], expected_2b_niels,
+            "table[0][1] should be [2]B"
+        );
 
         // table[0][2] should be [3]B
         let expected_3b = base.double().add(&base);
         let expected_3b_niels = NielsPoint::from_extended(&expected_3b);
-        assert_eq!(table.table[0][2], expected_3b_niels, "table[0][2] should be [3]B");
+        assert_eq!(
+            table.table[0][2], expected_3b_niels,
+            "table[0][2] should be [3]B"
+        );
     }
 
     #[test]
@@ -1490,8 +1514,13 @@ mod comb_tests {
 
         // Test B + B to compare intermediate values
         std::println!("\n=== Testing B + B ===");
-        std::println!("Generator: X[0]={:?}, Y[0]={:?}, Z[0]={:?}, T[0]={:?}",
-            base.x.limbs[0], base.y.limbs[0], base.z.limbs[0], base.t.limbs[0]);
+        std::println!(
+            "Generator: X[0]={:?}, Y[0]={:?}, Z[0]={:?}, T[0]={:?}",
+            base.x.limbs[0],
+            base.y.limbs[0],
+            base.z.limbs[0],
+            base.t.limbs[0]
+        );
 
         std::println!("\n--- Regular Extended + Extended ---");
         let a_ext = (base.y - base.x) * (base.y - base.x);
@@ -1518,11 +1547,19 @@ mod comb_tests {
         std::println!("H[0] = {:?}", h_ext.limbs[0]);
 
         let result_ext = base.add(&base);
-        std::println!("Result X[0]={:?}, Y[0]={:?}", result_ext.x.limbs[0], result_ext.y.limbs[0]);
+        std::println!(
+            "Result X[0]={:?}, Y[0]={:?}",
+            result_ext.x.limbs[0],
+            result_ext.y.limbs[0]
+        );
 
         std::println!("\n--- Niels Addition ---");
-        std::println!("Niels: y+x[0]={:?}, y-x[0]={:?}, t2d[0]={:?}",
-            base_niels.y_plus_x.limbs[0], base_niels.y_minus_x.limbs[0], base_niels.t2d.limbs[0]);
+        std::println!(
+            "Niels: y+x[0]={:?}, y-x[0]={:?}, t2d[0]={:?}",
+            base_niels.y_plus_x.limbs[0],
+            base_niels.y_minus_x.limbs[0],
+            base_niels.t2d.limbs[0]
+        );
 
         let a_niels = (base.y - base.x) * base_niels.y_minus_x;
         let b_niels = (base.y + base.x) * base_niels.y_plus_x;
@@ -1546,7 +1583,11 @@ mod comb_tests {
         std::println!("H[0] = {:?}", h_niels.limbs[0]);
 
         let result_niels = base.add_niels(&base_niels);
-        std::println!("Result X[0]={:?}, Y[0]={:?}", result_niels.x.limbs[0], result_niels.y.limbs[0]);
+        std::println!(
+            "Result X[0]={:?}, Y[0]={:?}",
+            result_niels.x.limbs[0],
+            result_niels.y.limbs[0]
+        );
 
         std::println!("\n--- Comparison ---");
         std::println!("A values match? {}", a_ext == a_niels);
@@ -1613,17 +1654,26 @@ mod comb_tests {
 
         // table[1][0] should be 1*256*B = 256B
         let base_256_niels = NielsPoint::from_extended(&base_256);
-        assert_eq!(table.table[1][0], base_256_niels, "table[1][0] should be [256]B");
+        assert_eq!(
+            table.table[1][0], base_256_niels,
+            "table[1][0] should be [256]B"
+        );
 
         // table[1][1] should be 2*256*B = 512B
         let expected_512b = base_256.double();
         let expected_512b_niels = NielsPoint::from_extended(&expected_512b);
-        assert_eq!(table.table[1][1], expected_512b_niels, "table[1][1] should be [512]B");
+        assert_eq!(
+            table.table[1][1], expected_512b_niels,
+            "table[1][1] should be [512]B"
+        );
 
         // table[1][2] should be 3*256*B = 768B
         let expected_768b = base_256.double().add(&base_256);
         let expected_768b_niels = NielsPoint::from_extended(&expected_768b);
-        assert_eq!(table.table[1][2], expected_768b_niels, "table[1][2] should be [768]B");
+        assert_eq!(
+            table.table[1][2], expected_768b_niels,
+            "table[1][2] should be [768]B"
+        );
     }
 
     #[test]
@@ -1640,7 +1690,7 @@ mod comb_tests {
         let base = Point::generator();
 
         let mut scalar_256 = [0u8; 57];
-        scalar_256[1] = 1;  // 256 in little-endian
+        scalar_256[1] = 1; // 256 in little-endian
 
         // Compute expected result manually
         let mut expected_256b = base;
@@ -1661,7 +1711,10 @@ mod comb_tests {
         std::println!("Result via Comb == Regular? {}", result == result_regular);
 
         assert_eq!(result, expected_256b, "Comb should give 256B");
-        assert_eq!(result, result_regular, "Comb should match regular scalar_mul");
+        assert_eq!(
+            result, result_regular,
+            "Comb should match regular scalar_mul"
+        );
     }
 
     #[test]
@@ -1688,7 +1741,13 @@ mod comb_tests {
             digits[2 * i] = (scalar_42[i] & 0x0F) as i8;
             digits[2 * i + 1] = (scalar_42[i] >> 4) as i8;
         }
-        std::println!("Digits before signed conversion: [{}, {}, {}, {}]", digits[0], digits[1], digits[2], digits[3]);
+        std::println!(
+            "Digits before signed conversion: [{}, {}, {}, {}]",
+            digits[0],
+            digits[1],
+            digits[2],
+            digits[3]
+        );
 
         // Signed conversion
         let mut carry = 0i8;
@@ -1699,7 +1758,13 @@ mod comb_tests {
         }
         digits[111] += carry;
 
-        std::println!("Digits after signed conversion: [{}, {}, {}, {}]", digits[0], digits[1], digits[2], digits[3]);
+        std::println!(
+            "Digits after signed conversion: [{}, {}, {}, {}]",
+            digits[0],
+            digits[1],
+            digits[2],
+            digits[3]
+        );
         std::println!("Expected: digit[0]=-6, digit[1]=3");
 
         // TODO: Update this test to work with Niels table
@@ -1736,11 +1801,20 @@ mod comb_tests {
         let result_regular = base.scalar_mul(&scalar);
 
         // std::println!("\nActual Comb result == Manual trace? {}", result_comb == phase2_result);
-        std::println!("Actual Comb result == Regular? {}", result_comb == result_regular);
-        std::println!("Actual Comb result == 42B manual? {}", result_comb == b42_manual);
+        std::println!(
+            "Actual Comb result == Regular? {}",
+            result_comb == result_regular
+        );
+        std::println!(
+            "Actual Comb result == 42B manual? {}",
+            result_comb == b42_manual
+        );
 
         assert_eq!(result_comb, b42_manual, "Comb should give 42B");
-        assert_eq!(result_comb, result_regular, "Comb should match regular scalar_mul");
+        assert_eq!(
+            result_comb, result_regular,
+            "Comb should match regular scalar_mul"
+        );
     }
 
     #[test]
@@ -1751,7 +1825,10 @@ mod comb_tests {
         // Test with scalar = 0 (should give identity)
         let scalar_zero = [0u8; 57];
         let result = table.scalar_mul(&scalar_zero);
-        assert!(bool::from(result.is_identity()), "Comb scalar_mul(0) should be identity");
+        assert!(
+            bool::from(result.is_identity()),
+            "Comb scalar_mul(0) should be identity"
+        );
 
         // Test with scalar = 1 (should give base point)
         let mut scalar_one = [0u8; 57];
@@ -1806,7 +1883,8 @@ mod comb_tests {
             let result_comb = table.scalar_mul(&scalar_bytes);
             let result_regular = base.scalar_mul(&scalar);
             assert_eq!(
-                result_comb, result_regular,
+                result_comb,
+                result_regular,
                 "Comb method disagrees with regular scalar_mul for scalar {:?}",
                 &scalar_bytes[0..8]
             );
@@ -1968,7 +2046,10 @@ mod comb_tests {
             acc
         };
 
-        assert_eq!(result_pippenger, result_naive, "Pippenger disagrees with naive summation");
+        assert_eq!(
+            result_pippenger, result_naive,
+            "Pippenger disagrees with naive summation"
+        );
     }
 
     #[test]
@@ -1977,7 +2058,10 @@ mod comb_tests {
 
         // Test with empty arrays
         let result_empty = Point::pippenger_msm(&[], &[]);
-        assert!(bool::from(result_empty.is_identity()), "Empty MSM should be identity");
+        assert!(
+            bool::from(result_empty.is_identity()),
+            "Empty MSM should be identity"
+        );
 
         // Test with single element
         let mut scalar_one = [0u8; 57];
