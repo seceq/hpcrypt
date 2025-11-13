@@ -9,12 +9,9 @@ keywords = ["cryptography", "post-quantum", "signature", "sphincs", "slh-dsa"]
 categories = ["cryptography", "no-std"]
 
 [dependencies]
-# Hash functions
-sha2 = { version = "0.10", default-features = false }
-sha3 = { version = "0.10", default-features = false }
-
-# Random number generation
-rand_core = { version = "0.6", default-features = false }
+# HPCrypt dependencies
+hpcrypt-rng = { path = "../hpcrypt-rng", default-features = false }
+hpcrypt-hash = { path = "../hpcrypt-hash", default-features = false }
 
 # Constant-time operations and zeroization
 subtle = { version = "2.5", default-features = false }
@@ -31,8 +28,8 @@ serde_json = "1.0"
 rand = "0.8"
 
 [features]
-default = ["std"]
-std = ["sha2/std", "sha3/std", "rand_core/std", "subtle/std", "zeroize/std"]
+default = ["std", "hpcrypt-rng/os-rng"]
+std = ["hpcrypt-hash/std", "hpcrypt-rng/std", "subtle/std", "zeroize/std"]
 
 [profile.release]
 opt-level = 3

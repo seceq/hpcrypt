@@ -16,8 +16,12 @@ hpcrypt-aead = { workspace = true }
 
 [dev-dependencies]
 hex-literal = { workspace = true }
+wycheproof = "0.6"
+serde_json = "1.0"
+hex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
 
 [features]
 default = ["std"]
-std = ["hpcrypt-core/std"]
-alloc = ["hpcrypt-core/alloc"]
+std = ["hpcrypt-core/std", "hpcrypt-aead/std"]
+alloc = ["hpcrypt-core/alloc", "hpcrypt-aead/alloc"]

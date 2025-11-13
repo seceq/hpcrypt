@@ -17,6 +17,9 @@ criterion = { workspace = true }
 hpcrypt-signatures = { path = "../hpcrypt-signatures" }
 proptest = "1.4"
 num-bigint = { version = "0.4", default-features = false }  # Test-only: validation/comparison
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+hex = "0.4"
 
 [features]
 default = ["std"]

@@ -14,10 +14,10 @@ keywords = ["cryptography", "post-quantum", "ml-dsa", "dilithium", "signatures"]
 categories = ["cryptography", "no-std"]
 
 [dependencies]
-sha3 = { version = "0.10", default-features = false }
+hpcrypt-rng = { path = "../hpcrypt-rng", default-features = false }
+hpcrypt-hash = { path = "../hpcrypt-hash", default-features = false }
 subtle = { version = "2.6", default-features = false }
 zeroize = { version = "1.8", default-features = false, features = ["derive"], optional = true }
-getrandom = { version = "0.2", default-features = false, optional = true }
 serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
 serde_arrays = { version = "0.1", optional = true }
 pem = { version = "3.0", optional = true }
@@ -53,10 +53,10 @@ name = "hpcrypt_mldsa"
 path = "src/lib.rs"
 
 [features]
-default = ["getrandom"]
-std = []
+default = ["hpcrypt-rng/os-rng"]
+std = ["hpcrypt-hash/std", "hpcrypt-rng/std"]
 zeroize = ["dep:zeroize"]
 serde = ["dep:serde", "dep:serde_arrays"]
 pem = ["dep:pem", "dep:der", "dep:spki"]
-wasm = ["getrandom/js"]
+wasm = ["hpcrypt-rng/wasm"]
 timing-tests = []

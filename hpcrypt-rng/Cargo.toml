@@ -35,6 +35,9 @@ alloc = ["zeroize/alloc"]
 # OS-based RNG (default, recommended)
 os-rng = ["getrandom/std"]
 
+# WASM support
+wasm = ["getrandom/js"]
+
 # Deterministic RNG (for testing/reproducibility)
 # TODO: Implement chacha20_rng module before enabling this feature
 # chacha20-rng = ["hpcrypt-aead", "alloc"]
