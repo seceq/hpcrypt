@@ -34,8 +34,8 @@ use crate::sha3::{ShakeCore, STATE_SIZE};
 pub struct XofReader<const RATE: usize, const ROUNDS: usize> {
     state: [u64; STATE_SIZE],
     buffer: [u8; RATE],
-    buffer_offset: usize,  // Current position in buffer (how much we've already read)
-    squeezed: bool,        // Whether we've squeezed the first block
+    buffer_offset: usize, // Current position in buffer (how much we've already read)
+    squeezed: bool,       // Whether we've squeezed the first block
 }
 
 impl<const RATE: usize, const ROUNDS: usize> XofReader<RATE, ROUNDS> {
@@ -109,19 +109,58 @@ impl<const RATE: usize, const ROUNDS: usize> XofReader<RATE, ROUNDS> {
     /// Uses word-at-a-time extraction for better performance.
     #[inline(always)]
     fn fill_buffer(&mut self) {
-        // Extract complete u64 words
-        let words = RATE / 8;
-        for i in 0..words {
-            let bytes = self.state[i].to_le_bytes();
-            self.buffer[i * 8..(i + 1) * 8].copy_from_slice(&bytes);
+        #[cfg(not(feature = "lane-complement"))]
+        {
+            // Extract complete u64 words
+            let words = RATE / 8;
+            for i in 0..words {
+                let bytes = self.state[i].to_le_bytes();
+                self.buffer[i * 8..(i + 1) * 8].copy_from_slice(&bytes);
+            }
+
+            // Handle any remaining bytes (for rates not divisible by 8)
+            let remainder_offset = words * 8;
+            if RATE > remainder_offset {
+                let bytes = self.state[words].to_le_bytes();
+                let remainder = RATE - remainder_offset;
+                self.buffer[remainder_offset..RATE].copy_from_slice(&bytes[..remainder]);
+            }
         }
 
-        // Handle any remaining bytes (for rates not divisible by 8)
-        let remainder_offset = words * 8;
-        if RATE > remainder_offset {
-            let bytes = self.state[words].to_le_bytes();
-            let remainder = RATE - remainder_offset;
-            self.buffer[remainder_offset..RATE].copy_from_slice(&bytes[..remainder]);
+        #[cfg(feature = "lane-complement")]
+        {
+            // Lane complement mode: certain lanes are stored complemented
+            // For SHAKE128 (RATE=168): lanes that need complementing
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false, false, false, false, true, false, false,
+                false, true, false, false, false, false, true, false, false, true, false,
+                false, false, false,
+            ];
+
+            // Extract complete u64 words with complementing
+            let words = RATE / 8;
+            for i in 0..words {
+                let lane = if COMPLEMENTED[i] {
+                    !self.state[i]
+                } else {
+                    self.state[i]
+                };
+                let bytes = lane.to_le_bytes();
+                self.buffer[i * 8..(i + 1) * 8].copy_from_slice(&bytes);
+            }
+
+            // Handle any remaining bytes (for rates not divisible by 8)
+            let remainder_offset = words * 8;
+            if RATE > remainder_offset {
+                let lane = if COMPLEMENTED[words] {
+                    !self.state[words]
+                } else {
+                    self.state[words]
+                };
+                let bytes = lane.to_le_bytes();
+                let remainder = RATE - remainder_offset;
+                self.buffer[remainder_offset..RATE].copy_from_slice(&bytes[..remainder]);
+            }
         }
     }
 
@@ -215,7 +254,10 @@ mod tests {
         let mut actual = vec![0u8; 128];
         reader.read(&mut actual);
 
-        assert_eq!(expected, actual, "XOF reader should match one-shot finalize");
+        assert_eq!(
+            expected, actual,
+            "XOF reader should match one-shot finalize"
+        );
     }
 
     #[test]
@@ -241,7 +283,10 @@ mod tests {
         reader2.read(&mut incremental[100..150]);
         reader2.read(&mut incremental[150..200]);
 
-        assert_eq!(all_at_once, incremental, "Incremental reads should match all-at-once");
+        assert_eq!(
+            all_at_once, incremental,
+            "Incremental reads should match all-at-once"
+        );
     }
 
     #[test]
