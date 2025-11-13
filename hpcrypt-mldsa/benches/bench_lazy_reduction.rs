@@ -3,9 +3,9 @@
 //! This benchmark compares eager reduction (current) vs lazy reduction (proposed)
 //! for polynomial arithmetic chains, especially in matrix-vector multiplication.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use mldsa::ntt::{inv_ntt, ntt};
 use mldsa::poly::Poly;
-use mldsa::ntt::{ntt, inv_ntt};
 
 /// Helper: Polynomial multiplication via NTT
 /// a and b should already be in NTT form
@@ -14,7 +14,8 @@ fn poly_multiply(a_ntt: &Poly, b_ntt: &Poly) -> Poly {
     let mut result_ntt = Poly::new();
     for i in 0..256 {
         // Coefficients are already in NTT domain, just multiply pointwise
-        result_ntt.coeffs[i] = ((a_ntt.coeffs[i] as i64) * (b_ntt.coeffs[i] as i64) % 8380417) as i32;
+        result_ntt.coeffs[i] =
+            ((a_ntt.coeffs[i] as i64) * (b_ntt.coeffs[i] as i64) % 8380417) as i32;
     }
     // Transform back to coefficient domain
     inv_ntt(&result_ntt)
@@ -39,17 +40,23 @@ fn bench_add_chain_eager(c: &mut Criterion) {
 
     // Test different chain lengths
     for &chain_len in &[2, 4, 8, 16] {
-        group.bench_with_input(BenchmarkId::from_parameter(chain_len), &chain_len, |b, &len| {
-            let polys: Vec<Poly> = (0..len).map(|i| create_test_poly(i as i32 * 1000)).collect();
+        group.bench_with_input(
+            BenchmarkId::from_parameter(chain_len),
+            &chain_len,
+            |b, &len| {
+                let polys: Vec<Poly> = (0..len)
+                    .map(|i| create_test_poly(i as i32 * 1000))
+                    .collect();
 
-            b.iter(|| {
-                let mut result = polys[0].clone();
-                for i in 1..len {
-                    result = result.add(black_box(&polys[i]));  // Eager: reduces inside add()
-                }
-                black_box(&result);
-            });
-        });
+                b.iter(|| {
+                    let mut result = polys[0].clone();
+                    for i in 1..len {
+                        result = result.add(black_box(&polys[i])); // Eager: reduces inside add()
+                    }
+                    black_box(&result);
+                });
+            },
+        );
     }
 
     group.finish();
@@ -61,18 +68,24 @@ fn bench_add_chain_lazy(c: &mut Criterion) {
 
     // Test different chain lengths
     for &chain_len in &[2, 4, 8, 16] {
-        group.bench_with_input(BenchmarkId::from_parameter(chain_len), &chain_len, |b, &len| {
-            let polys: Vec<Poly> = (0..len).map(|i| create_test_poly(i as i32 * 1000)).collect();
+        group.bench_with_input(
+            BenchmarkId::from_parameter(chain_len),
+            &chain_len,
+            |b, &len| {
+                let polys: Vec<Poly> = (0..len)
+                    .map(|i| create_test_poly(i as i32 * 1000))
+                    .collect();
 
-            b.iter(|| {
-                let mut result = polys[0].clone();
-                for i in 1..len {
-                    result = result.add_lazy(black_box(&polys[i]));  // Lazy: no reduction!
-                }
-                result.reduce();  // Single reduction at the end
-                black_box(&result);
-            });
-        });
+                b.iter(|| {
+                    let mut result = polys[0].clone();
+                    for i in 1..len {
+                        result = result.add_lazy(black_box(&polys[i])); // Lazy: no reduction!
+                    }
+                    result.reduce(); // Single reduction at the end
+                    black_box(&result);
+                });
+            },
+        );
     }
 
     group.finish();
@@ -89,8 +102,12 @@ fn bench_matrix_vector_mul_eager(c: &mut Criterion) {
     for &l in &[5, 7] {
         group.bench_with_input(BenchmarkId::from_parameter(l), &l, |b, &l| {
             // Create matrix row and vector
-            let matrix_row: Vec<Poly> = (0..l).map(|i| ntt(&create_test_poly(i as i32 * 1000))).collect();
-            let y_vec: Vec<Poly> = (0..l).map(|i| ntt(&create_test_poly(i as i32 * 2000))).collect();
+            let matrix_row: Vec<Poly> = (0..l)
+                .map(|i| ntt(&create_test_poly(i as i32 * 1000)))
+                .collect();
+            let y_vec: Vec<Poly> = (0..l)
+                .map(|i| ntt(&create_test_poly(i as i32 * 2000)))
+                .collect();
 
             b.iter(|| {
                 // Accumulate products with eager reduction (current implementation)
@@ -102,9 +119,9 @@ fn bench_matrix_vector_mul_eager(c: &mut Criterion) {
                 let mut j = 0;
                 while j + 4 <= l {
                     let prod0 = poly_multiply(&matrix_row[j], &y_vec[j]);
-                    let prod1 = poly_multiply(&matrix_row[j+1], &y_vec[j+1]);
-                    let prod2 = poly_multiply(&matrix_row[j+2], &y_vec[j+2]);
-                    let prod3 = poly_multiply(&matrix_row[j+3], &y_vec[j+3]);
+                    let prod1 = poly_multiply(&matrix_row[j + 1], &y_vec[j + 1]);
+                    let prod2 = poly_multiply(&matrix_row[j + 2], &y_vec[j + 2]);
+                    let prod3 = poly_multiply(&matrix_row[j + 3], &y_vec[j + 3]);
 
                     // Eager reduction: each add() reduces internally
                     acc0 = acc0.add(&prod0);
@@ -147,8 +164,12 @@ fn bench_matrix_vector_mul_lazy(c: &mut Criterion) {
     for &l in &[5, 7] {
         group.bench_with_input(BenchmarkId::from_parameter(l), &l, |b, &l| {
             // Create matrix row and vector
-            let matrix_row: Vec<Poly> = (0..l).map(|i| ntt(&create_test_poly(i as i32 * 1000))).collect();
-            let y_vec: Vec<Poly> = (0..l).map(|i| ntt(&create_test_poly(i as i32 * 2000))).collect();
+            let matrix_row: Vec<Poly> = (0..l)
+                .map(|i| ntt(&create_test_poly(i as i32 * 1000)))
+                .collect();
+            let y_vec: Vec<Poly> = (0..l)
+                .map(|i| ntt(&create_test_poly(i as i32 * 2000)))
+                .collect();
 
             b.iter(|| {
                 // Accumulate products with LAZY reduction (optimized)
@@ -160,9 +181,9 @@ fn bench_matrix_vector_mul_lazy(c: &mut Criterion) {
                 let mut j = 0;
                 while j + 4 <= l {
                     let prod0 = poly_multiply(&matrix_row[j], &y_vec[j]);
-                    let prod1 = poly_multiply(&matrix_row[j+1], &y_vec[j+1]);
-                    let prod2 = poly_multiply(&matrix_row[j+2], &y_vec[j+2]);
-                    let prod3 = poly_multiply(&matrix_row[j+3], &y_vec[j+3]);
+                    let prod1 = poly_multiply(&matrix_row[j + 1], &y_vec[j + 1]);
+                    let prod2 = poly_multiply(&matrix_row[j + 2], &y_vec[j + 2]);
+                    let prod3 = poly_multiply(&matrix_row[j + 3], &y_vec[j + 3]);
 
                     // Lazy reduction: no reduction in add_lazy()
                     acc0 = acc0.add_lazy(&prod0);
@@ -243,7 +264,7 @@ fn bench_reduce(c: &mut Criterion) {
     let mut poly = create_test_poly(1000);
     // Make coefficients larger to test reduction performance
     for coeff in &mut poly.coeffs {
-        *coeff = *coeff * 4;  // Could be up to 4*Q
+        *coeff = *coeff * 4; // Could be up to 4*Q
     }
 
     group.bench_function("reduce", |b| {

@@ -1,14 +1,14 @@
 //! Benchmark comparing AVX2 SIMD NTT vs Rust scalar NTT
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use mldsa::poly::Poly;
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use mldsa::ntt::ntt_scalar;
 use mldsa::params::N;
+use mldsa::poly::Poly;
 
 #[cfg(all(feature = "avx2", target_arch = "x86_64"))]
-use mldsa::simd::dispatch::ntt_simd;
-#[cfg(all(feature = "avx2", target_arch = "x86_64"))]
 use mldsa::simd::avx2::init_qdata;
+#[cfg(all(feature = "avx2", target_arch = "x86_64"))]
+use mldsa::simd::dispatch::ntt_simd;
 
 fn bench_ntt_scalar(c: &mut Criterion) {
     let mut group = c.benchmark_group("ntt_scalar");

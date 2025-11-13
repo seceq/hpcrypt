@@ -8,16 +8,19 @@
 //!
 //! Run with: cargo bench --bench bench_batch_verify
 
-use mldsa::keygen::keygen;
-use mldsa::sign::sign;
-use mldsa::verify::verify;
 use mldsa::batch::verify_batch;
+use mldsa::keygen::keygen;
 use mldsa::params::MlDsa65;
+use mldsa::sign::sign;
 use mldsa::sign::Signature;
+use mldsa::verify::verify;
 use std::time::Instant;
 
 fn benchmark_individual_verify(num_signatures: usize) -> std::time::Duration {
-    println!("\n=== Individual Verification ({} signatures) ===", num_signatures);
+    println!(
+        "\n=== Individual Verification ({} signatures) ===",
+        num_signatures
+    );
 
     // Setup
     let (pk, sk) = keygen::<MlDsa65>();
@@ -46,14 +49,19 @@ fn benchmark_individual_verify(num_signatures: usize) -> std::time::Duration {
     let avg_time = duration / num_signatures as u32;
     println!("Total time: {:.2?}", duration);
     println!("Average per signature: {:.2?}", avg_time);
-    println!("Throughput: {:.0} verifications/sec",
-             num_signatures as f64 / duration.as_secs_f64());
+    println!(
+        "Throughput: {:.0} verifications/sec",
+        num_signatures as f64 / duration.as_secs_f64()
+    );
 
     duration
 }
 
 fn benchmark_batch_verify(num_signatures: usize) -> std::time::Duration {
-    println!("\n=== Batch Verification ({} signatures) ===", num_signatures);
+    println!(
+        "\n=== Batch Verification ({} signatures) ===",
+        num_signatures
+    );
 
     // Setup
     let (pk, sk) = keygen::<MlDsa65>();
@@ -81,13 +89,18 @@ fn benchmark_batch_verify(num_signatures: usize) -> std::time::Duration {
     let duration = start.elapsed();
 
     // Verify all passed
-    assert!(results.iter().all(|&r| r), "Some signatures failed verification");
+    assert!(
+        results.iter().all(|&r| r),
+        "Some signatures failed verification"
+    );
 
     let avg_time = duration / num_signatures as u32;
     println!("Total time: {:.2?}", duration);
     println!("Average per signature: {:.2?}", avg_time);
-    println!("Throughput: {:.0} verifications/sec",
-             num_signatures as f64 / duration.as_secs_f64());
+    println!(
+        "Throughput: {:.0} verifications/sec",
+        num_signatures as f64 / duration.as_secs_f64()
+    );
 
     duration
 }
@@ -97,8 +110,10 @@ fn compare_verification_methods(batch_sizes: &[usize]) {
     println!("║         Batch Verification Performance Comparison             ║");
     println!("╚════════════════════════════════════════════════════════════════╝");
 
-    println!("\n{:>10} {:>15} {:>15} {:>12}",
-             "Batch Size", "Individual", "Batch", "Speedup");
+    println!(
+        "\n{:>10} {:>15} {:>15} {:>12}",
+        "Batch Size", "Individual", "Batch", "Speedup"
+    );
     println!("{}", "─".repeat(70));
 
     for &size in batch_sizes {
@@ -107,8 +122,10 @@ fn compare_verification_methods(batch_sizes: &[usize]) {
 
         let speedup = individual_time.as_secs_f64() / batch_time.as_secs_f64();
 
-        println!("{:>10} {:>15.2?} {:>15.2?} {:>11.2}x",
-                 size, individual_time, batch_time, speedup);
+        println!(
+            "{:>10} {:>15.2?} {:>15.2?} {:>11.2}x",
+            size, individual_time, batch_time, speedup
+        );
     }
 }
 

@@ -3,9 +3,9 @@
 //! This benchmark compares the baseline rejection sampling with lookup table optimization
 //! for both eta=2 and eta=4 cases.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use mldsa::symmetric::Shake256Xof;
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use mldsa::sampling::{sample_poly_eta, sample_poly_eta_baseline};
+use mldsa::symmetric::Shake256Xof;
 
 fn bench_sampling_eta2_optimized(c: &mut Criterion) {
     let mut group = c.benchmark_group("sampling_eta2_optimized");

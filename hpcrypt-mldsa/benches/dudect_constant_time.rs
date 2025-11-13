@@ -8,8 +8,8 @@
 //!
 //! Run with: cargo bench --bench dudect_constant_time
 
-use dudect_bencher::{ctbench_main, BenchRng, Class, CtRunner};
 use dudect_bencher::rand::Rng;
+use dudect_bencher::{ctbench_main, BenchRng, Class, CtRunner};
 use mldsa::constant_time::{ct_compare, ct_select_i32};
 use mldsa::keygen::keygen_from_seed;
 use mldsa::params::{MlDsa65, Q};
@@ -115,7 +115,7 @@ fn verify_timing(runner: &mut CtRunner, rng: &mut BenchRng) {
 
 /// Test NTT (Number Theoretic Transform) for constant-time behavior
 fn ntt_timing(runner: &mut CtRunner, rng: &mut BenchRng) {
-    use mldsa::ntt::{ntt, inv_ntt};
+    use mldsa::ntt::{inv_ntt, ntt};
 
     // Create two different polynomials
     let mut coeffs1 = [0i32; 256];

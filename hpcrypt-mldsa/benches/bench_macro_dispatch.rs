@@ -99,15 +99,11 @@ fn bench_power2round(c: &mut Criterion) {
     let mut group = c.benchmark_group("power2round_dispatch");
 
     group.bench_function("baseline", |b| {
-        b.iter(|| {
-            black_box(power2round_poly_baseline(black_box(&poly), D))
-        })
+        b.iter(|| black_box(power2round_poly_baseline(black_box(&poly), D)))
     });
 
     group.bench_function("macro", |b| {
-        b.iter(|| {
-            black_box(power2round_poly_macro(black_box(&poly), D))
-        })
+        b.iter(|| black_box(power2round_poly_macro(black_box(&poly), D)))
     });
 
     group.finish();
@@ -119,15 +115,11 @@ fn bench_decompose(c: &mut Criterion) {
     let mut group = c.benchmark_group("decompose_dispatch");
 
     group.bench_function("baseline", |b| {
-        b.iter(|| {
-            black_box(decompose_high_baseline(black_box(&poly), ALPHA))
-        })
+        b.iter(|| black_box(decompose_high_baseline(black_box(&poly), ALPHA)))
     });
 
     group.bench_function("macro", |b| {
-        b.iter(|| {
-            black_box(decompose_high_macro(black_box(&poly), ALPHA))
-        })
+        b.iter(|| black_box(decompose_high_macro(black_box(&poly), ALPHA)))
     });
 
     group.finish();

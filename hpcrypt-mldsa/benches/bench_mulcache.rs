@@ -4,9 +4,9 @@
 //! The cache optimization pre-computes values that can be reused across multiple
 //! multiplications, which is beneficial for matrix-vector operations.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use mldsa::poly::{Poly, PolyMulcache};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use mldsa::ntt::{ntt, ntt_multiply, ntt_multiply_cached};
+use mldsa::poly::{Poly, PolyMulcache};
 
 /// Helper: Create a test polynomial with pseudo-random coefficients
 fn create_test_poly(seed: i32) -> Poly {
@@ -56,7 +56,8 @@ fn bench_single_multiply(c: &mut Criterion) {
 
     group.bench_function("cached", |b| {
         b.iter(|| {
-            let result = ntt_multiply_cached(black_box(&a_ntt), black_box(&a_cache), black_box(&b_ntt));
+            let result =
+                ntt_multiply_cached(black_box(&a_ntt), black_box(&a_cache), black_box(&b_ntt));
             black_box(&result);
         });
     });
@@ -113,7 +114,8 @@ fn bench_two_multiplies(c: &mut Criterion) {
 /// For ML-DSA-65: K=6, L=5 → 30 polynomial multiplications
 /// For ML-DSA-87: K=8, L=7 → 56 polynomial multiplications
 fn bench_matrix_vector(c: &mut Criterion) {
-    for &l in &[5, 7] {  // ML-DSA-65 (L=5), ML-DSA-87 (L=7)
+    for &l in &[5, 7] {
+        // ML-DSA-65 (L=5), ML-DSA-87 (L=7)
         let mut group = c.benchmark_group(format!("matrix_vector_L{}", l));
 
         // Create test data: one row of matrix A (L polynomials) and vector y (L polynomials)
@@ -136,10 +138,7 @@ fn bench_matrix_vector(c: &mut Criterion) {
             b.iter(|| {
                 let mut acc = Poly::new();
                 for j in 0..l {
-                    let prod = ntt_multiply(
-                        black_box(&matrix_row[j]),
-                        black_box(&y_vec[j])
-                    );
+                    let prod = ntt_multiply(black_box(&matrix_row[j]), black_box(&y_vec[j]));
                     // Simple addition (no lazy reduction for fair comparison)
                     for i in 0..256 {
                         acc.coeffs[i] = acc.coeffs[i].wrapping_add(prod.coeffs[i]);
@@ -164,7 +163,7 @@ fn bench_matrix_vector(c: &mut Criterion) {
                     let prod = ntt_multiply_cached(
                         black_box(&matrix_row[j]),
                         black_box(&caches[j]),
-                        black_box(&y_vec[j])
+                        black_box(&y_vec[j]),
                     );
                     // Simple addition
                     for i in 0..256 {
@@ -189,7 +188,7 @@ fn bench_matrix_vector(c: &mut Criterion) {
                     let prod = ntt_multiply_cached(
                         black_box(&matrix_row[j]),
                         black_box(&pre_caches[j]),
-                        black_box(&y_vec[j])
+                        black_box(&y_vec[j]),
                     );
                     // Simple addition
                     for i in 0..256 {
@@ -209,8 +208,8 @@ fn bench_matrix_vector(c: &mut Criterion) {
 /// In ML-DSA signing, we often need to multiply the same matrix A with different
 /// y vectors in a rejection sampling loop. This is where mulcache shines.
 fn bench_repeated_matrix_vector(c: &mut Criterion) {
-    let l = 5;  // ML-DSA-65
-    let num_iterations = 10;  // Simulate 10 rejection loop iterations
+    let l = 5; // ML-DSA-65
+    let num_iterations = 10; // Simulate 10 rejection loop iterations
 
     let mut group = c.benchmark_group("repeated_matrix_vector");
 
@@ -240,10 +239,7 @@ fn bench_repeated_matrix_vector(c: &mut Criterion) {
             for y_vec in &y_vecs {
                 let mut acc = Poly::new();
                 for j in 0..l {
-                    let prod = ntt_multiply(
-                        black_box(&matrix_row[j]),
-                        black_box(&y_vec[j])
-                    );
+                    let prod = ntt_multiply(black_box(&matrix_row[j]), black_box(&y_vec[j]));
                     for i in 0..256 {
                         acc.coeffs[i] = acc.coeffs[i].wrapping_add(prod.coeffs[i]);
                     }
@@ -271,7 +267,7 @@ fn bench_repeated_matrix_vector(c: &mut Criterion) {
                     let prod = ntt_multiply_cached(
                         black_box(&matrix_row[j]),
                         black_box(&caches[j]),
-                        black_box(&y_vec[j])
+                        black_box(&y_vec[j]),
                     );
                     for i in 0..256 {
                         acc.coeffs[i] = acc.coeffs[i].wrapping_add(prod.coeffs[i]);

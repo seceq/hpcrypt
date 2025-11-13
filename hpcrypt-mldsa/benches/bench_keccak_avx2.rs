@@ -8,8 +8,11 @@
 
 #![cfg(all(feature = "avx2", feature = "std", feature = "simd"))]
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
-use sha3::{Shake256, digest::{Update, ExtendableOutput, XofReader}};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use sha3::{
+    digest::{ExtendableOutput, Update, XofReader},
+    Shake256,
+};
 
 #[cfg(all(feature = "avx2", target_arch = "x86_64"))]
 use mldsa::simd::keccak::{shake256x4_batch, Shake256X4, SHAKE256_RATE};
@@ -33,15 +36,11 @@ fn bench_shake256_single_vs_batch(c: &mut Criterion) {
         group.throughput(Throughput::Bytes(input_len as u64));
 
         // Scalar (sha3 crate) - single computation
-        group.bench_with_input(
-            BenchmarkId::new("scalar", input_len),
-            &input,
-            |b, input| {
-                b.iter(|| {
-                    black_box(shake256_scalar(black_box(input), 256));
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("scalar", input_len), &input, |b, input| {
+            b.iter(|| {
+                black_box(shake256_scalar(black_box(input), 256));
+            });
+        });
 
         // AVX2 - compute 4 in parallel (amortized cost per stream)
         #[cfg(all(feature = "avx2", target_arch = "x86_64"))]
@@ -69,15 +68,11 @@ fn bench_shake256_output_length(c: &mut Criterion) {
         group.throughput(Throughput::Bytes(outlen as u64));
 
         // Scalar
-        group.bench_with_input(
-            BenchmarkId::new("scalar", outlen),
-            &outlen,
-            |b, &outlen| {
-                b.iter(|| {
-                    black_box(shake256_scalar(black_box(&input), outlen));
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("scalar", outlen), &outlen, |b, &outlen| {
+            b.iter(|| {
+                black_box(shake256_scalar(black_box(&input), outlen));
+            });
+        });
 
         // AVX2 batch (amortized)
         #[cfg(all(feature = "avx2", target_arch = "x86_64"))]

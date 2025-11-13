@@ -1,10 +1,10 @@
 // Benchmark to demonstrate performance impact of optimizations
 // This validates that the rolling macros and other optimizations are working
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use mldsa::poly::Poly;
-use mldsa::ntt::{ntt_scalar, inv_ntt, ntt_merged, inv_ntt_merged};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use mldsa::ntt::{inv_ntt, inv_ntt_merged, ntt_merged, ntt_scalar};
 use mldsa::params::N;
+use mldsa::poly::Poly;
 
 fn create_test_poly(seed: i32) -> Poly {
     let mut poly = Poly::new();
@@ -22,16 +22,12 @@ fn bench_ntt_comparison(c: &mut Criterion) {
 
     // Standard NTT (baseline)
     group.bench_function("standard_ntt", |b| {
-        b.iter(|| {
-            black_box(ntt_scalar(black_box(&poly)))
-        })
+        b.iter(|| black_box(ntt_scalar(black_box(&poly))))
     });
 
     // Merged NTT with rolling macros (optimized)
     group.bench_function("merged_ntt_with_rolling_macros", |b| {
-        b.iter(|| {
-            black_box(ntt_merged(black_box(&poly)))
-        })
+        b.iter(|| black_box(ntt_merged(black_box(&poly))))
     });
 
     group.finish();
@@ -46,16 +42,12 @@ fn bench_inv_ntt_comparison(c: &mut Criterion) {
 
     // Standard inverse NTT
     group.bench_function("standard_inv_ntt", |b| {
-        b.iter(|| {
-            black_box(inv_ntt(black_box(&ntt_poly)))
-        })
+        b.iter(|| black_box(inv_ntt(black_box(&ntt_poly))))
     });
 
     // Merged inverse NTT with rolling macros
     group.bench_function("merged_inv_ntt_with_rolling_macros", |b| {
-        b.iter(|| {
-            black_box(inv_ntt_merged(black_box(&ntt_poly)))
-        })
+        b.iter(|| black_box(inv_ntt_merged(black_box(&ntt_poly))))
     });
 
     group.finish();

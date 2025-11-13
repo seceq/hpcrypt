@@ -4,9 +4,9 @@
 //! - Current: Multiple small reads (136 bytes for eta=2, 272+136 for eta=4)
 //! - Batched: Single large read (200 bytes for eta=2, 350 bytes for eta=4)
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use mldsa::symmetric::Shake256Xof;
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use mldsa::sampling::sample_poly_eta;
+use mldsa::symmetric::Shake256Xof;
 
 fn bench_sampling_with_batching(c: &mut Criterion) {
     let mut group = c.benchmark_group("sampling_with_batching");

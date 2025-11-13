@@ -1,8 +1,8 @@
 // Profile benchmark for ML-DSA operations
 // This runs enough iterations to get good profiling data
 
-use mldsa::params::MlDsa65;
 use mldsa::keygen::keygen_from_seed;
+use mldsa::params::MlDsa65;
 use mldsa::sign::sign_deterministic;
 use mldsa::verify::verify;
 
@@ -32,7 +32,10 @@ fn main() {
         let signature = sign_deterministic::<MlDsa65>(&sk, message, &rnd).unwrap();
 
         if i == 0 {
-            println!("  First signature size: {} bytes", std::mem::size_of_val(&signature));
+            println!(
+                "  First signature size: {} bytes",
+                std::mem::size_of_val(&signature)
+            );
         }
     }
 

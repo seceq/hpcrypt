@@ -5,9 +5,9 @@
 //! 2. Optimized: Multiple accumulators for ILP
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mldsa::ntt::{ntt, matrix_vector_mul_ntt, matrix_vector_mul_ntt_optimized};
-use mldsa::poly::Poly;
+use mldsa::ntt::{matrix_vector_mul_ntt, matrix_vector_mul_ntt_optimized, ntt};
 use mldsa::params::{N, Q};
+use mldsa::poly::Poly;
 
 /// Generate a deterministic pseudo-random polynomial for testing
 fn generate_test_poly(seed: i32) -> Poly {
@@ -43,7 +43,7 @@ fn generate_test_vector_ntt(l: usize) -> Vec<Poly> {
 
 /// Benchmark ML-DSA-65 matrix multiplication (k=6, l=5) - Compare baseline vs optimized
 fn bench_matrix_mul_ml_dsa_65(c: &mut Criterion) {
-    const K: usize = 6;  // ML-DSA-65
+    const K: usize = 6; // ML-DSA-65
     const L: usize = 5;
 
     let matrix_a = generate_test_matrix(K, L);
@@ -165,5 +165,9 @@ fn bench_matrix_mul_all_sizes(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, bench_matrix_mul_ml_dsa_65, bench_matrix_mul_all_sizes);
+criterion_group!(
+    benches,
+    bench_matrix_mul_ml_dsa_65,
+    bench_matrix_mul_all_sizes
+);
 criterion_main!(benches);

@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mldsa::ntt::{ntt_scalar, inv_ntt, ntt_merged, inv_ntt_merged};
+use mldsa::ntt::{inv_ntt, inv_ntt_merged, ntt_merged, ntt_scalar};
 use mldsa::poly::Poly;
 
 const N: usize = 256;
@@ -18,15 +18,11 @@ fn bench_ntt_comparison(c: &mut Criterion) {
     let mut group = c.benchmark_group("ntt_comparison");
 
     group.bench_function("ntt_scalar", |b| {
-        b.iter(|| {
-            black_box(ntt_scalar(black_box(&poly)))
-        })
+        b.iter(|| black_box(ntt_scalar(black_box(&poly))))
     });
 
     group.bench_function("ntt_merged_with_rolling_macros", |b| {
-        b.iter(|| {
-            black_box(ntt_merged(black_box(&poly)))
-        })
+        b.iter(|| black_box(ntt_merged(black_box(&poly))))
     });
 
     group.finish();
@@ -39,15 +35,11 @@ fn bench_inv_ntt_comparison(c: &mut Criterion) {
     let mut group = c.benchmark_group("inv_ntt_comparison");
 
     group.bench_function("inv_ntt", |b| {
-        b.iter(|| {
-            black_box(inv_ntt(black_box(&ntt_poly)))
-        })
+        b.iter(|| black_box(inv_ntt(black_box(&ntt_poly))))
     });
 
     group.bench_function("inv_ntt_merged_with_rolling_macros", |b| {
-        b.iter(|| {
-            black_box(inv_ntt_merged(black_box(&ntt_poly)))
-        })
+        b.iter(|| black_box(inv_ntt_merged(black_box(&ntt_poly))))
     });
 
     group.finish();
@@ -75,5 +67,10 @@ fn bench_ntt_roundtrip_comparison(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_ntt_comparison, bench_inv_ntt_comparison, bench_ntt_roundtrip_comparison);
+criterion_group!(
+    benches,
+    bench_ntt_comparison,
+    bench_inv_ntt_comparison,
+    bench_ntt_roundtrip_comparison
+);
 criterion_main!(benches);

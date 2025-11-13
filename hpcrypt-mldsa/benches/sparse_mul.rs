@@ -2,22 +2,18 @@
 //!
 //! Compares sparse multiplication vs NTT-based multiplication for challenge polynomials
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use mldsa::poly::Poly;
-use mldsa::sparse_mul::{SparsePoly, sparse_poly_multiply};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use mldsa::ntt::poly_mul_ntt;
-use mldsa::sampling::sample_in_ball;
 use mldsa::params::{N, Q};
+use mldsa::poly::Poly;
+use mldsa::sampling::sample_in_ball;
+use mldsa::sparse_mul::{sparse_poly_multiply, SparsePoly};
 
 fn bench_sparse_vs_ntt(c: &mut Criterion) {
     let mut group = c.benchmark_group("sparse_multiply");
 
     // Test with different tau values (ML-DSA parameter sets)
-    let tau_values = vec![
-        (39, "ML-DSA-44"),
-        (49, "ML-DSA-65"),
-        (60, "ML-DSA-87"),
-    ];
+    let tau_values = vec![(39, "ML-DSA-44"), (49, "ML-DSA-65"), (60, "ML-DSA-87")];
 
     for (tau, name) in tau_values {
         // Create challenge polynomial with tau non-zero coefficients
@@ -32,25 +28,15 @@ fn bench_sparse_vs_ntt(c: &mut Criterion) {
         }
 
         // Benchmark NTT multiplication
-        group.bench_with_input(
-            BenchmarkId::new("ntt", name),
-            &(&c, &p),
-            |b, (c, p)| {
-                b.iter(|| {
-                    black_box(poly_mul_ntt(c, p))
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("ntt", name), &(&c, &p), |b, (c, p)| {
+            b.iter(|| black_box(poly_mul_ntt(c, p)))
+        });
 
         // Benchmark sparse multiplication
         group.bench_with_input(
             BenchmarkId::new("sparse", name),
             &(&c_sparse, &p),
-            |b, (c_sparse, p)| {
-                b.iter(|| {
-                    black_box(sparse_poly_multiply(c_sparse, p))
-                })
-            },
+            |b, (c_sparse, p)| b.iter(|| black_box(sparse_poly_multiply(c_sparse, p))),
         );
     }
 
@@ -65,9 +51,7 @@ fn bench_sparse_extraction(c: &mut Criterion) {
     let poly = sample_in_ball(&seed, tau);
 
     group.bench_function("from_challenge", |b| {
-        b.iter(|| {
-            black_box(SparsePoly::from_challenge(&poly))
-        })
+        b.iter(|| black_box(SparsePoly::from_challenge(&poly)))
     });
 
     group.finish();

@@ -3,9 +3,9 @@
 //! This benchmark compares the current NTT implementation (runtime loops)
 //! vs. const generic specialized NTT (compile-time layer unrolling).
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use mldsa::ntt::{inv_ntt, inv_ntt_specialized, ntt, ntt_specialized};
 use mldsa::poly::Poly;
-use mldsa::ntt::{ntt, inv_ntt, ntt_specialized, inv_ntt_specialized};
 
 /// Helper: Create a test polynomial with coefficients in [-Q/2, Q/2)
 fn create_test_poly(seed: i32) -> Poly {

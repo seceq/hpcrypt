@@ -1,6 +1,6 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use mldsa::params::MlDsa65;
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use mldsa::keygen::keygen_from_seed;
+use mldsa::params::MlDsa65;
 use mldsa::sign::sign_deterministic;
 use mldsa::verify::verify;
 
@@ -10,9 +10,7 @@ fn bench_keygen(c: &mut Criterion) {
     let seed = [42u8; 32];
 
     group.bench_function("keygen_mldsa65", |b| {
-        b.iter(|| {
-            keygen_from_seed::<MlDsa65>(black_box(&seed))
-        });
+        b.iter(|| keygen_from_seed::<MlDsa65>(black_box(&seed)));
     });
 
     group.finish();
@@ -45,9 +43,7 @@ fn bench_verify(c: &mut Criterion) {
     let sig = sign_deterministic::<MlDsa65>(&sk, message, &rnd).unwrap();
 
     group.bench_function("verify_mldsa65", |b| {
-        b.iter(|| {
-            verify::<MlDsa65>(black_box(&pk), black_box(message), black_box(&sig))
-        });
+        b.iter(|| verify::<MlDsa65>(black_box(&pk), black_box(message), black_box(&sig)));
     });
 
     group.finish();
@@ -63,7 +59,9 @@ fn bench_sign_verify_roundtrip(c: &mut Criterion) {
 
     group.bench_function("sign_verify_roundtrip", |b| {
         b.iter(|| {
-            let sig = sign_deterministic::<MlDsa65>(black_box(&sk), black_box(message), black_box(&rnd)).unwrap();
+            let sig =
+                sign_deterministic::<MlDsa65>(black_box(&sk), black_box(message), black_box(&rnd))
+                    .unwrap();
             verify::<MlDsa65>(black_box(&pk), black_box(message), black_box(&sig))
         });
     });
@@ -90,9 +88,7 @@ fn bench_message_sizes(c: &mut Criterion) {
         let sig = sign_deterministic::<MlDsa65>(&sk, &message, &rnd).unwrap();
 
         group.bench_with_input(BenchmarkId::new("verify", size), size, |b, _| {
-            b.iter(|| {
-                verify::<MlDsa65>(black_box(&pk), black_box(&message), black_box(&sig))
-            });
+            b.iter(|| verify::<MlDsa65>(black_box(&pk), black_box(&message), black_box(&sig)));
         });
     }
 

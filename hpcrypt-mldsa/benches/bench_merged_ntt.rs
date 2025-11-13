@@ -7,8 +7,8 @@
 //! Expected improvement: 5-25% based on ML-KEM analysis
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use mldsa::ntt::{inv_ntt, inv_ntt_merged, ntt, ntt_merged};
 use mldsa::poly::Poly;
-use mldsa::ntt::{ntt, inv_ntt, ntt_merged, inv_ntt_merged};
 
 /// Helper: Create a test polynomial with small coefficients for testing
 fn create_test_poly(seed: i32) -> Poly {
@@ -51,7 +51,7 @@ fn bench_inverse_ntt(c: &mut Criterion) {
     let mut group = c.benchmark_group("inverse_ntt");
 
     let poly = create_test_poly(2000);
-    let poly_ntt = ntt(&poly);  // Pre-transform to NTT domain
+    let poly_ntt = ntt(&poly); // Pre-transform to NTT domain
 
     // Baseline: Standard inverse NTT
     group.bench_function("inv_ntt_standard", |b| {
@@ -104,7 +104,7 @@ fn bench_ntt_roundtrip(c: &mut Criterion) {
 /// Simulates ML-DSA signing where we transform multiple polynomials
 /// from matrix A and vector y, then transform results back.
 fn bench_matrix_vector_pattern(c: &mut Criterion) {
-    let l = 5;  // ML-DSA-65 parameter
+    let l = 5; // ML-DSA-65 parameter
 
     let mut group = c.benchmark_group("matrix_vector_transform");
 
@@ -163,7 +163,7 @@ fn bench_matrix_vector_pattern(c: &mut Criterion) {
 fn bench_rejection_loop_pattern(c: &mut Criterion) {
     let mut group = c.benchmark_group("rejection_loop");
 
-    let num_iterations: usize = 10;  // Simulate 10 rejection iterations
+    let num_iterations: usize = 10; // Simulate 10 rejection iterations
     let polys: Vec<Poly> = (0..num_iterations)
         .map(|i| create_test_poly((i as i32) * 100))
         .collect();
@@ -215,8 +215,8 @@ fn bench_rejection_loop_pattern(c: &mut Criterion) {
 ///
 /// Simulates transforming an entire K×L matrix as in ML-DSA-65 (6×5 = 30 polynomials)
 fn bench_batch_transform(c: &mut Criterion) {
-    let k = 6;  // ML-DSA-65 K parameter
-    let l = 5;  // ML-DSA-65 L parameter
+    let k = 6; // ML-DSA-65 K parameter
+    let l = 5; // ML-DSA-65 L parameter
     let total = k * l;
 
     let mut group = c.benchmark_group("batch_transform");
@@ -269,9 +269,9 @@ fn verify_correctness() {
         // Check forward NTT results match
         for i in 0..256 {
             assert_eq!(
-                standard_ntt.coeffs[i],
-                merged_ntt.coeffs[i],
-                "Forward NTT mismatch at index {} for seed {}", i, seed
+                standard_ntt.coeffs[i], merged_ntt.coeffs[i],
+                "Forward NTT mismatch at index {} for seed {}",
+                i, seed
             );
         }
 
@@ -282,9 +282,9 @@ fn verify_correctness() {
         // Check inverse NTT results match
         for i in 0..256 {
             assert_eq!(
-                standard_inv.coeffs[i],
-                merged_inv.coeffs[i],
-                "Inverse NTT mismatch at index {} for seed {}", i, seed
+                standard_inv.coeffs[i], merged_inv.coeffs[i],
+                "Inverse NTT mismatch at index {} for seed {}",
+                i, seed
             );
         }
 
@@ -298,8 +298,7 @@ fn verify_correctness() {
             let orig_mod = poly.coeffs[i].rem_euclid(Q);
             let recovered_mod = recovered.rem_euclid(Q);
             assert_eq!(
-                orig_mod,
-                recovered_mod,
+                orig_mod, recovered_mod,
                 "Roundtrip mismatch at index {} for seed {}: orig={} recovered={}",
                 i, seed, poly.coeffs[i], recovered
             );

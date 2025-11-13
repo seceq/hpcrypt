@@ -5,9 +5,9 @@
 //! lead to 5-10% NTT speedup on modern CPUs.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mldsa::ntt::{ntt, inv_ntt};
-use mldsa::poly::Poly;
+use mldsa::ntt::{inv_ntt, ntt};
 use mldsa::params::Q;
+use mldsa::poly::Poly;
 
 /// Create test polynomial with realistic values
 fn create_test_poly(seed: usize) -> Poly {

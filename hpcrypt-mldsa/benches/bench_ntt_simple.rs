@@ -1,9 +1,9 @@
 //! Simple benchmark test for NTT scalar
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mldsa::poly::Poly;
 use mldsa::ntt::ntt_scalar;
 use mldsa::params::N;
+use mldsa::poly::Poly;
 
 fn bench_ntt_scalar_simple(c: &mut Criterion) {
     // Create a simple test polynomial

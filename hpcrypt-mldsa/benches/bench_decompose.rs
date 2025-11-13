@@ -5,9 +5,9 @@
 //!
 //! Expected: LLVM should already optimize constant divisions, but we validate empirically.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use mldsa::rounding::{decompose, high_bits, low_bits};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use mldsa::params::Q;
+use mldsa::rounding::{decompose, high_bits, low_bits};
 
 /// Test data: representative coefficient values
 fn create_test_values() -> Vec<i32> {
@@ -210,10 +210,7 @@ fn bench_alpha_variation(c: &mut Criterion) {
     let mut group = c.benchmark_group("alpha_variation");
     let test_value = 100000i32;
 
-    let alphas = vec![
-        ("190464", 190464),
-        ("523776", 523776),
-    ];
+    let alphas = vec![("190464", 190464), ("523776", 523776)];
 
     for (name, alpha) in alphas {
         group.bench_with_input(BenchmarkId::new("runtime", name), &alpha, |b, &alpha| {
@@ -259,15 +256,23 @@ fn verify_correctness() {
                 decompose_const::<523776>(r)
             };
 
-            assert_eq!(r1_baseline, r1_const,
-                "r1 mismatch for r={}, alpha={}", r, alpha);
-            assert_eq!(r0_baseline, r0_const,
-                "r0 mismatch for r={}, alpha={}", r, alpha);
+            assert_eq!(
+                r1_baseline, r1_const,
+                "r1 mismatch for r={}, alpha={}",
+                r, alpha
+            );
+            assert_eq!(
+                r0_baseline, r0_const,
+                "r0 mismatch for r={}, alpha={}",
+                r, alpha
+            );
         }
     }
 
-    println!("✓ Correctness verification passed for {} test values × 2 alpha values",
-             test_values.len());
+    println!(
+        "✓ Correctness verification passed for {} test values × 2 alpha values",
+        test_values.len()
+    );
 }
 
 // Run correctness check before benchmarks

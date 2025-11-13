@@ -3,9 +3,9 @@
 //! This benchmark compares standard NTT (with clone) vs in-place NTT (without clone).
 //! The in-place version eliminates the allocation overhead of cloning the polynomial.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BatchSize};
+use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
+use mldsa::ntt::{inv_ntt, inv_ntt_inplace, ntt, ntt_inplace};
 use mldsa::poly::Poly;
-use mldsa::ntt::{ntt, inv_ntt, ntt_inplace, inv_ntt_inplace};
 
 /// Helper: Create a test polynomial with pseudo-random coefficients
 fn create_test_poly(seed: i32) -> Poly {
@@ -40,12 +40,12 @@ fn bench_ntt_comparison(c: &mut Criterion) {
     // In-place version: no clone, modifies input
     group.bench_function("ntt_inplace", |b| {
         b.iter_batched(
-            || poly.clone(),  // Setup: clone for each iteration (to measure just NTT)
+            || poly.clone(), // Setup: clone for each iteration (to measure just NTT)
             |mut poly| {
                 ntt_inplace(&mut poly);
                 black_box(&poly);
             },
-            BatchSize::SmallInput
+            BatchSize::SmallInput,
         );
     });
 
@@ -57,7 +57,7 @@ fn bench_inv_ntt_comparison(c: &mut Criterion) {
     let mut group = c.benchmark_group("inv_ntt");
 
     let poly = create_test_poly(1000);
-    let poly_ntt = ntt(&poly);  // Pre-transform to NTT domain
+    let poly_ntt = ntt(&poly); // Pre-transform to NTT domain
 
     // Current implementation: clone inside inv_ntt()
     group.bench_function("inv_ntt_clone", |b| {
@@ -70,12 +70,12 @@ fn bench_inv_ntt_comparison(c: &mut Criterion) {
     // In-place version: no clone, modifies input
     group.bench_function("inv_ntt_inplace", |b| {
         b.iter_batched(
-            || poly_ntt.clone(),  // Setup: clone for each iteration
+            || poly_ntt.clone(), // Setup: clone for each iteration
             |mut poly| {
                 inv_ntt_inplace(&mut poly);
                 black_box(&poly);
             },
-            BatchSize::SmallInput
+            BatchSize::SmallInput,
         );
     });
 
@@ -100,13 +100,13 @@ fn bench_roundtrip(c: &mut Criterion) {
     // In-place: no clones (transforms in-place)
     group.bench_function("inplace_version", |b| {
         b.iter_batched(
-            || poly.clone(),  // Setup: start with clean poly
+            || poly.clone(), // Setup: start with clean poly
             |mut poly| {
                 ntt_inplace(&mut poly);
                 inv_ntt_inplace(&mut poly);
                 black_box(&poly);
             },
-            BatchSize::SmallInput
+            BatchSize::SmallInput,
         );
     });
 
@@ -118,7 +118,7 @@ fn bench_roundtrip(c: &mut Criterion) {
 /// Simulates the pattern in ML-DSA signing where we transform each row of matrix A
 /// and then multiply with vector y.
 fn bench_matrix_vector_pattern(c: &mut Criterion) {
-    let l = 5;  // ML-DSA-65
+    let l = 5; // ML-DSA-65
 
     let mut group = c.benchmark_group("matrix_vector_transform");
 
@@ -174,7 +174,7 @@ fn bench_matrix_vector_pattern(c: &mut Criterion) {
 fn bench_rejection_loop_pattern(c: &mut Criterion) {
     let mut group = c.benchmark_group("rejection_loop");
 
-    let num_iterations: usize = 10;  // Simulate 10 rejection iterations
+    let num_iterations: usize = 10; // Simulate 10 rejection iterations
     let polys: Vec<Poly> = (0..num_iterations)
         .map(|i| create_test_poly((i as i32) * 100))
         .collect();
@@ -198,7 +198,7 @@ fn bench_rejection_loop_pattern(c: &mut Criterion) {
         b.iter(|| {
             let mut results = Vec::with_capacity(num_iterations);
             for poly in &polys {
-                let mut poly_ntt = poly.clone();  // Represents sampling
+                let mut poly_ntt = poly.clone(); // Represents sampling
                 ntt_inplace(&mut poly_ntt);
                 // In real code: use poly_ntt, then might reject
                 results.push(poly_ntt);

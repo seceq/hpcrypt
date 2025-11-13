@@ -1,5 +1,5 @@
 //\! Benchmark for Montgomery Reduction optimization validation
-//\! 
+//\!
 //\! This validates the performance gain of Montgomery reduction vs standard modular reduction
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
@@ -16,7 +16,7 @@ fn standard_reduce(x: i64) -> i32 {
 fn barrett_reduce(x: i64) -> i32 {
     const BARRETT_MULTIPLIER: i64 = 5039; // Precomputed: floor(2^28 / Q)
     const BARRETT_SHIFT: i32 = 28;
-    
+
     let q = (((x * BARRETT_MULTIPLIER) >> BARRETT_SHIFT) * (Q as i64)) as i32;
     (x as i32) - q
 }
@@ -72,7 +72,7 @@ fn bench_reduction_methods(c: &mut Criterion) {
 
 fn bench_single_reduction(c: &mut Criterion) {
     let val: i64 = 1234567890;
-    
+
     let mut group = c.benchmark_group("single_reduction");
 
     group.bench_function("standard", |b| {
@@ -119,5 +119,10 @@ fn bench_multiply_reduce_chain(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_reduction_methods, bench_single_reduction, bench_multiply_reduce_chain);
+criterion_group!(
+    benches,
+    bench_reduction_methods,
+    bench_single_reduction,
+    bench_multiply_reduce_chain
+);
 criterion_main!(benches);

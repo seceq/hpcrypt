@@ -6,8 +6,8 @@
 // - cargo bench --bench compare_simd_implementations --features avx2,simd-both
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mldsa::params::MlDsa65;
 use mldsa::keygen::keygen;
+use mldsa::params::MlDsa65;
 use mldsa::sign::sign;
 use mldsa::verify::verify;
 
@@ -63,5 +63,10 @@ fn benchmark_keygen(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, benchmark_signing, benchmark_verification, benchmark_keygen);
+criterion_group!(
+    benches,
+    benchmark_signing,
+    benchmark_verification,
+    benchmark_keygen
+);
 criterion_main!(benches);
