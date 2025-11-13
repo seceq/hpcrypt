@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://github.com/conneroisu/conclaude/releases/latest/download/conclaude-schema.json
+# Conclaude YAML Configuration - Complete Default Configuration
+# This configuration defines how conclaude handles Claude Code hook events
+# All supported options are shown below with their default values
+
+# Stop hook configuration - runs when Claude is about to stop
+stop:
+  # Infinite mode - allows Claude to continue automatically
+  # When enabled, Claude receives the infiniteMessage to continue working
+  # instead of ending the session after stop hook commands succeed
+  infinite: false
+
+  # Message to send when infinite mode is enabled
+  # When there's no more steps, modify the value of key "infinite" in .conclaude.yaml to false.
+  # Do not stop until you complete all tasks.
+  #infiniteMessage: "continue working on the task which is create Rust intrinsics optimization for crypto implementations except for ML-KEM, ML-DSA, and SLH-DSA. create Rust intrinsics using AVX, AVX2, AVX512, NEON. start with most common algorithms like first SHA-2 then SHA-3, then keccac then AES then GHASH ..etc"
+  infiniteMessage: "continue working on the task which is do cleanup but make sure the removed code has no perforamnce or security advantauges before you remove it"
+
+  # Alternative to infinite mode - run for a specific number of rounds
+  # When set, Claude will continue for the specified number of rounds
+  rounds: null
