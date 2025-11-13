@@ -4,7 +4,7 @@
 //! contexts with common prefixes (padding + pk_seed), allowing reuse via
 //! cloning instead of re-hashing the same data repeatedly.
 
-use sha2::{Digest, Sha256};
+use hpcrypt_hash::Sha256;
 
 /// Pre-initialized hash contexts for SHA2-based operations.
 ///
@@ -34,12 +34,12 @@ impl<const N: usize> PreInitializedSha2<N> {
 
         // Pre-initialize T_leaf/F context: padding + pk_seed
         let mut t_leaf_base = Sha256::new();
-        t_leaf_base.update([0u8; 32]); // T_leaf padding
+        t_leaf_base.update(&[0u8; 32]); // T_leaf padding
         t_leaf_base.update(&pk_seed[..N]);
 
         // Pre-initialize T_node context: padding + pk_seed
         let mut t_node_base = Sha256::new();
-        t_node_base.update([1u8; 32]); // T_node padding
+        t_node_base.update(&[1u8; 32]); // T_node padding
         t_node_base.update(&pk_seed[..N]);
 
         let mut pk_seed_array = [0u8; N];
@@ -122,7 +122,7 @@ impl<const N: usize> PreInitializedSha2<N> {
         while offset < outlen {
             let mut hasher = Sha256::new();
             hasher.update(input);
-            hasher.update(counter.to_be_bytes());
+            hasher.update(&counter.to_be_bytes());
 
             let hash = hasher.finalize();
             let to_copy = core::cmp::min(32, outlen - offset);

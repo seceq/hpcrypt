@@ -37,7 +37,7 @@ impl<const N: usize> Sha2HashFunction<N> {
         while offset < outlen {
             let mut hasher = Sha256::new();
             hasher.update(input);
-            hasher.update(counter.to_be_bytes());
+            hasher.update(&counter.to_be_bytes());
 
             let hash = hasher.finalize();
             let to_copy = core::cmp::min(32, outlen - offset);
