@@ -4,9 +4,9 @@ extern crate alloc;
 use alloc::vec::Vec;
 
 use crate::error::{EciesError, Result};
-use hpcrypt_curves::secp256k1::{Point, Scalar, AffinePoint, FieldElement};
-use hpcrypt_kdf::x963_kdf_sha256;
 use hpcrypt_aead::aes_gcm::{Aes128Gcm, NONCE_SIZE, TAG_SIZE};
+use hpcrypt_curves::secp256k1::{AffinePoint, FieldElement, Point, Scalar};
+use hpcrypt_kdf::x963_kdf_sha256;
 
 /// ECIES implementation for secp256k1 curve
 ///
@@ -123,7 +123,8 @@ impl EciesSecp256k1 {
 
         // 4. Derive encryption key using X9.63 KDF
         let key_material = x963_kdf_sha256(&shared_secret, shared_info, Self::AES_KEY_SIZE);
-        let aes_key: [u8; 16] = key_material.try_into()
+        let aes_key: [u8; 16] = key_material
+            .try_into()
             .map_err(|_| EciesError::KeyDerivationFailed)?;
 
         // 5. Generate random nonce for AES-GCM
@@ -134,9 +135,8 @@ impl EciesSecp256k1 {
         let ciphertext_with_tag = Aes128Gcm::encrypt(&aes_key, &nonce, message, &[]);
 
         // 7. Construct output: ephemeral_public_key || nonce || ciphertext || tag
-        let mut output = Vec::with_capacity(
-            Self::PUBLIC_KEY_SIZE + NONCE_SIZE + ciphertext_with_tag.len()
-        );
+        let mut output =
+            Vec::with_capacity(Self::PUBLIC_KEY_SIZE + NONCE_SIZE + ciphertext_with_tag.len());
         output.extend_from_slice(&ephemeral_public_bytes);
         output.extend_from_slice(&nonce);
         output.extend_from_slice(&ciphertext_with_tag);
@@ -198,7 +198,8 @@ impl EciesSecp256k1 {
 
         // 4. Derive encryption key using X9.63 KDF
         let key_material = x963_kdf_sha256(&shared_secret, shared_info, Self::AES_KEY_SIZE);
-        let aes_key: [u8; 16] = key_material.try_into()
+        let aes_key: [u8; 16] = key_material
+            .try_into()
             .map_err(|_| EciesError::KeyDerivationFailed)?;
 
         // 5. Generate random nonce for AES-GCM
@@ -210,7 +211,7 @@ impl EciesSecp256k1 {
 
         // 7. Construct output: ephemeral_public_key_compressed || nonce || ciphertext || tag
         let mut output = Vec::with_capacity(
-            Self::PUBLIC_KEY_SIZE_COMPRESSED + NONCE_SIZE + ciphertext_with_tag.len()
+            Self::PUBLIC_KEY_SIZE_COMPRESSED + NONCE_SIZE + ciphertext_with_tag.len(),
         );
         output.extend_from_slice(&ephemeral_public_bytes);
         output.extend_from_slice(&nonce);
@@ -254,7 +255,10 @@ impl EciesSecp256k1 {
         let (ephemeral_public_bytes, nonce_start) = match ciphertext[0] {
             0x02 | 0x03 => {
                 // Compressed format (33 bytes)
-                (&ciphertext[..Self::PUBLIC_KEY_SIZE_COMPRESSED], Self::PUBLIC_KEY_SIZE_COMPRESSED)
+                (
+                    &ciphertext[..Self::PUBLIC_KEY_SIZE_COMPRESSED],
+                    Self::PUBLIC_KEY_SIZE_COMPRESSED,
+                )
             }
             0x04 => {
                 // Uncompressed format (65 bytes)
@@ -295,7 +299,8 @@ impl EciesSecp256k1 {
 
         // 5. Derive encryption key using X9.63 KDF
         let key_material = x963_kdf_sha256(&shared_secret, shared_info, Self::AES_KEY_SIZE);
-        let aes_key: [u8; 16] = key_material.try_into()
+        let aes_key: [u8; 16] = key_material
+            .try_into()
             .map_err(|_| EciesError::KeyDerivationFailed)?;
 
         // 6. Decrypt and verify with AES-128-GCM
@@ -308,8 +313,7 @@ impl EciesSecp256k1 {
 
     /// Encode a point as uncompressed public key (0x04 || x || y)
     fn encode_public_key(point: &Point) -> Result<Vec<u8>> {
-        let affine = point.to_affine()
-            .ok_or(EciesError::InvalidPublicKey)?;
+        let affine = point.to_affine().ok_or(EciesError::InvalidPublicKey)?;
 
         let x_bytes = affine.x.to_bytes();
         let y_bytes = affine.y.to_bytes();
@@ -350,16 +354,14 @@ impl EciesSecp256k1 {
 
     /// Extract X-coordinate from shared secret point
     fn extract_x_coordinate(point: &Point) -> Result<Vec<u8>> {
-        let affine = point.to_affine()
-            .ok_or(EciesError::SharedSecretFailed)?;
+        let affine = point.to_affine().ok_or(EciesError::SharedSecretFailed)?;
 
         Ok(affine.x.to_bytes().to_vec())
     }
 
     /// Encode a point as compressed public key (0x02/0x03 || x)
     fn encode_public_key_compressed(point: &Point) -> Result<Vec<u8>> {
-        let affine = point.to_affine()
-            .ok_or(EciesError::InvalidPublicKey)?;
+        let affine = point.to_affine().ok_or(EciesError::InvalidPublicKey)?;
 
         let compressed = affine.to_compressed_bytes();
         Ok(compressed.to_vec())
@@ -529,7 +531,8 @@ mod tests {
 
         // Encrypt with compressed ephemeral key
         let message = b"Hello, Bitcoin with compression!";
-        let ciphertext = EciesSecp256k1::encrypt_compressed(&public, message, &[], &mut rng).unwrap();
+        let ciphertext =
+            EciesSecp256k1::encrypt_compressed(&public, message, &[], &mut rng).unwrap();
 
         // Verify ciphertext has reduced overhead (61 bytes instead of 93)
         assert_eq!(ciphertext.len(), message.len() + 61); // 33 + 12 + 16
@@ -550,7 +553,8 @@ mod tests {
         let message = b"Message with context";
         let shared_info = b"bitcoin-context-v1";
 
-        let ciphertext = EciesSecp256k1::encrypt_compressed(&public, message, shared_info, &mut rng).unwrap();
+        let ciphertext =
+            EciesSecp256k1::encrypt_compressed(&public, message, shared_info, &mut rng).unwrap();
         let plaintext = EciesSecp256k1::decrypt(&secret, &ciphertext, shared_info).unwrap();
 
         assert_eq!(plaintext, message);
@@ -564,7 +568,8 @@ mod tests {
         let message = b"Test message";
 
         // Encrypt with compressed key
-        let ct_compressed = EciesSecp256k1::encrypt_compressed(&public, message, &[], &mut rng).unwrap();
+        let ct_compressed =
+            EciesSecp256k1::encrypt_compressed(&public, message, &[], &mut rng).unwrap();
 
         // Encrypt with uncompressed key
         let ct_uncompressed = EciesSecp256k1::encrypt(&public, message, &[], &mut rng).unwrap();
@@ -589,7 +594,8 @@ mod tests {
         let (_, public) = EciesSecp256k1::generate_keypair(&mut rng).unwrap();
         let message = b"Same message for both";
 
-        let ct_compressed = EciesSecp256k1::encrypt_compressed(&public, message, &[], &mut rng).unwrap();
+        let ct_compressed =
+            EciesSecp256k1::encrypt_compressed(&public, message, &[], &mut rng).unwrap();
         let ct_uncompressed = EciesSecp256k1::encrypt(&public, message, &[], &mut rng).unwrap();
 
         // Compressed saves 32 bytes (entire Y coordinate)
@@ -598,7 +604,8 @@ mod tests {
         // Overhead reduction: 93 -> 61 = 35% reduction
         let overhead_uncompressed = 93;
         let overhead_compressed = 61;
-        let reduction_pct = (overhead_uncompressed - overhead_compressed) * 100 / overhead_uncompressed;
+        let reduction_pct =
+            (overhead_uncompressed - overhead_compressed) * 100 / overhead_uncompressed;
         assert_eq!(reduction_pct, 34); // ~35% reduction
     }
 
@@ -609,7 +616,8 @@ mod tests {
         let (secret, public) = EciesSecp256k1::generate_keypair(&mut rng).unwrap();
         let message = b"";
 
-        let ciphertext = EciesSecp256k1::encrypt_compressed(&public, message, &[], &mut rng).unwrap();
+        let ciphertext =
+            EciesSecp256k1::encrypt_compressed(&public, message, &[], &mut rng).unwrap();
         let plaintext = EciesSecp256k1::decrypt(&secret, &ciphertext, &[]).unwrap();
 
         assert_eq!(plaintext, message);
@@ -623,7 +631,8 @@ mod tests {
         let (secret, public) = EciesSecp256k1::generate_keypair(&mut rng).unwrap();
         let message = vec![0x42u8; 10000]; // 10 KB
 
-        let ciphertext = EciesSecp256k1::encrypt_compressed(&public, &message, &[], &mut rng).unwrap();
+        let ciphertext =
+            EciesSecp256k1::encrypt_compressed(&public, &message, &[], &mut rng).unwrap();
         let plaintext = EciesSecp256k1::decrypt(&secret, &ciphertext, &[]).unwrap();
 
         assert_eq!(plaintext, message);
@@ -637,7 +646,8 @@ mod tests {
         let (secret, public) = EciesSecp256k1::generate_keypair(&mut rng).unwrap();
         let message = b"Secret message";
 
-        let ciphertext = EciesSecp256k1::encrypt_compressed(&public, message, b"info1", &mut rng).unwrap();
+        let ciphertext =
+            EciesSecp256k1::encrypt_compressed(&public, message, b"info1", &mut rng).unwrap();
         let result = EciesSecp256k1::decrypt(&secret, &ciphertext, b"info2");
 
         assert!(result.is_err());
@@ -650,7 +660,8 @@ mod tests {
         let (secret, public) = EciesSecp256k1::generate_keypair(&mut rng).unwrap();
         let message = b"Secret message";
 
-        let mut ciphertext = EciesSecp256k1::encrypt_compressed(&public, message, &[], &mut rng).unwrap();
+        let mut ciphertext =
+            EciesSecp256k1::encrypt_compressed(&public, message, &[], &mut rng).unwrap();
 
         // Modify last byte (part of tag)
         let len = ciphertext.len();
@@ -677,7 +688,8 @@ mod tests {
 
         // Encrypt using compressed recipient key
         let message = b"Test with compressed recipient key";
-        let ciphertext = EciesSecp256k1::encrypt_compressed(&public_compressed, message, &[], &mut rng).unwrap();
+        let ciphertext =
+            EciesSecp256k1::encrypt_compressed(&public_compressed, message, &[], &mut rng).unwrap();
 
         // Decrypt should work
         let plaintext = EciesSecp256k1::decrypt(&secret, &ciphertext, &[]).unwrap();
@@ -703,7 +715,8 @@ mod tests {
         let (_, public) = EciesSecp256k1::generate_keypair(&mut rng).unwrap();
         let message = b"Format test";
 
-        let ciphertext = EciesSecp256k1::encrypt_compressed(&public, message, &[], &mut rng).unwrap();
+        let ciphertext =
+            EciesSecp256k1::encrypt_compressed(&public, message, &[], &mut rng).unwrap();
 
         // Verify format: compressed_key (33) || nonce (12) || encrypted (11) || tag (16)
         assert_eq!(ciphertext.len(), 33 + 12 + message.len() + 16);

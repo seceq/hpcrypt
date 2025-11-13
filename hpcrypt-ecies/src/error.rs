@@ -10,31 +10,31 @@ pub type Result<T> = core::result::Result<T, EciesError>;
 pub enum EciesError {
     /// Invalid public key
     InvalidPublicKey,
-    
+
     /// Invalid ciphertext (malformed or corrupted)
     InvalidCiphertext,
-    
+
     /// Ciphertext too short
     CiphertextTooShort,
-    
+
     /// Message too long for the given parameters
     MessageTooLong,
-    
+
     /// Key derivation failed
     KeyDerivationFailed,
-    
+
     /// AEAD encryption failed
     EncryptionFailed,
-    
+
     /// AEAD decryption failed (authentication failed)
     DecryptionFailed,
-    
+
     /// Shared secret computation failed
     SharedSecretFailed,
-    
+
     /// Random number generation failed
     RngError,
-    
+
     /// Internal error
     InternalError,
 }
