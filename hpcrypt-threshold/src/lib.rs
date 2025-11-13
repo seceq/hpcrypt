@@ -33,4 +33,4 @@ use alloc::vec::Vec;
 
 pub mod shamir;
 
-pub use shamir::{Share, split_secret, reconstruct_secret};
+pub use shamir::{reconstruct_secret, split_secret, Share};

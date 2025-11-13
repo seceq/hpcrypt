@@ -35,17 +35,17 @@ fn test_reconstruct_different_share_combinations() {
     let shares = split_secret(&secret, 3, 6).unwrap();
 
     // Try different combinations of 3 shares
-    let combos = vec![
-        vec![0, 1, 2],
-        vec![0, 2, 4],
-        vec![1, 3, 5],
-        vec![2, 4, 5],
-    ];
+    let combos = vec![vec![0, 1, 2], vec![0, 2, 4], vec![1, 3, 5], vec![2, 4, 5]];
 
     for combo in combos {
         let selected: Vec<Share> = combo.iter().map(|&i| shares[i].clone()).collect();
         let reconstructed = reconstruct_secret(&selected).unwrap();
-        assert_eq!(&secret[..], &reconstructed[..], "Failed for combo {:?}", combo);
+        assert_eq!(
+            &secret[..],
+            &reconstructed[..],
+            "Failed for combo {:?}",
+            combo
+        );
     }
 }
 
@@ -94,8 +94,8 @@ fn test_all_ones_secret() {
 #[test]
 fn test_random_pattern_secret() {
     let secret = [
-        0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
-        0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
+        0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32,
+        0x10,
     ];
     let shares = split_secret(&secret, 4, 8).unwrap();
 
@@ -132,7 +132,7 @@ fn test_shares_are_different() {
 
     // All shares should be different from each other
     for i in 0..shares.len() {
-        for j in (i+1)..shares.len() {
+        for j in (i + 1)..shares.len() {
             assert_ne!(shares[i].data, shares[j].data);
         }
     }
