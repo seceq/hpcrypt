@@ -81,14 +81,14 @@ pub const SECP256K1_ORDER: [u64; 4] = [
 ///
 /// Represented as 8 x 64-bit limbs (little-endian), though only 5 are non-zero:
 pub const BARRETT_MU_SCALAR: [u64; 8] = [
-    0x402DA1732FC9BEC0,  // limbs[0]
-    0x4551231950B75FC4,  // limbs[1]
-    0x0000000000000001,  // limbs[2]
-    0x0000000000000000,  // limbs[3]
-    0x0000000000000001,  // limbs[4]
-    0x0000000000000000,  // limbs[5]
-    0x0000000000000000,  // limbs[6]
-    0x0000000000000000,  // limbs[7]
+    0x402DA1732FC9BEC0, // limbs[0]
+    0x4551231950B75FC4, // limbs[1]
+    0x0000000000000001, // limbs[2]
+    0x0000000000000000, // limbs[3]
+    0x0000000000000001, // limbs[4]
+    0x0000000000000000, // limbs[5]
+    0x0000000000000000, // limbs[6]
+    0x0000000000000000, // limbs[7]
 ];
 
 /// Field element representing zero
