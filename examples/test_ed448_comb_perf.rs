@@ -39,9 +39,9 @@ fn main() {
     let result_comb = scalar_mul_base_comb(&scalar_bytes);
 
     if result_variable == result_comb {
-        println!("✅ Correctness verified: Both methods produce identical results");
+        println!(" Correctness verified: Both methods produce identical results");
     } else {
-        println!("❌ ERROR: Methods produce different results!");
+        println!(" ERROR: Methods produce different results!");
         println!("Variable-base: {:?}", result_variable);
         println!("Comb method:   {:?}", result_comb);
     }

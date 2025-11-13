@@ -45,10 +45,10 @@ fn main() {
 
     if avg_time < avg_time_var {
         let speedup = avg_time_var.as_nanos() as f64 / avg_time.as_nanos() as f64;
-        println!("Speedup:       {:.2}× faster ✅", speedup);
+        println!("Speedup:       {:.2}× faster ", speedup);
     } else {
         let slowdown = avg_time.as_nanos() as f64 / avg_time_var.as_nanos() as f64;
-        println!("Slowdown:      {:.2}× SLOWER ❌", slowdown);
+        println!("Slowdown:      {:.2}× SLOWER ", slowdown);
     }
 
     // Verify correctness
@@ -57,8 +57,8 @@ fn main() {
     let result_comb = scalar_mul_base_comb(&scalar_bytes);
 
     if result_var == result_comb {
-        println!("✅ Results match - implementation is correct");
+        println!(" Results match - implementation is correct");
     } else {
-        println!("❌ Results differ - implementation has bug!");
+        println!(" Results differ - implementation has bug!");
     }
 }
