@@ -11,17 +11,10 @@ pub mod blake2b;
 pub mod blake2s;
 pub mod blake3;
 pub mod hmac;
-pub mod kmac;
-pub mod kmac_const_generic;
-pub mod kmac_optimized_absorb;
-pub mod kmac_optimized_encoding;
-pub mod kmac_optimized_keccak;
-pub mod kmac_precomputed;
-pub mod kmac_step_level_keccak;
+pub mod kmac; // Production KMAC implementation
 pub mod sha1;
 pub mod sha256;
 pub mod sha3;
-pub mod sha3_small_msg;
 pub mod sha384;
 pub mod sha512;
 pub mod xof_reader;
@@ -39,6 +32,8 @@ pub use kmac::{kmac128, kmac256};
 pub use kmac::{CShake128, CShake256, Kmac128, Kmac256};
 pub use sha1::{sha1, Sha1};
 pub use sha256::{sha256, Sha256};
-pub use sha3::{Sha3_224, Sha3_256, Sha3_384, Sha3_512, Shake128, Shake256, TurboShake128, TurboShake256};
+pub use sha3::{
+    Sha3_224, Sha3_256, Sha3_384, Sha3_512, Shake128, Shake256, TurboShake128, TurboShake256,
+};
 pub use sha384::{sha384, Sha384};
 pub use sha512::{sha512, Sha512};
