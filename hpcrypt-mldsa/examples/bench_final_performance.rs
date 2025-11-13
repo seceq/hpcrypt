@@ -3,8 +3,8 @@
 //! Demonstrates the current optimized performance after all improvements.
 //! Run with: cargo run --release --features avx2,simd --example bench_final_performance
 
-use mldsa::params::MlDsa65;
 use mldsa::keygen::keygen;
+use mldsa::params::MlDsa65;
 use mldsa::sign::sign;
 use mldsa::verify::verify;
 use std::time::Instant;
@@ -17,8 +17,22 @@ fn main() {
 
     #[cfg(target_arch = "x86_64")]
     {
-        println!("  AVX2: {}", if std::arch::is_x86_feature_detected!("avx2") { "✓ Enabled" } else { "✗ Not available" });
-        println!("  AVX-512: {}", if std::arch::is_x86_feature_detected!("avx512f") { "✓ Available (not used)" } else { "✗ Not available" });
+        println!(
+            "  AVX2: {}",
+            if std::arch::is_x86_feature_detected!("avx2") {
+                "✓ Enabled"
+            } else {
+                "✗ Not available"
+            }
+        );
+        println!(
+            "  AVX-512: {}",
+            if std::arch::is_x86_feature_detected!("avx512f") {
+                "✓ Available (not used)"
+            } else {
+                "✗ Not available"
+            }
+        );
     }
 
     println!("\n--- Running Benchmarks ---\n");
@@ -49,7 +63,10 @@ fn main() {
     let keygen_avg = keygen_time.as_micros() / ITERATIONS as u128;
     println!("   Total: {:?}", keygen_time);
     println!("   Average: {} µs per keypair", keygen_avg);
-    println!("   Throughput: {:.0} keypairs/sec", 1_000_000.0 / keygen_avg as f64);
+    println!(
+        "   Throughput: {:.0} keypairs/sec",
+        1_000_000.0 / keygen_avg as f64
+    );
 
     // Benchmark Signing
     println!("\n2. Signature Generation");
@@ -66,7 +83,10 @@ fn main() {
     let sign_avg = sign_time.as_micros() / ITERATIONS as u128;
     println!("   Total: {:?}", sign_time);
     println!("   Average: {} µs per signature", sign_avg);
-    println!("   Throughput: {:.0} signatures/sec", 1_000_000.0 / sign_avg as f64);
+    println!(
+        "   Throughput: {:.0} signatures/sec",
+        1_000_000.0 / sign_avg as f64
+    );
 
     // Benchmark Verification
     println!("\n3. Signature Verification");
@@ -84,31 +104,56 @@ fn main() {
     let verify_avg = verify_time.as_micros() / ITERATIONS as u128;
     println!("   Total: {:?}", verify_time);
     println!("   Average: {} µs per verification", verify_avg);
-    println!("   Throughput: {:.0} verifications/sec", 1_000_000.0 / verify_avg as f64);
+    println!(
+        "   Throughput: {:.0} verifications/sec",
+        1_000_000.0 / verify_avg as f64
+    );
     println!("   Valid signatures: {}/{}", valid_count, ITERATIONS);
 
     // Total cycle time
     let total_avg = keygen_avg + sign_avg + verify_avg;
     println!("\n4. Total Cycle Time (KeyGen + Sign + Verify)");
     println!("   Average: {} µs", total_avg);
-    println!("   Throughput: {:.0} complete cycles/sec", 1_000_000.0 / total_avg as f64);
+    println!(
+        "   Throughput: {:.0} complete cycles/sec",
+        1_000_000.0 / total_avg as f64
+    );
 
     // Performance Summary
     println!("\n=== Performance Summary ===");
     println!("┌─────────────────┬───────────────┬─────────────────────┐");
     println!("│ Operation       │ Time (µs)     │ Throughput (ops/s)  │");
     println!("├─────────────────┼───────────────┼─────────────────────┤");
-    println!("│ KeyGen          │ {:>13} │ {:>19.0} │", keygen_avg, 1_000_000.0 / keygen_avg as f64);
-    println!("│ Sign            │ {:>13} │ {:>19.0} │", sign_avg, 1_000_000.0 / sign_avg as f64);
-    println!("│ Verify          │ {:>13} │ {:>19.0} │", verify_avg, 1_000_000.0 / verify_avg as f64);
-    println!("│ Total Cycle     │ {:>13} │ {:>19.0} │", total_avg, 1_000_000.0 / total_avg as f64);
+    println!(
+        "│ KeyGen          │ {:>13} │ {:>19.0} │",
+        keygen_avg,
+        1_000_000.0 / keygen_avg as f64
+    );
+    println!(
+        "│ Sign            │ {:>13} │ {:>19.0} │",
+        sign_avg,
+        1_000_000.0 / sign_avg as f64
+    );
+    println!(
+        "│ Verify          │ {:>13} │ {:>19.0} │",
+        verify_avg,
+        1_000_000.0 / verify_avg as f64
+    );
+    println!(
+        "│ Total Cycle     │ {:>13} │ {:>19.0} │",
+        total_avg,
+        1_000_000.0 / total_avg as f64
+    );
     println!("└─────────────────┴───────────────┴─────────────────────┘");
 
     // Size information
     println!("\n=== Size Information ===");
     println!("Public key size:  {} bytes", pks[0].pk.len());
-    println!("Secret key size:  {} bytes (estimated)", 2560 + 128 + 96);  // Approximate
-    println!("Signature size:   {} bytes", signatures[0].c_tilde.len() + signatures[0].z.len() * 256 * 4 + 256);
+    println!("Secret key size:  {} bytes (estimated)", 2560 + 128 + 96); // Approximate
+    println!(
+        "Signature size:   {} bytes",
+        signatures[0].c_tilde.len() + signatures[0].z.len() * 256 * 4 + 256
+    );
 
     // Optimization Status
     println!("\n=== Optimization Status ===");

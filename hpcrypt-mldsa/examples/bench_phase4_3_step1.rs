@@ -3,10 +3,10 @@
 // This benchmark measures the impact of the early rejection optimization
 // that checks ||y||∞ before computing expensive A·y matrix multiply.
 
-use mldsa::MlDsa65;
 use mldsa::keygen::keygen;
 use mldsa::sign::sign;
 use mldsa::verify::verify;
+use mldsa::MlDsa65;
 use std::time::Instant;
 
 fn main() {
@@ -21,14 +21,14 @@ fn main() {
     {
         use mldsa::simd::dispatch::has_avx2;
         if has_avx2() {
-            println!("✅ AVX2 detected and active");
+            println!(" AVX2 detected and active");
         } else {
-            println!("⚠️  AVX2 not available - using scalar implementation");
+            println!("  AVX2 not available - using scalar implementation");
         }
     }
     #[cfg(not(all(target_arch = "x86_64", feature = "avx2")))]
     {
-        println!("⚠️  AVX2 feature not enabled");
+        println!("  AVX2 feature not enabled");
     }
 
     println!();
@@ -105,13 +105,13 @@ fn main() {
     println!("   - Location: After y generation, before A·y computation");
     println!("   - Implementation: likely_to_reject_z() in sign.rs");
     println!();
-    println!("🎯 Expected vs Actual Performance:");
+    println!(" Expected vs Actual Performance:");
     println!("   - Baseline (Phase 4 complete): ~619 µs signing");
     println!("   - Current signing time: {} µs", sign_us);
 
     if sign_us < 619 {
         let improvement = ((619 - sign_us) as f64 / 619.0) * 100.0;
-        println!("   - Improvement: {:.1}% faster ✅", improvement);
+        println!("   - Improvement: {:.1}% faster ", improvement);
     } else {
         println!("   - Note: Run with more iterations for stable results");
     }
@@ -126,7 +126,7 @@ fn main() {
     println!("   Expected detection rate: 50-60% of rejections");
     println!("   Expected speedup: 10-20% signing improvement");
     println!();
-    println!("💡 Why This Works:");
+    println!(" Why This Works:");
     println!("   - y sampled uniformly in [-γ₁+1, γ₁]");
     println!("   - z = y + c·s1 must satisfy ||z||∞ ≤ γ₁ - β");
     println!("   - If ||y||∞ > γ₁ - 3β, high probability of rejection");
@@ -136,7 +136,7 @@ fn main() {
     println!("     • Challenge hash computation");
     println!("     • Challenge sampling");
     println!();
-    println!("✅ Benefits:");
+    println!(" Benefits:");
     println!("   ✓ Simple implementation (~40 lines of code)");
     println!("   ✓ Very low false positive rate (<1%)");
     println!("   ✓ No security impact (rejection count is public)");
@@ -157,7 +157,10 @@ fn main() {
 
     if total_us < 924 {
         let total_improvement = ((1019 - total_us) as f64 / 1019.0) * 100.0;
-        println!("\n🎉 Total cumulative improvement: {:.1}% ✅", total_improvement);
+        println!(
+            "\n Total cumulative improvement: {:.1}% ",
+            total_improvement
+        );
     }
 
     println!();

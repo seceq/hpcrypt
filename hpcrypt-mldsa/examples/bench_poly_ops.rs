@@ -64,9 +64,21 @@ fn main() {
     println!("Analysis:");
     println!("================================================================================");
     println!();
-    println!("poly.add():    {} ns for 256 coefficients = {:.2} ns/coeff", add_ns, add_ns as f64 / 256.0);
-    println!("poly.sub():    {} ns for 256 coefficients = {:.2} ns/coeff", sub_ns, sub_ns as f64 / 256.0);
-    println!("poly.reduce(): {} ns for 256 coefficients = {:.2} ns/coeff", reduce_ns, reduce_ns as f64 / 256.0);
+    println!(
+        "poly.add():    {} ns for 256 coefficients = {:.2} ns/coeff",
+        add_ns,
+        add_ns as f64 / 256.0
+    );
+    println!(
+        "poly.sub():    {} ns for 256 coefficients = {:.2} ns/coeff",
+        sub_ns,
+        sub_ns as f64 / 256.0
+    );
+    println!(
+        "poly.reduce(): {} ns for 256 coefficients = {:.2} ns/coeff",
+        reduce_ns,
+        reduce_ns as f64 / 256.0
+    );
     println!();
 
     println!("Expected AVX2 improvement:");

@@ -33,7 +33,7 @@ fn main() {
     for i in 0..N {
         poly3.coeffs[i] = ((i * 1337) % 10000) as i32;
     }
-    poly3.coeffs[255] = 523000;  // Large value at the end
+    poly3.coeffs[255] = 523000; // Large value at the end
     polys.push(("large at end", poly3));
 
     let iterations = 100_000;
@@ -53,7 +53,10 @@ fn main() {
         }
         let duration = start.elapsed();
         let ns_per_op = duration.as_nanos() / iterations;
-        println!("Standard infinity_norm:           {} ns/op (sum={})", ns_per_op, sum);
+        println!(
+            "Standard infinity_norm:           {} ns/op (sum={})",
+            ns_per_op, sum
+        );
 
         // Benchmark threshold-based infinity_norm
         let start = Instant::now();
@@ -64,7 +67,10 @@ fn main() {
         }
         let duration = start.elapsed();
         let ns_per_op = duration.as_nanos() / iterations;
-        println!("Threshold infinity_norm:          {} ns/op (sum={})", ns_per_op, sum);
+        println!(
+            "Threshold infinity_norm:          {} ns/op (sum={})",
+            ns_per_op, sum
+        );
 
         println!();
     }

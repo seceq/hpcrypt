@@ -3,8 +3,8 @@
 // Directly measures NTT and inverse NTT performance
 // to isolate Shoup's impact from other operations
 
+use mldsa::ntt::{inv_ntt, ntt};
 use mldsa::poly::Poly;
-use mldsa::ntt::{ntt, inv_ntt};
 use std::time::Instant;
 
 fn main() {
@@ -19,9 +19,9 @@ fn main() {
     {
         use mldsa::simd::dispatch::has_avx2;
         if has_avx2() {
-            println!("✅ AVX2 with Shoup optimization active");
+            println!(" AVX2 with Shoup optimization active");
         } else {
-            println!("⚠️  Scalar fallback");
+            println!("  Scalar fallback");
         }
     }
 
@@ -57,7 +57,10 @@ fn main() {
     let ntt_ns_per_op = ntt_time.as_nanos() / iterations;
     println!("Total time: {:?}", ntt_time);
     println!("Per operation: {} ns", ntt_ns_per_op);
-    println!("Throughput: {:.2} M ops/sec", 1000.0 / (ntt_ns_per_op as f64));
+    println!(
+        "Throughput: {:.2} M ops/sec",
+        1000.0 / (ntt_ns_per_op as f64)
+    );
 
     // Benchmark Inverse NTT
     println!("\n=== Inverse NTT ===");
@@ -70,7 +73,10 @@ fn main() {
     let inv_ntt_ns_per_op = inv_ntt_time.as_nanos() / iterations;
     println!("Total time: {:?}", inv_ntt_time);
     println!("Per operation: {} ns", inv_ntt_ns_per_op);
-    println!("Throughput: {:.2} M ops/sec", 1000.0 / (inv_ntt_ns_per_op as f64));
+    println!(
+        "Throughput: {:.2} M ops/sec",
+        1000.0 / (inv_ntt_ns_per_op as f64)
+    );
 
     // Round-trip
     println!("\n=== NTT + InvNTT Round-trip ===");
@@ -86,7 +92,10 @@ fn main() {
     let roundtrip_ns_per_op = roundtrip_time.as_nanos() / iterations;
     println!("Total time: {:?}", roundtrip_time);
     println!("Per operation: {} ns", roundtrip_ns_per_op);
-    println!("Throughput: {:.2} M ops/sec", 1000.0 / (roundtrip_ns_per_op as f64));
+    println!(
+        "Throughput: {:.2} M ops/sec",
+        1000.0 / (roundtrip_ns_per_op as f64)
+    );
 
     // Summary
     println!();
@@ -103,16 +112,16 @@ fn main() {
     println!("=== Shoup Optimization Impact ===");
     println!("{}", sep);
     println!();
-    println!("🎯 What's Measured:");
+    println!(" What's Measured:");
     println!("   - Pure NTT operations (no SHAKE256, no sampling)");
     println!("   - Both forward and inverse NTT with Shoup");
     println!("   - Direct measurement of butterfly performance");
     println!();
     println!("⚡ Shoup Benefits:");
-    println!("   ✅ Precomputed zeta_shoup constants");
-    println!("   ✅ Parallel execution: a*b || a*b_shoup");
-    println!("   ✅ Reduced dependency chain latency");
-    println!("   ✅ Better CPU pipeline utilization");
+    println!("    Precomputed zeta_shoup constants");
+    println!("    Parallel execution: a*b || a*b_shoup");
+    println!("    Reduced dependency chain latency");
+    println!("    Better CPU pipeline utilization");
     println!();
     println!("📊 Context:");
     println!("   - NTT usage in ML-DSA:");
@@ -125,7 +134,10 @@ fn main() {
     println!("     If NTT 20% faster → ML-DSA 3.0-5.0% faster");
     println!();
     println!("🔬 Measurement Quality:");
-    println!("   - {} iterations for statistical significance", iterations);
+    println!(
+        "   - {} iterations for statistical significance",
+        iterations
+    );
     println!("   - Isolated from other operations");
     println!("   - Direct butterfly performance");
 

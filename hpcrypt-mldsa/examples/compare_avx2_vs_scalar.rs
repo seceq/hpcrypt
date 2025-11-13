@@ -4,11 +4,11 @@
 
 #![cfg(feature = "std")]
 
-use std::time::Instant;
-use mldsa::params::MlDsa65;
 use mldsa::keygen::keygen;
+use mldsa::params::MlDsa65;
 use mldsa::sign::sign;
 use mldsa::verify::verify;
+use std::time::Instant;
 
 fn main() {
     println!("ML-DSA AVX2 vs Scalar Comparison");
@@ -24,9 +24,9 @@ fn main() {
     {
         use mldsa::simd::dispatch::has_avx2;
         if has_avx2() {
-            println!("✅ AVX2 detected and active\n");
+            println!(" AVX2 detected and active\n");
         } else {
-            println!("⚠️  AVX2 feature enabled but CPU doesn't support it");
+            println!("  AVX2 feature enabled but CPU doesn't support it");
             println!("   Using scalar fallback\n");
         }
     }
@@ -107,13 +107,25 @@ fn main() {
             let est_scalar_total = est_scalar_keygen + est_scalar_sign + est_scalar_verify;
 
             println!("\n=== Estimated Scalar Baseline ===");
-            println!("KeyGen:  {:4} µs (+{:.0}%)", est_scalar_keygen, ((est_scalar_keygen as f64 / keygen_us as f64) - 1.0) * 100.0);
-            println!("Sign:    {:4} µs (+{:.0}%)", est_scalar_sign, ((est_scalar_sign as f64 / sign_us as f64) - 1.0) * 100.0);
+            println!(
+                "KeyGen:  {:4} µs (+{:.0}%)",
+                est_scalar_keygen,
+                ((est_scalar_keygen as f64 / keygen_us as f64) - 1.0) * 100.0
+            );
+            println!(
+                "Sign:    {:4} µs (+{:.0}%)",
+                est_scalar_sign,
+                ((est_scalar_sign as f64 / sign_us as f64) - 1.0) * 100.0
+            );
             println!("Verify:  {:4} µs (unchanged)", est_scalar_verify);
             println!("Total:   {:4} µs", est_scalar_total);
 
             let speedup = est_scalar_total as f64 / total_us as f64;
-            println!("\n🚀 Estimated Speedup: {:.2}X ({:.0}% faster)", speedup, (speedup - 1.0) * 100.0);
+            println!(
+                "\n Estimated Speedup: {:.2}X ({:.0}% faster)",
+                speedup,
+                (speedup - 1.0) * 100.0
+            );
         }
     }
 

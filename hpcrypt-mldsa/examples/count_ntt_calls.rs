@@ -1,12 +1,12 @@
 //! Count actual NTT calls during operations
 //! This uses a thread-local counter to track NTT invocations
 
-use std::cell::Cell;
-use std::time::Instant;
-use mldsa::params::MlDsa65;
 use mldsa::keygen::keygen_from_seed;
+use mldsa::params::MlDsa65;
 use mldsa::sign::sign_deterministic;
 use mldsa::verify::verify;
+use std::cell::Cell;
+use std::time::Instant;
 
 thread_local! {
     static NTT_FORWARD_COUNT: Cell<usize> = Cell::new(0);
@@ -79,9 +79,18 @@ fn main() {
     let _ = verify::<MlDsa65>(&pk, message, &sig);
     let verify_time = start.elapsed();
 
-    println!("KeyGen:  {:8.2} µs (est. 11 NTT ops)", keygen_time.as_micros());
-    println!("Sign:    {:8.2} µs (est. 104-130 NTT ops)", sign_time.as_micros());
-    println!("Verify:  {:8.2} µs (est. 17 NTT ops)", verify_time.as_micros());
+    println!(
+        "KeyGen:  {:8.2} µs (est. 11 NTT ops)",
+        keygen_time.as_micros()
+    );
+    println!(
+        "Sign:    {:8.2} µs (est. 104-130 NTT ops)",
+        sign_time.as_micros()
+    );
+    println!(
+        "Verify:  {:8.2} µs (est. 17 NTT ops)",
+        verify_time.as_micros()
+    );
 
     println!("\n═══ NTT Impact Calculation ═══\n");
 
@@ -94,15 +103,24 @@ fn main() {
 
     let keygen_ntt_time = 11.0 * single_ntt_us;
     let keygen_ntt_pct = (keygen_ntt_time / keygen_time.as_micros() as f64) * 100.0;
-    println!("KeyGen NTT time:  {:.2} µs ({:.1}% of total)", keygen_ntt_time, keygen_ntt_pct);
+    println!(
+        "KeyGen NTT time:  {:.2} µs ({:.1}% of total)",
+        keygen_ntt_time, keygen_ntt_pct
+    );
 
     let sign_ntt_time = 117.0 * single_ntt_us; // Using middle estimate
     let sign_ntt_pct = (sign_ntt_time / sign_time.as_micros() as f64) * 100.0;
-    println!("Sign NTT time:    {:.2} µs ({:.1}% of total)", sign_ntt_time, sign_ntt_pct);
+    println!(
+        "Sign NTT time:    {:.2} µs ({:.1}% of total)",
+        sign_ntt_time, sign_ntt_pct
+    );
 
     let verify_ntt_time = 17.0 * single_ntt_us;
     let verify_ntt_pct = (verify_ntt_time / verify_time.as_micros() as f64) * 100.0;
-    println!("Verify NTT time:  {:.2} µs ({:.1}% of total)", verify_ntt_time, verify_ntt_pct);
+    println!(
+        "Verify NTT time:  {:.2} µs ({:.1}% of total)",
+        verify_ntt_time, verify_ntt_pct
+    );
 
     println!("\n═══ Conclusions ═══\n");
     println!("Based on algorithm analysis and timing:");

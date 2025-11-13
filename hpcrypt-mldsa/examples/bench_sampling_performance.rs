@@ -2,9 +2,9 @@
 //!
 //! Measures signing performance before and after AVX2 sampling optimization
 
-use mldsa::MlDsa65;
 use mldsa::keygen::keygen;
 use mldsa::sign;
+use mldsa::MlDsa65;
 use std::time::Instant;
 
 fn main() {
@@ -42,7 +42,10 @@ fn main() {
     println!("  Total time:       {:?}", elapsed);
     println!("  Successful signs: {}/{}", successful_signs, ITERATIONS);
     println!("  Average per sign: {} µs", avg_micros);
-    println!("  Throughput:       {:.1} signs/sec", 1_000_000.0 / avg_micros as f64);
+    println!(
+        "  Throughput:       {:.1} signs/sec",
+        1_000_000.0 / avg_micros as f64
+    );
     println!("\n========================================\n");
 
     // Verification benchmark
@@ -64,9 +67,15 @@ fn main() {
 
     println!("Results:");
     println!("  Total time:          {:?}", elapsed);
-    println!("  Successful verifies: {}/{}", successful_verifies, ITERATIONS);
+    println!(
+        "  Successful verifies: {}/{}",
+        successful_verifies, ITERATIONS
+    );
     println!("  Average per verify:  {} µs", avg_micros);
-    println!("  Throughput:          {:.1} verifies/sec", 1_000_000.0 / avg_micros as f64);
+    println!(
+        "  Throughput:          {:.1} verifies/sec",
+        1_000_000.0 / avg_micros as f64
+    );
     println!("\n========================================\n");
 
     println!("Performance Summary:");

@@ -8,8 +8,8 @@
 //! cargo run --release --example batch_signing --features avx2,simd
 //! ```
 
-use mldsa::params::MlDsa65;
 use mldsa::keygen::keygen;
+use mldsa::params::MlDsa65;
 use mldsa::{sign_batch, verify_batch};
 use std::time::Instant;
 
@@ -42,13 +42,13 @@ fn main() {
         // Verify all signatures succeeded
         let success_count = signatures.iter().filter(|s| s.is_some()).count();
         println!("  Signing: {} signatures in {:?}", success_count, sign_time);
-        println!("  Throughput: {:.0} signs/sec",
-            batch_size as f64 / sign_time.as_secs_f64());
+        println!(
+            "  Throughput: {:.0} signs/sec",
+            batch_size as f64 / sign_time.as_secs_f64()
+        );
 
         // Time batch verification
-        let sig_refs: Vec<_> = signatures.iter()
-            .map(|s| s.as_ref().unwrap())
-            .collect();
+        let sig_refs: Vec<_> = signatures.iter().map(|s| s.as_ref().unwrap()).collect();
 
         let start = Instant::now();
         let results = verify_batch(&pk, &msg_refs, &sig_refs);
@@ -56,8 +56,10 @@ fn main() {
 
         let valid_count = results.iter().filter(|&&r| r).count();
         println!("  Verification: {} valid in {:?}", valid_count, verify_time);
-        println!("  Throughput: {:.0} verifications/sec",
-            batch_size as f64 / verify_time.as_secs_f64());
+        println!(
+            "  Throughput: {:.0} verifications/sec",
+            batch_size as f64 / verify_time.as_secs_f64()
+        );
         println!();
     }
 

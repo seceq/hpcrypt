@@ -3,10 +3,10 @@
 //! Re-profile ML-DSA after all optimizations (Phases 1-4 + Quick Wins + Sampling)
 //! to identify actual current bottlenecks.
 
-use mldsa::MlDsa65;
 use mldsa::keygen::keygen;
 use mldsa::sign;
 use mldsa::verify;
+use mldsa::MlDsa65;
 use std::time::Instant;
 
 fn main() {
@@ -44,7 +44,10 @@ fn main() {
 
     println!("Overall Signing:");
     println!("  Average: {} µs", avg_sign_us);
-    println!("  Throughput: {:.1} signs/sec", 1_000_000.0 / avg_sign_us as f64);
+    println!(
+        "  Throughput: {:.1} signs/sec",
+        1_000_000.0 / avg_sign_us as f64
+    );
     println!("  Total time: {:?}\n", total_sign_time);
 
     // ========================================
@@ -66,7 +69,10 @@ fn main() {
 
     println!("Overall Verification:");
     println!("  Average: {} µs", avg_verify_us);
-    println!("  Throughput: {:.1} verifies/sec", 1_000_000.0 / avg_verify_us as f64);
+    println!(
+        "  Throughput: {:.1} verifies/sec",
+        1_000_000.0 / avg_verify_us as f64
+    );
     println!("  Total time: {:?}\n", total_verify_time);
 
     // ========================================
@@ -83,7 +89,10 @@ fn main() {
 
     println!("Overall KeyGen:");
     println!("  Average: {} µs", avg_keygen_us);
-    println!("  Throughput: {:.1} keygens/sec", 1_000_000.0 / avg_keygen_us as f64);
+    println!(
+        "  Throughput: {:.1} keygens/sec",
+        1_000_000.0 / avg_keygen_us as f64
+    );
     println!("  Total time: {:?}\n", total_keygen_time);
 
     // ========================================
@@ -96,23 +105,27 @@ fn main() {
     println!("┌─────────────┬─────────────┬──────────────────┬─────────────────┐");
     println!("│ Operation   │ Time (µs)   │ Throughput/sec   │ % of Total      │");
     println!("├─────────────┼─────────────┼──────────────────┼─────────────────┤");
-    println!("│ KeyGen      │ {:>11} │ {:>16.1} │ {:>15.1}% │",
+    println!(
+        "│ KeyGen      │ {:>11} │ {:>16.1} │ {:>15.1}% │",
         avg_keygen_us,
         1_000_000.0 / avg_keygen_us as f64,
         100.0 * avg_keygen_us as f64 / (avg_keygen_us + avg_sign_us + avg_verify_us) as f64
     );
-    println!("│ Sign        │ {:>11} │ {:>16.1} │ {:>15.1}% │",
+    println!(
+        "│ Sign        │ {:>11} │ {:>16.1} │ {:>15.1}% │",
         avg_sign_us,
         1_000_000.0 / avg_sign_us as f64,
         100.0 * avg_sign_us as f64 / (avg_keygen_us + avg_sign_us + avg_verify_us) as f64
     );
-    println!("│ Verify      │ {:>11} │ {:>16.1} │ {:>15.1}% │",
+    println!(
+        "│ Verify      │ {:>11} │ {:>16.1} │ {:>15.1}% │",
         avg_verify_us,
         1_000_000.0 / avg_verify_us as f64,
         100.0 * avg_verify_us as f64 / (avg_keygen_us + avg_sign_us + avg_verify_us) as f64
     );
     println!("├─────────────┼─────────────┼──────────────────┼─────────────────┤");
-    println!("│ TOTAL       │ {:>11} │                  │ {:>15}  │",
+    println!(
+        "│ TOTAL       │ {:>11} │                  │ {:>15}  │",
         avg_keygen_us + avg_sign_us + avg_verify_us,
         "100.0%"
     );
@@ -134,9 +147,15 @@ fn main() {
     println!("After Phase 3 (PGO):        ~580 µs  (-38%)");
     println!("After Phase 4 (XOF x4):     ~440 µs  (-53%)");
     println!("After Quick Wins:           ~440 µs  (-53%)");
-    println!("After Sampling AVX2:        {} µs  ({:.1}%)", avg_sign_us, -improvement_pct);
+    println!(
+        "After Sampling AVX2:        {} µs  ({:.1}%)",
+        avg_sign_us, -improvement_pct
+    );
     println!();
-    println!("Total improvement: {:.1}% ({} → {} µs)", improvement_pct, baseline_us, avg_sign_us);
+    println!(
+        "Total improvement: {:.1}% ({} → {} µs)",
+        improvement_pct, baseline_us, avg_sign_us
+    );
     println!();
 
     // ========================================
@@ -170,7 +189,10 @@ fn main() {
     println!("=== RECOMMENDED NEXT STEPS ===");
     println!("================================================================================\n");
 
-    println!("To close the {:.1}% gap to hand-optimized assembly ({} µs):", gap_to_asm, hand_asm_us);
+    println!(
+        "To close the {:.1}% gap to hand-optimized assembly ({} µs):",
+        gap_to_asm, hand_asm_us
+    );
     println!();
     println!("Need to save: {} µs", avg_sign_us - hand_asm_us as u128);
     println!();

@@ -2,11 +2,11 @@
 //!
 //! Measures signing and verification performance for ML-DSA-44, ML-DSA-65, and ML-DSA-87
 
-use mldsa::{MlDsa44, MlDsa65, MlDsa87};
 use mldsa::keygen::keygen;
+use mldsa::params::DsaParams;
 use mldsa::sign;
 use mldsa::verify::verify;
-use mldsa::params::DsaParams;
+use mldsa::{MlDsa44, MlDsa65, MlDsa87};
 use std::time::Instant;
 
 fn benchmark_param_set<P: DsaParams>() -> (u128, u128) {
@@ -79,22 +79,32 @@ fn main() {
     println!("┌────────────┬──────────────┬──────────────┬──────────────┐");
     println!("│ Operation  │   ML-DSA-44  │   ML-DSA-65  │   ML-DSA-87  │");
     println!("├────────────┼──────────────┼──────────────┼──────────────┤");
-    println!("│ Sign (µs)  │  {:>10}  │  {:>10}  │  {:>10}  │", sign_44, sign_65, sign_87);
-    println!("│ Verify (µs)│  {:>10}  │  {:>10}  │  {:>10}  │", verify_44, verify_65, verify_87);
+    println!(
+        "│ Sign (µs)  │  {:>10}  │  {:>10}  │  {:>10}  │",
+        sign_44, sign_65, sign_87
+    );
+    println!(
+        "│ Verify (µs)│  {:>10}  │  {:>10}  │  {:>10}  │",
+        verify_44, verify_65, verify_87
+    );
     println!("└────────────┴──────────────┴──────────────┴──────────────┘\n");
 
     println!("Throughput (operations/second):");
     println!("┌────────────┬──────────────┬──────────────┬──────────────┐");
     println!("│ Operation  │   ML-DSA-44  │   ML-DSA-65  │   ML-DSA-87  │");
     println!("├────────────┼──────────────┼──────────────┼──────────────┤");
-    println!("│ Sign/s     │  {:>10.0}  │  {:>10.0}  │  {:>10.0}  │",
-             1_000_000.0 / sign_44 as f64,
-             1_000_000.0 / sign_65 as f64,
-             1_000_000.0 / sign_87 as f64);
-    println!("│ Verify/s   │  {:>10.0}  │  {:>10.0}  │  {:>10.0}  │",
-             1_000_000.0 / verify_44 as f64,
-             1_000_000.0 / verify_65 as f64,
-             1_000_000.0 / verify_87 as f64);
+    println!(
+        "│ Sign/s     │  {:>10.0}  │  {:>10.0}  │  {:>10.0}  │",
+        1_000_000.0 / sign_44 as f64,
+        1_000_000.0 / sign_65 as f64,
+        1_000_000.0 / sign_87 as f64
+    );
+    println!(
+        "│ Verify/s   │  {:>10.0}  │  {:>10.0}  │  {:>10.0}  │",
+        1_000_000.0 / verify_44 as f64,
+        1_000_000.0 / verify_65 as f64,
+        1_000_000.0 / verify_87 as f64
+    );
     println!("└────────────┴──────────────┴──────────────┴──────────────┘\n");
 
     // Relative performance
@@ -102,12 +112,16 @@ fn main() {
     println!("┌────────────┬──────────────┬──────────────┬──────────────┐");
     println!("│ Operation  │   ML-DSA-44  │   ML-DSA-65  │   ML-DSA-87  │");
     println!("├────────────┼──────────────┼──────────────┼──────────────┤");
-    println!("│ Sign       │  {:>9.1}%  │     100.0%   │  {:>9.1}%  │",
-             (sign_44 as f64 / sign_65 as f64) * 100.0,
-             (sign_87 as f64 / sign_65 as f64) * 100.0);
-    println!("│ Verify     │  {:>9.1}%  │     100.0%   │  {:>9.1}%  │",
-             (verify_44 as f64 / verify_65 as f64) * 100.0,
-             (verify_87 as f64 / verify_65 as f64) * 100.0);
+    println!(
+        "│ Sign       │  {:>9.1}%  │     100.0%   │  {:>9.1}%  │",
+        (sign_44 as f64 / sign_65 as f64) * 100.0,
+        (sign_87 as f64 / sign_65 as f64) * 100.0
+    );
+    println!(
+        "│ Verify     │  {:>9.1}%  │     100.0%   │  {:>9.1}%  │",
+        (verify_44 as f64 / verify_65 as f64) * 100.0,
+        (verify_87 as f64 / verify_65 as f64) * 100.0
+    );
     println!("└────────────┴──────────────┴──────────────┴──────────────┘\n");
 
     println!("════════════════════════════════════════════════════════════");

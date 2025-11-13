@@ -2,8 +2,8 @@
 //!
 //! Instruments the signing algorithm to identify current bottlenecks
 
-use mldsa::MlDsa65;
 use mldsa::keygen::keygen;
+use mldsa::MlDsa65;
 use std::time::Instant;
 
 // We'll need to create a custom instrumented version of sign
@@ -65,22 +65,46 @@ fn main() {
     let norms_pct = 5.0;
     let other_pct = 5.0;
 
-    println!("│ XOF (SHAKE-256) operations    │ {:>7.1}% │ {:>7.0}  │ Optimized  │",
-        xof_pct, total_us * xof_pct / 100.0);
-    println!("│ NTT forward/inverse            │ {:>7.1}% │ {:>7.0}  │ Optimized  │",
-        ntt_pct, total_us * ntt_pct / 100.0);
-    println!("│ Rejection sampling             │ {:>7.1}% │ {:>7.0}  │ Optimized  │",
-        sampling_pct, total_us * sampling_pct / 100.0);
-    println!("│ Poly add/sub/mul operations    │ {:>7.1}% │ {:>7.0}  │ Partial    │",
-        poly_ops_pct, total_us * poly_ops_pct / 100.0);
-    println!("│ Hint generation                │ {:>7.1}% │ {:>7.0}  │ Optimized  │",
-        hints_pct, total_us * hints_pct / 100.0);
-    println!("│ Rounding (Power2/Decompose)    │ {:>7.1}% │ {:>7.0}  │ Optimized  │",
-        rounding_pct, total_us * rounding_pct / 100.0);
-    println!("│ Norm calculations (‖z‖, ‖r‖)  │ {:>7.1}% │ {:>7.0}  │ Scalar     │",
-        norms_pct, total_us * norms_pct / 100.0);
-    println!("│ Other (hashing, serialization) │ {:>7.1}% │ {:>7.0}  │ Mixed      │",
-        other_pct, total_us * other_pct / 100.0);
+    println!(
+        "│ XOF (SHAKE-256) operations    │ {:>7.1}% │ {:>7.0}  │ Optimized  │",
+        xof_pct,
+        total_us * xof_pct / 100.0
+    );
+    println!(
+        "│ NTT forward/inverse            │ {:>7.1}% │ {:>7.0}  │ Optimized  │",
+        ntt_pct,
+        total_us * ntt_pct / 100.0
+    );
+    println!(
+        "│ Rejection sampling             │ {:>7.1}% │ {:>7.0}  │ Optimized  │",
+        sampling_pct,
+        total_us * sampling_pct / 100.0
+    );
+    println!(
+        "│ Poly add/sub/mul operations    │ {:>7.1}% │ {:>7.0}  │ Partial    │",
+        poly_ops_pct,
+        total_us * poly_ops_pct / 100.0
+    );
+    println!(
+        "│ Hint generation                │ {:>7.1}% │ {:>7.0}  │ Optimized  │",
+        hints_pct,
+        total_us * hints_pct / 100.0
+    );
+    println!(
+        "│ Rounding (Power2/Decompose)    │ {:>7.1}% │ {:>7.0}  │ Optimized  │",
+        rounding_pct,
+        total_us * rounding_pct / 100.0
+    );
+    println!(
+        "│ Norm calculations (‖z‖, ‖r‖)  │ {:>7.1}% │ {:>7.0}  │ Scalar     │",
+        norms_pct,
+        total_us * norms_pct / 100.0
+    );
+    println!(
+        "│ Other (hashing, serialization) │ {:>7.1}% │ {:>7.0}  │ Mixed      │",
+        other_pct,
+        total_us * other_pct / 100.0
+    );
     println!("└────────────────────────────────┴──────────┴──────────┴────────────┘");
     println!();
 
@@ -95,25 +119,46 @@ fn main() {
     println!("Potential optimizations:");
     println!();
 
-    println!("1. Norm Calculations (~{} µs potential)", (total_us * norms_pct / 100.0) as i32);
+    println!(
+        "1. Norm Calculations (~{} µs potential)",
+        (total_us * norms_pct / 100.0) as i32
+    );
     println!("   Current: Scalar loops");
     println!("   Opportunity: SIMD infinity norm and L2 norm");
-    println!("   Expected gain: 50% speedup → ~{} µs saved", (total_us * norms_pct / 200.0) as i32);
+    println!(
+        "   Expected gain: 50% speedup → ~{} µs saved",
+        (total_us * norms_pct / 200.0) as i32
+    );
     println!();
 
-    println!("2. Remaining Polynomial Ops (~{} µs potential)", (total_us * poly_ops_pct / 100.0) as i32);
+    println!(
+        "2. Remaining Polynomial Ops (~{} µs potential)",
+        (total_us * poly_ops_pct / 100.0) as i32
+    );
     println!("   Current: Partial AVX2 (add/sub have Barrett, but not all ops)");
     println!("   Opportunity: Vectorize remaining operations");
-    println!("   Expected gain: 30% speedup → ~{} µs saved", (total_us * poly_ops_pct * 0.3 / 100.0) as i32);
+    println!(
+        "   Expected gain: 30% speedup → ~{} µs saved",
+        (total_us * poly_ops_pct * 0.3 / 100.0) as i32
+    );
     println!();
 
-    println!("3. Memory Layout Optimization (~{} µs potential)", (total_us * 5.0 / 100.0) as i32);
+    println!(
+        "3. Memory Layout Optimization (~{} µs potential)",
+        (total_us * 5.0 / 100.0) as i32
+    );
     println!("   Current: Standard struct layout");
     println!("   Opportunity: Cache-line alignment, prefetching");
-    println!("   Expected gain: 5-10% overall → ~{} µs saved", (total_us * 5.0 / 100.0) as i32);
+    println!(
+        "   Expected gain: 5-10% overall → ~{} µs saved",
+        (total_us * 5.0 / 100.0) as i32
+    );
     println!();
 
-    println!("4. Investigate Regression (~{} µs potential)", (487.0 - 440.0) as i32);
+    println!(
+        "4. Investigate Regression (~{} µs potential)",
+        (487.0 - 440.0) as i32
+    );
     println!("   Issue: Performance went from 440 µs to 487 µs");
     println!("   Actions:");
     println!("     - Disable AVX2 sampling, measure impact");
@@ -121,20 +166,29 @@ fn main() {
     println!("     - Profile to find regression source");
     println!();
 
-    println!("Total potential savings: ~{} µs",
-        (total_us * norms_pct / 200.0 +
-         total_us * poly_ops_pct * 0.3 / 100.0 +
-         total_us * 5.0 / 100.0 +
-         (487.0 - 440.0)) as i32);
-    println!("Projected performance: ~{} µs (within {}% of 380 µs target)",
-        (total_us - (total_us * norms_pct / 200.0 +
-                     total_us * poly_ops_pct * 0.3 / 100.0 +
-                     total_us * 5.0 / 100.0 +
-                     (487.0 - 440.0))) as i32,
-        (((total_us - (total_us * norms_pct / 200.0 +
-                       total_us * poly_ops_pct * 0.3 / 100.0 +
-                       total_us * 5.0 / 100.0 +
-                       (487.0 - 440.0))) - 380.0) / 380.0 * 100.0) as i32);
+    println!(
+        "Total potential savings: ~{} µs",
+        (total_us * norms_pct / 200.0
+            + total_us * poly_ops_pct * 0.3 / 100.0
+            + total_us * 5.0 / 100.0
+            + (487.0 - 440.0)) as i32
+    );
+    println!(
+        "Projected performance: ~{} µs (within {}% of 380 µs target)",
+        (total_us
+            - (total_us * norms_pct / 200.0
+                + total_us * poly_ops_pct * 0.3 / 100.0
+                + total_us * 5.0 / 100.0
+                + (487.0 - 440.0))) as i32,
+        (((total_us
+            - (total_us * norms_pct / 200.0
+                + total_us * poly_ops_pct * 0.3 / 100.0
+                + total_us * 5.0 / 100.0
+                + (487.0 - 440.0)))
+            - 380.0)
+            / 380.0
+            * 100.0) as i32
+    );
     println!();
 
     println!("================================================================================");

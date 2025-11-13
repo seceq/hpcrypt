@@ -4,11 +4,11 @@
 
 #![cfg(feature = "std")]
 
-use std::time::Instant;
-use mldsa::params::MlDsa65;
 use mldsa::keygen::keygen;
+use mldsa::params::MlDsa65;
 use mldsa::sign::sign;
 use mldsa::verify::verify;
+use std::time::Instant;
 
 fn main() {
     println!("ML-DSA End-to-End Performance Benchmark");
@@ -62,16 +62,19 @@ fn main() {
     println!("KeyGen:  {} µs", keygen_per_op);
     println!("Sign:    {} µs", sign_per_op);
     println!("Verify:  {} µs", verify_per_op);
-    println!("Total:   {} µs", keygen_per_op + sign_per_op + verify_per_op);
+    println!(
+        "Total:   {} µs",
+        keygen_per_op + sign_per_op + verify_per_op
+    );
 
     #[cfg(all(feature = "avx2", feature = "simd", target_arch = "x86_64"))]
     {
         use mldsa::simd::dispatch::has_avx2;
         if has_avx2() {
-            println!("\n✅ AVX2 SHAKE256 optimization is ACTIVE");
+            println!("\n AVX2 SHAKE256 optimization is ACTIVE");
             println!("Expected improvement vs scalar: ~20-22%");
         } else {
-            println!("\n⚠️  AVX2 not available, using scalar fallback");
+            println!("\n  AVX2 not available, using scalar fallback");
         }
     }
 

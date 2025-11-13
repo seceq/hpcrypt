@@ -1,5 +1,5 @@
 //! Benchmark: Comparing Reduction Methods with Shoup Optimization
-//! 
+//!
 //! Tests:
 //! 1. Montgomery + Shoup (current implementation)
 //! 2. Barrett reduction (standard)
@@ -46,10 +46,10 @@ fn precompute_montgomery_shoup(b: i32) -> u32 {
 fn barrett_reduce(a: i64) -> i32 {
     // Quotient estimate: q ≈ a / Q
     let q = ((a as i128 * BARRETT_MU as i128) >> 64) as i64;
-    
+
     // Remainder
     let mut r = (a - q * Q as i64) as i32;
-    
+
     // Conditional correction
     if r >= Q {
         r -= Q;
@@ -57,7 +57,7 @@ fn barrett_reduce(a: i64) -> i32 {
     if r < 0 {
         r += Q;
     }
-    
+
     r
 }
 
@@ -80,24 +80,21 @@ struct BarrettShoup {
 fn precompute_barrett_shoup(b: i32) -> BarrettShoup {
     // Precompute partial quotient calculation
     let helper = ((b as i64 as i128 * BARRETT_MU as i128) >> BARRETT_K) as u64;
-    
-    BarrettShoup {
-        value: b,
-        helper,
-    }
+
+    BarrettShoup { value: b, helper }
 }
 
 #[inline(always)]
 fn barrett_mul_shoup(a: i32, b_shoup: &BarrettShoup) -> i32 {
     // Step 1: Compute product (can execute in parallel)
     let prod = (a as i64).wrapping_mul(b_shoup.value as i64);
-    
+
     // Step 2: Compute quotient estimate using precomputed helper (parallel!)
     let q = ((a as i64 as i128 * b_shoup.helper as i128) >> BARRETT_K) as i64;
-    
+
     // Step 3: Compute remainder
     let mut r = (prod - q * Q as i64) as i32;
-    
+
     // Step 4: Conditional correction
     if r >= Q {
         r -= Q;
@@ -105,7 +102,7 @@ fn barrett_mul_shoup(a: i32, b_shoup: &BarrettShoup) -> i32 {
     if r < 0 {
         r += Q;
     }
-    
+
     r
 }
 
@@ -205,103 +202,107 @@ fn main() {
     println!("║        Reduction Method Comparison: Standard vs Shoup Optimization          ║");
     println!("╚══════════════════════════════════════════════════════════════════════════════╝");
     println!();
-    println!("Testing modular multiplication: (a × b) mod Q where Q = {}", Q);
+    println!(
+        "Testing modular multiplication: (a × b) mod Q where Q = {}",
+        Q
+    );
     println!("Each test: 1000 multiplications × 10000 iterations = 10M operations");
     println!();
-    
+
     let iterations = 10000;
-    
+
     // Precompute Shoup helpers
     let test_b = 1234567 % Q;
     let montgomery_helper = precompute_montgomery_shoup(test_b);
     let barrett_helper = precompute_barrett_shoup(test_b);
-    
+
     println!("════════════════════════════════════════════════════════════════════════════════");
     println!("METHOD 1: Montgomery + Shoup (Current Implementation)");
     println!("════════════════════════════════════════════════════════════════════════════════");
-    
-    let mont_shoup_time = benchmark_method(
-        "Montgomery + Shoup",
-        iterations,
-        |a, _| montgomery_mul_shoup(a, test_b, montgomery_helper),
-    );
-    
+
+    let mont_shoup_time = benchmark_method("Montgomery + Shoup", iterations, |a, _| {
+        montgomery_mul_shoup(a, test_b, montgomery_helper)
+    });
+
     println!("════════════════════════════════════════════════════════════════════════════════");
     println!("METHOD 2: Barrett Reduction (Standard)");
     println!("════════════════════════════════════════════════════════════════════════════════");
-    
-    let barrett_time = benchmark_method(
-        "Barrett (standard)",
-        iterations,
-        |a, b| barrett_mul(a, b),
-    );
-    
+
+    let barrett_time = benchmark_method("Barrett (standard)", iterations, |a, b| barrett_mul(a, b));
+
     println!("════════════════════════════════════════════════════════════════════════════════");
     println!("METHOD 3: Barrett + Shoup (Experimental)");
     println!("════════════════════════════════════════════════════════════════════════════════");
-    
-    let barrett_shoup_time = benchmark_method(
-        "Barrett + Shoup",
-        iterations,
-        |a, _| barrett_mul_shoup(a, &barrett_helper),
-    );
-    
+
+    let barrett_shoup_time = benchmark_method("Barrett + Shoup", iterations, |a, _| {
+        barrett_mul_shoup(a, &barrett_helper)
+    });
+
     println!("════════════════════════════════════════════════════════════════════════════════");
     println!("METHOD 4: Montgomery (Standard - for reference)");
     println!("════════════════════════════════════════════════════════════════════════════════");
-    
-    let montgomery_time = benchmark_method(
-        "Montgomery (standard)",
-        iterations,
-        |a, b| montgomery_reduce((a as i64) * (b as i64)),
-    );
-    
+
+    let montgomery_time = benchmark_method("Montgomery (standard)", iterations, |a, b| {
+        montgomery_reduce((a as i64) * (b as i64))
+    });
+
     println!("════════════════════════════════════════════════════════════════════════════════");
     println!("PERFORMANCE SUMMARY");
     println!("════════════════════════════════════════════════════════════════════════════════");
     println!();
-    
+
     println!("Method                          ns/op    Relative    vs Montgomery+Shoup");
     println!("──────────────────────────────────────────────────────────────────────────────");
-    
+
     let baseline = mont_shoup_time as f64;
-    
-    println!("Montgomery + Shoup              {:5}    1.00×       baseline",
-             mont_shoup_time);
-    
-    println!("Montgomery (standard)           {:5}    {:.2}×       {:.1}% slower",
-             montgomery_time,
-             montgomery_time as f64 / baseline,
-             ((montgomery_time as f64 / baseline) - 1.0) * 100.0);
-    
-    println!("Barrett (standard)              {:5}    {:.2}×       {:.1}% slower",
-             barrett_time,
-             barrett_time as f64 / baseline,
-             ((barrett_time as f64 / baseline) - 1.0) * 100.0);
-    
-    println!("Barrett + Shoup                 {:5}    {:.2}×       {:.1}% slower",
-             barrett_shoup_time,
-             barrett_shoup_time as f64 / baseline,
-             ((barrett_shoup_time as f64 / baseline) - 1.0) * 100.0);
-    
+
+    println!(
+        "Montgomery + Shoup              {:5}    1.00×       baseline",
+        mont_shoup_time
+    );
+
+    println!(
+        "Montgomery (standard)           {:5}    {:.2}×       {:.1}% slower",
+        montgomery_time,
+        montgomery_time as f64 / baseline,
+        ((montgomery_time as f64 / baseline) - 1.0) * 100.0
+    );
+
+    println!(
+        "Barrett (standard)              {:5}    {:.2}×       {:.1}% slower",
+        barrett_time,
+        barrett_time as f64 / baseline,
+        ((barrett_time as f64 / baseline) - 1.0) * 100.0
+    );
+
+    println!(
+        "Barrett + Shoup                 {:5}    {:.2}×       {:.1}% slower",
+        barrett_shoup_time,
+        barrett_shoup_time as f64 / baseline,
+        ((barrett_shoup_time as f64 / baseline) - 1.0) * 100.0
+    );
+
     println!();
     println!("════════════════════════════════════════════════════════════════════════════════");
     println!("ANALYSIS");
     println!("════════════════════════════════════════════════════════════════════════════════");
     println!();
-    
+
     // Shoup benefit for Montgomery
-    let montgomery_improvement = ((montgomery_time as f64 - mont_shoup_time as f64) / 
-                                  montgomery_time as f64) * 100.0;
-    println!("Shoup benefit for Montgomery: {:.1}%", montgomery_improvement);
-    
+    let montgomery_improvement =
+        ((montgomery_time as f64 - mont_shoup_time as f64) / montgomery_time as f64) * 100.0;
+    println!(
+        "Shoup benefit for Montgomery: {:.1}%",
+        montgomery_improvement
+    );
+
     // Shoup benefit for Barrett
-    let barrett_improvement = ((barrett_time as f64 - barrett_shoup_time as f64) / 
-                               barrett_time as f64) * 100.0;
+    let barrett_improvement =
+        ((barrett_time as f64 - barrett_shoup_time as f64) / barrett_time as f64) * 100.0;
     println!("Shoup benefit for Barrett:    {:.1}%", barrett_improvement);
-    
+
     println!();
-    
+
     if barrett_improvement > 5.0 {
         println!("✓ Barrett + Shoup shows measurable improvement!");
         println!("  However, still slower than Montgomery + Shoup due to:");
@@ -314,7 +315,7 @@ fn main() {
         println!("  - Compiler may already optimize standard Barrett");
         println!("  - Branch misprediction costs exceed ILP benefits");
     }
-    
+
     println!();
     println!("════════════════════════════════════════════════════════════════════════════════");
     println!("CONCLUSION");

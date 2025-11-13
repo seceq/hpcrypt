@@ -3,10 +3,10 @@
 // This benchmark compares performance before/after Shoup optimization
 // by measuring end-to-end ML-DSA operations that heavily use NTT.
 
-use mldsa::MlDsa65;
 use mldsa::keygen::keygen;
 use mldsa::sign::sign;
 use mldsa::verify::verify;
+use mldsa::MlDsa65;
 use std::time::Instant;
 
 fn main() {
@@ -21,14 +21,14 @@ fn main() {
     {
         use mldsa::simd::dispatch::has_avx2;
         if has_avx2() {
-            println!("✅ AVX2 detected and active");
+            println!(" AVX2 detected and active");
         } else {
-            println!("⚠️  AVX2 not available - falling back to scalar");
+            println!("  AVX2 not available - falling back to scalar");
         }
     }
     #[cfg(not(all(target_arch = "x86_64", feature = "avx2")))]
     {
-        println!("⚠️  AVX2 feature not enabled");
+        println!("  AVX2 feature not enabled");
     }
 
     println!();
@@ -104,17 +104,17 @@ fn main() {
     println!("   - Sign:   ~25% of runtime is NTT");
     println!("   - Verify: ~20% of runtime is NTT");
     println!();
-    println!("🎯 Expected Shoup Improvement:");
+    println!(" Expected Shoup Improvement:");
     println!("   - NTT speedup: 5-15% (ILP improvement)");
     println!("   - KeyGen: +0.75-2.25% overall");
     println!("   - Sign:   +1.25-3.75% overall");
     println!("   - Verify: +1.0-3.0% overall");
     println!();
     println!("⚡ Shoup Benefits:");
-    println!("   ✅ Breaks dependency chain in Montgomery reduction");
-    println!("   ✅ Better instruction-level parallelism (ILP)");
-    println!("   ✅ Allows a*zeta and a*zeta_shoup to run in parallel");
-    println!("   ✅ Proven technique from pq-crystals/dilithium");
+    println!("    Breaks dependency chain in Montgomery reduction");
+    println!("    Better instruction-level parallelism (ILP)");
+    println!("    Allows a*zeta and a*zeta_shoup to run in parallel");
+    println!("    Proven technique from pq-crystals/dilithium");
     println!();
     println!("📈 Comparison with Baseline:");
     println!("   - Pre-Phase 4: ~1019 µs total (no SHAKE256 AVX2)");
@@ -123,7 +123,7 @@ fn main() {
 
     if total_us < 924 {
         let improvement = ((924 - total_us) as f64 / 924.0) * 100.0;
-        println!("   - Additional Shoup gain: {:.1}% ✅", improvement);
+        println!("   - Additional Shoup gain: {:.1}% ", improvement);
     } else {
         println!("   - (Measure with larger iteration count for accuracy)");
     }
@@ -144,11 +144,11 @@ fn main() {
     println!("   Shoup:    t = a * (b*QINV)  [precomputed, parallel]");
     println!();
     println!("   Result: Still computes (a*b)*2^(-32) mod Q");
-    println!("   Domain: Montgomery domain preserved ✅");
+    println!("   Domain: Montgomery domain preserved ");
     println!();
-    println!("✅ All 172 unit tests passing");
-    println!("✅ NIST KAT vectors validated");
-    println!("✅ Montgomery domain correctness verified");
+    println!(" All 172 unit tests passing");
+    println!(" NIST KAT vectors validated");
+    println!(" Montgomery domain correctness verified");
     println!();
     println!("{}", "=".repeat(70));
     println!("Benchmark Complete!");

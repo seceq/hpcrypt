@@ -49,31 +49,29 @@ fn example_rayon() {
 
         // Benchmark sequential
         let start = Instant::now();
-        let _sigs_seq: Vec<_> = msg_refs.iter()
-            .map(|msg| sign(&sk, msg))
-            .collect();
+        let _sigs_seq: Vec<_> = msg_refs.iter().map(|msg| sign(&sk, msg)).collect();
         let seq_time = start.elapsed();
 
         // Benchmark parallel
         let start = Instant::now();
-        let sigs_par: Vec<_> = msg_refs.par_iter()
-            .map(|msg| sign(&sk, msg))
-            .collect();
+        let sigs_par: Vec<_> = msg_refs.par_iter().map(|msg| sign(&sk, msg)).collect();
         let par_time = start.elapsed();
 
         // Verify all signatures
-        let all_valid = messages.iter()
-            .zip(sigs_par.iter())
-            .all(|(msg, sig_opt)| {
-                sig_opt.as_ref()
-                    .map(|sig| verify(&pk, msg, sig))
-                    .unwrap_or(false)
-            });
+        let all_valid = messages.iter().zip(sigs_par.iter()).all(|(msg, sig_opt)| {
+            sig_opt
+                .as_ref()
+                .map(|sig| verify(&pk, msg, sig))
+                .unwrap_or(false)
+        });
 
         println!("Messages:        100");
         println!("Sequential time: {:?}", seq_time);
         println!("Parallel time:   {:?}", par_time);
-        println!("Speedup:         {:.2}x", seq_time.as_secs_f64() / par_time.as_secs_f64());
+        println!(
+            "Speedup:         {:.2}x",
+            seq_time.as_secs_f64() / par_time.as_secs_f64()
+        );
         println!("All valid:       {}", all_valid);
         println!("\nCode:");
         println!("  use rayon::prelude::*;");
@@ -99,8 +97,8 @@ fn example_rayon() {
 fn example_thread_pool() {
     println!("\n=== Example 2: Manual Thread Pool ===\n");
 
-    use std::thread;
     use std::sync::Arc;
+    use std::thread;
 
     let (pk, sk) = keygen::<MlDsa65>();
     let sk = Arc::new(sk);
@@ -151,16 +149,18 @@ fn example_thread_pool() {
     let elapsed = start.elapsed();
 
     // Verify
-    let all_valid = messages.iter()
-        .zip(all_sigs.iter())
-        .all(|(msg, sig_opt)| {
-            sig_opt.as_ref()
-                .map(|sig| verify(&pk, msg, sig))
-                .unwrap_or(false)
-        });
+    let all_valid = messages.iter().zip(all_sigs.iter()).all(|(msg, sig_opt)| {
+        sig_opt
+            .as_ref()
+            .map(|sig| verify(&pk, msg, sig))
+            .unwrap_or(false)
+    });
 
     println!("Time:         {:?}", elapsed);
-    println!("Throughput:   {:.0} sigs/sec", 100.0 / elapsed.as_secs_f64());
+    println!(
+        "Throughput:   {:.0} sigs/sec",
+        100.0 / elapsed.as_secs_f64()
+    );
     println!("All valid:    {}", all_valid);
     println!("\nCode:");
     println!("  let handles: Vec<_> = (0..num_threads).map(|id| {{");
@@ -207,9 +207,7 @@ fn example_tokio() {
                 let sk = Arc::clone(&sk);
                 let msg = msg.clone();
 
-                let handle = task::spawn_blocking(move || {
-                    sign(&sk, &msg)
-                });
+                let handle = task::spawn_blocking(move || sign(&sk, &msg));
 
                 handles.push(handle);
             }
@@ -224,13 +222,12 @@ fn example_tokio() {
             let elapsed = start.elapsed();
 
             // Verify
-            let all_valid = messages.iter()
-                .zip(sigs.iter())
-                .all(|(msg, sig_opt)| {
-                    sig_opt.as_ref()
-                        .map(|sig| verify(&pk, msg, sig))
-                        .unwrap_or(false)
-                });
+            let all_valid = messages.iter().zip(sigs.iter()).all(|(msg, sig_opt)| {
+                sig_opt
+                    .as_ref()
+                    .map(|sig| verify(&pk, msg, sig))
+                    .unwrap_or(false)
+            });
 
             println!("Time:       {:?}", elapsed);
             println!("Throughput: {:.0} sigs/sec", 100.0 / elapsed.as_secs_f64());
@@ -271,20 +268,17 @@ fn example_sequential() {
     let start = Instant::now();
 
     // Sequential processing
-    let sigs: Vec<_> = messages.iter()
-        .map(|msg| sign(&sk, msg))
-        .collect();
+    let sigs: Vec<_> = messages.iter().map(|msg| sign(&sk, msg)).collect();
 
     let elapsed = start.elapsed();
 
     // Verify
-    let all_valid = messages.iter()
-        .zip(sigs.iter())
-        .all(|(msg, sig_opt)| {
-            sig_opt.as_ref()
-                .map(|sig| verify(&pk, msg, sig))
-                .unwrap_or(false)
-        });
+    let all_valid = messages.iter().zip(sigs.iter()).all(|(msg, sig_opt)| {
+        sig_opt
+            .as_ref()
+            .map(|sig| verify(&pk, msg, sig))
+            .unwrap_or(false)
+    });
 
     println!("Time:       {:?}", elapsed);
     println!("Throughput: {:.0} sigs/sec", 100.0 / elapsed.as_secs_f64());

@@ -46,7 +46,9 @@ fn main() {
     let multiply_ns = multiply_time.as_nanos() / (iterations * 256);
 
     println!("1. Multiply only:              {} ns/op", multiply_ns);
-    if sum == 0x123456789ABCDEF { println!("impossible {}", sum); }
+    if sum == 0x123456789ABCDEF {
+        println!("impossible {}", sum);
+    }
 
     // Benchmark 2: Multiply + Montgomery reduction
     let start = Instant::now();
@@ -62,7 +64,9 @@ fn main() {
     let montgomery_ns = montgomery_time.as_nanos() / (iterations * 256);
 
     println!("2. Multiply + Montgomery:      {} ns/op", montgomery_ns);
-    if sum == 0x123456789ABCDEF { println!("impossible {}", sum); }
+    if sum == 0x123456789ABCDEF {
+        println!("impossible {}", sum);
+    }
 
     // Benchmark 3: Multiply + simple modulo (for comparison)
     let start = Instant::now();
@@ -78,7 +82,9 @@ fn main() {
     let modulo_ns = modulo_time.as_nanos() / (iterations * 256);
 
     println!("3. Multiply + simple modulo:   {} ns/op", modulo_ns);
-    if sum == 0x123456789ABCDEF { println!("impossible {}", sum); }
+    if sum == 0x123456789ABCDEF {
+        println!("impossible {}", sum);
+    }
 
     println!();
     println!("================================================================================");
@@ -89,28 +95,48 @@ fn main() {
     let reduction_cost = montgomery_ns - multiply_ns;
     let modulo_cost = modulo_ns - multiply_ns;
 
-    println!("Montgomery reduction cost:  {} ns ({:.1}% of multiply+reduce)",
-             reduction_cost,
-             (reduction_cost as f64 / montgomery_ns as f64) * 100.0);
+    println!(
+        "Montgomery reduction cost:  {} ns ({:.1}% of multiply+reduce)",
+        reduction_cost,
+        (reduction_cost as f64 / montgomery_ns as f64) * 100.0
+    );
 
-    println!("Simple modulo cost:         {} ns ({:.1}% of multiply+mod)",
-             modulo_cost,
-             (modulo_cost as f64 / modulo_ns as f64) * 100.0);
+    println!(
+        "Simple modulo cost:         {} ns ({:.1}% of multiply+mod)",
+        modulo_cost,
+        (modulo_cost as f64 / modulo_ns as f64) * 100.0
+    );
 
     println!();
-    println!("Montgomery vs modulo: {:.1}× faster", modulo_ns as f64 / montgomery_ns as f64);
+    println!(
+        "Montgomery vs modulo: {:.1}× faster",
+        modulo_ns as f64 / montgomery_ns as f64
+    );
 
     println!();
     println!("Impact on NTT:");
     println!("- NTT has 256 coeffs × 8 layers = 2048 operations");
     println!("- Current NTT time: ~540 ns (with AVX2)");
-    println!("- Reduction cost per NTT: {} × 2048 = {} ns", reduction_cost, reduction_cost * 2048);
-    println!("- Reduction % of NTT: {:.1}%", (reduction_cost * 2048) as f64 / 540.0);
+    println!(
+        "- Reduction cost per NTT: {} × 2048 = {} ns",
+        reduction_cost,
+        reduction_cost * 2048
+    );
+    println!(
+        "- Reduction % of NTT: {:.1}%",
+        (reduction_cost * 2048) as f64 / 540.0
+    );
 
     println!();
     println!("If we could eliminate reduction entirely:");
-    println!("- NTT speedup: {:.1}%", ((reduction_cost * 2048) as f64 / 540.0));
-    println!("- Overall signing impact: {:.2}%", ((reduction_cost * 2048) as f64 / 540.0) * 0.054);
+    println!(
+        "- NTT speedup: {:.1}%",
+        ((reduction_cost * 2048) as f64 / 540.0)
+    );
+    println!(
+        "- Overall signing impact: {:.2}%",
+        ((reduction_cost * 2048) as f64 / 540.0) * 0.054
+    );
 
     println!();
     println!("Conclusion:");

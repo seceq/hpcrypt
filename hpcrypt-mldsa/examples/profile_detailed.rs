@@ -2,8 +2,8 @@
 //
 // This tool breaks down signing performance to identify the next optimization target
 
-use mldsa::MlDsa65;
 use mldsa::keygen::keygen;
+use mldsa::MlDsa65;
 use std::time::Instant;
 
 fn main() {
@@ -76,14 +76,20 @@ fn main() {
     println!("KeyGen:  {:4} µs", avg_keygen_us);
     println!("Sign:    {:4} µs", avg_sign_us);
     println!("Verify:  {:4} µs", avg_verify_us);
-    println!("Total:   {:4} µs", avg_keygen_us + avg_sign_us + avg_verify_us);
+    println!(
+        "Total:   {:4} µs",
+        avg_keygen_us + avg_sign_us + avg_verify_us
+    );
     println!();
 
     println!("================================================================================");
     println!("=== Next Optimization Targets ===");
     println!("================================================================================");
     println!();
-    println!("Based on current performance (~{} µs signing):", avg_sign_us);
+    println!(
+        "Based on current performance (~{} µs signing):",
+        avg_sign_us
+    );
     println!();
     println!("1. SHAKE256/XOF Operations (20-30% of signing)");
     println!("   - Current: ~{} µs estimated", avg_sign_us * 25 / 100);

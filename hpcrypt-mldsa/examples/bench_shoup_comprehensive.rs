@@ -6,11 +6,11 @@
 // - End-to-end ML-DSA performance
 // - Statistical analysis (mean, variance)
 
-use mldsa::MlDsa65;
 use mldsa::keygen::keygen;
 use mldsa::sign::sign;
 use mldsa::verify::verify;
-use std::time::{Instant, Duration};
+use mldsa::MlDsa65;
+use std::time::{Duration, Instant};
 
 fn mean_duration(durations: &[Duration]) -> Duration {
     let total_micros: u128 = durations.iter().map(|d| d.as_micros()).sum();
@@ -19,12 +19,14 @@ fn mean_duration(durations: &[Duration]) -> Duration {
 
 fn stddev_duration(durations: &[Duration], mean: Duration) -> f64 {
     let mean_micros = mean.as_micros() as f64;
-    let variance: f64 = durations.iter()
+    let variance: f64 = durations
+        .iter()
         .map(|d| {
             let diff = d.as_micros() as f64 - mean_micros;
             diff * diff
         })
-        .sum::<f64>() / durations.len() as f64;
+        .sum::<f64>()
+        / durations.len() as f64;
     variance.sqrt()
 }
 
@@ -40,14 +42,14 @@ fn main() {
     {
         use mldsa::simd::dispatch::has_avx2;
         if has_avx2() {
-            println!("✅ AVX2 detected and active");
+            println!(" AVX2 detected and active");
         } else {
-            println!("⚠️  AVX2 not available - using scalar fallback");
+            println!("  AVX2 not available - using scalar fallback");
         }
     }
     #[cfg(not(all(target_arch = "x86_64", feature = "avx2")))]
     {
-        println!("⚠️  AVX2 feature not enabled");
+        println!("  AVX2 feature not enabled");
     }
 
     println!();
@@ -92,8 +94,14 @@ fn main() {
 
     println!("  Mean: {} µs", keygen_mean.as_micros());
     println!("  Std Dev: {:.2} µs", keygen_stddev);
-    println!("  Min: {} µs", keygen_times.iter().min().unwrap().as_micros());
-    println!("  Max: {} µs", keygen_times.iter().max().unwrap().as_micros());
+    println!(
+        "  Min: {} µs",
+        keygen_times.iter().min().unwrap().as_micros()
+    );
+    println!(
+        "  Max: {} µs",
+        keygen_times.iter().max().unwrap().as_micros()
+    );
 
     // Sign
     println!("\nSign...");
@@ -134,8 +142,14 @@ fn main() {
 
     println!("  Mean: {} µs", verify_mean.as_micros());
     println!("  Std Dev: {:.2} µs", verify_stddev);
-    println!("  Min: {} µs", verify_times.iter().min().unwrap().as_micros());
-    println!("  Max: {} µs", verify_times.iter().max().unwrap().as_micros());
+    println!(
+        "  Min: {} µs",
+        verify_times.iter().min().unwrap().as_micros()
+    );
+    println!(
+        "  Max: {} µs",
+        verify_times.iter().max().unwrap().as_micros()
+    );
 
     // Summary
     println!();
@@ -143,9 +157,21 @@ fn main() {
     println!("=== Test 1 Summary ===");
     println!("{}", sep);
     let total_mean = keygen_mean + sign_mean + verify_mean;
-    println!("KeyGen:  {:4} µs (±{:.2})", keygen_mean.as_micros(), keygen_stddev);
-    println!("Sign:    {:4} µs (±{:.2})", sign_mean.as_micros(), sign_stddev);
-    println!("Verify:  {:4} µs (±{:.2})", verify_mean.as_micros(), verify_stddev);
+    println!(
+        "KeyGen:  {:4} µs (±{:.2})",
+        keygen_mean.as_micros(),
+        keygen_stddev
+    );
+    println!(
+        "Sign:    {:4} µs (±{:.2})",
+        sign_mean.as_micros(),
+        sign_stddev
+    );
+    println!(
+        "Verify:  {:4} µs (±{:.2})",
+        verify_mean.as_micros(),
+        verify_stddev
+    );
     println!("Total:   {:4} µs", total_mean.as_micros());
 
     // Test 2: Multiple runs for variance analysis
@@ -183,17 +209,23 @@ fn main() {
 
     println!();
     let runs_mean = run_totals.iter().sum::<u64>() / run_totals.len() as u64;
-    let runs_variance: f64 = run_totals.iter()
+    let runs_variance: f64 = run_totals
+        .iter()
         .map(|&t| {
             let diff = t as f64 - runs_mean as f64;
             diff * diff
         })
-        .sum::<f64>() / run_totals.len() as f64;
+        .sum::<f64>()
+        / run_totals.len() as f64;
     let runs_stddev = runs_variance.sqrt();
 
     println!("Cross-run statistics:");
     println!("  Mean: {} µs", runs_mean);
-    println!("  Std Dev: {:.2} µs ({:.1}%)", runs_stddev, (runs_stddev / runs_mean as f64) * 100.0);
+    println!(
+        "  Std Dev: {:.2} µs ({:.1}%)",
+        runs_stddev,
+        (runs_stddev / runs_mean as f64) * 100.0
+    );
     println!("  Min: {} µs", run_totals.iter().min().unwrap());
     println!("  Max: {} µs", run_totals.iter().max().unwrap());
 
@@ -225,11 +257,11 @@ fn main() {
     println!("{}", sep);
     println!();
     println!("📊 What Shoup Optimizes:");
-    println!("   ✅ Forward NTT (all levels 0-4)");
-    println!("   ✅ Inverse NTT (all levels 0-4)");
-    println!("   ✅ Montgomery multiplication in butterflies");
+    println!("    Forward NTT (all levels 0-4)");
+    println!("    Inverse NTT (all levels 0-4)");
+    println!("    Montgomery multiplication in butterflies");
     println!();
-    println!("🎯 How Shoup Works:");
+    println!(" How Shoup Works:");
     println!("   - Precomputes: zeta_shoup = (zeta * QINV) & 0xFFFFFFFF");
     println!("   - Allows parallel execution:");
     println!("     Standard: a*b → (a*b)*QINV → t*Q  [serial]");
@@ -241,12 +273,15 @@ fn main() {
     println!("   - Overall: +1-3% (NTT is 15-25% of total runtime)");
     println!();
     println!("🔬 Measurement Considerations:");
-    println!("   - Variance: ±{:.1}% across runs", (runs_stddev / runs_mean as f64) * 100.0);
+    println!(
+        "   - Variance: ±{:.1}% across runs",
+        (runs_stddev / runs_mean as f64) * 100.0
+    );
     println!("   - Modern CPUs have excellent out-of-order execution");
     println!("   - Small improvements may be within noise");
     println!("   - Benefits vary by microarchitecture");
     println!();
-    println!("✅ Correctness:");
+    println!(" Correctness:");
     println!("   - All 172 unit tests passing");
     println!("   - NIST KAT vectors validated");
     println!("   - Montgomery domain preserved");

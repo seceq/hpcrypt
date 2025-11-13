@@ -55,6 +55,12 @@ fn main() {
     let elapsed = start.elapsed();
 
     println!("Results:");
-    println!("  Total time: {:.3} ms", elapsed.as_micros() as f64 / 1000.0);
-    println!("  Per reduce: {:.1} µs", elapsed.as_micros() as f64 / 10_000.0);
+    println!(
+        "  Total time: {:.3} ms",
+        elapsed.as_micros() as f64 / 1000.0
+    );
+    println!(
+        "  Per reduce: {:.1} µs",
+        elapsed.as_micros() as f64 / 10_000.0
+    );
 }
