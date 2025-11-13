@@ -7,7 +7,7 @@
 //! Target: Single pre-allocated buffer reused across iterations
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use hpcrypt_slhdsa::{Sha2_128s, Sha2_128f, Sha2_192s, Sha2_256s, KeyPair};
+use hpcrypt_slhdsa::{KeyPair, Sha2_128f, Sha2_128s, Sha2_192s, Sha2_256s};
 use rand::rngs::OsRng;
 
 fn bench_allocation_overhead(c: &mut Criterion) {
@@ -155,7 +155,11 @@ fn bench_verify_baseline(c: &mut Criterion) {
 
         group.bench_function("sha2_128s_baseline", |b| {
             b.iter(|| {
-                let valid = hpcrypt_slhdsa::verify(&keypair.public_key, black_box(message), black_box(&signature));
+                let valid = hpcrypt_slhdsa::verify(
+                    &keypair.public_key,
+                    black_box(message),
+                    black_box(&signature),
+                );
                 black_box(valid)
             })
         });
@@ -170,7 +174,11 @@ fn bench_verify_baseline(c: &mut Criterion) {
 
         group.bench_function("sha2_192s_baseline", |b| {
             b.iter(|| {
-                let valid = hpcrypt_slhdsa::verify(&keypair.public_key, black_box(message), black_box(&signature));
+                let valid = hpcrypt_slhdsa::verify(
+                    &keypair.public_key,
+                    black_box(message),
+                    black_box(&signature),
+                );
                 black_box(valid)
             })
         });

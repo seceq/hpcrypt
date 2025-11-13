@@ -5,8 +5,8 @@
 //! 2. Stack vs heap allocation
 //! 3. Struct-of-Arrays vs Array-of-Structs
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use sha2::{Sha256, Digest};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use sha2::{Digest, Sha256};
 
 // ============================================================================
 // Test 1: Memory Alignment

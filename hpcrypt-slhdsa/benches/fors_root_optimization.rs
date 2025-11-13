@@ -4,7 +4,7 @@
 //! FORS tree roots. Current implementation clones K roots (14-33 depending on parameter set).
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use hpcrypt_slhdsa::{Sha2_128s, Sha2_128f, Sha2_192s, KeyPair};
+use hpcrypt_slhdsa::{KeyPair, Sha2_128f, Sha2_128s, Sha2_192s};
 use rand::rngs::OsRng;
 
 fn bench_fors_signing(c: &mut Criterion) {
@@ -113,9 +113,5 @@ fn bench_vec_clone_overhead(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(
-    benches,
-    bench_fors_signing,
-    bench_vec_clone_overhead
-);
+criterion_group!(benches, bench_fors_signing, bench_vec_clone_overhead);
 criterion_main!(benches);

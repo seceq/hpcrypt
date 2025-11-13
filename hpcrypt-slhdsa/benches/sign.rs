@@ -2,8 +2,10 @@
 //!
 //! Measures the performance of signature generation across all parameter sets.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use hpcrypt_slhdsa::{KeyPair, sign, Sha2_128s, Sha2_128f, Sha2_192s, Sha2_192f, Sha2_256s, Sha2_256f};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use hpcrypt_slhdsa::{
+    sign, KeyPair, Sha2_128f, Sha2_128s, Sha2_192f, Sha2_192s, Sha2_256f, Sha2_256s,
+};
 use rand::rngs::OsRng;
 
 fn bench_sign_sha2_128s(c: &mut Criterion) {

@@ -7,8 +7,8 @@
 //! These tests focus on API correctness and that operations complete without errors.
 
 use hpcrypt_slhdsa::{
-    KeyPair, SecretKey, PublicKey, sign, verify, ParameterSet,
-    Sha2_128s, Sha2_128f, Sha2_192s, Sha2_192f, Sha2_256s, Sha2_256f,
+    sign, verify, KeyPair, ParameterSet, PublicKey, SecretKey, Sha2_128f, Sha2_128s, Sha2_192f,
+    Sha2_192s, Sha2_256f, Sha2_256s,
 };
 use rand::rngs::OsRng;
 

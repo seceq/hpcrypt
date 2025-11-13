@@ -2,7 +2,7 @@
 //! are performed during signing to understand the performance profile.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use hpcrypt_slhdsa::{KeyPair, Sha2_128s, Sha2_128f, Sha2_192s, Sha2_256s, sign};
+use hpcrypt_slhdsa::{sign, KeyPair, Sha2_128f, Sha2_128s, Sha2_192s, Sha2_256s};
 use rand::rngs::OsRng;
 use std::sync::atomic::{AtomicUsize, Ordering};
 

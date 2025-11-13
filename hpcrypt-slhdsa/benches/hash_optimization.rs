@@ -2,15 +2,15 @@
 //!
 //! This benchmark suite tests specific optimization techniques for hash operations.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
 // Simulate hash operations without pooling (baseline)
 mod baseline {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
 
     pub fn hash_multiple_without_pool(data: &[&[u8]], outputs: &mut [Vec<u8>]) {
         for (input, output) in data.iter().zip(outputs.iter_mut()) {
-            let mut hasher = Sha256::new();  // Create new each time
+            let mut hasher = Sha256::new(); // Create new each time
             hasher.update(input);
             let result = hasher.finalize();
             output.clear();
@@ -21,7 +21,7 @@ mod baseline {
 
 // Simulate hash operations with context pooling
 mod optimized {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
 
     pub struct HashContextPool {
         // Simple pool - just reuse one context
@@ -62,18 +62,14 @@ fn bench_hash_without_pool(c: &mut Criterion) {
         let data_refs: Vec<&[u8]> = data.iter().map(|v| v.as_slice()).collect();
         let mut outputs = vec![vec![0u8; 32]; *count];
 
-        group.bench_with_input(
-            BenchmarkId::new("without_pool", count),
-            count,
-            |b, _| {
-                b.iter(|| {
-                    baseline::hash_multiple_without_pool(
-                        black_box(&data_refs),
-                        black_box(&mut outputs),
-                    );
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("without_pool", count), count, |b, _| {
+            b.iter(|| {
+                baseline::hash_multiple_without_pool(
+                    black_box(&data_refs),
+                    black_box(&mut outputs),
+                );
+            });
+        });
     }
 
     group.finish();
@@ -87,25 +83,18 @@ fn bench_hash_with_pool(c: &mut Criterion) {
         let data_refs: Vec<&[u8]> = data.iter().map(|v| v.as_slice()).collect();
         let mut outputs = vec![vec![0u8; 32]; *count];
 
-        group.bench_with_input(
-            BenchmarkId::new("with_pool", count),
-            count,
-            |b, _| {
-                b.iter(|| {
-                    optimized::hash_multiple_with_pool(
-                        black_box(&data_refs),
-                        black_box(&mut outputs),
-                    );
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("with_pool", count), count, |b, _| {
+            b.iter(|| {
+                optimized::hash_multiple_with_pool(black_box(&data_refs), black_box(&mut outputs));
+            });
+        });
     }
 
     group.finish();
 }
 
 fn bench_wots_chain_baseline(c: &mut Criterion) {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
 
     let mut group = c.benchmark_group("wots_chain");
 

@@ -2,7 +2,7 @@
 //!
 //! Compares signing performance with and without Merkle cache at different depths.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use hpcrypt_slhdsa::{
     address::Address,
     hash::sha2::Sha2HashFunction,

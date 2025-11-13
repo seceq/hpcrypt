@@ -34,7 +34,9 @@ struct Vec16 {
 impl Vec16 {
     #[inline(always)]
     fn zero() -> Self {
-        Self { elements: [0u8; 16] }
+        Self {
+            elements: [0u8; 16],
+        }
     }
 
     #[inline(always)]
@@ -60,7 +62,9 @@ struct Vec32 {
 impl Vec32 {
     #[inline(always)]
     fn zero() -> Self {
-        Self { elements: [0u8; 32] }
+        Self {
+            elements: [0u8; 32],
+        }
     }
 
     #[inline(always)]

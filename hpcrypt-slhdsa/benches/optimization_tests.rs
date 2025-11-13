@@ -3,7 +3,7 @@
 //! Each benchmark compares baseline vs optimized implementation.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use hpcrypt_slhdsa::{Sha2_128s, KeyPair, sign, verify};
+use hpcrypt_slhdsa::{sign, verify, KeyPair, Sha2_128s};
 use rand::rngs::OsRng;
 
 // ============================================================================
@@ -52,7 +52,7 @@ fn baseline_verify(c: &mut Criterion) {
             let result = verify(
                 black_box(&keypair.public_key),
                 black_box(message),
-                black_box(&signature)
+                black_box(&signature),
             );
             black_box(result);
         });
@@ -393,12 +393,7 @@ fn test_const_generics(c: &mut Criterion) {
 // Criterion Groups
 // ============================================================================
 
-criterion_group!(
-    baseline,
-    baseline_keygen,
-    baseline_sign,
-    baseline_verify
-);
+criterion_group!(baseline, baseline_keygen, baseline_sign, baseline_verify);
 
 criterion_group!(
     optimization_tests,

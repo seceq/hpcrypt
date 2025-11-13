@@ -3,8 +3,8 @@
 //! This benchmark measures the impact of replacing heap allocations with
 //! stack-allocated arrays for temporary buffers in signing and verification.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use hpcrypt_slhdsa::{Sha2_128s, Sha2_128f, Sha2_192s, Sha2_256s, KeyPair};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use hpcrypt_slhdsa::{KeyPair, Sha2_128f, Sha2_128s, Sha2_192s, Sha2_256s};
 use rand::rngs::OsRng;
 
 fn bench_sign_baseline(c: &mut Criterion) {
@@ -81,7 +81,11 @@ fn bench_verify_baseline(c: &mut Criterion) {
 
         group.bench_function("sha2_128s_baseline", |b| {
             b.iter(|| {
-                let valid = hpcrypt_slhdsa::verify(&keypair.public_key, black_box(message), black_box(&signature));
+                let valid = hpcrypt_slhdsa::verify(
+                    &keypair.public_key,
+                    black_box(message),
+                    black_box(&signature),
+                );
                 black_box(valid)
             })
         });
@@ -96,7 +100,11 @@ fn bench_verify_baseline(c: &mut Criterion) {
 
         group.bench_function("sha2_192s_baseline", |b| {
             b.iter(|| {
-                let valid = hpcrypt_slhdsa::verify(&keypair.public_key, black_box(message), black_box(&signature));
+                let valid = hpcrypt_slhdsa::verify(
+                    &keypair.public_key,
+                    black_box(message),
+                    black_box(&signature),
+                );
                 black_box(valid)
             })
         });

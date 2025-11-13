@@ -2,7 +2,7 @@
 //!
 //! Run with: cargo run --release --example timing_analysis
 
-use hpcrypt_slhdsa::{KeyPair, Sha2_128s, sign};
+use hpcrypt_slhdsa::{sign, KeyPair, Sha2_128s};
 use rand::rngs::OsRng;
 use std::time::Instant;
 
@@ -36,7 +36,10 @@ fn main() {
 
     println!("Iterations: {}", iterations);
     println!("Average signing time: {:?}", avg_time);
-    println!("Average in microseconds: {:.2} µs\n", avg_time.as_secs_f64() * 1_000_000.0);
+    println!(
+        "Average in microseconds: {:.2} µs\n",
+        avg_time.as_secs_f64() * 1_000_000.0
+    );
 
     // Calculate theoretical breakdown based on known algorithm structure
     println!("--------------------------------------------------");
@@ -99,7 +102,10 @@ fn main() {
     println!("--------------------------------------------------");
     println!("Our effective hash rate: ~{:.0} hashes/µs", hash_per_us);
     println!("Pure SHA-256 (RustCrypto sha2): ~10-20 hashes/µs (64 bytes)");
-    println!("Overhead factor: ~{:.1}x slower than pure SHA-256", 15.0 / hash_per_us);
+    println!(
+        "Overhead factor: ~{:.1}x slower than pure SHA-256",
+        15.0 / hash_per_us
+    );
 
     println!("\n--------------------------------------------------");
     println!("Where the overhead comes from:");

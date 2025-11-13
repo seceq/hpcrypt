@@ -3,13 +3,18 @@
 //! Tests chain interleaving vs sequential chain computation.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 const CHAIN_LEN: usize = 67; // Typical WOTS+ parameter (w=16)
 const NUM_CHAINS: usize = 32; // Number of parallel chains
 
 // Baseline: Sequential chain computation (current implementation)
-fn wots_chains_sequential(num_chains: usize, chain_len: usize, seed: &[u8; 32], output: &mut Vec<Vec<u8>>) {
+fn wots_chains_sequential(
+    num_chains: usize,
+    chain_len: usize,
+    seed: &[u8; 32],
+    output: &mut Vec<Vec<u8>>,
+) {
     for chain_idx in 0..num_chains {
         let mut current = seed.to_vec();
 
@@ -26,11 +31,14 @@ fn wots_chains_sequential(num_chains: usize, chain_len: usize, seed: &[u8; 32], 
 }
 
 // Optimized: Interleaved chain computation for better cache locality
-fn wots_chains_interleaved(num_chains: usize, chain_len: usize, seed: &[u8; 32], output: &mut Vec<Vec<u8>>) {
+fn wots_chains_interleaved(
+    num_chains: usize,
+    chain_len: usize,
+    seed: &[u8; 32],
+    output: &mut Vec<Vec<u8>>,
+) {
     // Initialize all chains
-    let mut chains: Vec<Vec<u8>> = (0..num_chains)
-        .map(|_| seed.to_vec())
-        .collect();
+    let mut chains: Vec<Vec<u8>> = (0..num_chains).map(|_| seed.to_vec()).collect();
 
     // Compute all chains one step at a time (interleaved)
     for step in 0..chain_len {
@@ -50,16 +58,20 @@ fn wots_chains_interleaved(num_chains: usize, chain_len: usize, seed: &[u8; 32],
 }
 
 // Alternative: Block-based interleaving (compute N chains at a time)
-fn wots_chains_blocked(num_chains: usize, chain_len: usize, seed: &[u8; 32], output: &mut Vec<Vec<u8>>) {
+fn wots_chains_blocked(
+    num_chains: usize,
+    chain_len: usize,
+    seed: &[u8; 32],
+    output: &mut Vec<Vec<u8>>,
+) {
     const BLOCK_SIZE: usize = 4;
 
     for block_start in (0..num_chains).step_by(BLOCK_SIZE) {
         let block_end = (block_start + BLOCK_SIZE).min(num_chains);
 
         // Initialize block chains
-        let mut block_chains: Vec<Vec<u8>> = (block_start..block_end)
-            .map(|_| seed.to_vec())
-            .collect();
+        let mut block_chains: Vec<Vec<u8>> =
+            (block_start..block_end).map(|_| seed.to_vec()).collect();
 
         // Compute block chains
         for step in 0..chain_len {
@@ -95,7 +107,7 @@ fn bench_wots_sequential(c: &mut Criterion) {
                         black_box(num_chains),
                         black_box(CHAIN_LEN),
                         black_box(&seed),
-                        black_box(&mut output)
+                        black_box(&mut output),
                     );
                 });
             },
@@ -121,7 +133,7 @@ fn bench_wots_interleaved(c: &mut Criterion) {
                         black_box(num_chains),
                         black_box(CHAIN_LEN),
                         black_box(&seed),
-                        black_box(&mut output)
+                        black_box(&mut output),
                     );
                 });
             },
@@ -147,7 +159,7 @@ fn bench_wots_blocked(c: &mut Criterion) {
                         black_box(num_chains),
                         black_box(CHAIN_LEN),
                         black_box(&seed),
-                        black_box(&mut output)
+                        black_box(&mut output),
                     );
                 });
             },

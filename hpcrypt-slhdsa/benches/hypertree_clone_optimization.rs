@@ -4,7 +4,7 @@
 //! hypertree signing hot path (called 7 times per signature for D=7).
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use hpcrypt_slhdsa::{Sha2_128s, KeyPair};
+use hpcrypt_slhdsa::{KeyPair, Sha2_128s};
 use rand::rngs::OsRng;
 
 fn bench_hypertree_signing_baseline(c: &mut Criterion) {

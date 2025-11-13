@@ -3,7 +3,7 @@
 //! Tests batch leaf generation vs sequential.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 // Baseline: Sequential leaf generation (current implementation)
 fn fors_leaves_sequential(count: usize, seed: &[u8; 32], leaves: &mut [Vec<u8>]) {
@@ -48,7 +48,11 @@ fn bench_fors_sequential(c: &mut Criterion) {
             count,
             |b, _| {
                 b.iter(|| {
-                    fors_leaves_sequential(black_box(*count), black_box(&seed), black_box(&mut leaves));
+                    fors_leaves_sequential(
+                        black_box(*count),
+                        black_box(&seed),
+                        black_box(&mut leaves),
+                    );
                 });
             },
         );
@@ -69,7 +73,11 @@ fn bench_fors_batched(c: &mut Criterion) {
             count,
             |b, _| {
                 b.iter(|| {
-                    fors_leaves_batched(black_box(*count), black_box(&seed), black_box(&mut leaves));
+                    fors_leaves_batched(
+                        black_box(*count),
+                        black_box(&seed),
+                        black_box(&mut leaves),
+                    );
                 });
             },
         );

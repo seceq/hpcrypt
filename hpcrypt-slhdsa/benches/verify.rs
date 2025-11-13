@@ -2,8 +2,10 @@
 //!
 //! Measures the performance of signature verification across all parameter sets.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use hpcrypt_slhdsa::{KeyPair, sign, verify, Sha2_128s, Sha2_128f, Sha2_192s, Sha2_192f, Sha2_256s, Sha2_256f};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use hpcrypt_slhdsa::{
+    sign, verify, KeyPair, Sha2_128f, Sha2_128s, Sha2_192f, Sha2_192s, Sha2_256f, Sha2_256s,
+};
 use rand::rngs::OsRng;
 
 fn bench_verify_sha2_128s(c: &mut Criterion) {
@@ -17,7 +19,7 @@ fn bench_verify_sha2_128s(c: &mut Criterion) {
             let valid = verify(
                 black_box(&keypair.public_key),
                 black_box(message),
-                black_box(&signature)
+                black_box(&signature),
             );
             black_box(valid);
         });
@@ -35,7 +37,7 @@ fn bench_verify_sha2_128f(c: &mut Criterion) {
             let valid = verify(
                 black_box(&keypair.public_key),
                 black_box(message),
-                black_box(&signature)
+                black_box(&signature),
             );
             black_box(valid);
         });
@@ -53,7 +55,7 @@ fn bench_verify_sha2_192s(c: &mut Criterion) {
             let valid = verify(
                 black_box(&keypair.public_key),
                 black_box(message),
-                black_box(&signature)
+                black_box(&signature),
             );
             black_box(valid);
         });
@@ -71,7 +73,7 @@ fn bench_verify_sha2_192f(c: &mut Criterion) {
             let valid = verify(
                 black_box(&keypair.public_key),
                 black_box(message),
-                black_box(&signature)
+                black_box(&signature),
             );
             black_box(valid);
         });
@@ -89,7 +91,7 @@ fn bench_verify_sha2_256s(c: &mut Criterion) {
             let valid = verify(
                 black_box(&keypair.public_key),
                 black_box(message),
-                black_box(&signature)
+                black_box(&signature),
             );
             black_box(valid);
         });
@@ -107,7 +109,7 @@ fn bench_verify_sha2_256f(c: &mut Criterion) {
             let valid = verify(
                 black_box(&keypair.public_key),
                 black_box(message),
-                black_box(&signature)
+                black_box(&signature),
             );
             black_box(valid);
         });
@@ -126,7 +128,7 @@ fn bench_verify_comparison(c: &mut Criterion) {
             let valid = verify(
                 black_box(&keypair_128s.public_key),
                 black_box(message),
-                black_box(&sig_128s)
+                black_box(&sig_128s),
             );
             black_box(valid);
         });
@@ -139,7 +141,7 @@ fn bench_verify_comparison(c: &mut Criterion) {
             let valid = verify(
                 black_box(&keypair_128f.public_key),
                 black_box(message),
-                black_box(&sig_128f)
+                black_box(&sig_128f),
             );
             black_box(valid);
         });
@@ -152,7 +154,7 @@ fn bench_verify_comparison(c: &mut Criterion) {
             let valid = verify(
                 black_box(&keypair_192s.public_key),
                 black_box(message),
-                black_box(&sig_192s)
+                black_box(&sig_192s),
             );
             black_box(valid);
         });
@@ -165,7 +167,7 @@ fn bench_verify_comparison(c: &mut Criterion) {
             let valid = verify(
                 black_box(&keypair_192f.public_key),
                 black_box(message),
-                black_box(&sig_192f)
+                black_box(&sig_192f),
             );
             black_box(valid);
         });
@@ -178,7 +180,7 @@ fn bench_verify_comparison(c: &mut Criterion) {
             let valid = verify(
                 black_box(&keypair_256s.public_key),
                 black_box(message),
-                black_box(&sig_256s)
+                black_box(&sig_256s),
             );
             black_box(valid);
         });
@@ -191,7 +193,7 @@ fn bench_verify_comparison(c: &mut Criterion) {
             let valid = verify(
                 black_box(&keypair_256f.public_key),
                 black_box(message),
-                black_box(&sig_256f)
+                black_box(&sig_256f),
             );
             black_box(valid);
         });
@@ -214,7 +216,7 @@ fn bench_verify_invalid_signature(c: &mut Criterion) {
             let valid = verify(
                 black_box(&keypair.public_key),
                 black_box(message),
-                black_box(&signature)
+                black_box(&signature),
             );
             black_box(valid);
         });

@@ -4,7 +4,7 @@
 //! This benchmark demonstrates the benefit of SHA hardware instructions.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 /// Benchmark SHA-256 hashing with different input sizes
 fn bench_sha256_throughput(c: &mut Criterion) {

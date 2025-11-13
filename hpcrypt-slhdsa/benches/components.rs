@@ -2,7 +2,7 @@
 //!
 //! Measures the performance of individual components: WOTS+, FORS, Merkle trees.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use hpcrypt_slhdsa::Sha2_128s;
 use rand::rngs::OsRng;
 use rand::RngCore;
@@ -40,7 +40,7 @@ fn bench_hash_functions(c: &mut Criterion) {
 
     // Benchmark hash throughput by measuring signing operations
     // which are hash-intensive
-    use hpcrypt_slhdsa::{KeyPair, sign};
+    use hpcrypt_slhdsa::{sign, KeyPair};
     let keypair = KeyPair::<Sha2_128s>::generate(&mut rng);
 
     for msg_size in [32, 64, 128, 256, 512, 1024].iter() {
@@ -65,7 +65,7 @@ fn bench_fors_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("fors_signing");
     let mut rng = OsRng;
 
-    use hpcrypt_slhdsa::{KeyPair, sign};
+    use hpcrypt_slhdsa::{sign, KeyPair};
 
     // Different parameter sets have different FORS parameters (k, a)
     // SHA2-128s: k=14, a=12
@@ -100,7 +100,7 @@ fn bench_merkle_tree_heights(c: &mut Criterion) {
     let mut group = c.benchmark_group("merkle_via_parameters");
     let mut rng = OsRng;
 
-    use hpcrypt_slhdsa::{KeyPair, sign, Sha2_128f, Sha2_192s, Sha2_256s};
+    use hpcrypt_slhdsa::{sign, KeyPair, Sha2_128f, Sha2_192s, Sha2_256s};
 
     // Different tree heights:
     // 128s: h'=63, d=7 (height per layer = 9)
@@ -167,7 +167,7 @@ fn bench_base_w_encoding(c: &mut Criterion) {
     let mut group = c.benchmark_group("base_w_via_signing");
     let mut rng = OsRng;
 
-    use hpcrypt_slhdsa::{KeyPair, sign, Sha2_128s, Sha2_256s};
+    use hpcrypt_slhdsa::{sign, KeyPair, Sha2_128s, Sha2_256s};
 
     // w=16 parameter sets
     let keypair_128s = KeyPair::<Sha2_128s>::generate(&mut rng);
@@ -198,7 +198,7 @@ fn bench_memory_allocation_patterns(c: &mut Criterion) {
     let mut group = c.benchmark_group("allocation_patterns");
     let mut rng = OsRng;
 
-    use hpcrypt_slhdsa::{KeyPair, sign};
+    use hpcrypt_slhdsa::{sign, KeyPair};
 
     let keypair = KeyPair::<Sha2_128s>::generate(&mut rng);
 

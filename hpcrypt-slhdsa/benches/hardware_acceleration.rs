@@ -5,8 +5,8 @@
 //! 2. Parallel hashing operations
 //! 3. Batch processing with SIMD-friendly patterns
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
-use sha2::{Sha256, Digest};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use sha2::{Digest, Sha256};
 
 // Test different input sizes that might benefit from hardware acceleration
 const SIZES: &[usize] = &[32, 64, 128, 256, 512, 1024, 4096];
@@ -21,7 +21,8 @@ fn hash_single(input: &[u8]) -> [u8; 32] {
 /// Hardware-accelerated: Batch multiple independent hashes
 /// This allows the CPU to potentially pipeline operations
 fn hash_batch_independent(inputs: &[&[u8]]) -> Vec<[u8; 32]> {
-    inputs.iter()
+    inputs
+        .iter()
         .map(|input| {
             let mut hasher = Sha256::new();
             hasher.update(input);
@@ -124,7 +125,11 @@ fn hash_chain_step(current: &[u8; 32], chain_idx: u32, step: u32) -> [u8; 32] {
 }
 
 /// Batch chain steps with unrolling
-fn hash_chain_batch_unrolled(starts: &[[u8; 32]], chain_indices: &[u32], step: u32) -> Vec<[u8; 32]> {
+fn hash_chain_batch_unrolled(
+    starts: &[[u8; 32]],
+    chain_indices: &[u32],
+    step: u32,
+) -> Vec<[u8; 32]> {
     let mut results = Vec::with_capacity(starts.len());
 
     let chunks = starts.len() / 4;
@@ -192,9 +197,7 @@ fn bench_batch_hashing(c: &mut Criterion) {
 
     // Test batches of different sizes
     for &batch_size in &[4, 8, 16, 32, 64] {
-        let inputs: Vec<Vec<u8>> = (0..batch_size)
-            .map(|i| vec![i as u8; 32])
-            .collect();
+        let inputs: Vec<Vec<u8>> = (0..batch_size).map(|i| vec![i as u8; 32]).collect();
         let input_refs: Vec<&[u8]> = inputs.iter().map(|v| v.as_slice()).collect();
 
         group.throughput(Throughput::Elements(batch_size as u64));
@@ -208,7 +211,7 @@ fn bench_batch_hashing(c: &mut Criterion) {
                     let results = hash_batch_independent(black_box(&input_refs));
                     black_box(results);
                 });
-            }
+            },
         );
 
         // Unrolled 4-way
@@ -220,7 +223,7 @@ fn bench_batch_hashing(c: &mut Criterion) {
                     let results = hash_batch_unrolled_4(black_box(&input_refs));
                     black_box(results);
                 });
-            }
+            },
         );
 
         // Unrolled 8-way
@@ -232,7 +235,7 @@ fn bench_batch_hashing(c: &mut Criterion) {
                     let results = hash_batch_unrolled_8(black_box(&input_refs));
                     black_box(results);
                 });
-            }
+            },
         );
     }
 
@@ -266,12 +269,12 @@ fn bench_chain_hashing(c: &mut Criterion) {
                         results.push(hash_chain_step(
                             black_box(&starts[i]),
                             black_box(indices[i]),
-                            black_box(0)
+                            black_box(0),
                         ));
                     }
                     black_box(results);
                 });
-            }
+            },
         );
 
         // Unrolled batch
@@ -283,11 +286,11 @@ fn bench_chain_hashing(c: &mut Criterion) {
                     let results = hash_chain_batch_unrolled(
                         black_box(&starts),
                         black_box(&indices),
-                        black_box(0)
+                        black_box(0),
                     );
                     black_box(results);
                 });
-            }
+            },
         );
     }
 
@@ -313,7 +316,7 @@ fn bench_wots_realistic(c: &mut Criterion) {
                     current = hash_chain_step(
                         black_box(&current),
                         black_box(chain_idx as u32),
-                        black_box(step)
+                        black_box(step),
                     );
                 }
                 results.push(current);

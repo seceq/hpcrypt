@@ -25,7 +25,12 @@ fn bench_hash_function_calls(c: &mut Criterion) {
         group.bench_function("sha2_128s_t_leaf", |b| {
             b.iter(|| {
                 let mut out_local = out;
-                hash_fn.t_leaf(black_box(&pk_seed), black_box(&addr), black_box(&leaf), &mut out_local);
+                hash_fn.t_leaf(
+                    black_box(&pk_seed),
+                    black_box(&addr),
+                    black_box(&leaf),
+                    &mut out_local,
+                );
                 black_box(out_local)
             })
         });
@@ -34,7 +39,13 @@ fn bench_hash_function_calls(c: &mut Criterion) {
         group.bench_function("sha2_128s_t_node", |b| {
             b.iter(|| {
                 let mut out_local = out;
-                hash_fn.t_node(black_box(&pk_seed), black_box(&addr), black_box(&left), black_box(&right), &mut out_local);
+                hash_fn.t_node(
+                    black_box(&pk_seed),
+                    black_box(&addr),
+                    black_box(&left),
+                    black_box(&right),
+                    &mut out_local,
+                );
                 black_box(out_local)
             })
         });
@@ -46,7 +57,12 @@ fn bench_hash_function_calls(c: &mut Criterion) {
         group.bench_function("sha2_128s_prf_msg", |b| {
             b.iter(|| {
                 let mut out_local = out;
-                hash_fn.prf_msg(black_box(&sk_prf), black_box(&opt_rand), black_box(msg), &mut out_local);
+                hash_fn.prf_msg(
+                    black_box(&sk_prf),
+                    black_box(&opt_rand),
+                    black_box(msg),
+                    &mut out_local,
+                );
                 black_box(out_local)
             })
         });
@@ -65,7 +81,12 @@ fn bench_hash_function_calls(c: &mut Criterion) {
         group.bench_function("sha2_256s_t_leaf", |b| {
             b.iter(|| {
                 let mut out_local = out;
-                hash_fn.t_leaf(black_box(&pk_seed), black_box(&addr), black_box(&leaf), &mut out_local);
+                hash_fn.t_leaf(
+                    black_box(&pk_seed),
+                    black_box(&addr),
+                    black_box(&leaf),
+                    &mut out_local,
+                );
                 black_box(out_local)
             })
         });
@@ -73,7 +94,13 @@ fn bench_hash_function_calls(c: &mut Criterion) {
         group.bench_function("sha2_256s_t_node", |b| {
             b.iter(|| {
                 let mut out_local = out;
-                hash_fn.t_node(black_box(&pk_seed), black_box(&addr), black_box(&left), black_box(&right), &mut out_local);
+                hash_fn.t_node(
+                    black_box(&pk_seed),
+                    black_box(&addr),
+                    black_box(&left),
+                    black_box(&right),
+                    &mut out_local,
+                );
                 black_box(out_local)
             })
         });
@@ -92,7 +119,12 @@ fn bench_hash_function_calls(c: &mut Criterion) {
         group.bench_function("shake_128s_t_leaf", |b| {
             b.iter(|| {
                 let mut out_local = out;
-                hash_fn.t_leaf(black_box(&pk_seed), black_box(&addr), black_box(&leaf), &mut out_local);
+                hash_fn.t_leaf(
+                    black_box(&pk_seed),
+                    black_box(&addr),
+                    black_box(&leaf),
+                    &mut out_local,
+                );
                 black_box(out_local)
             })
         });
@@ -100,7 +132,13 @@ fn bench_hash_function_calls(c: &mut Criterion) {
         group.bench_function("shake_128s_t_node", |b| {
             b.iter(|| {
                 let mut out_local = out;
-                hash_fn.t_node(black_box(&pk_seed), black_box(&addr), black_box(&left), black_box(&right), &mut out_local);
+                hash_fn.t_node(
+                    black_box(&pk_seed),
+                    black_box(&addr),
+                    black_box(&left),
+                    black_box(&right),
+                    &mut out_local,
+                );
                 black_box(out_local)
             })
         });
@@ -126,7 +164,13 @@ fn bench_hot_loop_simulation(c: &mut Criterion) {
                 let mut out_local = out;
                 for i in 0..1000 {
                     addr[28] = (i & 0xFF) as u8;
-                    hash_fn.t_node(black_box(&pk_seed), black_box(&addr), black_box(&left), black_box(&right), &mut out_local);
+                    hash_fn.t_node(
+                        black_box(&pk_seed),
+                        black_box(&addr),
+                        black_box(&left),
+                        black_box(&right),
+                        &mut out_local,
+                    );
                     black_box(out_local);
                 }
             })
@@ -147,7 +191,13 @@ fn bench_hot_loop_simulation(c: &mut Criterion) {
                 let mut out_local = out;
                 for i in 0..1000 {
                     addr[28] = (i & 0xFF) as u8;
-                    hash_fn.t_node(black_box(&pk_seed), black_box(&addr), black_box(&left), black_box(&right), &mut out_local);
+                    hash_fn.t_node(
+                        black_box(&pk_seed),
+                        black_box(&addr),
+                        black_box(&left),
+                        black_box(&right),
+                        &mut out_local,
+                    );
                     black_box(out_local);
                 }
             })
