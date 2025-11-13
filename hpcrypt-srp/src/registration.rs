@@ -205,13 +205,8 @@ mod tests {
     #[test]
     fn test_register_user() {
         let mut rng = thread_rng();
-        let registration = register_user(
-            b"alice",
-            b"password123",
-            SrpGroup::Srp2048,
-            &mut rng,
-        )
-        .unwrap();
+        let registration =
+            register_user(b"alice", b"password123", SrpGroup::Srp2048, &mut rng).unwrap();
 
         assert_eq!(registration.salt.len(), 16);
         assert_eq!(registration.verifier.len(), 256); // 2048 bits = 256 bytes
@@ -257,12 +252,8 @@ mod tests {
         let mut rng = thread_rng();
 
         // Test with SHA-256 (default)
-        let reg_sha256 = register_user(
-            b"alice",
-            b"password123",
-            SrpGroup::Srp2048,
-            &mut rng,
-        ).unwrap();
+        let reg_sha256 =
+            register_user(b"alice", b"password123", SrpGroup::Srp2048, &mut rng).unwrap();
         assert_eq!(reg_sha256.salt.len(), 16);
         assert_eq!(reg_sha256.verifier.len(), 256);
 
@@ -272,8 +263,9 @@ mod tests {
             b"password123",
             SrpGroup::Srp2048,
             &mut rng,
-            SrpHashFunction::Sha512
-        ).unwrap();
+            SrpHashFunction::Sha512,
+        )
+        .unwrap();
         assert_eq!(reg_sha512.salt.len(), 16);
         assert_eq!(reg_sha512.verifier.len(), 256);
 
@@ -283,16 +275,38 @@ mod tests {
             b"password123",
             SrpGroup::Srp2048,
             &mut rng,
-            SrpHashFunction::Sha1
-        ).unwrap();
+            SrpHashFunction::Sha1,
+        )
+        .unwrap();
         assert_eq!(reg_sha1.salt.len(), 16);
         assert_eq!(reg_sha1.verifier.len(), 256);
 
         // Different hash functions produce different verifiers (with same salt)
         let salt = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-        let v1 = create_verifier_with_hash(b"alice", b"password", &salt, SrpGroup::Srp2048, SrpHashFunction::Sha256).unwrap();
-        let v512 = create_verifier_with_hash(b"alice", b"password", &salt, SrpGroup::Srp2048, SrpHashFunction::Sha512).unwrap();
-        let v_sha1 = create_verifier_with_hash(b"alice", b"password", &salt, SrpGroup::Srp2048, SrpHashFunction::Sha1).unwrap();
+        let v1 = create_verifier_with_hash(
+            b"alice",
+            b"password",
+            &salt,
+            SrpGroup::Srp2048,
+            SrpHashFunction::Sha256,
+        )
+        .unwrap();
+        let v512 = create_verifier_with_hash(
+            b"alice",
+            b"password",
+            &salt,
+            SrpGroup::Srp2048,
+            SrpHashFunction::Sha512,
+        )
+        .unwrap();
+        let v_sha1 = create_verifier_with_hash(
+            b"alice",
+            b"password",
+            &salt,
+            SrpGroup::Srp2048,
+            SrpHashFunction::Sha1,
+        )
+        .unwrap();
 
         assert_ne!(v1, v512);
         assert_ne!(v1, v_sha1);

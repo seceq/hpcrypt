@@ -2,7 +2,9 @@
 
 use crate::error::{Result, SrpError};
 use crate::groups::SrpGroup;
-use crate::utils::{compute_k, compute_k_from_s, compute_m1, compute_m2, compute_u, compute_x, pad};
+use crate::utils::{
+    compute_k, compute_k_from_s, compute_m1, compute_m2, compute_u, compute_x, pad,
+};
 use crate::SrpHashFunction;
 use alloc::vec::Vec;
 use num_bigint::BigUint;
@@ -93,7 +95,12 @@ impl SrpClient {
     ///     SrpHashFunction::Sha1
     /// );
     /// ```
-    pub fn with_hash(username: &[u8], password: &[u8], group: SrpGroup, hash_fn: SrpHashFunction) -> Self {
+    pub fn with_hash(
+        username: &[u8],
+        password: &[u8],
+        group: SrpGroup,
+        hash_fn: SrpHashFunction,
+    ) -> Self {
         Self {
             username: username.to_vec(),
             password: Zeroizing::new(password.to_vec()),
@@ -216,7 +223,12 @@ impl SrpClient {
                 salt,
                 session_key,
                 ..
-            } => (a_pub.clone(), b_pub.clone(), salt.clone(), session_key.clone()),
+            } => (
+                a_pub.clone(),
+                b_pub.clone(),
+                salt.clone(),
+                session_key.clone(),
+            ),
             _ => return Err(SrpError::InvalidState),
         };
 
@@ -323,7 +335,7 @@ mod tests {
             b"alice",
             b"password123",
             SrpGroup::Srp2048,
-            SrpHashFunction::Sha512
+            SrpHashFunction::Sha512,
         );
         let a_pub_sha512 = client_sha512.compute_public(&mut rng).unwrap();
         assert_eq!(a_pub_sha512.len(), 256);
@@ -333,7 +345,7 @@ mod tests {
             b"alice",
             b"password123",
             SrpGroup::Srp2048,
-            SrpHashFunction::Sha1
+            SrpHashFunction::Sha1,
         );
         let a_pub_sha1 = client_sha1.compute_public(&mut rng).unwrap();
         assert_eq!(a_pub_sha1.len(), 256);

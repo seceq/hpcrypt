@@ -1,9 +1,9 @@
 //! Utility functions for SRP protocol
 
+use crate::SrpHashFunction;
 use alloc::vec::Vec;
 use hpcrypt_hash::{sha1, sha256, sha512};
 use num_bigint::BigUint;
-use crate::SrpHashFunction;
 
 /// Internal helper to hash data with the specified hash function
 fn hash_data(data: &[u8], hash_fn: SrpHashFunction) -> Vec<u8> {
@@ -33,7 +33,12 @@ pub fn pad(n: &BigUint, group_byte_len: usize) -> Vec<u8> {
 /// Compute k = H(N | PAD(g)) for SRP-6a
 ///
 /// Where H can be SHA-1 (RFC 5054), SHA-256, or SHA-512
-pub fn compute_k(n: &BigUint, g: &BigUint, group_byte_len: usize, hash_fn: SrpHashFunction) -> BigUint {
+pub fn compute_k(
+    n: &BigUint,
+    g: &BigUint,
+    group_byte_len: usize,
+    hash_fn: SrpHashFunction,
+) -> BigUint {
     let mut input = Vec::new();
     input.extend_from_slice(&pad(n, group_byte_len));
     input.extend_from_slice(&pad(g, group_byte_len));
@@ -45,7 +50,12 @@ pub fn compute_k(n: &BigUint, g: &BigUint, group_byte_len: usize, hash_fn: SrpHa
 /// Compute u = H(PAD(A) | PAD(B))
 ///
 /// Where H can be SHA-1 (RFC 5054), SHA-256, or SHA-512
-pub fn compute_u(a_pub: &BigUint, b_pub: &BigUint, group_byte_len: usize, hash_fn: SrpHashFunction) -> BigUint {
+pub fn compute_u(
+    a_pub: &BigUint,
+    b_pub: &BigUint,
+    group_byte_len: usize,
+    hash_fn: SrpHashFunction,
+) -> BigUint {
     let mut input = Vec::new();
     input.extend_from_slice(&pad(a_pub, group_byte_len));
     input.extend_from_slice(&pad(b_pub, group_byte_len));
@@ -57,7 +67,12 @@ pub fn compute_u(a_pub: &BigUint, b_pub: &BigUint, group_byte_len: usize, hash_f
 /// Compute x = H(s | H(I | ":" | P))
 ///
 /// Where H can be SHA-1 (RFC 5054), SHA-256, or SHA-512
-pub fn compute_x(username: &[u8], password: &[u8], salt: &[u8], hash_fn: SrpHashFunction) -> BigUint {
+pub fn compute_x(
+    username: &[u8],
+    password: &[u8],
+    salt: &[u8],
+    hash_fn: SrpHashFunction,
+) -> BigUint {
     // First hash: H(I | ":" | P)
     let mut inner = Vec::new();
     inner.extend_from_slice(username);

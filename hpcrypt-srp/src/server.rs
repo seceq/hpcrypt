@@ -93,7 +93,13 @@ impl SrpServer {
     ///     SrpHashFunction::Sha1
     /// );
     /// ```
-    pub fn with_hash(verifier: &[u8], salt: &[u8], username: &[u8], group: SrpGroup, hash_fn: SrpHashFunction) -> Self {
+    pub fn with_hash(
+        verifier: &[u8],
+        salt: &[u8],
+        username: &[u8],
+        group: SrpGroup,
+        hash_fn: SrpHashFunction,
+    ) -> Self {
         Self {
             verifier: verifier.to_vec(),
             salt: salt.to_vec(),
@@ -327,7 +333,7 @@ mod tests {
             &salt,
             b"alice",
             SrpGroup::Srp2048,
-            SrpHashFunction::Sha512
+            SrpHashFunction::Sha512,
         );
         let b_pub_sha512 = server_sha512.compute_public(&mut rng).unwrap();
         assert_eq!(b_pub_sha512.len(), 256);
@@ -338,7 +344,7 @@ mod tests {
             &salt,
             b"alice",
             SrpGroup::Srp2048,
-            SrpHashFunction::Sha1
+            SrpHashFunction::Sha1,
         );
         let b_pub_sha1 = server_sha1.compute_public(&mut rng).unwrap();
         assert_eq!(b_pub_sha1.len(), 256);
