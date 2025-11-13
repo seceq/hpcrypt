@@ -240,7 +240,7 @@ impl Poly {
             for i in (0..N).step_by(8) {
                 let va = _mm256_loadu_si256(a.coeffs[i..].as_ptr() as *const __m256i);
                 let vb = _mm256_loadu_si256(b.coeffs[i..].as_ptr() as *const __m256i);
-                let sum = _mm256_add_epi32(va, vb);  // No reduction!
+                let sum = _mm256_add_epi32(va, vb); // No reduction!
                 _mm256_storeu_si256(result.coeffs[i..].as_mut_ptr() as *mut __m256i, sum);
             }
 
@@ -269,7 +269,7 @@ impl Poly {
             for i in (0..N).step_by(8) {
                 let va = _mm256_loadu_si256(a.coeffs[i..].as_ptr() as *const __m256i);
                 let vb = _mm256_loadu_si256(b.coeffs[i..].as_ptr() as *const __m256i);
-                let diff = _mm256_sub_epi32(va, vb);  // No reduction!
+                let diff = _mm256_sub_epi32(va, vb); // No reduction!
                 _mm256_storeu_si256(result.coeffs[i..].as_mut_ptr() as *mut __m256i, diff);
             }
 
@@ -746,7 +746,7 @@ pub fn uncenter_coeff(a: i32) -> i32 {
 }
 
 mod tests {
-    use super::*;
+    
 
     #[test]
     fn test_poly_new() {
@@ -864,7 +864,13 @@ mod tests {
         // Test that output is always in [0, q)
         for x in -100000..100000 {
             let r = barrett_reduce(x);
-            assert!(r >= 0 && r < Q, "barrett_reduce({}) = {} not in [0, {})", x, r, Q);
+            assert!(
+                r >= 0 && r < Q,
+                "barrett_reduce({}) = {} not in [0, {})",
+                x,
+                r,
+                Q
+            );
         }
     }
 

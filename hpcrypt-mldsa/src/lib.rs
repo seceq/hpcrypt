@@ -120,37 +120,36 @@ use jemallocator::Jemalloc;
 static GLOBAL: Jemalloc = Jemalloc;
 
 // Public modules
-pub mod params;
 pub mod errors;
+pub mod params;
+
+// Re-export RNG functionality from hpcrypt-rng
+pub use hpcrypt_rng as rng;
 
 // Internal modules
-pub mod symmetric;
-pub mod utils;
-pub mod rng;
-pub mod poly;
-pub mod poly_shoup;  // Barrett+Shoup experimental implementation
-pub mod rounding;
-pub mod hints;
-pub mod sampling;
-pub mod ntt;
-pub mod ntt_prefetch;
-pub mod sparse_mul;
-pub mod prefetch;
-pub mod keygen;
-pub mod sign;
-pub mod verify;
-pub mod serialize;
-pub mod constant_time;
-pub mod kat;
 pub mod batch;
-pub mod prehash;
+pub mod constant_time;
 pub mod context;
+pub mod hints;
+pub mod kat;
+pub mod keygen;
+pub mod ntt;
 #[cfg(feature = "pem")]
 pub mod pem_encoding;
+pub mod poly;
+pub mod prehash;
+pub mod rounding;
+pub mod sampling;
+pub mod serialize;
+pub mod sign;
+pub mod sparse_mul;
+pub mod symmetric;
+pub mod utils;
+pub mod verify;
 
 // Stress tests for robustness validation
 mod stress_tests;
 
 // Re-exports
-pub use params::{DsaParams, MlDsa44, MlDsa65, MlDsa87, N, Q};
 pub use batch::{sign_batch, verify_batch};
+pub use params::{DsaParams, MlDsa44, MlDsa65, MlDsa87, N, Q};

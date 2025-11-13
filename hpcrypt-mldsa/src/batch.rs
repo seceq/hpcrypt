@@ -56,8 +56,8 @@ use std::vec::Vec;
 
 use crate::keygen::SecretKey;
 use crate::params::{DsaParams, Q};
-use crate::sign::{Signature, sign};
 use crate::poly::Poly;
+use crate::sign::{sign, Signature};
 
 /// Sign multiple messages sequentially
 ///
@@ -112,9 +112,7 @@ pub fn sign_batch<P: DsaParams>(
     // Sequential processing - simple and predictable
     // Applications wanting parallelism should use their own threading
     // (Rayon, Tokio, thread pools, etc.)
-    messages.iter()
-        .map(|msg| sign(sk, msg))
-        .collect()
+    messages.iter().map(|msg| sign(sk, msg)).collect()
 }
 
 /// Verify multiple signatures in a batch
@@ -140,8 +138,11 @@ pub fn verify_batch<P: DsaParams>(
     messages: &[&[u8]],
     signatures: &[&Signature<P>],
 ) -> Vec<bool> {
-    assert_eq!(messages.len(), signatures.len(),
-        "Number of messages must equal number of signatures");
+    assert_eq!(
+        messages.len(),
+        signatures.len(),
+        "Number of messages must equal number of signatures"
+    );
 
     // Use optimized batch verification for 4+ signatures
     // For smaller batches, simple loop is fine
@@ -149,7 +150,8 @@ pub fn verify_batch<P: DsaParams>(
         verify_batch_optimized(pk, messages, signatures)
     } else {
         // Simple loop for small batches
-        messages.iter()
+        messages
+            .iter()
             .zip(signatures.iter())
             .map(|(msg, sig)| crate::verify::verify(pk, msg, sig))
             .collect()
@@ -173,12 +175,12 @@ fn verify_batch_optimized<P: DsaParams>(
 ) -> Vec<bool> {
     use crate::sampling::{expand_matrix_a, sample_in_ball};
     use crate::symmetric::{h, h_var};
-    
-    use crate::hints::{use_hint_poly, poly_hint_count};
-    use crate::ntt::poly_mul_ntt;
-    use crate::poly::Poly;
+
     use crate::constant_time::ct_compare;
+    use crate::hints::{poly_hint_count, use_hint_poly};
+    use crate::ntt::poly_mul_ntt;
     use crate::params::N;
+    use crate::poly::Poly;
 
     let batch_size = signatures.len();
     let mut results = vec![true; batch_size];
@@ -323,12 +325,11 @@ fn encode_w1<P: DsaParams>(w1: &[Poly]) -> Vec<u8> {
     bytes
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::params::MlDsa65;
     use crate::keygen::keygen;
+    use crate::params::MlDsa65;
     use crate::verify::verify;
 
     #[test]
@@ -365,15 +366,11 @@ mod tests {
     fn test_verify_batch() {
         let (pk, sk) = keygen::<MlDsa65>();
 
-        let messages = vec![
-            b"Test 1".as_slice(),
-            b"Test 2".as_slice(),
-        ];
+        let messages = vec![b"Test 1".as_slice(), b"Test 2".as_slice()];
 
         let signatures = sign_batch(&sk, &messages);
-        let sig_refs: Vec<&Signature<MlDsa65>> = signatures.iter()
-            .map(|s| s.as_ref().unwrap())
-            .collect();
+        let sig_refs: Vec<&Signature<MlDsa65>> =
+            signatures.iter().map(|s| s.as_ref().unwrap()).collect();
 
         let results = verify_batch(&pk, &messages, &sig_refs);
 
@@ -392,5 +389,4 @@ mod tests {
 
         verify_batch(&pk, &messages, &[&sig, &sig]); // Should panic
     }
-
 }

@@ -19,9 +19,9 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 use crate::keygen::{PublicKey, SecretKey};
-use crate::sign::Signature;
 use crate::params::{DsaParams, N, Q};
 use crate::poly::Poly;
+use crate::sign::Signature;
 
 /// Error type for serialization/deserialization
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -70,9 +70,8 @@ fn decode_poly_full(bytes: &[u8]) -> Result<Poly, SerializeError> {
 
     for i in 0..N {
         let idx = i * 3;
-        let coeff = (bytes[idx] as i32)
-            | ((bytes[idx + 1] as i32) << 8)
-            | ((bytes[idx + 2] as i32) << 16);
+        let coeff =
+            (bytes[idx] as i32) | ((bytes[idx + 1] as i32) << 8) | ((bytes[idx + 2] as i32) << 16);
 
         if coeff >= Q {
             return Err(SerializeError::InvalidCoefficient);
@@ -114,7 +113,7 @@ fn encode_poly_z(poly: &Poly, gamma1: i32) -> Vec<u8> {
         // But they may be stored as positive values mod Q
         // Normalize to signed centered representation first
         let normalized = if coeff > Q / 2 {
-            coeff - Q  // Large positive -> negative
+            coeff - Q // Large positive -> negative
         } else {
             coeff
         };
@@ -138,11 +137,7 @@ fn encode_poly_z(poly: &Poly, gamma1: i32) -> Vec<u8> {
 /// FIPS 204 Algorithm 24 (sigDecode):
 /// Unpacks z coefficients based on γ₁ parameter
 fn decode_poly_z(bytes: &[u8], gamma1: i32) -> Result<Poly, SerializeError> {
-    let bits_per_coeff = if gamma1 == (1 << 17) {
-        18
-    } else {
-        20
-    };
+    let bits_per_coeff = if gamma1 == (1 << 17) { 18 } else { 20 };
 
     let expected_bytes = (N * bits_per_coeff + 7) / 8;
 
@@ -185,7 +180,7 @@ fn encode_poly_eta(poly: &Poly, eta: i32) -> Vec<u8> {
         // Reduce coefficient to proper range first
         let mut c = coeff % Q;
         if c > Q / 2 {
-            c -= Q;  // Center to [-Q/2, Q/2]
+            c -= Q; // Center to [-Q/2, Q/2]
         }
 
         // Clamp to [-η, η] if needed
@@ -634,10 +629,10 @@ pub fn deserialize_signature<P: DsaParams>(bytes: &[u8]) -> Result<Signature<P>,
 }
 
 mod tests {
-    use super::*;
-    use crate::params::{DsaParams, MlDsa44, MlDsa65};
-    use crate::poly::Poly;
-    use crate::keygen::keygen_from_seed;
+    
+    
+    
+    
 
     #[test]
     fn test_encode_decode_poly_full() {
@@ -742,17 +737,29 @@ mod tests {
         // ML-DSA-44
         let (pk44, _) = keygen_from_seed::<MlDsa44>(&seed);
         let serialized44 = serialize_public_key::<MlDsa44>(&pk44);
-        assert_eq!(serialized44.len(), 1312, "ML-DSA-44 pk size should be 1312 bytes (FIPS 204 Table 2)");
+        assert_eq!(
+            serialized44.len(),
+            1312,
+            "ML-DSA-44 pk size should be 1312 bytes (FIPS 204 Table 2)"
+        );
 
         // ML-DSA-65
         let (pk65, _) = keygen_from_seed::<MlDsa65>(&seed);
         let serialized65 = serialize_public_key::<MlDsa65>(&pk65);
-        assert_eq!(serialized65.len(), 1952, "ML-DSA-65 pk size should be 1952 bytes (FIPS 204 Table 2)");
+        assert_eq!(
+            serialized65.len(),
+            1952,
+            "ML-DSA-65 pk size should be 1952 bytes (FIPS 204 Table 2)"
+        );
 
         // ML-DSA-87
         let (pk87, _) = keygen_from_seed::<MlDsa87>(&seed);
         let serialized87 = serialize_public_key::<MlDsa87>(&pk87);
-        assert_eq!(serialized87.len(), 2592, "ML-DSA-87 pk size should be 2592 bytes (FIPS 204 Table 2)");
+        assert_eq!(
+            serialized87.len(),
+            2592,
+            "ML-DSA-87 pk size should be 2592 bytes (FIPS 204 Table 2)"
+        );
     }
 
     #[test]
@@ -765,19 +772,31 @@ mod tests {
         let (_, sk44) = keygen_from_seed::<MlDsa44>(&seed);
         let serialized44 = serialize_secret_key::<MlDsa44>(&sk44);
         // ρ(32) + K(32) + tr(64) + s1(4*96) + s2(4*96) + t0(4*416) = 32+32+64+384+384+1664 = 2560
-        assert_eq!(serialized44.len(), 2560, "ML-DSA-44 sk size should be 2560 bytes");
+        assert_eq!(
+            serialized44.len(),
+            2560,
+            "ML-DSA-44 sk size should be 2560 bytes"
+        );
 
         // ML-DSA-65: FIPS 204 Table 2 - 4032 bytes
         let (_, sk65) = keygen_from_seed::<MlDsa65>(&seed);
         let serialized65 = serialize_secret_key::<MlDsa65>(&sk65);
         // ρ(32) + K(32) + tr(64) + s1(5*128) + s2(6*128) + t0(6*416) = 32+32+64+640+768+2496 = 4032
-        assert_eq!(serialized65.len(), 4032, "ML-DSA-65 sk size should be 4032 bytes");
+        assert_eq!(
+            serialized65.len(),
+            4032,
+            "ML-DSA-65 sk size should be 4032 bytes"
+        );
 
         // ML-DSA-87: FIPS 204 Table 2 - 4896 bytes
         let (_, sk87) = keygen_from_seed::<MlDsa87>(&seed);
         let serialized87 = serialize_secret_key::<MlDsa87>(&sk87);
         // ρ(32) + K(32) + tr(64) + s1(7*96) + s2(8*96) + t0(8*416) = 32+32+64+672+768+3328 = 4896
-        assert_eq!(serialized87.len(), 4896, "ML-DSA-87 sk size should be 4896 bytes");
+        assert_eq!(
+            serialized87.len(),
+            4896,
+            "ML-DSA-87 sk size should be 4896 bytes"
+        );
     }
 
     #[test]
@@ -836,7 +855,11 @@ mod tests {
         let decoded = decode_poly_z(&encoded, MlDsa44::GAMMA1).unwrap();
 
         for i in 0..N {
-            assert_eq!(poly.coeffs[i], decoded.coeffs[i], "ML-DSA-44 z coeff {} mismatch", i);
+            assert_eq!(
+                poly.coeffs[i], decoded.coeffs[i],
+                "ML-DSA-44 z coeff {} mismatch",
+                i
+            );
         }
 
         // Test ML-DSA-65 (γ₁ = 2^19, 20 bits)
@@ -850,7 +873,11 @@ mod tests {
         let decoded2 = decode_poly_z(&encoded2, MlDsa65::GAMMA1).unwrap();
 
         for i in 0..N {
-            assert_eq!(poly2.coeffs[i], decoded2.coeffs[i], "ML-DSA-65 z coeff {} mismatch", i);
+            assert_eq!(
+                poly2.coeffs[i], decoded2.coeffs[i],
+                "ML-DSA-65 z coeff {} mismatch",
+                i
+            );
         }
     }
 

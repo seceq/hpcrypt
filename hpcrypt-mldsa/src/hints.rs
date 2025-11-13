@@ -7,7 +7,7 @@
 //! Hints are a critical component of ML-DSA that allow the verifier to correctly
 //! compute high bits even when the input has been perturbed by the signature.
 
-use crate::params::{Q, N, DsaParams};
+use crate::params::{DsaParams, N, Q};
 use crate::poly::Poly;
 use crate::rounding::{decompose, decompose_optimized, high_bits, high_bits_optimized};
 
@@ -278,9 +278,9 @@ pub fn poly_hint_count(h: &Poly) -> usize {
 }
 
 mod tests {
-    use super::*;
-    extern crate alloc;
-    use alloc::vec;
+    
+    
+    
 
     #[test]
     fn test_make_hint_no_change() {
@@ -327,7 +327,10 @@ mod tests {
         let result = use_hint(false, r, alpha);
         let expected = high_bits(r, alpha);
 
-        assert_eq!(result, expected, "UseHint with h=false should return HighBits(r)");
+        assert_eq!(
+            result, expected,
+            "UseHint with h=false should return HighBits(r)"
+        );
     }
 
     #[test]
@@ -369,9 +372,11 @@ mod tests {
 
                 if r1 == 0 {
                     assert_eq!(
-                        result, m - 1,
+                        result,
+                        m - 1,
                         "UseHint should wrap to m-1 when r1 = 0 (r={}, r0={})",
-                        test_r, r0
+                        test_r,
+                        r0
                     );
                 } else {
                     assert_eq!(
@@ -469,7 +474,7 @@ mod tests {
 
         // Test with z values bounded by γ₂ as in the actual signature scheme
         for r in (0..Q).step_by(50000) {
-            for z in [-gamma2/2, -1000, -100, 0, 100, 1000, gamma2/2] {
+            for z in [-gamma2 / 2, -1000, -100, 0, 100, 1000, gamma2 / 2] {
                 let h = make_hint(z, r, alpha);
                 let r_plus_z = ((r as i64 + z as i64).rem_euclid(Q as i64)) as i32;
                 let recovered_r1 = use_hint(h, r_plus_z, alpha);
@@ -522,9 +527,11 @@ mod tests {
             if r1 == 0 && r0 <= 0 {
                 let result = use_hint(true, test_r, alpha);
                 assert_eq!(
-                    result, m - 1,
+                    result,
+                    m - 1,
                     "UseHint should wrap from 0 to m-1 (r={}, r0={})",
-                    test_r, r0
+                    test_r,
+                    r0
                 );
                 return; // Test passed
             }

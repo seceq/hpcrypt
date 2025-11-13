@@ -61,7 +61,7 @@ pub fn ct_select(condition: bool, a: &[u8], b: &[u8]) -> Vec<u8> {
 }
 
 mod tests {
-    use super::*;
+    
 
     #[test]
     fn test_byte_to_bits() {

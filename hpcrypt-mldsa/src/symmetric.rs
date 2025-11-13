@@ -12,14 +12,11 @@
 //! - Mask expansion (SHAKE-256)
 
 extern crate alloc;
+use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
-use alloc::boxed::Box;
 
-use sha3::{
-    Shake128, Shake256,
-    digest::{ExtendableOutput, Update, XofReader},
-};
+use hpcrypt_hash::{xof_reader::XofReader, Shake128, Shake256};
 
 /// Extendable Output Function (XOF)
 ///
@@ -40,7 +37,7 @@ impl Xof {
     /// # Returns
     /// A new XOF instance ready to produce output
     pub fn new(seed: &[u8]) -> Self {
-        let mut state = Shake128::default();
+        let mut state = Shake128::new();
         state.update(seed);
         Self { state }
     }
@@ -55,7 +52,7 @@ impl Xof {
     }
 
     /// Create a new reader for this XOF
-    pub fn reader(&self) -> impl XofReader {
+    pub fn reader(&self) -> XofReader<168, 24> {
         self.state.clone().finalize_xof()
     }
 }
@@ -67,15 +64,15 @@ impl Xof {
 /// - Mask expansion (ExpandMask)
 /// - Message hashing
 pub struct Shake256Xof {
-    reader: Box<dyn XofReader + Send>,
+    reader: XofReader<136, 24>,
 }
 
 impl Shake256Xof {
     /// Create a new SHAKE-256 XOF instance with the given input
     pub fn new(input: &[u8]) -> Self {
-        let mut state = Shake256::default();
+        let mut state = Shake256::new();
         state.update(input);
-        let reader = Box::new(state.finalize_xof());
+        let reader = state.finalize_xof();
         Self { reader }
     }
 
@@ -86,10 +83,10 @@ impl Shake256Xof {
     }
 
     /// Create a new reader for this XOF
-    pub fn reader(&self) -> impl XofReader {
+    pub fn reader(&self) -> XofReader<136, 24> {
         // Note: This can't actually be used effectively since we need the state
         // Keeping for API compatibility but the read() method should be preferred
-        let state = Shake256::default();
+        let state = Shake256::new();
         state.finalize_xof()
     }
 }
@@ -107,7 +104,7 @@ impl Shake256Xof {
 /// 64-byte (512-bit) hash output
 pub fn h(input: &[u8]) -> [u8; 64] {
     let mut output = [0u8; 64];
-    let mut hasher = Shake256::default();
+    let mut hasher = Shake256::new();
     hasher.update(input);
     let mut reader = hasher.finalize_xof();
     reader.read(&mut output);
@@ -127,7 +124,7 @@ pub fn h(input: &[u8]) -> [u8; 64] {
 /// 32-byte (256-bit) hash output
 pub fn h256(input: &[u8]) -> [u8; 32] {
     let mut output = [0u8; 32];
-    let mut hasher = Shake256::default();
+    let mut hasher = Shake256::new();
     hasher.update(input);
     let mut reader = hasher.finalize_xof();
     reader.read(&mut output);
@@ -148,7 +145,7 @@ pub fn h256(input: &[u8]) -> [u8; 32] {
 /// Vector of `len` bytes
 pub fn h_var(input: &[u8], len: usize) -> Vec<u8> {
     let mut output = vec![0u8; len];
-    let mut hasher = Shake256::default();
+    let mut hasher = Shake256::new();
     hasher.update(input);
     let mut reader = hasher.finalize_xof();
     reader.read(&mut output);
@@ -169,7 +166,7 @@ pub fn h_var(input: &[u8], len: usize) -> Vec<u8> {
 /// 128-byte (1024-bit) hash output
 pub fn h128(input: &[u8]) -> [u8; 128] {
     let mut output = [0u8; 128];
-    let mut hasher = Shake256::default();
+    let mut hasher = Shake256::new();
     hasher.update(input);
     let mut reader = hasher.finalize_xof();
     reader.read(&mut output);
@@ -448,7 +445,7 @@ pub fn expand_mask_x4_avx2(rho_prime: &[u8; 64], kappas: [u16; 4]) -> [Vec<u8>; 
 }
 
 mod tests {
-    use super::*;
+    
 
     #[test]
     fn test_xof_deterministic() {
@@ -590,12 +587,7 @@ mod tests {
 
     #[test]
     fn test_xof_x4_matches_sequential() {
-        let seeds = [
-            [1u8; 34],
-            [2u8; 34],
-            [3u8; 34],
-            [4u8; 34],
-        ];
+        let seeds = [[1u8; 34], [2u8; 34], [3u8; 34], [4u8; 34]];
 
         // Batched version
         let mut outputs_batch = [[0u8; 168]; 4];
@@ -610,8 +602,11 @@ mod tests {
 
         // Should produce identical results
         for i in 0..4 {
-            assert_eq!(outputs_batch[i], outputs_seq[i],
-                "Batched XOF output {} doesn't match sequential", i);
+            assert_eq!(
+                outputs_batch[i], outputs_seq[i],
+                "Batched XOF output {} doesn't match sequential",
+                i
+            );
         }
     }
 }

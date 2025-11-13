@@ -374,10 +374,7 @@ mod tests {
         for i in 0..N {
             let sparse_reduced = ((result_sparse.coeffs[i] % Q) + Q) % Q;
             let ntt_reduced = ((result_ntt.coeffs[i] % Q) + Q) % Q;
-            assert_eq!(
-                sparse_reduced, ntt_reduced,
-                "Mismatch at coefficient {}", i
-            );
+            assert_eq!(sparse_reduced, ntt_reduced, "Mismatch at coefficient {}", i);
         }
     }
 }

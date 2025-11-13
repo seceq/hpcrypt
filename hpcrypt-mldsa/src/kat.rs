@@ -95,8 +95,7 @@ pub fn parse_hex(hex: &str) -> Result<Vec<u8>, &'static str> {
     let mut bytes = Vec::with_capacity(hex.len() / 2);
     for i in (0..hex.len()).step_by(2) {
         let byte_str = &hex[i..i + 2];
-        let byte = u8::from_str_radix(byte_str, 16)
-            .map_err(|_| "Invalid hex character")?;
+        let byte = u8::from_str_radix(byte_str, 16).map_err(|_| "Invalid hex character")?;
         bytes.push(byte);
     }
 
@@ -129,8 +128,7 @@ pub fn parse_kat_file(content: &str) -> Result<Vec<KatVector>, &'static str> {
                         vectors.push(current.clone());
                     }
                     current = KatVector::new();
-                    current.count = usize::from_str(value)
-                        .map_err(|_| "Invalid count")?;
+                    current.count = usize::from_str(value).map_err(|_| "Invalid count")?;
                     in_vector = true;
                 }
                 "xi" => {
@@ -149,15 +147,13 @@ pub fn parse_kat_file(content: &str) -> Result<Vec<KatVector>, &'static str> {
                     current.msg = parse_hex(value)?;
                 }
                 "mlen" => {
-                    current.mlen = usize::from_str(value)
-                        .map_err(|_| "Invalid mlen")?;
+                    current.mlen = usize::from_str(value).map_err(|_| "Invalid mlen")?;
                 }
                 "sm" => {
                     current.sm = parse_hex(value)?;
                 }
                 "smlen" => {
-                    current.smlen = usize::from_str(value)
-                        .map_err(|_| "Invalid smlen")?;
+                    current.smlen = usize::from_str(value).map_err(|_| "Invalid smlen")?;
                 }
                 "ctx" => {
                     current.ctx = parse_hex(value)?;
@@ -178,9 +174,9 @@ pub fn parse_kat_file(content: &str) -> Result<Vec<KatVector>, &'static str> {
 }
 
 mod tests {
-    use super::*;
-    extern crate alloc;
-    use alloc::vec;
+    
+    
+    
 
     #[test]
     fn test_parse_hex() {

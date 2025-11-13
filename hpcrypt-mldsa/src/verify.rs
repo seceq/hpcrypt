@@ -14,12 +14,12 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
+use crate::hints::{poly_hint_count, use_hint_poly_optimized};
 use crate::keygen::PublicKey;
-use crate::sign::Signature;
 use crate::params::{DsaParams, N, Q};
 use crate::poly::Poly;
-use crate::hints::{use_hint_poly_optimized, poly_hint_count};
 use crate::sampling::{expand_matrix_a, sample_in_ball};
+use crate::sign::Signature;
 use crate::symmetric::{h, h_var};
 
 /// Verify a signature on a message
@@ -31,11 +31,7 @@ use crate::symmetric::{h, h_var};
 ///
 /// # Returns
 /// * `true` if signature is valid, `false` otherwise
-pub fn verify<P: DsaParams>(
-    pk: &PublicKey<P>,
-    message: &[u8],
-    signature: &Signature<P>,
-) -> bool {
+pub fn verify<P: DsaParams>(pk: &PublicKey<P>, message: &[u8], signature: &Signature<P>) -> bool {
     // Step 1: Check signature dimensions
     if signature.z.len() != P::L || signature.h.len() != P::K {
         return false;
@@ -82,8 +78,7 @@ pub fn verify<P: DsaParams>(
         w_prime.push(w_prime_i);
     }
 
-    {
-    }
+    {}
 
     // Subtract c·(t1·2^d)
     // Following reference: shift t1 left BEFORE multiplying by c
@@ -100,15 +95,13 @@ pub fn verify<P: DsaParams>(
         // c·(t1·2^d)
         let c_t1_scaled = poly_multiply(&c, &t1_scaled);
 
-        if i == 0 {
-        }
+        if i == 0 {}
 
         // w' = w' - c·(t1·2^d)
         w_prime[i] = w_prime[i].sub(&c_t1_scaled);
         w_prime[i].reduce();
 
-        if i == 0 {
-        }
+        if i == 0 {}
     }
 
     // Step 8: Apply hints to recover high bits w'₁
@@ -128,13 +121,11 @@ pub fn verify<P: DsaParams>(
     c_prime_input.extend_from_slice(&mu);
     c_prime_input.extend_from_slice(&w1_prime_bytes);
 
-    {
-    }
+    {}
 
     let c_prime_tilde = h_var(&c_prime_input, P::CTILDEBYTES);
 
-    {
-    }
+    {}
 
     // Step 10: Compare challenges using constant-time comparison
     // This prevents timing attacks by ensuring comparison time is independent
@@ -142,8 +133,7 @@ pub fn verify<P: DsaParams>(
     use crate::constant_time::ct_compare;
     let result = ct_compare(&c_prime_tilde, &signature.c_tilde);
 
-    if result != 1 {
-    }
+    if result != 1 {}
 
     result == 1
 }
@@ -178,12 +168,12 @@ fn encode_w1<P: DsaParams>(w1: &[Poly]) -> Vec<u8> {
 }
 
 mod tests {
-    use super::*;
-    use crate::keygen::keygen_from_seed;
-    use crate::params::{MlDsa44, MlDsa65};
-    use crate::sign::sign_deterministic;
-    extern crate alloc;
-    use alloc::vec;
+    
+    
+    
+    
+    
+    
 
     #[test]
     fn test_verify_valid_signature() {

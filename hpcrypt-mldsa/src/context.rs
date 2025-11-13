@@ -46,7 +46,7 @@ use alloc::vec::Vec;
 
 use crate::keygen::{PublicKey, SecretKey};
 use crate::params::DsaParams;
-use crate::sign::{Signature, sign, sign_deterministic};
+use crate::sign::{sign, sign_deterministic, Signature};
 use crate::verify::verify;
 
 /// Maximum context string length as per FIPS 204
@@ -69,10 +69,7 @@ pub enum ContextError {
 ///
 /// # Returns
 /// * Encoded message or error if context is too long
-fn encode_message_with_context(
-    message: &[u8],
-    context: &[u8],
-) -> Result<Vec<u8>, ContextError> {
+fn encode_message_with_context(message: &[u8], context: &[u8]) -> Result<Vec<u8>, ContextError> {
     if context.len() > MAX_CONTEXT_LENGTH {
         return Err(ContextError::ContextTooLong);
     }
@@ -202,8 +199,8 @@ pub fn sign_with_context_deterministic<P: DsaParams>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::params::MlDsa65;
     use crate::keygen::keygen;
+    use crate::params::MlDsa65;
 
     extern crate alloc;
     use alloc::vec;
@@ -280,7 +277,8 @@ mod tests {
         let max_context = vec![0x42u8; MAX_CONTEXT_LENGTH];
         let message = b"Test with max context";
 
-        let sig = sign_with_context(&sk, message, &max_context).expect("Signing with max context failed");
+        let sig =
+            sign_with_context(&sk, message, &max_context).expect("Signing with max context failed");
 
         let valid = verify_with_context(&pk, message, &max_context, &sig);
         assert!(valid, "Signature with max-length context should verify");
@@ -295,7 +293,10 @@ mod tests {
         let message = b"Test";
 
         let result = sign_with_context(&sk, message, &too_long_context);
-        assert!(result.is_none(), "Signing with too-long context should fail");
+        assert!(
+            result.is_none(),
+            "Signing with too-long context should fail"
+        );
     }
 
     #[test]
@@ -306,13 +307,16 @@ mod tests {
         let message = b"Deterministic message";
         let rnd = [99u8; 32];
 
-        let sig1 = sign_with_context_deterministic(&sk, message, context, &rnd)
-            .expect("Signing failed");
-        let sig2 = sign_with_context_deterministic(&sk, message, context, &rnd)
-            .expect("Signing failed");
+        let sig1 =
+            sign_with_context_deterministic(&sk, message, context, &rnd).expect("Signing failed");
+        let sig2 =
+            sign_with_context_deterministic(&sk, message, context, &rnd).expect("Signing failed");
 
         // Deterministic signing should produce identical signatures
-        assert_eq!(sig1.c_tilde, sig2.c_tilde, "Deterministic signatures should be identical");
+        assert_eq!(
+            sig1.c_tilde, sig2.c_tilde,
+            "Deterministic signatures should be identical"
+        );
 
         let valid = verify_with_context(&pk, message, context, &sig1);
         assert!(valid, "Deterministic signature with context should verify");
@@ -327,8 +331,20 @@ mod tests {
 
         // Check format: 0x00 || len(ctx) || ctx || M
         assert_eq!(encoded[0], 0x00, "First byte should be 0x00");
-        assert_eq!(encoded[1], context.len() as u8, "Second byte should be context length");
-        assert_eq!(&encoded[2..2+context.len()], context, "Context should follow");
-        assert_eq!(&encoded[2+context.len()..], message, "Message should be at end");
+        assert_eq!(
+            encoded[1],
+            context.len() as u8,
+            "Second byte should be context length"
+        );
+        assert_eq!(
+            &encoded[2..2 + context.len()],
+            context,
+            "Context should follow"
+        );
+        assert_eq!(
+            &encoded[2 + context.len()..],
+            message,
+            "Message should be at end"
+        );
     }
 }

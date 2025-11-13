@@ -9,7 +9,7 @@
 //! These operations are critical for the ML-DSA signature scheme's correctness
 //! and security properties.
 
-use crate::params::{Q, DsaParams};
+use crate::params::{DsaParams, Q};
 
 /// Power2Round: Split r into high and low parts
 ///
@@ -220,8 +220,8 @@ pub fn low_bits(r: i32, alpha: i32) -> i32 {
 // SIMD-accelerated polynomial-level operations
 //
 
-use crate::poly::Poly;
 use crate::params::N;
+use crate::poly::Poly;
 
 /// Power2Round for entire polynomial with SIMD acceleration
 ///
@@ -368,8 +368,8 @@ pub fn low_bits_poly(poly: &Poly, alpha: i32) -> Poly {
 }
 
 mod tests {
-    use super::*;
-    use crate::params::Q;
+    
+    
 
     #[test]
     fn test_power2round_basic() {
@@ -530,12 +530,7 @@ mod tests {
 
             // Check r1 is non-negative and bounded
             assert!(r1 >= 0, "r1={} negative for r={}", r1, r);
-            assert!(
-                r1 <= (Q - 1) / alpha + 1,
-                "r1={} too large for r={}",
-                r1,
-                r
-            );
+            assert!(r1 <= (Q - 1) / alpha + 1, "r1={} too large for r={}", r1, r);
         }
     }
 
@@ -564,12 +559,7 @@ mod tests {
 
             // Check r1 is non-negative and bounded
             assert!(r1 >= 0, "r1={} negative for r={}", r1, r);
-            assert!(
-                r1 <= (Q - 1) / alpha + 1,
-                "r1={} too large for r={}",
-                r1,
-                r
-            );
+            assert!(r1 <= (Q - 1) / alpha + 1, "r1={} too large for r={}", r1, r);
         }
     }
 

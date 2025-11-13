@@ -17,15 +17,15 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
+use crate::constant_time::ct_lt_i32;
+use crate::hints::{make_hint_poly_optimized, poly_hint_count};
 use crate::keygen::SecretKey;
 use crate::params::{DsaParams, Q};
 use crate::poly::Poly;
-use crate::rng::fill_random;
 use crate::rounding::{high_bits_poly, low_bits_poly};
-use crate::hints::{make_hint_poly_optimized, poly_hint_count};
 use crate::sampling::{expand_mask_poly, sample_in_ball};
 use crate::symmetric::{h, h_var};
-use crate::constant_time::ct_lt_i32;
+use hpcrypt_rng::generate_random_bytes;
 
 /// Maximum number of rejection sampling attempts
 const MAX_REJECTIONS: usize = 1000;
@@ -103,7 +103,13 @@ pub struct Signature<P: DsaParams> {
 impl<P: DsaParams> Signature<P> {
     /// Create a new signature
     pub fn new(c_tilde: Vec<u8>, z: Vec<Poly>, h: Vec<Poly>) -> Self {
-        assert_eq!(c_tilde.len(), P::CTILDEBYTES, "c_tilde must be {} bytes for {}", P::CTILDEBYTES, P::NAME);
+        assert_eq!(
+            c_tilde.len(),
+            P::CTILDEBYTES,
+            "c_tilde must be {} bytes for {}",
+            P::CTILDEBYTES,
+            P::NAME
+        );
         Self {
             c_tilde,
             z,
@@ -124,7 +130,7 @@ impl<P: DsaParams> Signature<P> {
 pub fn sign<P: DsaParams>(sk: &SecretKey<P>, message: &[u8]) -> Option<Signature<P>> {
     // Generate random seed for signing
     let mut rnd = [0u8; 32];
-    fill_random(&mut rnd);
+    generate_random_bytes(&mut rnd).expect("RNG failure");
 
     sign_internal::<P>(sk, message, &rnd)
 }
@@ -152,13 +158,11 @@ fn sign_internal<P: DsaParams>(
     message: &[u8],
     rnd: &[u8; 32],
 ) -> Option<Signature<P>> {
-
     // Step 1: Compute μ = H(tr || M)
     let mut mu_input = Vec::with_capacity(64 + message.len());
     mu_input.extend_from_slice(&sk.tr);
     mu_input.extend_from_slice(message);
     let mu = h(&mu_input);
-
 
     // Step 2: Generate seed for masking
     // rho_prime = H(K || rnd || μ)
@@ -168,12 +172,10 @@ fn sign_internal<P: DsaParams>(
     rho_prime_input.extend_from_slice(&mu);
     let rho_prime = h(&rho_prime_input);
 
-
     // Step 3: Use cached matrix A from secret key
     // OPTIMIZATION: Matrix A is pre-computed during keygen and cached in sk.cached_a
     // This eliminates ~80 µs (12%) of signing time that was spent on expand_matrix_a
     let matrix_a = &sk.cached_a;
-
 
     // Rejection sampling loop
     let mut kappa: u16 = 0;
@@ -189,18 +191,24 @@ fn sign_internal<P: DsaParams>(
     let mut _hint_rejects = 0usize;
 
     for attempt in 0..MAX_REJECTIONS {
-        if attempt % 10 == 0 {
-        }
+        if attempt % 10 == 0 {}
 
         #[cfg(not(all(test, feature = "std")))]
         let _ = attempt; // Suppress unused warning in release builds
 
         // Step 4: Sample masking vector y
-        if attempt == 0 {
-        }
+        if attempt == 0 {}
         // OPTIMIZATION: Use stack array to avoid heap allocation
-        let mut y_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
-                           Poly::new(), Poly::new(), Poly::new(), Poly::new()]; // Max L=7 for ML-DSA-87, use 8 for alignment
+        let mut y_array = [
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+        ]; // Max L=7 for ML-DSA-87, use 8 for alignment
         let y_slice = &mut y_array[..P::L];
 
         // Use AVX2 batched sampling if available (4-way parallel)
@@ -214,19 +222,21 @@ fn sign_internal<P: DsaParams>(
                 while i + 4 <= P::L {
                     let kappas = [
                         kappa + i as u16,
-                        kappa + (i+1) as u16,
-                        kappa + (i+2) as u16,
-                        kappa + (i+3) as u16
+                        kappa + (i + 1) as u16,
+                        kappa + (i + 2) as u16,
+                        kappa + (i + 3) as u16,
                     ];
                     let outputs = crate::symmetric::expand_mask_x4_avx2(&rho_prime, kappas);
                     for j in 0..4 {
-                        y_slice[i + j] = crate::sampling::sample_mask_from_bytes(&outputs[j], P::GAMMA1);
+                        y_slice[i + j] =
+                            crate::sampling::sample_mask_from_bytes(&outputs[j], P::GAMMA1);
                     }
                     i += 4;
                 }
                 // Handle remaining (< 4)
                 for idx in i..P::L {
-                    y_slice[idx] = expand_mask_poly(&rho_prime, kappa + idx as u16, idx as u8, P::GAMMA1);
+                    y_slice[idx] =
+                        expand_mask_poly(&rho_prime, kappa + idx as u16, idx as u8, P::GAMMA1);
                 }
             } else {
                 // Fallback: scalar path
@@ -240,11 +250,9 @@ fn sign_internal<P: DsaParams>(
         #[cfg(not(all(feature = "avx2", feature = "simd", target_arch = "x86_64")))]
         {
             for i in 0..P::L {
-                if attempt == 0 && i == 0 {
-                }
+                if attempt == 0 && i == 0 {}
                 y_slice[i] = expand_mask_poly(&rho_prime, kappa + i as u16, i as u8, P::GAMMA1);
-                if attempt == 0 && i == 0 {
-                }
+                if attempt == 0 && i == 0 {}
             }
         }
 
@@ -266,8 +274,16 @@ fn sign_internal<P: DsaParams>(
         // Optimization: Use multiple accumulators to expose instruction-level parallelism
         // CPU can execute multiple NTT multiplies in parallel, reducing critical path depth
         // OPTIMIZATION: Use stack array to avoid heap allocation
-        let mut w_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
-                           Poly::new(), Poly::new(), Poly::new(), Poly::new()]; // Max K=8 for ML-DSA-87
+        let mut w_array = [
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+        ]; // Max K=8 for ML-DSA-87
         let w_slice = &mut w_array[..P::K];
         for i in 0..P::K {
             // Use 4 accumulators for better ILP (instruction-level parallelism)
@@ -280,9 +296,9 @@ fn sign_internal<P: DsaParams>(
             let mut j = 0;
             while j + 4 <= P::L {
                 let prod0 = poly_multiply(&matrix_a[i][j], &y_slice[j]);
-                let prod1 = poly_multiply(&matrix_a[i][j+1], &y_slice[j+1]);
-                let prod2 = poly_multiply(&matrix_a[i][j+2], &y_slice[j+2]);
-                let prod3 = poly_multiply(&matrix_a[i][j+3], &y_slice[j+3]);
+                let prod1 = poly_multiply(&matrix_a[i][j + 1], &y_slice[j + 1]);
+                let prod2 = poly_multiply(&matrix_a[i][j + 2], &y_slice[j + 2]);
+                let prod3 = poly_multiply(&matrix_a[i][j + 3], &y_slice[j + 3]);
 
                 // Lazy reduction: defer modular reduction until final step
                 acc0 = acc0.add_lazy(&prod0);
@@ -307,21 +323,27 @@ fn sign_internal<P: DsaParams>(
             w_slice[i] = w_i;
         }
 
-        if attempt < 10 {
-        }
+        if attempt < 10 {}
 
         // Step 6: Extract high bits w1 = HighBits(w, 2γ₂)
         // OPTIMIZATION: Use stack array to avoid heap allocation
-        let mut w1_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
-                            Poly::new(), Poly::new(), Poly::new(), Poly::new()]; // Max K=8 for ML-DSA-87
+        let mut w1_array = [
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+        ]; // Max K=8 for ML-DSA-87
         let w1_slice = &mut w1_array[..P::K];
         for (idx, w_i) in w_slice.iter().enumerate() {
             // Use SIMD-accelerated high_bits for entire polynomial
             w1_slice[idx] = high_bits_poly(w_i, 2 * P::GAMMA2);
         }
 
-        if attempt < 10 {
-        }
+        if attempt < 10 {}
 
         // Step 7: Compute challenge c = H(μ || w1)
         let w1_bytes = encode_w1::<P>(w1_slice);
@@ -329,21 +351,27 @@ fn sign_internal<P: DsaParams>(
         c_input.extend_from_slice(&mu);
         c_input.extend_from_slice(&w1_bytes);
 
-        {
-        }
+        {}
 
         let c_tilde = h_var(&c_input, P::CTILDEBYTES);
 
-        {
-        }
+        {}
 
         // Sample challenge polynomial
         let c = sample_in_ball(&c_tilde, P::TAU);
 
         // Step 8: Compute response z = y + c·s1
         // OPTIMIZATION: Use stack array to avoid heap allocation
-        let mut z_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
-                           Poly::new(), Poly::new(), Poly::new(), Poly::new()]; // Max L=7 for ML-DSA-87
+        let mut z_array = [
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+        ]; // Max L=7 for ML-DSA-87
         let z_slice = &mut z_array[..P::L];
         let mut z_valid = true;
 
@@ -376,15 +404,22 @@ fn sign_internal<P: DsaParams>(
             {
                 _z_rejects += 1;
             }
-            if attempt < 5 || attempt % 100 == 0 {
-            }
+            if attempt < 5 || attempt % 100 == 0 {}
             continue; // Reject and try again
         }
 
         // Step 9: Compute r0 (low bits of w - c·s2)
         // OPTIMIZATION: Use stack array to avoid heap allocation
-        let mut r0_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
-                            Poly::new(), Poly::new(), Poly::new(), Poly::new()]; // Max K=8 for ML-DSA-87
+        let mut r0_array = [
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+        ]; // Max K=8 for ML-DSA-87
         let r0_slice = &mut r0_array[..P::K];
         let mut r0_valid = true;
 
@@ -411,15 +446,22 @@ fn sign_internal<P: DsaParams>(
             {
                 _r0_rejects += 1;
             }
-            if attempt < 5 || attempt % 100 == 0 {
-            }
+            if attempt < 5 || attempt % 100 == 0 {}
             continue; // Reject and try again
         }
 
         // Step 10: Compute c·t0 for hint generation
         // OPTIMIZATION: Use stack array to avoid heap allocation
-        let mut c_t0_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
-                              Poly::new(), Poly::new(), Poly::new(), Poly::new()]; // Max K=8 for ML-DSA-87
+        let mut c_t0_array = [
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+        ]; // Max K=8 for ML-DSA-87
         let c_t0_slice = &mut c_t0_array[..P::K];
         for i in 0..P::K {
             c_t0_slice[i] = poly_multiply(&c, &sk.t0[i]);
@@ -427,16 +469,26 @@ fn sign_internal<P: DsaParams>(
 
         // Step 11: Compute hints h
         // OPTIMIZATION: Use stack array to avoid heap allocation
-        let mut h_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
-                           Poly::new(), Poly::new(), Poly::new(), Poly::new()]; // Max K=8 for ML-DSA-87
+        let mut h_array = [
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+            Poly::new(),
+        ]; // Max K=8 for ML-DSA-87
         let h_slice = &mut h_array[..P::K];
         let mut total_hint_count = 0;
 
         for i in 0..P::K {
             // h_i = MakeHint(-c·t0, w - c·s2 + c·t0)
             // Use lazy reduction for the sub().add() chain
-            let mut w_cs2_ct0 = w_slice[i].sub_lazy(&poly_multiply(&c, &sk.s2[i])).add_lazy(&c_t0_slice[i]);
-            w_cs2_ct0.reduce();  // Reduce before hint computation
+            let mut w_cs2_ct0 = w_slice[i]
+                .sub_lazy(&poly_multiply(&c, &sk.s2[i]))
+                .add_lazy(&c_t0_slice[i]);
+            w_cs2_ct0.reduce(); // Reduce before hint computation
             let neg_ct0 = c_t0_slice[i].negate();
 
             // Use optimized const generic make_hint for +77% decompose improvement
@@ -455,8 +507,7 @@ fn sign_internal<P: DsaParams>(
             {
                 _hint_rejects += 1;
             }
-            if attempt < 5 || attempt % 100 == 0 {
-            }
+            if attempt < 5 || attempt % 100 == 0 {}
             continue; // Reject and try again
         }
 
@@ -547,11 +598,11 @@ fn encode_w1<P: DsaParams>(w1: &[Poly]) -> Vec<u8> {
 }
 
 mod tests {
-    use super::*;
-    use crate::keygen::keygen_from_seed;
-    use crate::params::{MlDsa44, MlDsa65};
-    extern crate alloc;
-    use alloc::vec;
+    
+    
+    
+    
+    
 
     #[test]
     fn test_sign_succeeds() {
@@ -646,7 +697,11 @@ mod tests {
         // Check dimensions
         assert_eq!(sig.z.len(), MlDsa65::L);
         assert_eq!(sig.h.len(), MlDsa65::K);
-        assert_eq!(sig.c_tilde.len(), MlDsa65::CTILDEBYTES, "c_tilde should be CTILDEBYTES (48 for ML-DSA-65)");
+        assert_eq!(
+            sig.c_tilde.len(),
+            MlDsa65::CTILDEBYTES,
+            "c_tilde should be CTILDEBYTES (48 for ML-DSA-65)"
+        );
     }
 
     #[test]
@@ -686,7 +741,7 @@ mod tests {
         // Test boundary
         poly.coeffs[5] = 100;
         assert_eq!(ct_norm_exceeds(&poly, 100), 0); // Exactly at threshold
-        assert_eq!(ct_norm_exceeds(&poly, 99), 1);  // Just over threshold
+        assert_eq!(ct_norm_exceeds(&poly, 99), 1); // Just over threshold
     }
 
     #[test]
@@ -699,9 +754,9 @@ mod tests {
     #[test]
     #[cfg(feature = "serde")]
     fn test_signature_serde_roundtrip() {
-        use serde_json;
         use crate::keygen::keygen_from_seed;
         use crate::params::MlDsa65;
+        use serde_json;
 
         let seed = [0x42u8; 32];
         let (_pk, sk) = keygen_from_seed::<MlDsa65>(&seed);

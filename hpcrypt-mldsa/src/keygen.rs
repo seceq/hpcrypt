@@ -22,10 +22,10 @@ use core::marker::PhantomData;
 
 use crate::params::DsaParams;
 use crate::poly::Poly;
-use crate::rng::fill_random;
 use crate::rounding::power2round;
 use crate::sampling::expand_matrix_a;
 use crate::symmetric::h;
+use hpcrypt_rng::generate_random_bytes;
 
 /// Public key for ML-DSA
 ///
@@ -114,7 +114,6 @@ pub struct SecretKey<P: DsaParams> {
     _phantom: PhantomData<P>,
 }
 
-
 #[cfg(feature = "zeroize")]
 impl<P: DsaParams> Drop for SecretKey<P> {
     fn drop(&mut self) {
@@ -182,7 +181,7 @@ impl<P: DsaParams> SecretKey<P> {
 pub fn keygen<P: DsaParams>() -> (PublicKey<P>, SecretKey<P>) {
     // Step 1: Generate random seed ξ
     let mut xi = [0u8; 32];
-    fill_random(&mut xi);
+    generate_random_bytes(&mut xi).expect("RNG failure");
 
     keygen_from_seed::<P>(&xi)
 }
@@ -217,13 +216,11 @@ pub fn keygen_from_seed<P: DsaParams>(xi: &[u8; 32]) -> (PublicKey<P>, SecretKey
     seed_with_params[32] = P::K as u8;
     seed_with_params[33] = P::L as u8;
 
-    {
-    }
+    {}
 
     let seed_expansion = crate::symmetric::h128(&seed_with_params);
 
-    {
-    }
+    {}
 
     let mut rho = [0u8; 32];
     let mut rho_prime = [0u8; 64];
@@ -250,11 +247,14 @@ pub fn keygen_from_seed<P: DsaParams>(xi: &[u8; 32]) -> (PublicKey<P>, SecretKey
             // Sample s1 in batches of 4
             let mut i = 0;
             while i + 4 <= P::L {
-                let indices = [i as u16, (i+1) as u16, (i+2) as u16, (i+3) as u16];
+                let indices = [i as u16, (i + 1) as u16, (i + 2) as u16, (i + 3) as u16];
                 let outputs = crate::symmetric::expand_s_x4_avx2(&rho_prime, indices);
                 for j in 0..4 {
                     let mut reader = &outputs[j][..];
-                    s1.push(crate::sampling::sample_poly_eta_from_bytes(&mut reader, P::ETA));
+                    s1.push(crate::sampling::sample_poly_eta_from_bytes(
+                        &mut reader,
+                        P::ETA,
+                    ));
                 }
                 i += 4;
             }
@@ -268,11 +268,19 @@ pub fn keygen_from_seed<P: DsaParams>(xi: &[u8; 32]) -> (PublicKey<P>, SecretKey
             let mut i = 0;
             while i + 4 <= P::K {
                 let base = P::L + i;
-                let indices = [base as u16, (base+1) as u16, (base+2) as u16, (base+3) as u16];
+                let indices = [
+                    base as u16,
+                    (base + 1) as u16,
+                    (base + 2) as u16,
+                    (base + 3) as u16,
+                ];
                 let outputs = crate::symmetric::expand_s_x4_avx2(&rho_prime, indices);
                 for j in 0..4 {
                     let mut reader = &outputs[j][..];
-                    s2.push(crate::sampling::sample_poly_eta_from_bytes(&mut reader, P::ETA));
+                    s2.push(crate::sampling::sample_poly_eta_from_bytes(
+                        &mut reader,
+                        P::ETA,
+                    ));
                 }
                 i += 4;
             }
@@ -331,8 +339,7 @@ pub fn keygen_from_seed<P: DsaParams>(xi: &[u8; 32]) -> (PublicKey<P>, SecretKey
         t_i.reduce();
 
         // DEBUG: Print first t value for KAT comparison
-        if i == 0 {
-        }
+        if i == 0 {}
 
         t.push(t_i);
     }
@@ -361,7 +368,8 @@ pub fn keygen_from_seed<P: DsaParams>(xi: &[u8; 32]) -> (PublicKey<P>, SecretKey
         let two_pow_d = 1i64 << P::D;
         for i in 0..P::K {
             for j in 0..256 {
-                let reconstructed = ((t1[i].coeffs[j] as i64 * two_pow_d + t0[i].coeffs[j] as i64).rem_euclid(Q as i64)) as i32;
+                let reconstructed = ((t1[i].coeffs[j] as i64 * two_pow_d + t0[i].coeffs[j] as i64)
+                    .rem_euclid(Q as i64)) as i32;
                 if reconstructed != t[i].coeffs[j] {
                     panic!("Power2Round failed!");
                 }
@@ -409,8 +417,8 @@ fn poly_multiply(a: &Poly, b: &Poly) -> Poly {
 }
 
 mod tests {
-    use super::*;
-    use crate::params::{MlDsa44, MlDsa65, MlDsa87, Q};
+    
+    
 
     #[test]
     fn test_keygen_deterministic() {
@@ -561,10 +569,10 @@ mod tests {
         // This demonstrates that the algorithm doesn't have secret-dependent branches
 
         let seeds = [
-            [0x00u8; 32],  // All zeros
-            [0xFFu8; 32],  // All ones
-            [0x55u8; 32],  // Alternating bits
-            [0xAAu8; 32],  // Different alternating
+            [0x00u8; 32], // All zeros
+            [0xFFu8; 32], // All ones
+            [0x55u8; 32], // Alternating bits
+            [0xAAu8; 32], // Different alternating
         ];
 
         for seed in &seeds {

@@ -3,18 +3,16 @@
 //! These tests validate robustness, edge cases, and performance characteristics.
 
 mod tests {
-    use crate::keygen::keygen_from_seed;
-    use crate::params::{MlDsa44, MlDsa65, MlDsa87};
-    use crate::sign::{sign, sign_deterministic};
-    use crate::verify::verify;
-    use crate::serialize::{serialize_public_key, serialize_secret_key,
-                           deserialize_public_key, deserialize_secret_key,
-                           serialize_signature, deserialize_signature};
-    extern crate alloc;
-    use alloc::vec;
-    use alloc::vec::Vec;
-    use alloc::string::String;
-    use alloc::format;
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
     /// Test multiple sign/verify cycles with the same keypair
     #[test]
@@ -32,13 +30,19 @@ mod tests {
                 .expect(&format!("Signing should succeed for message {}", i));
 
             // Verify with correct message
-            assert!(verify::<MlDsa65>(&pk, msg_bytes, &sig),
-                "Signature {} should verify with correct message", i);
+            assert!(
+                verify::<MlDsa65>(&pk, msg_bytes, &sig),
+                "Signature {} should verify with correct message",
+                i
+            );
 
             // Verify fails with wrong message
             let wrong_msg = format!("Wrong message {}", i);
-            assert!(!verify::<MlDsa65>(&pk, wrong_msg.as_bytes(), &sig),
-                "Signature {} should not verify with wrong message", i);
+            assert!(
+                !verify::<MlDsa65>(&pk, wrong_msg.as_bytes(), &sig),
+                "Signature {} should not verify with wrong message",
+                i
+            );
         }
     }
 
@@ -57,13 +61,19 @@ mod tests {
             let sig = sign::<MlDsa65>(&sk, &message)
                 .expect(&format!("Signing should succeed for {} byte message", size));
 
-            assert!(verify::<MlDsa65>(&pk, &message, &sig),
-                "Signature should verify for {} byte message", size);
+            assert!(
+                verify::<MlDsa65>(&pk, &message, &sig),
+                "Signature should verify for {} byte message",
+                size
+            );
 
             // Check signature size is always correct
             let serialized = serialize_signature::<MlDsa65>(&sig);
-            assert_eq!(serialized.len(), 3309,
-                "Signature size should be 3309 bytes regardless of message size");
+            assert_eq!(
+                serialized.len(),
+                3309,
+                "Signature size should be 3309 bytes regardless of message size"
+            );
         }
     }
 
@@ -77,30 +87,51 @@ mod tests {
         {
             let (pk, sk) = keygen_from_seed::<MlDsa44>(&seed);
             let sig = sign::<MlDsa44>(&sk, message).expect("ML-DSA-44 sign should succeed");
-            assert!(verify::<MlDsa44>(&pk, message, &sig), "ML-DSA-44 verify should succeed");
+            assert!(
+                verify::<MlDsa44>(&pk, message, &sig),
+                "ML-DSA-44 verify should succeed"
+            );
 
             let serialized = serialize_signature::<MlDsa44>(&sig);
-            assert_eq!(serialized.len(), 2420, "ML-DSA-44 signature should be 2420 bytes");
+            assert_eq!(
+                serialized.len(),
+                2420,
+                "ML-DSA-44 signature should be 2420 bytes"
+            );
         }
 
         // ML-DSA-65
         {
             let (pk, sk) = keygen_from_seed::<MlDsa65>(&seed);
             let sig = sign::<MlDsa65>(&sk, message).expect("ML-DSA-65 sign should succeed");
-            assert!(verify::<MlDsa65>(&pk, message, &sig), "ML-DSA-65 verify should succeed");
+            assert!(
+                verify::<MlDsa65>(&pk, message, &sig),
+                "ML-DSA-65 verify should succeed"
+            );
 
             let serialized = serialize_signature::<MlDsa65>(&sig);
-            assert_eq!(serialized.len(), 3309, "ML-DSA-65 signature should be 3309 bytes");
+            assert_eq!(
+                serialized.len(),
+                3309,
+                "ML-DSA-65 signature should be 3309 bytes"
+            );
         }
 
         // ML-DSA-87
         {
             let (pk, sk) = keygen_from_seed::<MlDsa87>(&seed);
             let sig = sign::<MlDsa87>(&sk, message).expect("ML-DSA-87 sign should succeed");
-            assert!(verify::<MlDsa87>(&pk, message, &sig), "ML-DSA-87 verify should succeed");
+            assert!(
+                verify::<MlDsa87>(&pk, message, &sig),
+                "ML-DSA-87 verify should succeed"
+            );
 
             let serialized = serialize_signature::<MlDsa87>(&sig);
-            assert_eq!(serialized.len(), 4627, "ML-DSA-87 signature should be 4627 bytes");
+            assert_eq!(
+                serialized.len(),
+                4627,
+                "ML-DSA-87 signature should be 4627 bytes"
+            );
         }
     }
 
@@ -112,16 +143,16 @@ mod tests {
         let message = b"Serialization test message";
 
         for i in 0..50 {
-            let test_msg = format!("{} iteration {}",
-                core::str::from_utf8(message).unwrap(), i);
+            let test_msg = format!("{} iteration {}", core::str::from_utf8(message).unwrap(), i);
 
             // Sign
-            let sig = sign::<MlDsa65>(&sk, test_msg.as_bytes())
-                .expect("Signing should succeed");
+            let sig = sign::<MlDsa65>(&sk, test_msg.as_bytes()).expect("Signing should succeed");
 
             // Verify original
-            assert!(verify::<MlDsa65>(&pk, test_msg.as_bytes(), &sig),
-                "Original signature should verify");
+            assert!(
+                verify::<MlDsa65>(&pk, test_msg.as_bytes(), &sig),
+                "Original signature should verify"
+            );
 
             // Serialize and deserialize
             let serialized = serialize_signature::<MlDsa65>(&sig);
@@ -129,8 +160,10 @@ mod tests {
                 .expect("Deserialization should succeed");
 
             // Verify deserialized
-            assert!(verify::<MlDsa65>(&pk, test_msg.as_bytes(), &deserialized),
-                "Deserialized signature should verify");
+            assert!(
+                verify::<MlDsa65>(&pk, test_msg.as_bytes(), &deserialized),
+                "Deserialized signature should verify"
+            );
         }
     }
 
@@ -174,13 +207,20 @@ mod tests {
         let (pk2, sk2) = keygen_from_seed::<MlDsa65>(&seed2);
 
         // Public keys should differ
-        assert_ne!(pk1.rho, pk2.rho, "Different seeds should produce different rho");
-        assert_ne!(pk1.t1[0].coeffs[0], pk2.t1[0].coeffs[0],
-            "Different seeds should produce different t1");
+        assert_ne!(
+            pk1.rho, pk2.rho,
+            "Different seeds should produce different rho"
+        );
+        assert_ne!(
+            pk1.t1[0].coeffs[0], pk2.t1[0].coeffs[0],
+            "Different seeds should produce different t1"
+        );
 
         // Secret keys should differ
-        assert_ne!(sk1.s1[0].coeffs[0], sk2.s1[0].coeffs[0],
-            "Different seeds should produce different s1");
+        assert_ne!(
+            sk1.s1[0].coeffs[0], sk2.s1[0].coeffs[0],
+            "Different seeds should produce different s1"
+        );
     }
 
     /// Test cross-keypair signature rejection
@@ -195,16 +235,19 @@ mod tests {
         let message = b"Cross-key test";
 
         // Sign with sk1
-        let sig = sign::<MlDsa65>(&sk1, message)
-            .expect("Signing with sk1 should succeed");
+        let sig = sign::<MlDsa65>(&sk1, message).expect("Signing with sk1 should succeed");
 
         // Verify with correct pk1
-        assert!(verify::<MlDsa65>(&pk1, message, &sig),
-            "Signature should verify with matching public key");
+        assert!(
+            verify::<MlDsa65>(&pk1, message, &sig),
+            "Signature should verify with matching public key"
+        );
 
         // Should NOT verify with wrong pk2
-        assert!(!verify::<MlDsa65>(&pk2, message, &sig),
-            "Signature should NOT verify with different public key");
+        assert!(
+            !verify::<MlDsa65>(&pk2, message, &sig),
+            "Signature should NOT verify with different public key"
+        );
     }
 
     /// Stress test: Sign many messages rapidly (1000 signatures)
@@ -228,16 +271,22 @@ mod tests {
 
                 // Verify every 10th signature
                 if i % 10 == 0 {
-                    assert!(verify::<MlDsa65>(&pk, message.as_bytes(), &sig),
-                        "Signature {} should verify", i);
+                    assert!(
+                        verify::<MlDsa65>(&pk, message.as_bytes(), &sig),
+                        "Signature {} should verify",
+                        i
+                    );
                 }
             }
         }
 
         // Should have high success rate (>90% based on rejection sampling)
         let success_rate = (success_count as f64) / (total_attempts as f64);
-        assert!(success_rate > 0.90,
-            "Success rate should be >90%, got {:.2}%", success_rate * 100.0);
+        assert!(
+            success_rate > 0.90,
+            "Success rate should be >90%, got {:.2}%",
+            success_rate * 100.0
+        );
     }
 
     /// Test edge case: empty message
@@ -247,11 +296,13 @@ mod tests {
         let (pk, sk) = keygen_from_seed::<MlDsa65>(&seed);
         let empty_message = b"";
 
-        let sig = sign::<MlDsa65>(&sk, empty_message)
-            .expect("Signing empty message should succeed");
+        let sig =
+            sign::<MlDsa65>(&sk, empty_message).expect("Signing empty message should succeed");
 
-        assert!(verify::<MlDsa65>(&pk, empty_message, &sig),
-            "Empty message signature should verify");
+        assert!(
+            verify::<MlDsa65>(&pk, empty_message, &sig),
+            "Empty message signature should verify"
+        );
     }
 
     /// Test edge case: very long message (1MB, simulating large document)
@@ -267,15 +318,19 @@ mod tests {
         // 1 MB message
         let large_message = vec![0x5Au8; 1024 * 1024];
 
-        let sig = sign::<MlDsa65>(&sk, &large_message)
-            .expect("Signing 1MB message should succeed");
+        let sig = sign::<MlDsa65>(&sk, &large_message).expect("Signing 1MB message should succeed");
 
-        assert!(verify::<MlDsa65>(&pk, &large_message, &sig),
-            "Large message signature should verify");
+        assert!(
+            verify::<MlDsa65>(&pk, &large_message, &sig),
+            "Large message signature should verify"
+        );
 
         // Signature size should still be constant
         let serialized = serialize_signature::<MlDsa65>(&sig);
-        assert_eq!(serialized.len(), 3309,
-            "Signature size should be constant regardless of message size");
+        assert_eq!(
+            serialized.len(),
+            3309,
+            "Signature size should be constant regardless of message size"
+        );
     }
 }

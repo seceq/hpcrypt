@@ -19,22 +19,6 @@ use crate::symmetric::{expand_a as expand_a_element, expand_s as expand_s_xof, S
 // Lookup Tables for Rejection Sampling Optimization
 // ============================================================================
 
-/// Lookup table for modulo 5 operation (for eta=2 sampling)
-///
-/// This table precomputes `i % 5` for all possible nibble values (0-15).
-/// Using a lookup table eliminates the expensive modulo operation in the hot path.
-///
-/// Performance gain: ~3-7% overall for eta=2 sampling
-const MOD5_TABLE: [u8; 16] = {
-    let mut table = [0u8; 16];
-    let mut i = 0;
-    while i < 16 {
-        table[i] = (i % 5) as u8;
-        i += 1;
-    }
-    table
-};
-
 /// Lookup table for nibble value to coefficient mapping (eta=2)
 ///
 /// For eta=2, we map nibble values 0-14 to coefficients in [-2, 2]:
@@ -49,20 +33,6 @@ const ETA2_COEFF_TABLE: [i32; 16] = {
     while i < 15 {
         let mod5 = (i % 5) as i32;
         table[i] = 2 - mod5;
-        i += 1;
-    }
-    table
-};
-
-/// Lookup table for modulo 9 operation (for eta=4 sampling)
-///
-/// This table precomputes `i % 9` for all possible nibble values (0-15).
-/// Only values 0-8 are valid for eta=4 sampling.
-const MOD9_TABLE: [u8; 16] = {
-    let mut table = [0u8; 16];
-    let mut i = 0;
-    while i < 16 {
-        table[i] = (i % 9) as u8;
         i += 1;
     }
     table
@@ -95,7 +65,7 @@ const ETA4_COEFF_TABLE: [i32; 16] = {
 /// Using a macro keeps the code organized and allows for easy loop unrolling.
 macro_rules! process_byte_eta2_lut {
     ($poly:expr, $coeffs_generated:expr, $byte:expr) => {{
-        let t0 = $byte & 0x0F;        // Low nibble
+        let t0 = $byte & 0x0F; // Low nibble
         let t1 = ($byte >> 4) & 0x0F; // High nibble
 
         // Process low nibble using lookup table
@@ -559,7 +529,7 @@ fn sample_poly_eta_old_modulo_version(xof: &mut Shake256Xof, eta: i32) -> Poly {
                     break;
                 }
 
-                let t0 = byte & 0x0F;        // Low nibble
+                let t0 = byte & 0x0F; // Low nibble
                 let t1 = (byte >> 4) & 0x0F; // High nibble
 
                 // Process low nibble
@@ -675,7 +645,7 @@ pub fn sample_poly_eta_from_bytes(bytes: &mut &[u8], eta: i32) -> Poly {
             let byte = bytes[byte_idx];
             byte_idx += 1;
 
-            let t0 = byte & 0x0F;        // Low nibble
+            let t0 = byte & 0x0F; // Low nibble
             let t1 = (byte >> 4) & 0x0F; // High nibble
 
             // Process low nibble
@@ -742,7 +712,6 @@ pub fn sample_poly_eta_from_bytes(bytes: &mut &[u8], eta: i32) -> Poly {
 /// # Returns
 /// * Polynomial with coefficients in [-γ₁, γ₁]
 pub fn expand_mask_poly(rho_prime: &[u8; 64], kappa: u16, _index: u8, gamma1: i32) -> Poly {
-
     // Construct input for SHAKE-256: rho_prime || kappa (2 bytes, little-endian)
     // Note: kappa already encodes the polynomial index
     let mut input = [0u8; 64 + 2];
@@ -760,7 +729,6 @@ pub fn expand_mask_poly(rho_prime: &[u8; 64], kappa: u16, _index: u8, gamma1: i3
     } else {
         panic!("Invalid gamma1 value");
     };
-
 
     let mut poly = Poly::new();
     let mut coeffs_generated = 0;
@@ -782,8 +750,7 @@ pub fn expand_mask_poly(rho_prime: &[u8; 64], kappa: u16, _index: u8, gamma1: i3
     while coeffs_generated < N {
         {
             _iterations += 1;
-            if _iterations % 1000 == 0 {
-            }
+            if _iterations % 1000 == 0 {}
         }
         // Read enough bytes for one coefficient
         let mut val = 0u32;
@@ -874,8 +841,11 @@ pub fn sample_mask_from_bytes(bytes: &[u8], gamma1: i32) -> Poly {
 
     // If we didn't generate enough coefficients, something is wrong
     // (640 bytes should be more than enough for 256 coefficients)
-    debug_assert_eq!(coeffs_generated, N,
-        "Not enough bytes to generate all coefficients: {} < {}", coeffs_generated, N);
+    debug_assert_eq!(
+        coeffs_generated, N,
+        "Not enough bytes to generate all coefficients: {} < {}",
+        coeffs_generated, N
+    );
 
     poly
 }
@@ -1008,7 +978,13 @@ pub(crate) fn sample_poly_uniform(xof: &mut Xof) -> Poly {
         buflen = SHAKE128_RATE + off;
 
         // Continue rejection sampling from where we left off
-        let new_coeffs = rej_uniform(&mut poly.coeffs, coeffs_generated, N - coeffs_generated, &buf, buflen);
+        let new_coeffs = rej_uniform(
+            &mut poly.coeffs,
+            coeffs_generated,
+            N - coeffs_generated,
+            &buf,
+            buflen,
+        );
         coeffs_generated += new_coeffs;
     }
 
@@ -1024,10 +1000,8 @@ fn rej_uniform(coeffs: &mut [i32], start: usize, len: usize, buf: &[u8], buflen:
 
     while ctr < len && pos + 3 <= buflen {
         // Read 3 bytes and mask to 23 bits
-        let t = ((buf[pos] as u32)
-              | ((buf[pos + 1] as u32) << 8)
-              | ((buf[pos + 2] as u32) << 16))
-              & 0x7FFFFF;
+        let t = ((buf[pos] as u32) | ((buf[pos + 1] as u32) << 8) | ((buf[pos + 2] as u32) << 16))
+            & 0x7FFFFF;
 
         pos += 3;
 
@@ -1042,8 +1016,8 @@ fn rej_uniform(coeffs: &mut [i32], start: usize, len: usize, buf: &[u8], buflen:
 }
 
 mod tests {
-    use super::*;
-    use crate::params::{MlDsa44, MlDsa65, MlDsa87};
+    
+    
 
     #[test]
     fn test_sample_in_ball_count() {
@@ -1060,7 +1034,10 @@ mod tests {
             }
         }
 
-        assert_eq!(non_zero_count, tau, "Should have exactly tau non-zero coefficients");
+        assert_eq!(
+            non_zero_count, tau,
+            "Should have exactly tau non-zero coefficients"
+        );
     }
 
     #[test]
@@ -1102,7 +1079,10 @@ mod tests {
         let poly1 = sample_in_ball(&seed1, tau);
         let poly2 = sample_in_ball(&seed2, tau);
 
-        assert_ne!(poly1, poly2, "Different seeds should produce different polynomials");
+        assert_ne!(
+            poly1, poly2,
+            "Different seeds should produce different polynomials"
+        );
     }
 
     #[test]
@@ -1185,7 +1165,10 @@ mod tests {
         let poly1 = expand_mask_poly(&rho_prime, 0, index, gamma1);
         let poly2 = expand_mask_poly(&rho_prime, 1, index, gamma1);
 
-        assert_ne!(poly1, poly2, "Different kappa should produce different polynomials");
+        assert_ne!(
+            poly1, poly2,
+            "Different kappa should produce different polynomials"
+        );
     }
 
     #[test]
@@ -1284,14 +1267,13 @@ mod tests {
     #[cfg(feature = "std")]
     fn test_uniform_eta_matches_c_reference() {
         use crate::params::MlDsa65;
-        use sha3::{Shake256, digest::{Update, ExtendableOutput, XofReader}};
+        use hpcrypt_hash::Shake256;
 
         // KAT xi seed
         let xi: [u8; 32] = [
-            0xf6, 0x96, 0x48, 0x40, 0x48, 0xec, 0x21, 0xf9,
-            0x6c, 0xf5, 0x0a, 0x56, 0xd0, 0x75, 0x9c, 0x44,
-            0x8f, 0x37, 0x79, 0x75, 0x2f, 0x03, 0x83, 0xd3,
-            0x74, 0x49, 0x69, 0x06, 0x94, 0xcf, 0x7a, 0x68
+            0xf6, 0x96, 0x48, 0x40, 0x48, 0xec, 0x21, 0xf9, 0x6c, 0xf5, 0x0a, 0x56, 0xd0, 0x75,
+            0x9c, 0x44, 0x8f, 0x37, 0x79, 0x75, 0x2f, 0x03, 0x83, 0xd3, 0x74, 0x49, 0x69, 0x06,
+            0x94, 0xcf, 0x7a, 0x68,
         ];
 
         // Expand seed (matching C test_ntt_s1.c)
@@ -1300,7 +1282,7 @@ mod tests {
         seedbuf[32] = MlDsa65::K as u8;
         seedbuf[33] = MlDsa65::L as u8;
 
-        let mut hasher = Shake256::default();
+        let mut hasher = Shake256::new();
         hasher.update(&seedbuf[..34]);
         let mut reader = hasher.finalize_xof();
         reader.read(&mut seedbuf);
@@ -1309,26 +1291,21 @@ mod tests {
         rhoprime.copy_from_slice(&seedbuf[32..96]);
 
         // Sample s1 using our implementation
-        let s1 = expand_secret_vec::<{MlDsa65::L}>(&rhoprime, 0, MlDsa65::ETA);
+        let s1 = expand_secret_vec::<{ MlDsa65::L }>(&rhoprime, 0, MlDsa65::ETA);
 
         // Expected values from C polyvecl_uniform_eta (ALL 256 coefficients)
         let expected_s1_0: [i32; 256] = [
-            0, 0, -2, 4, 1, -4, 0, -1, 2, 0, 1, -4, 3, 2, -3, -4,
-            3, 3, 3, 0, 1, 4, -4, 1, -2, -2, 4, 2, 0, -4, -4, -4,
-            -4, 1, 2, -1, -1, 4, -3, -4, -4, -1, -1, 4, 0, 4, -4, -3,
-            -2, 1, -2, 1, -2, 0, -4, 1, -4, -1, -3, 1, -4, 0, -1, 0,
-            3, -3, 0, 3, 3, -3, 1, -3, 2, -1, -4, 0, -2, 3, -3, 4,
-            1, 2, 3, 2, 2, -1, 4, -3, 3, -4, 4, -2, -2, 1, 3, 0,
-            -1, 2, 1, -3, -2, 4, 0, 1, 1, -3, 2, -4, 1, -1, -1, 2,
-            -2, 1, -2, 2, 0, -3, 3, -4, -2, 1, -4, -1, -4, -3, 1, 0,
-            -1, -2, -1, -3, -1, -4, 2, 4, 0, -4, 4, -3, 0, -1, 0, 1,
-            -1, 1, 3, 2, -2, 2, 2, -3, -3, 2, 3, -3, 3, 0, 4, 3,
-            3, -4, 0, 1, 3, 0, -1, -4, 0, 4, 3, -1, -2, -3, 3, 1,
-            -2, 2, 1, 0, 4, -4, 4, -2, -3, 3, 2, 0, 0, 3, 3, 4,
-            3, -1, 2, -2, -1, -1, -2, 3, 0, -3, 1, -1, 0, 0, -3, -3,
-            3, 2, 1, -4, -4, -1, 1, -4, -4, -3, 4, 3, -3, -4, -3, -1,
-            -2, -4, 0, 4, -3, -4, -1, 2, 1, -1, 3, -2, 2, 3, 2, 3,
-            1, -3, 2, -2, 3, -2, 3, -1, 4, 0, -1, 3, 4, 3, 4, 3,
+            0, 0, -2, 4, 1, -4, 0, -1, 2, 0, 1, -4, 3, 2, -3, -4, 3, 3, 3, 0, 1, 4, -4, 1, -2, -2,
+            4, 2, 0, -4, -4, -4, -4, 1, 2, -1, -1, 4, -3, -4, -4, -1, -1, 4, 0, 4, -4, -3, -2, 1,
+            -2, 1, -2, 0, -4, 1, -4, -1, -3, 1, -4, 0, -1, 0, 3, -3, 0, 3, 3, -3, 1, -3, 2, -1, -4,
+            0, -2, 3, -3, 4, 1, 2, 3, 2, 2, -1, 4, -3, 3, -4, 4, -2, -2, 1, 3, 0, -1, 2, 1, -3, -2,
+            4, 0, 1, 1, -3, 2, -4, 1, -1, -1, 2, -2, 1, -2, 2, 0, -3, 3, -4, -2, 1, -4, -1, -4, -3,
+            1, 0, -1, -2, -1, -3, -1, -4, 2, 4, 0, -4, 4, -3, 0, -1, 0, 1, -1, 1, 3, 2, -2, 2, 2,
+            -3, -3, 2, 3, -3, 3, 0, 4, 3, 3, -4, 0, 1, 3, 0, -1, -4, 0, 4, 3, -1, -2, -3, 3, 1, -2,
+            2, 1, 0, 4, -4, 4, -2, -3, 3, 2, 0, 0, 3, 3, 4, 3, -1, 2, -2, -1, -1, -2, 3, 0, -3, 1,
+            -1, 0, 0, -3, -3, 3, 2, 1, -4, -4, -1, 1, -4, -4, -3, 4, 3, -3, -4, -3, -1, -2, -4, 0,
+            4, -3, -4, -1, 2, 1, -1, 3, -2, 2, 3, 2, 3, 1, -3, 2, -2, 3, -2, 3, -1, 4, 0, -1, 3, 4,
+            3, 4, 3,
         ];
 
         // Compare first 256 coefficients and show first mismatch details
@@ -1344,6 +1321,5 @@ mod tests {
         if let Some(pos) = first_mismatch {
             panic!("s1[0] coefficient mismatch at position {}", pos);
         }
-
     }
 }
