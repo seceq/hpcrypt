@@ -6,10 +6,10 @@
 //! allows for fast reduction using the identity:
 //!   2^256 ≡ 2^32 + 977 (mod p)
 
+use super::macros::*;
+use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 use crate::secp256k1::constants::SECP256K1_MODULUS;
 use hpcrypt_core::error::CurveError;
-use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
-use super::macros::*;
 
 /// A field element in GF(p) where p is the secp256k1 prime
 ///
@@ -21,14 +21,20 @@ pub struct FieldElement {
 
 impl FieldElement {
     /// The zero element
-    pub const ZERO: Self = Self { limbs: [0, 0, 0, 0] };
+    pub const ZERO: Self = Self {
+        limbs: [0, 0, 0, 0],
+    };
 
     /// The multiplicative identity
-    pub const ONE: Self = Self { limbs: [1, 0, 0, 0] };
+    pub const ONE: Self = Self {
+        limbs: [1, 0, 0, 0],
+    };
 
     /// Return the additive identity (zero)
     pub const fn zero() -> Self {
-        Self { limbs: [0, 0, 0, 0] }
+        Self {
+            limbs: [0, 0, 0, 0],
+        }
     }
 
     /// Return the multiplicative identity (one)
@@ -121,41 +127,6 @@ impl FieldElement {
         Self::reduce_after_add(&result)
     }
 
-    /// Check if this element is less than the modulus
-    /// Returns true if self < p, false otherwise
-    fn lt_modulus(&self) -> bool {
-        // Compare limbs from most significant to least significant
-        for i in (0..4).rev() {
-            if self.limbs[i] < SECP256K1_MODULUS[i] {
-                return true;
-            } else if self.limbs[i] > SECP256K1_MODULUS[i] {
-                return false;
-            }
-        }
-        // Equal to modulus
-        false
-    }
-
-    /// Subtract the modulus from this element
-    /// Does not check if self >= p, caller must ensure this
-    fn sub_modulus(&self) -> Self {
-        let mut result = [0u64; 4];
-        let mut borrow = 0i128;
-
-        for i in 0..4 {
-            let diff = (self.limbs[i] as i128) - (SECP256K1_MODULUS[i] as i128) - borrow;
-            if diff < 0 {
-                result[i] = (diff + (1i128 << 64)) as u64;
-                borrow = 1;
-            } else {
-                result[i] = diff as u64;
-                borrow = 0;
-            }
-        }
-
-        Self { limbs: result }
-    }
-
     /// Multiply two field elements
     pub fn mul(&self, other: &Self) -> Self {
         // Karatsuba multiplication: 4x4 limbs -> 8 limb result
@@ -204,7 +175,7 @@ impl FieldElement {
                         // True value = (temp + carry) mod 2^128 + 2^128
                         let wrapped = temp.wrapping_add(carry);
                         result[1] = wrapped as u64;
-                        (wrapped >> 64) + (1u128 << 64)  // Add 2^128 / 2^64 = 2^64 to high part
+                        (wrapped >> 64) + (1u128 << 64) // Add 2^128 / 2^64 = 2^64 to high part
                     }
                 },
                 None => {
@@ -212,7 +183,7 @@ impl FieldElement {
                     // True value = (p01 + p10) mod 2^128 + 2^128
                     let wrapped = p01.wrapping_add(p10);
                     let sum1 = wrapped.wrapping_add(carry);
-                    let overflow2 = sum1 < wrapped;  // Did adding carry also overflow?
+                    let overflow2 = sum1 < wrapped; // Did adding carry also overflow?
                     result[1] = sum1 as u64;
                     (sum1 >> 64) + (1u128 << 64) + if overflow2 { 1u128 << 64 } else { 0 }
                 }
@@ -263,7 +234,7 @@ impl FieldElement {
             z_mid[2] = add as u64;
             let add = (z_mid[3] as u128) + (b_sum[1] as u128) + (add >> 64);
             z_mid[3] = add as u64;
-            z_mid_carry += (add >> 64) as u64;  // FIX: Capture the carry!
+            z_mid_carry += (add >> 64) as u64; // FIX: Capture the carry!
         }
 
         if b_sum_carry != 0 {
@@ -271,11 +242,11 @@ impl FieldElement {
             z_mid[2] = add as u64;
             let add = (z_mid[3] as u128) + (a_sum[1] as u128) + (add >> 64);
             z_mid[3] = add as u64;
-            z_mid_carry += (add >> 64) as u64;  // FIX: Capture the carry!
+            z_mid_carry += (add >> 64) as u64; // FIX: Capture the carry!
         }
 
         if a_sum_carry != 0 && b_sum_carry != 0 {
-            z_mid_carry += 1;  // The product of the two carry bits
+            z_mid_carry += 1; // The product of the two carry bits
         }
 
         // Compute z1 = z_mid - z0 - z2
@@ -492,7 +463,10 @@ impl FieldElement {
     /// Only use this if you specifically need Fermat-based inversion.
     pub fn invert_fermat(&self) -> Result<Self, CurveError> {
         if bool::from(self.is_zero()) {
-            return Err(CurveError::InvalidScalar { expected: 32, actual: 0 });
+            return Err(CurveError::InvalidScalar {
+                expected: 32,
+                actual: 0,
+            });
         }
 
         // p - 2 for secp256k1 (in little-endian limbs)
@@ -500,10 +474,10 @@ impl FieldElement {
         // p-2 = FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2D
         // In little-endian limbs:
         let exp = [
-            0xFFFFFFFEFFFFFC2D,  // limbs[0] (low)
-            0xFFFFFFFFFFFFFFFF,  // limbs[1]
-            0xFFFFFFFFFFFFFFFF,  // limbs[2]
-            0xFFFFFFFFFFFFFFFF,  // limbs[3] (high)
+            0xFFFFFFFEFFFFFC2D, // limbs[0] (low)
+            0xFFFFFFFFFFFFFFFF, // limbs[1]
+            0xFFFFFFFFFFFFFFFF, // limbs[2]
+            0xFFFFFFFFFFFFFFFF, // limbs[3] (high)
         ];
 
         Ok(self.pow(&exp))
@@ -528,7 +502,10 @@ impl FieldElement {
     /// - `Err(CurveError::InvalidScalar)` if element is zero (no inverse exists)
     pub fn invert_gcd(&self) -> Result<Self, CurveError> {
         if bool::from(self.is_zero()) {
-            return Err(CurveError::InvalidScalar { expected: 32, actual: 0 });
+            return Err(CurveError::InvalidScalar {
+                expected: 32,
+                actual: 0,
+            });
         }
 
         // secp256k1 modulus
@@ -559,10 +536,10 @@ impl FieldElement {
         //
         // In little-endian limbs:
         let exp = [
-            0xFFFFFFFFBFFFFF0C,  // limbs[0] (low)
-            0xFFFFFFFFFFFFFFFF,  // limbs[1]
-            0xFFFFFFFFFFFFFFFF,  // limbs[2]
-            0x3FFFFFFFFFFFFFFF,  // limbs[3] (high)
+            0xFFFFFFFFBFFFFF0C, // limbs[0] (low)
+            0xFFFFFFFFFFFFFFFF, // limbs[1]
+            0xFFFFFFFFFFFFFFFF, // limbs[2]
+            0x3FFFFFFFFFFFFFFF, // limbs[3] (high)
         ];
 
         let candidate = self.pow(&exp);
@@ -665,28 +642,38 @@ impl FieldElement {
         // wide[4] * 2^256 ≡ wide[4] * R (mod p)
         let d = (wide[4] as u128) * (R as u128);
         c0 += d;
-        c1 += c0 >> 64; c0 &= 0xFFFFFFFFFFFFFFFF;
-        c2 += c1 >> 64; c1 &= 0xFFFFFFFFFFFFFFFF;
-        c3 += c2 >> 64; c2 &= 0xFFFFFFFFFFFFFFFF;
-        c4 = c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
+        c1 += c0 >> 64;
+        c0 &= 0xFFFFFFFFFFFFFFFF;
+        c2 += c1 >> 64;
+        c1 &= 0xFFFFFFFFFFFFFFFF;
+        c3 += c2 >> 64;
+        c2 &= 0xFFFFFFFFFFFFFFFF;
+        c4 = c3 >> 64;
+        c3 &= 0xFFFFFFFFFFFFFFFF;
 
         // wide[5] * 2^320 ≡ wide[5] * R * 2^64 (mod p)
         let d = (wide[5] as u128) * (R as u128);
         c1 += d;
-        c2 += c1 >> 64; c1 &= 0xFFFFFFFFFFFFFFFF;
-        c3 += c2 >> 64; c2 &= 0xFFFFFFFFFFFFFFFF;
-        c4 += c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
+        c2 += c1 >> 64;
+        c1 &= 0xFFFFFFFFFFFFFFFF;
+        c3 += c2 >> 64;
+        c2 &= 0xFFFFFFFFFFFFFFFF;
+        c4 += c3 >> 64;
+        c3 &= 0xFFFFFFFFFFFFFFFF;
 
         // wide[6] * 2^384 ≡ wide[6] * R * 2^128 (mod p)
         let d = (wide[6] as u128) * (R as u128);
         c2 += d;
-        c3 += c2 >> 64; c2 &= 0xFFFFFFFFFFFFFFFF;
-        c4 += c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
+        c3 += c2 >> 64;
+        c2 &= 0xFFFFFFFFFFFFFFFF;
+        c4 += c3 >> 64;
+        c3 &= 0xFFFFFFFFFFFFFFFF;
 
         // wide[7] * 2^448 ≡ wide[7] * R * 2^192 (mod p)
         let d = (wide[7] as u128) * (R as u128);
         c3 += d;
-        c4 += c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
+        c4 += c3 >> 64;
+        c3 &= 0xFFFFFFFFFFFFFFFF;
 
         // Handle remaining carry in c4
         // c4 * 2^256 ≡ c4 * R (mod p)
@@ -694,10 +681,14 @@ impl FieldElement {
         while c4 > 0 {
             let d = c4 * (R as u128);
             c0 += d;
-            c1 += c0 >> 64; c0 &= 0xFFFFFFFFFFFFFFFF;
-            c2 += c1 >> 64; c1 &= 0xFFFFFFFFFFFFFFFF;
-            c3 += c2 >> 64; c2 &= 0xFFFFFFFFFFFFFFFF;
-            c4 = c3 >> 64; c3 &= 0xFFFFFFFFFFFFFFFF;
+            c1 += c0 >> 64;
+            c0 &= 0xFFFFFFFFFFFFFFFF;
+            c2 += c1 >> 64;
+            c1 &= 0xFFFFFFFFFFFFFFFF;
+            c3 += c2 >> 64;
+            c2 &= 0xFFFFFFFFFFFFFFFF;
+            c4 = c3 >> 64;
+            c3 &= 0xFFFFFFFFFFFFFFFF;
         }
 
         let limbs = [c0 as u64, c1 as u64, c2 as u64, c3 as u64];
@@ -873,13 +864,19 @@ mod tests {
             let inv_fermat = value.invert().unwrap();
             let inv_gcd = value.invert_gcd().unwrap();
 
-            assert_eq!(inv_fermat, inv_gcd,
-                "invert_gcd should match invert (Fermat) for value {:?}", value);
+            assert_eq!(
+                inv_fermat, inv_gcd,
+                "invert_gcd should match invert (Fermat) for value {:?}",
+                value
+            );
 
             // Also verify that value * inverse = 1
             let product = value.mul(&inv_gcd);
-            assert_eq!(product, FieldElement::ONE,
-                "value * invert_gcd should equal 1");
+            assert_eq!(
+                product,
+                FieldElement::ONE,
+                "value * invert_gcd should equal 1"
+            );
         }
     }
 
@@ -926,7 +923,10 @@ mod tests {
         // a * (b + c) = a * b + a * c
         let left = a.mul(&b.add(&c));
         let right = a.mul(&b).add(&a.mul(&c));
-        assert_eq!(left, right, "Multiplication should be distributive over addition");
+        assert_eq!(
+            left, right,
+            "Multiplication should be distributive over addition"
+        );
     }
 
     #[test]
@@ -952,7 +952,10 @@ mod tests {
             0xFFFFFFFFFFFFFFFF,
         ]); // p - 2
 
-        assert_eq!(product, expected, "Multiplication with near-max values failed");
+        assert_eq!(
+            product, expected,
+            "Multiplication with near-max values failed"
+        );
     }
 
     #[test]
@@ -965,12 +968,14 @@ mod tests {
             let squared = x.square();
             let mul_self = x.mul(&x);
 
-            assert_eq!(squared, mul_self,
-                "square({}) should equal mul({}, {})", val, val, val);
+            assert_eq!(
+                squared, mul_self,
+                "square({}) should equal mul({}, {})",
+                val, val, val
+            );
         }
     }
 }
-
 
 #[cfg(test)]
 mod reduce_tests {
@@ -980,22 +985,30 @@ mod reduce_tests {
     fn test_cumulative_mul() {
         extern crate std;
         use std::println;
-        
+
         // Simulate what happens in batch inversion forward pass
         let mut prod = FieldElement::from_u64(1);
         for i in 1..=100 {
             let elem = FieldElement::from_u64(i);
             prod = prod.mul(&elem);
-            
+
             // Check that result is properly reduced
             // All limbs should be less than modulus limbs
-            let is_reduced = prod.limbs[3] < SECP256K1_MODULUS[3] ||
-                           (prod.limbs[3] == SECP256K1_MODULUS[3] && prod.limbs[2] < SECP256K1_MODULUS[2]) ||
-                           (prod.limbs[3] == SECP256K1_MODULUS[3] && prod.limbs[2] == SECP256K1_MODULUS[2] && prod.limbs[1] < SECP256K1_MODULUS[1]) ||
-                           (prod.limbs[3] == SECP256K1_MODULUS[3] && prod.limbs[2] == SECP256K1_MODULUS[2] && prod.limbs[1] == SECP256K1_MODULUS[1] && prod.limbs[0] < SECP256K1_MODULUS[0]);
-            
+            let is_reduced = prod.limbs[3] < SECP256K1_MODULUS[3]
+                || (prod.limbs[3] == SECP256K1_MODULUS[3] && prod.limbs[2] < SECP256K1_MODULUS[2])
+                || (prod.limbs[3] == SECP256K1_MODULUS[3]
+                    && prod.limbs[2] == SECP256K1_MODULUS[2]
+                    && prod.limbs[1] < SECP256K1_MODULUS[1])
+                || (prod.limbs[3] == SECP256K1_MODULUS[3]
+                    && prod.limbs[2] == SECP256K1_MODULUS[2]
+                    && prod.limbs[1] == SECP256K1_MODULUS[1]
+                    && prod.limbs[0] < SECP256K1_MODULUS[0]);
+
             if !is_reduced {
-                println!("After multiplying 1..={}, result is NOT properly reduced:", i);
+                println!(
+                    "After multiplying 1..={}, result is NOT properly reduced:",
+                    i
+                );
                 println!("  prod = {:?}", prod.limbs);
                 println!("  modulus = {:?}", SECP256K1_MODULUS);
                 panic!("Unreduced result after {} multiplications", i);
@@ -1005,24 +1018,34 @@ mod reduce_tests {
     }
 }
 
-    #[test]
-    fn test_specific_mul_from_batch() {
-        // Test the specific multiplication that's failing in batch inversion
-        let acc = FieldElement::from_limbs([8010035984186428865, 12823321887127128530, 7793243387130014532, 8179536956251270358]);
-        let prod38 = FieldElement::from_limbs([2304077777655037952, 16380098128408031836, 59943987, 0]);
-        
-        let result = acc.mul(&prod38);
-        
-        extern crate std;
-        use std::println;
-        println!("Testing acc * products[38]:");
-        println!("  acc = {:?}", acc.limbs);
-        println!("  prod38 = {:?}", prod38.limbs);
-        println!("  result = {:?}", result.limbs);
-        
-        // This should equal inv(40) which is [3689348811198561498, 3689348814741910323, 3689348814741910323, 15218563860810380083]
-        let expected = FieldElement::from_limbs([3689348811198561498, 3689348814741910323, 3689348814741910323, 15218563860810380083]);
-        println!("  expected = {:?}", expected.limbs);
-        
-        assert_eq!(result, expected, "Multiplication produced wrong result!");
-    }
+#[test]
+fn test_specific_mul_from_batch() {
+    // Test the specific multiplication that's failing in batch inversion
+    let acc = FieldElement::from_limbs([
+        8010035984186428865,
+        12823321887127128530,
+        7793243387130014532,
+        8179536956251270358,
+    ]);
+    let prod38 = FieldElement::from_limbs([2304077777655037952, 16380098128408031836, 59943987, 0]);
+
+    let result = acc.mul(&prod38);
+
+    extern crate std;
+    use std::println;
+    println!("Testing acc * products[38]:");
+    println!("  acc = {:?}", acc.limbs);
+    println!("  prod38 = {:?}", prod38.limbs);
+    println!("  result = {:?}", result.limbs);
+
+    // This should equal inv(40) which is [3689348811198561498, 3689348814741910323, 3689348814741910323, 15218563860810380083]
+    let expected = FieldElement::from_limbs([
+        3689348811198561498,
+        3689348814741910323,
+        3689348814741910323,
+        15218563860810380083,
+    ]);
+    println!("  expected = {:?}", expected.limbs);
+
+    assert_eq!(result, expected, "Multiplication produced wrong result!");
+}
