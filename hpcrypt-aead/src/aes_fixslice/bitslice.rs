@@ -96,14 +96,14 @@ pub fn bitslice_4blocks(blocks: &[[u8; 16]; 4]) -> State {
     // Helper function matching RustCrypto's read_reordered
     #[inline]
     fn read_reordered(input: &[u8]) -> u64 {
-        (u64::from(input[0x0])        ) |
-        (u64::from(input[0x1]) << 0x10) |
-        (u64::from(input[0x2]) << 0x20) |
-        (u64::from(input[0x3]) << 0x30) |
-        (u64::from(input[0x8]) << 0x08) |
-        (u64::from(input[0x9]) << 0x18) |
-        (u64::from(input[0xa]) << 0x28) |
-        (u64::from(input[0xb]) << 0x38)
+        (u64::from(input[0x0]))
+            | (u64::from(input[0x1]) << 0x10)
+            | (u64::from(input[0x2]) << 0x20)
+            | (u64::from(input[0x3]) << 0x30)
+            | (u64::from(input[0x8]) << 0x08)
+            | (u64::from(input[0x9]) << 0x18)
+            | (u64::from(input[0xa]) << 0x28)
+            | (u64::from(input[0xb]) << 0x38)
     }
 
     // Read and reorder bytes from each block
@@ -119,19 +119,19 @@ pub fn bitslice_4blocks(blocks: &[[u8; 16]; 4]) -> State {
     // Apply delta swaps between pairs of u64 values
     // IMPORTANT: Order matters! Must match RustCrypto's order exactly
     let m0 = 0x5555555555555555;
-    delta_swap_2(&mut t1, &mut t0, 1, m0);  // Exact RustCrypto order
+    delta_swap_2(&mut t1, &mut t0, 1, m0); // Exact RustCrypto order
     delta_swap_2(&mut t3, &mut t2, 1, m0);
     delta_swap_2(&mut t5, &mut t4, 1, m0);
     delta_swap_2(&mut t7, &mut t6, 1, m0);
 
     let m1 = 0x3333333333333333;
-    delta_swap_2(&mut t2, &mut t0, 2, m1);  // Exact RustCrypto order
+    delta_swap_2(&mut t2, &mut t0, 2, m1); // Exact RustCrypto order
     delta_swap_2(&mut t3, &mut t1, 2, m1);
     delta_swap_2(&mut t6, &mut t4, 2, m1);
     delta_swap_2(&mut t7, &mut t5, 2, m1);
 
     let m2 = 0x0f0f0f0f0f0f0f0f;
-    delta_swap_2(&mut t4, &mut t0, 4, m2);  // Exact RustCrypto order
+    delta_swap_2(&mut t4, &mut t0, 4, m2); // Exact RustCrypto order
     delta_swap_2(&mut t5, &mut t1, 4, m2);
     delta_swap_2(&mut t6, &mut t2, 4, m2);
     delta_swap_2(&mut t7, &mut t3, 4, m2);
@@ -185,7 +185,7 @@ pub fn unbitslice_4blocks(state: &State) -> [[u8; 16]; 4] {
     // Helper function matching RustCrypto's write_reordered
     #[inline]
     fn write_reordered(columns: u64, output: &mut [u8]) {
-        output[0x0] = (columns        ) as u8;
+        output[0x0] = (columns) as u8;
         output[0x1] = (columns >> 0x10) as u8;
         output[0x2] = (columns >> 0x20) as u8;
         output[0x3] = (columns >> 0x30) as u8;
@@ -306,14 +306,22 @@ mod tests {
     fn test_bitslice_roundtrip() {
         // Test that bitslice -> unbitslice is identity
         let original_blocks = [
-            [0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-             0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff],
-            [0x01, 0x12, 0x23, 0x34, 0x45, 0x56, 0x67, 0x78,
-             0x89, 0x9a, 0xab, 0xbc, 0xcd, 0xde, 0xef, 0xf0],
-            [0x02, 0x13, 0x24, 0x35, 0x46, 0x57, 0x68, 0x79,
-             0x8a, 0x9b, 0xac, 0xbd, 0xce, 0xdf, 0xe0, 0xf1],
-            [0x03, 0x14, 0x25, 0x36, 0x47, 0x58, 0x69, 0x7a,
-             0x8b, 0x9c, 0xad, 0xbe, 0xcf, 0xd0, 0xe1, 0xf2],
+            [
+                0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd,
+                0xee, 0xff,
+            ],
+            [
+                0x01, 0x12, 0x23, 0x34, 0x45, 0x56, 0x67, 0x78, 0x89, 0x9a, 0xab, 0xbc, 0xcd, 0xde,
+                0xef, 0xf0,
+            ],
+            [
+                0x02, 0x13, 0x24, 0x35, 0x46, 0x57, 0x68, 0x79, 0x8a, 0x9b, 0xac, 0xbd, 0xce, 0xdf,
+                0xe0, 0xf1,
+            ],
+            [
+                0x03, 0x14, 0x25, 0x36, 0x47, 0x58, 0x69, 0x7a, 0x8b, 0x9c, 0xad, 0xbe, 0xcf, 0xd0,
+                0xe1, 0xf2,
+            ],
         ];
 
         let bitsliced = bitslice_4blocks(&original_blocks);
