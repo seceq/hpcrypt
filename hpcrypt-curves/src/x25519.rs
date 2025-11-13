@@ -2,9 +2,9 @@
 //!
 //! Implementation of the X25519 function as specified in RFC 7748.
 
+use crate::ct_utils::{Choice, ConditionallySelectable};
 use crate::field25519::FieldElement;
 use hpcrypt_core::error::CurveError;
-use crate::ct_utils::{Choice, ConditionallySelectable};
 
 /// X25519 private key (32 bytes)
 pub const X25519_PRIVATE_KEY_LEN: usize = 32;
@@ -29,10 +29,10 @@ impl X25519 {
     pub fn public_key(private_key: &[u8; 32]) -> [u8; 32] {
         let mut clamped = *private_key;
         clamp_scalar(&mut clamped);
-        
+
         scalar_mult_base(&clamped)
     }
-    
+
     /// Compute shared secret from private and public keys
     ///
     /// Returns the 32-byte shared secret computed from your private key
@@ -60,9 +60,9 @@ impl X25519 {
 ///
 /// Clear bits 0, 1, 2, 255 and set bit 254
 fn clamp_scalar(scalar: &mut [u8; 32]) {
-    scalar[0] &= 248;  // Clear bits 0, 1, 2
+    scalar[0] &= 248; // Clear bits 0, 1, 2
     scalar[31] &= 127; // Clear bit 255
-    scalar[31] |= 64;  // Set bit 254
+    scalar[31] |= 64; // Set bit 254
 }
 
 /// Scalar multiplication with the base point
@@ -184,9 +184,8 @@ mod tests {
     #[test]
     fn test_field_element_conversion() {
         // Test that from_bytes and to_bytes work correctly
-        let u_coord = hex_literal::hex!(
-            "e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c"
-        );
+        let u_coord =
+            hex_literal::hex!("e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c");
 
         let fe = FieldElement::from_bytes(&u_coord);
         let bytes_back = fe.to_bytes();
@@ -201,7 +200,10 @@ mod tests {
         let two = FieldElement::from_limbs([2, 0, 0, 0, 0]);
         let four = two.mul(&two);
         let four_bytes = four.to_bytes();
-        let expected = [4u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected = [
+            4u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
         assert_eq!(four_bytes, expected, "2 * 2 should equal 4");
 
         // Test 3 * 5 = 15
@@ -209,7 +211,10 @@ mod tests {
         let five = FieldElement::from_limbs([5, 0, 0, 0, 0]);
         let fifteen = three.mul(&five);
         let fifteen_bytes = fifteen.to_bytes();
-        let expected15 = [15u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected15 = [
+            15u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
         assert_eq!(fifteen_bytes, expected15, "3 * 5 should equal 15");
 
         // Test 2^2 = 4 using square
@@ -220,7 +225,10 @@ mod tests {
         // Test 3^2 = 9 using square
         let three_squared = three.square();
         let nine_bytes = three_squared.to_bytes();
-        let expected9 = [9u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected9 = [
+            9u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
         assert_eq!(nine_bytes, expected9, "3^2 should equal 9");
     }
 
@@ -230,7 +238,10 @@ mod tests {
         let one = FieldElement::ONE;
         let one_inv = one.invert();
         let one_inv_bytes = one_inv.to_bytes();
-        let expected = [1u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected = [
+            1u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
         assert_eq!(one_inv_bytes, expected, "1^{{-1}} should equal 1");
 
         // And check 1 * 1 = 1
@@ -243,7 +254,10 @@ mod tests {
     fn test_large_number_operations() {
         // Test with a large number close to p
         // Use p - 1 = 2^255 - 20
-        let p_minus_1_bytes = [236u8, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 127];
+        let p_minus_1_bytes = [
+            236u8, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 127,
+        ];
         let p_minus_1 = FieldElement::from_bytes(&p_minus_1_bytes);
 
         // (p-1) + 1 should equal 0 (mod p)
@@ -251,7 +265,10 @@ mod tests {
         let result = p_minus_1.add(&one);
         let result_bytes = result.to_bytes();
         let expected_zero = [0u8; 32];
-        assert_eq!(result_bytes, expected_zero, "(p-1) + 1 should equal 0 mod p");
+        assert_eq!(
+            result_bytes, expected_zero,
+            "(p-1) + 1 should equal 0 mod p"
+        );
     }
 
     #[test]
@@ -262,7 +279,10 @@ mod tests {
         // 2^{2^3} = 2^8 = 256
         let result = two.pow2k(3);
         let result_bytes = result.to_bytes();
-        let expected = [0u8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected = [
+            0u8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
         assert_eq!(result_bytes, expected, "2^{{2^3}} should equal 256");
 
         // Verify manually: 2 -> 4 -> 16 -> 256
@@ -277,15 +297,19 @@ mod tests {
         let two = FieldElement::from_limbs([2, 0, 0, 0, 0]);
 
         // Follow exact pow22501 logic
-        let t0 = two.square();           // x^2 = 4
-        let t1 = t0.square().square();   // x^8 = 256
-        let t2 = two.mul(&t1);           // x^9 = 512
-        let t3 = t0.mul(&t2);            // x^11 = 2048
-        let t4 = t3.square();            // x^22 = 4194304
-        let t5 = t2.mul(&t4);            // x^31 = 2147483648
+        let t0 = two.square(); // x^2 = 4
+        let t1 = t0.square().square(); // x^8 = 256
+        let t2 = two.mul(&t1); // x^9 = 512
+        let t3 = t0.mul(&t2); // x^11 = 2048
+        let t4 = t3.square(); // x^22 = 4194304
+        let t5 = t2.mul(&t4); // x^31 = 2147483648
 
         // Verify t5
-        assert_eq!(t5.to_bytes()[0..4], 2147483648u64.to_le_bytes()[0..4], "t5 should be 2^31");
+        assert_eq!(
+            t5.to_bytes()[0..4],
+            2147483648u64.to_le_bytes()[0..4],
+            "t5 should be 2^31"
+        );
 
         // Continue: t6 = t5.pow2k(5) which is x^31 squared 5 times = x^(31*32) = x^992
         let t6 = t5.pow2k(5);
@@ -318,7 +342,10 @@ mod tests {
         // But we can verify that converting back and forth doesn't change it
         let fe = FieldElement::from_bytes(&bytes);
         let bytes2 = fe.to_bytes();
-        assert_eq!(bytes, bytes2, "to_bytes/from_bytes should round-trip even after many operations");
+        assert_eq!(
+            bytes, bytes2,
+            "to_bytes/from_bytes should round-trip even after many operations"
+        );
     }
 
     #[test]
@@ -327,14 +354,20 @@ mod tests {
         let two = FieldElement::from_limbs([2, 0, 0, 0, 0]);
 
         // Manually compute first few steps
-        let t0 = two.square();  // Should be 4
+        let t0 = two.square(); // Should be 4
         let t0_bytes = t0.to_bytes();
-        let expected_t0 = [4u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected_t0 = [
+            4u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
         assert_eq!(t0_bytes, expected_t0, "t0 = 2^2 = 4");
 
-        let t1 = t0.square().square();  // Should be 4^2 = 16, then 16^2 = 256
+        let t1 = t0.square().square(); // Should be 4^2 = 16, then 16^2 = 256
         let t1_bytes = t1.to_bytes();
-        let expected_t1 = [0u8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];  // 256 in little-endian
+        let expected_t1 = [
+            0u8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ]; // 256 in little-endian
         assert_eq!(t1_bytes, expected_t1, "t1 = (2^2)^2 = 2^8 = 256");
     }
 
@@ -343,8 +376,10 @@ mod tests {
         // Test 2 * 2 = 4
         let two = FieldElement::from_limbs([2, 0, 0, 0, 0]);
         let four = two.mul(&two);
-        let expected = [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected = [
+            4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
         assert_eq!(four.to_bytes(), expected, "2 * 2 should equal 4");
     }
 
@@ -358,8 +393,10 @@ mod tests {
 
         // Test 2^8 = 256
         let two_8 = two_4.square();
-        let expected_256 = [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected_256 = [
+            0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
         assert_eq!(two_8.to_bytes(), expected_256, "2^8 should be 256");
 
         // Test 2^9 = 2 * 2^8 = 512
@@ -369,8 +406,10 @@ mod tests {
 
         // Test 2^11 = 2^2 * 2^9 = 2048
         let two_11 = two.square().mul(&two_9);
-        let expected_2048 = [0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected_2048 = [
+            0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
         assert_eq!(two_11.to_bytes(), expected_2048, "2^11 should be 2048");
     }
 
@@ -404,7 +443,12 @@ mod tests {
         let t7 = t6.mul(&t5);
         let expected_t7 = [136u8, 232, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         let t7_bytes = t7.to_bytes();
-        assert_eq!(&t7_bytes[0..16], &expected_t7[..], "t7 - got {:?}", &t7_bytes[0..16]);
+        assert_eq!(
+            &t7_bytes[0..16],
+            &expected_t7[..],
+            "t7 - got {:?}",
+            &t7_bytes[0..16]
+        );
 
         // Check t7's limbs
         let t7_limbs = t7.limbs();
@@ -414,14 +458,21 @@ mod tests {
         // Which should all fit in limb 0 since it's < 2^51
         // So expected limbs: [1042568, 0, 0, 0, 0]
         let expected_t7_limbs = [1042568i64, 0, 0, 0, 0];
-        assert_eq!(t7_limbs, expected_t7_limbs, "t7 limbs should be [1042568, 0, 0, 0, 0]");
+        assert_eq!(
+            t7_limbs, expected_t7_limbs,
+            "t7 limbs should be [1042568, 0, 0, 0, 0]"
+        );
 
         // Test squaring t7 once
         let t7_squared = t7.square();
         let expected_t7_sq = [64u8, 200, 38, 19, 253, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         let t7_sq_bytes = t7_squared.to_bytes();
-        assert_eq!(&t7_sq_bytes[0..16], &expected_t7_sq[..],
-                   "t7^2 - got {:?}", &t7_sq_bytes[0..16]);
+        assert_eq!(
+            &t7_sq_bytes[0..16],
+            &expected_t7_sq[..],
+            "t7^2 - got {:?}",
+            &t7_sq_bytes[0..16]
+        );
 
         // Test t8 step by step - square t7 twice to see if it fails
         let t7_sq_sq = t7_squared.square();
@@ -430,7 +481,11 @@ mod tests {
 
         // Try just 2 squares total
         let t7_2sq = t7.square().square();
-        assert_eq!(t7_2sq.to_bytes(), t7_sq_sq.to_bytes(), "Double square should match");
+        assert_eq!(
+            t7_2sq.to_bytes(),
+            t7_sq_sq.to_bytes(),
+            "Double square should match"
+        );
 
         // Test squaring t7 incrementally and check limbs
         let mut current = t7;
@@ -442,19 +497,69 @@ mod tests {
             let expected = match i {
                 1 => [1086948034624i64, 0, 0, 0, 0],
                 2 => [1853886388506624i64, 524671874, 0, 0, 0],
-                3 => [1076441227722752i64, 1904559430732844, 560998960986822, 122, 0],
-                4 => [647583459099808i64, 543870741618256, 1340511200666851, 1504753886484743, 1113124285103332],
-                5 => [1389476300342576i64, 1081103168511698, 698670036238561, 1786761589578693, 969548901900735],
-                6 => [945787938796331i64, 281883122644848, 1257523518546423, 277074759109911, 1229938846834965],
-                7 => [1574390107120866i64, 871559649737421, 337667584630407, 2167283968243958, 654586535741251],
-                8 => [323275702184927i64, 1186734507640709, 718830201372678, 484828744966154, 85512376563674],
-                9 => [2216317968719237i64, 1919012133642788, 647610942179171, 745562020728013, 643149525183618],
-                10 => [842548680036508i64, 2043987139278447, 1230172140004936, 663471947011029, 78980750370088],
-                _ => [0i64, 0, 0, 0, 0]
+                3 => [
+                    1076441227722752i64,
+                    1904559430732844,
+                    560998960986822,
+                    122,
+                    0,
+                ],
+                4 => [
+                    647583459099808i64,
+                    543870741618256,
+                    1340511200666851,
+                    1504753886484743,
+                    1113124285103332,
+                ],
+                5 => [
+                    1389476300342576i64,
+                    1081103168511698,
+                    698670036238561,
+                    1786761589578693,
+                    969548901900735,
+                ],
+                6 => [
+                    945787938796331i64,
+                    281883122644848,
+                    1257523518546423,
+                    277074759109911,
+                    1229938846834965,
+                ],
+                7 => [
+                    1574390107120866i64,
+                    871559649737421,
+                    337667584630407,
+                    2167283968243958,
+                    654586535741251,
+                ],
+                8 => [
+                    323275702184927i64,
+                    1186734507640709,
+                    718830201372678,
+                    484828744966154,
+                    85512376563674,
+                ],
+                9 => [
+                    2216317968719237i64,
+                    1919012133642788,
+                    647610942179171,
+                    745562020728013,
+                    643149525183618,
+                ],
+                10 => [
+                    842548680036508i64,
+                    2043987139278447,
+                    1230172140004936,
+                    663471947011029,
+                    78980750370088,
+                ],
+                _ => [0i64, 0, 0, 0, 0],
             };
             if limbs != expected {
-                panic!("After {} square(s): got limbs {:?}, expected {:?}",
-                       i, limbs, expected);
+                panic!(
+                    "After {} square(s): got limbs {:?}, expected {:?}",
+                    i, limbs, expected
+                );
             }
         }
 
@@ -464,28 +569,45 @@ mod tests {
         let t8_limbs = t8_manual.limbs();
 
         let t8 = t7.pow2k(10);
-        let expected_t8 = [156u8, 144, 199, 38, 75, 254, 122, 179, 229, 186, 246, 23, 58, 146, 185, 90];
+        let expected_t8 = [
+            156u8, 144, 199, 38, 75, 254, 122, 179, 229, 186, 246, 23, 58, 146, 185, 90,
+        ];
 
-        assert_eq!(&t8.to_bytes()[0..16], &expected_t8[..], "t8 - limbs are {:?}", t8_limbs);
+        assert_eq!(
+            &t8.to_bytes()[0..16],
+            &expected_t8[..],
+            "t8 - limbs are {:?}",
+            t8_limbs
+        );
 
         let t9 = t8.mul(&t7);
-        let expected_t9 = [213u8, 204, 64, 238, 194, 120, 50, 182, 227, 248, 232, 71, 9, 188, 129, 240];
+        let expected_t9 = [
+            213u8, 204, 64, 238, 194, 120, 50, 182, 227, 248, 232, 71, 9, 188, 129, 240,
+        ];
         assert_eq!(&t9.to_bytes()[0..16], &expected_t9[..], "t9");
 
         let t10 = t9.pow2k(20);
-        let expected_t10 = [173u8, 90, 180, 37, 100, 235, 112, 124, 226, 241, 208, 32, 9, 0, 206, 191];
+        let expected_t10 = [
+            173u8, 90, 180, 37, 100, 235, 112, 124, 226, 241, 208, 32, 9, 0, 206, 191,
+        ];
         assert_eq!(&t10.to_bytes()[0..16], &expected_t10[..], "t10");
 
         let t11 = t10.mul(&t9);
-        let expected_t11 = [175u8, 214, 118, 148, 151, 58, 72, 127, 219, 37, 64, 201, 223, 196, 47, 196];
+        let expected_t11 = [
+            175u8, 214, 118, 148, 151, 58, 72, 127, 219, 37, 64, 201, 223, 196, 47, 196,
+        ];
         assert_eq!(&t11.to_bytes()[0..16], &expected_t11[..], "t11");
 
         let t12 = t11.pow2k(10);
-        let expected_t12 = [231u8, 103, 217, 37, 159, 84, 213, 180, 175, 230, 49, 182, 62, 51, 145, 145];
+        let expected_t12 = [
+            231u8, 103, 217, 37, 159, 84, 213, 180, 175, 230, 49, 182, 62, 51, 145, 145,
+        ];
         assert_eq!(&t12.to_bytes()[0..16], &expected_t12[..], "t12");
 
         let t13 = t12.mul(&t7);
-        let expected_t13 = [71u8, 182, 228, 56, 150, 102, 88, 91, 185, 97, 221, 135, 90, 187, 64, 236];
+        let expected_t13 = [
+            71u8, 182, 228, 56, 150, 102, 88, 91, 185, 97, 221, 135, 90, 187, 64, 236,
+        ];
         assert_eq!(&t13.to_bytes()[0..16], &expected_t13[..], "t13");
     }
 
@@ -496,10 +618,14 @@ mod tests {
         let b = FieldElement::from_limbs([3, 0, 0, 0, 0]);
         let c = FieldElement::from_limbs([5, 0, 0, 0, 0]);
 
-        let left = a.mul(&b).mul(&c);  // (2 * 3) * 5 = 6 * 5 = 30
+        let left = a.mul(&b).mul(&c); // (2 * 3) * 5 = 6 * 5 = 30
         let right = a.mul(&b.mul(&c)); // 2 * (3 * 5) = 2 * 15 = 30
 
-        assert_eq!(left.to_bytes(), right.to_bytes(), "Multiplication should be associative");
+        assert_eq!(
+            left.to_bytes(),
+            right.to_bytes(),
+            "Multiplication should be associative"
+        );
 
         // Also check the actual value
         assert_eq!(left.to_bytes()[0], 30, "Should equal 30");
@@ -517,7 +643,11 @@ mod tests {
         for _ in 0..10 {
             manual = manual.square();
         }
-        assert_eq!(result10.to_bytes(), manual.to_bytes(), "pow2k(10) should match 10 squares");
+        assert_eq!(
+            result10.to_bytes(),
+            manual.to_bytes(),
+            "pow2k(10) should match 10 squares"
+        );
 
         // Test even larger
         let result50 = two.pow2k(50);
@@ -525,7 +655,11 @@ mod tests {
         for _ in 0..50 {
             manual50 = manual50.square();
         }
-        assert_eq!(result50.to_bytes(), manual50.to_bytes(), "pow2k(50) should match 50 squares");
+        assert_eq!(
+            result50.to_bytes(),
+            manual50.to_bytes(),
+            "pow2k(50) should match 50 squares"
+        );
     }
 
     #[test]
@@ -536,13 +670,17 @@ mod tests {
 
         // t19 should be 2^(2^250-1) mod p
         // Expected: [60, 2, 79, 190, 181, 224, 149, 244, 74, 243, 9, 204, 127, 178, 174, 162, 64, 99, 96, 254, 238, 218, 95, 213, 88, 98, 181, 16, 173, 147, 140, 127]
-        let expected_t19 = [60, 2, 79, 190, 181, 224, 149, 244, 74, 243, 9, 204, 127, 178, 174, 162,
-                           64, 99, 96, 254, 238, 218, 95, 213, 88, 98, 181, 16, 173, 147, 140, 127];
+        let expected_t19 = [
+            60, 2, 79, 190, 181, 224, 149, 244, 74, 243, 9, 204, 127, 178, 174, 162, 64, 99, 96,
+            254, 238, 218, 95, 213, 88, 98, 181, 16, 173, 147, 140, 127,
+        ];
         assert_eq!(t19.to_bytes(), expected_t19, "t19 = 2^(2^250-1) mod p");
 
         // t3 should be 2^11 = 2048
-        let expected_t3 = [0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let expected_t3 = [
+            0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ];
         assert_eq!(t3.to_bytes(), expected_t3, "t3 = 2^11 = 2048");
     }
 
@@ -553,8 +691,10 @@ mod tests {
         let two_inv = two.invert();
 
         // Expected value of 2^(-1) mod p
-        let expected_inv = [247, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-                           255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 63];
+        let expected_inv = [
+            247, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 63,
+        ];
         let two_inv_bytes = two_inv.to_bytes();
         assert_eq!(two_inv_bytes, expected_inv, "2^(-1) should equal (p+1)/2");
 
@@ -570,10 +710,13 @@ mod tests {
         // Test scalar multiplication with scalar=9
         // This is a standard X25519 test
         let mut scalar = [0u8; 32];
-        scalar[0] = 9;  // scalar = 9
+        scalar[0] = 9; // scalar = 9
 
         // Basepoint for X25519
-        let basepoint = [9u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let basepoint = [
+            9u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0,
+        ];
 
         let result = X25519::public_key(&scalar);
 
@@ -582,29 +725,32 @@ mod tests {
         use x25519_dalek::x25519;
         let expected = x25519(scalar, basepoint);
 
-        assert_eq!(result, expected, "Scalar multiplication by 9 should match reference");
+        assert_eq!(
+            result, expected,
+            "Scalar multiplication by 9 should match reference"
+        );
     }
-    
+
     #[test]
     fn test_clamp_scalar() {
         let mut scalar = [0xFFu8; 32];
         clamp_scalar(&mut scalar);
-        
-        assert_eq!(scalar[0] & 0x07, 0);    // Bits 0,1,2 cleared
-        assert_eq!(scalar[31] & 0x80, 0);   // Bit 255 cleared
+
+        assert_eq!(scalar[0] & 0x07, 0); // Bits 0,1,2 cleared
+        assert_eq!(scalar[31] & 0x80, 0); // Bit 255 cleared
         assert_eq!(scalar[31] & 0x40, 0x40); // Bit 254 set
     }
-    
+
     #[test]
     fn test_x25519_basic() {
         // Test that key generation works
         let private_key = [1u8; 32];
         let public_key = X25519::public_key(&private_key);
-        
+
         // Public key should not be all zeros
         assert!(!is_zero(&public_key));
     }
-    
+
     #[test]
     fn test_x25519_shared_secret() {
         let alice_private = [2u8; 32];
@@ -624,20 +770,17 @@ mod tests {
     #[test]
     fn test_x25519_rfc7748_vector1() {
         // RFC 7748 Test Vector 1
-        let scalar = hex_literal::hex!(
-            "a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4"
-        );
-        let u_coord = hex_literal::hex!(
-            "e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c"
-        );
+        let scalar =
+            hex_literal::hex!("a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4");
+        let u_coord =
+            hex_literal::hex!("e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c");
 
         let mut clamped = scalar;
         clamp_scalar(&mut clamped);
         let result = scalar_mult(&clamped, &u_coord);
 
-        let expected = hex_literal::hex!(
-            "c3da55379de9c6908e94ea4df28d084f32eccf03491c71f754b4075577a28552"
-        );
+        let expected =
+            hex_literal::hex!("c3da55379de9c6908e94ea4df28d084f32eccf03491c71f754b4075577a28552");
 
         assert_eq!(result, expected);
     }
@@ -655,9 +798,8 @@ mod tests {
         k = scalar_mult(&k, &u);
 
         // After 1 iteration
-        let expected_1 = hex_literal::hex!(
-            "422c8e7a6227d7bca1350b3e2bb7279f7897b87bb6854b783c60e80311ae3079"
-        );
+        let expected_1 =
+            hex_literal::hex!("422c8e7a6227d7bca1350b3e2bb7279f7897b87bb6854b783c60e80311ae3079");
         assert_eq!(k, expected_1);
     }
 
@@ -667,12 +809,10 @@ mod tests {
         use x25519_dalek::x25519;
 
         // Test the RFC 7748 test vector using reference implementation
-        let scalar = hex_literal::hex!(
-            "a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4"
-        );
-        let u_coord = hex_literal::hex!(
-            "e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c"
-        );
+        let scalar =
+            hex_literal::hex!("a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4");
+        let u_coord =
+            hex_literal::hex!("e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c");
 
         // Use the low-level x25519 function from dalek (it applies clamping internally)
         let expected = x25519(scalar, u_coord);
@@ -682,7 +822,10 @@ mod tests {
         clamp_scalar(&mut clamped);
         let result = scalar_mult(&clamped, &u_coord);
 
-        assert_eq!(result, expected, "Our X25519 doesn't match reference implementation");
+        assert_eq!(
+            result, expected,
+            "Our X25519 doesn't match reference implementation"
+        );
     }
 
     #[test]
@@ -701,6 +844,9 @@ mod tests {
         clamp_scalar(&mut k_clamped);
         let our_result = scalar_mult(&k_clamped, &u);
 
-        assert_eq!(our_result, dalek_result, "Iteration test: Our result doesn't match dalek");
+        assert_eq!(
+            our_result, dalek_result,
+            "Iteration test: Our result doesn't match dalek"
+        );
     }
 }
