@@ -1,6 +1,6 @@
 //! Digital Signature Algorithms
 //!
-//! This crate provides production-ready implementations of ECDSA (Elliptic Curve
+//! This crate implements ECDSA (Elliptic Curve
 //! Digital Signature Algorithm) for multiple curves.
 //!
 //! # Supported Algorithms
