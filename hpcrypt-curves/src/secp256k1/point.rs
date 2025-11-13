@@ -70,8 +70,8 @@ impl Point {
         let x_cubed = x_squared.mul(&self.x);
 
         // Compute 7·Z⁶
-        let z_squared = self.z.square();    // Z²
-        let z_fourth = z_squared.square();  // Z⁴
+        let z_squared = self.z.square(); // Z²
+        let z_fourth = z_squared.square(); // Z⁴
         let z_sixth = z_fourth.mul(&z_squared); // Z⁶
         let seven = FieldElement::from_limbs([7, 0, 0, 0]);
         let b_z6 = seven.mul(&z_sixth);
@@ -127,12 +127,12 @@ impl Point {
         let points_inverse = h_zero & (!r_zero);
 
         // Compute general addition (even if we might not use it)
-        let h_squared = h.square();           // H²
-        let h_cubed = h_squared.mul(&h);      // H³
+        let h_squared = h.square(); // H²
+        let h_cubed = h_squared.mul(&h); // H³
 
-        let u1_h2 = u1.mul(&h_squared);       // U₁·H²
+        let u1_h2 = u1.mul(&h_squared); // U₁·H²
         let two = FieldElement::from_limbs([2, 0, 0, 0]);
-        let two_u1_h2 = u1_h2.mul(&two);      // 2·U₁·H²
+        let two_u1_h2 = u1_h2.mul(&two); // 2·U₁·H²
 
         // X₃ = R² - H³ - 2·U₁·H²
         let r_squared = r.square();
@@ -146,7 +146,11 @@ impl Point {
         // Z₃ = H·Z₁·Z₂
         let z3 = h.mul(&self.z).mul(&other.z);
 
-        let add_result = Point { x: x3, y: y3, z: z3 };
+        let add_result = Point {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
 
         // Select the appropriate result based on special cases
         let doubled = self.double();
@@ -240,7 +244,11 @@ impl Point {
         // Z₃ = H·Z₁ (simplified because Z₂ = 1)
         let z3 = h.mul(&self.z);
 
-        let add_result = Point { x: x3, y: y3, z: z3 };
+        let add_result = Point {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
 
         // Select the appropriate result based on special cases
 
@@ -272,8 +280,8 @@ impl Point {
         let ret_inf = is_inf | y_zero;
 
         // Compute doubling formula (same structure as P-256, adapted for a=0)
-        let y_squared = self.y.square();           // Y²
-        let y_fourth = y_squared.square();         // Y⁴
+        let y_squared = self.y.square(); // Y²
+        let y_fourth = y_squared.square(); // Y⁴
 
         // S = 4·X·Y²
         let two = FieldElement::from_limbs([2, 0, 0, 0]);
@@ -300,7 +308,11 @@ impl Point {
         // Z₃ = 2·Y·Z
         let z3 = self.y.mul(&self.z).mul(&two);
 
-        let result = Point { x: x3, y: y3, z: z3 };
+        let result = Point {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
 
         // Constant-time select: return infinity if ret_inf is true, else result
         Point::conditional_select(&result, &Point::infinity(), ret_inf)
@@ -450,7 +462,11 @@ impl Point {
         scalars: &[[u8; 32]],
         points: &[Point],
     ) -> Point {
-        assert_eq!(scalars.len(), points.len(), "Scalars and points must have same length");
+        assert_eq!(
+            scalars.len(),
+            points.len(),
+            "Scalars and points must have same length"
+        );
 
         if scalars.is_empty() {
             // Just generator multiplication (use precomputed tables)
@@ -528,11 +544,7 @@ impl Point {
     /// // ECDSA verification: R = u1*G + u2*Q
     /// let r_point = Point::scalar_mul_shamir(&u1_bytes, &u2_bytes, &public_key);
     /// ```
-    pub fn scalar_mul_shamir(
-        scalar_g: &[u8; 32],
-        scalar_p: &[u8; 32],
-        point_p: &Point,
-    ) -> Point {
+    pub fn scalar_mul_shamir(scalar_g: &[u8; 32], scalar_p: &[u8; 32], point_p: &Point) -> Point {
         // Step 1: Precompute table [O, G, P, G+P]
         // We use lazy computation since O and G are trivial
         let g = Point::generator();
@@ -633,11 +645,7 @@ impl Point {
         // If y is odd, negate it to get even y (BIP 340 convention)
         // Note: to_bytes() returns big-endian, so LSB is at the end
         let y_bytes = y.to_bytes();
-        let y_final = if y_bytes[31] & 1 == 1 {
-            y.neg()
-        } else {
-            y
-        };
+        let y_final = if y_bytes[31] & 1 == 1 { y.neg() } else { y };
 
         Some(Point {
             x,
@@ -741,11 +749,7 @@ impl AffinePoint {
         let expected_odd = prefix == 0x03;
 
         // If parity doesn't match, negate y
-        let y_final = if y_is_odd == expected_odd {
-            y
-        } else {
-            y.neg()
-        };
+        let y_final = if y_is_odd == expected_odd { y } else { y.neg() };
 
         let point = AffinePoint { x, y: y_final };
 
@@ -856,7 +860,10 @@ mod tests {
         }
 
         // Now check if it's on curve
-        assert!(g2_affine.is_on_curve(), "2G not on curve (but coordinates match expected)");
+        assert!(
+            g2_affine.is_on_curve(),
+            "2G not on curve (but coordinates match expected)"
+        );
     }
 
     #[test]
@@ -1004,16 +1011,14 @@ mod tests {
 
         // Expected Q = d*G from Python (using standard secp256k1 implementation)
         let expected_qx = [
-            0x24, 0x65, 0x3e, 0xac, 0x43, 0x44, 0x88, 0x00,
-            0x2c, 0xc0, 0x6b, 0xbf, 0xb7, 0xf1, 0x0f, 0xe1,
-            0x89, 0x91, 0xe3, 0x5f, 0x9f, 0xe4, 0x30, 0x2d,
-            0xbe, 0xa6, 0xd2, 0x35, 0x3d, 0xc0, 0xab, 0x1c,
+            0x24, 0x65, 0x3e, 0xac, 0x43, 0x44, 0x88, 0x00, 0x2c, 0xc0, 0x6b, 0xbf, 0xb7, 0xf1,
+            0x0f, 0xe1, 0x89, 0x91, 0xe3, 0x5f, 0x9f, 0xe4, 0x30, 0x2d, 0xbe, 0xa6, 0xd2, 0x35,
+            0x3d, 0xc0, 0xab, 0x1c,
         ];
         let expected_qy = [
-            0x11, 0x9f, 0xc5, 0x00, 0x9a, 0x03, 0x2a, 0xa9,
-            0xfe, 0x47, 0xf5, 0xe1, 0x49, 0xbb, 0x84, 0x42,
-            0xf7, 0x1f, 0x88, 0x4c, 0xcb, 0x51, 0x65, 0x90,
-            0x68, 0x6d, 0x8f, 0xf6, 0xab, 0x91, 0xc6, 0x13,
+            0x11, 0x9f, 0xc5, 0x00, 0x9a, 0x03, 0x2a, 0xa9, 0xfe, 0x47, 0xf5, 0xe1, 0x49, 0xbb,
+            0x84, 0x42, 0xf7, 0x1f, 0x88, 0x4c, 0xcb, 0x51, 0x65, 0x90, 0x68, 0x6d, 0x8f, 0xf6,
+            0xab, 0x91, 0xc6, 0x13,
         ];
 
         let g = Point::generator();
@@ -1023,8 +1028,14 @@ mod tests {
         let qx_bytes = q_affine.x.to_bytes();
         let qy_bytes = q_affine.y.to_bytes();
 
-        assert_eq!(qx_bytes, expected_qx, "Public key X coordinate doesn't match reference");
-        assert_eq!(qy_bytes, expected_qy, "Public key Y coordinate doesn't match reference");
+        assert_eq!(
+            qx_bytes, expected_qx,
+            "Public key X coordinate doesn't match reference"
+        );
+        assert_eq!(
+            qy_bytes, expected_qy,
+            "Public key Y coordinate doesn't match reference"
+        );
     }
 
     #[test]
@@ -1034,16 +1045,14 @@ mod tests {
 
         // Public key Q (from d*G where d = 0x42...)
         let qx_bytes = [
-            0x24, 0x65, 0x3e, 0xac, 0x43, 0x44, 0x88, 0x00,
-            0x2c, 0xc0, 0x6b, 0xbf, 0xb7, 0xf1, 0x0f, 0xe1,
-            0x89, 0x91, 0xe3, 0x5f, 0x9f, 0xe4, 0x30, 0x2d,
-            0xbe, 0xa6, 0xd2, 0x35, 0x3d, 0xc0, 0xab, 0x1c,
+            0x24, 0x65, 0x3e, 0xac, 0x43, 0x44, 0x88, 0x00, 0x2c, 0xc0, 0x6b, 0xbf, 0xb7, 0xf1,
+            0x0f, 0xe1, 0x89, 0x91, 0xe3, 0x5f, 0x9f, 0xe4, 0x30, 0x2d, 0xbe, 0xa6, 0xd2, 0x35,
+            0x3d, 0xc0, 0xab, 0x1c,
         ];
         let qy_bytes = [
-            0x11, 0x9f, 0xc5, 0x00, 0x9a, 0x03, 0x2a, 0xa9,
-            0xfe, 0x47, 0xf5, 0xe1, 0x49, 0xbb, 0x84, 0x42,
-            0xf7, 0x1f, 0x88, 0x4c, 0xcb, 0x51, 0x65, 0x90,
-            0x68, 0x6d, 0x8f, 0xf6, 0xab, 0x91, 0xc6, 0x13,
+            0x11, 0x9f, 0xc5, 0x00, 0x9a, 0x03, 0x2a, 0xa9, 0xfe, 0x47, 0xf5, 0xe1, 0x49, 0xbb,
+            0x84, 0x42, 0xf7, 0x1f, 0x88, 0x4c, 0xcb, 0x51, 0x65, 0x90, 0x68, 0x6d, 0x8f, 0xf6,
+            0xab, 0x91, 0xc6, 0x13,
         ];
         let qx = FieldElement::from_bytes(&qx_bytes);
         let qy = FieldElement::from_bytes(&qy_bytes);
@@ -1052,24 +1061,21 @@ mod tests {
 
         // Verification scalars u1 and u2
         let u1_bytes = [
-            0x68, 0xec, 0x7d, 0x60, 0x7e, 0x60, 0x51, 0x85,
-            0x3a, 0xd7, 0x03, 0xf6, 0x4d, 0x7f, 0x95, 0x8e,
-            0x3c, 0x39, 0xb3, 0xc6, 0xac, 0x7a, 0xac, 0xac,
-            0x81, 0x8e, 0x6d, 0x48, 0xf3, 0xfd, 0xdc, 0x76,
+            0x68, 0xec, 0x7d, 0x60, 0x7e, 0x60, 0x51, 0x85, 0x3a, 0xd7, 0x03, 0xf6, 0x4d, 0x7f,
+            0x95, 0x8e, 0x3c, 0x39, 0xb3, 0xc6, 0xac, 0x7a, 0xac, 0xac, 0x81, 0x8e, 0x6d, 0x48,
+            0xf3, 0xfd, 0xdc, 0x76,
         ];
         let u2_bytes = [
-            0x79, 0x21, 0x69, 0x4a, 0x98, 0x78, 0x37, 0x75,
-            0x93, 0x87, 0x40, 0x9d, 0x5d, 0xa8, 0xc4, 0xb9,
-            0x6a, 0x0b, 0x5f, 0x1b, 0x53, 0x2f, 0x04, 0xf9,
-            0x97, 0xd8, 0x30, 0x0e, 0x2f, 0x91, 0x71, 0xfa,
+            0x79, 0x21, 0x69, 0x4a, 0x98, 0x78, 0x37, 0x75, 0x93, 0x87, 0x40, 0x9d, 0x5d, 0xa8,
+            0xc4, 0xb9, 0x6a, 0x0b, 0x5f, 0x1b, 0x53, 0x2f, 0x04, 0xf9, 0x97, 0xd8, 0x30, 0x0e,
+            0x2f, 0x91, 0x71, 0xfa,
         ];
 
         // Expected result R' from Python
         let expected_rx = [
-            0xc1, 0xef, 0x64, 0x65, 0x11, 0xeb, 0x63, 0x98,
-            0xd9, 0x3f, 0x6c, 0x98, 0x06, 0x85, 0xdf, 0x74,
-            0xdb, 0xed, 0x28, 0x15, 0x55, 0x9c, 0x76, 0x92,
-            0x1a, 0x3e, 0x14, 0x34, 0x88, 0xd7, 0xe1, 0xae,
+            0xc1, 0xef, 0x64, 0x65, 0x11, 0xeb, 0x63, 0x98, 0xd9, 0x3f, 0x6c, 0x98, 0x06, 0x85,
+            0xdf, 0x74, 0xdb, 0xed, 0x28, 0x15, 0x55, 0x9c, 0x76, 0x92, 0x1a, 0x3e, 0x14, 0x34,
+            0x88, 0xd7, 0xe1, 0xae,
         ];
 
         // Compute R' = u1*G + u2*Q
@@ -1081,7 +1087,10 @@ mod tests {
         let r_prime_affine = r_prime.to_affine().expect("R' should not be infinity");
         let rx_bytes = r_prime_affine.x.to_bytes();
 
-        assert_eq!(rx_bytes, expected_rx, "Verification point R'.x doesn't match Python reference");
+        assert_eq!(
+            rx_bytes, expected_rx,
+            "Verification point R'.x doesn't match Python reference"
+        );
     }
 
     #[test]
@@ -1090,10 +1099,9 @@ mod tests {
         // This matches the Python test case
 
         let k_bytes = [
-            0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-            0x18, 0x19, 0x19, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
-            0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25,
-            0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d,
+            0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x19, 0x19, 0x1a, 0x1b,
+            0x1c, 0x1d, 0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29,
+            0x2a, 0x2b, 0x2c, 0x2d,
         ];
 
         // Compute R = k*G
@@ -1103,10 +1111,9 @@ mod tests {
 
         // Expected from Python
         let expected_rx = [
-            0xc1, 0xef, 0x64, 0x65, 0x11, 0xeb, 0x63, 0x98,
-            0xd9, 0x3f, 0x6c, 0x98, 0x06, 0x85, 0xdf, 0x74,
-            0xdb, 0xed, 0x28, 0x15, 0x55, 0x9c, 0x76, 0x92,
-            0x1a, 0x3e, 0x14, 0x34, 0x88, 0xd7, 0xe1, 0xae,
+            0xc1, 0xef, 0x64, 0x65, 0x11, 0xeb, 0x63, 0x98, 0xd9, 0x3f, 0x6c, 0x98, 0x06, 0x85,
+            0xdf, 0x74, 0xdb, 0xed, 0x28, 0x15, 0x55, 0x9c, 0x76, 0x92, 0x1a, 0x3e, 0x14, 0x34,
+            0x88, 0xd7, 0xe1, 0xae,
         ];
 
         let rx_bytes = r_affine.x.to_bytes();
@@ -1266,14 +1273,16 @@ mod tests {
         // Known compressed generator (from Bitcoin/secp256k1)
         let expected_compressed = [
             0x02, // Prefix (G has even Y)
-            0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac,
-            0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b, 0x07,
-            0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9,
-            0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98,
+            0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95, 0xce, 0x87,
+            0x0b, 0x07, 0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9, 0x59, 0xf2, 0x81, 0x5b,
+            0x16, 0xf8, 0x17, 0x98,
         ];
 
         let compressed = g_affine.to_compressed_bytes();
-        assert_eq!(compressed, expected_compressed, "Generator compression should match known value");
+        assert_eq!(
+            compressed, expected_compressed,
+            "Generator compression should match known value"
+        );
 
         // Verify decompression works
         let decoded = AffinePoint::from_compressed_bytes(&expected_compressed)
@@ -1307,8 +1316,12 @@ mod tests {
         let result_shamir = Point::scalar_mul_shamir(&u1_bytes, &u2_bytes, &p);
 
         // Convert both to affine and compare
-        let affine_separate = result_separate.to_affine().expect("Result should not be infinity");
-        let affine_shamir = result_shamir.to_affine().expect("Result should not be infinity");
+        let affine_separate = result_separate
+            .to_affine()
+            .expect("Result should not be infinity");
+        let affine_shamir = result_shamir
+            .to_affine()
+            .expect("Result should not be infinity");
 
         // Check that both methods produce the same result
         assert!(
