@@ -1,10 +1,10 @@
 //! SHA2-256 based hash functions for SLH-DSA.
 //!
-//! This implementation uses the sha2 crate with optimizations for context
+//! This implementation uses hpcrypt-hash with optimizations for context
 //! reuse and minimal allocations.
 
 use crate::hash::traits::{HashFunction, HashFunctionContext};
-use sha2::{Digest, Sha256};
+use hpcrypt_hash::Sha256;
 
 /// SHA2-256 hash function implementation for SLH-DSA.
 ///
@@ -59,7 +59,7 @@ impl<const N: usize> HashFunction for Sha2HashFunction<N> {
 
         // PRF uses padding: SHA-256(toByte(0, 64) || key || addr)
         let mut hasher = Sha256::new();
-        hasher.update([0u8; 64]);  // Padding
+        hasher.update(&[0u8; 64]); // Padding
         hasher.update(&key[..N]);
         hasher.update(addr);
 
@@ -81,7 +81,7 @@ impl<const N: usize> HashFunction for Sha2HashFunction<N> {
 
         // PRF_msg: SHA-256(toByte(1, 64) || sk_prf || opt_rand || msg)
         let mut hasher = Sha256::new();
-        hasher.update([1u8; 64]);
+        hasher.update(&[1u8; 64]);
         hasher.update(&sk_prf[..N]);
         hasher.update(opt_rand);
         hasher.update(msg);
@@ -120,7 +120,7 @@ impl<const N: usize> HashFunction for Sha2HashFunction<N> {
 
         // T_l: SHA-256(toByte(0, 32) || pk_seed || addr || leaf)
         let mut hasher = Sha256::new();
-        hasher.update([0u8; 32]);
+        hasher.update(&[0u8; 32]);
         hasher.update(&pk_seed[..N]);
         hasher.update(addr);
         hasher.update(&leaf[..N]);
@@ -143,7 +143,7 @@ impl<const N: usize> HashFunction for Sha2HashFunction<N> {
 
         // T_k: SHA-256(toByte(1, 32) || pk_seed || addr || left || right)
         let mut hasher = Sha256::new();
-        hasher.update([1u8; 32]);
+        hasher.update(&[1u8; 32]);
         hasher.update(&pk_seed[..N]);
         hasher.update(addr);
         hasher.update(&left[..N]);
@@ -177,7 +177,7 @@ impl<const N: usize> HashFunction for Sha2HashFunction<N> {
         // Batch hash: T_l(pk_seed, addr, input[0] || input[1] || ... || input[n-1])
         // This is the horizontal hashing pattern from PQClean/reference implementations
         let mut hasher = Sha256::new();
-        hasher.update([0u8; 32]);  // T_l padding
+        hasher.update(&[0u8; 32]); // T_l padding
         hasher.update(&pk_seed[..N]);
         hasher.update(addr);
 
@@ -219,14 +219,20 @@ impl<const N: usize> HashFunctionContext for Sha2HashFunction<N> {
         }
     }
 
-    fn prf_with_context(&self, ctx: &mut Self::Context, key: &[u8], addr: &[u8; 32], out: &mut [u8]) {
+    fn prf_with_context(
+        &self,
+        ctx: &mut Self::Context,
+        key: &[u8],
+        addr: &[u8; 32],
+        out: &mut [u8],
+    ) {
         // Reset and reuse context
         ctx.hasher = Sha256::new();
-        ctx.hasher.update([0u8; 64]);
+        ctx.hasher.update(&[0u8; 64]);
         ctx.hasher.update(&key[..N]);
         ctx.hasher.update(addr);
 
-        let result = ctx.hasher.finalize_reset();
+        let result = ctx.hasher.clone().finalize();
 
         if N <= 32 {
             out.copy_from_slice(&result[..N]);
@@ -235,14 +241,21 @@ impl<const N: usize> HashFunctionContext for Sha2HashFunction<N> {
         }
     }
 
-    fn f_with_context(&self, ctx: &mut Self::Context, pk_seed: &[u8], addr: &[u8; 32], input: &[u8], out: &mut [u8]) {
+    fn f_with_context(
+        &self,
+        ctx: &mut Self::Context,
+        pk_seed: &[u8],
+        addr: &[u8; 32],
+        input: &[u8],
+        out: &mut [u8],
+    ) {
         ctx.hasher = Sha256::new();
-        ctx.hasher.update([0u8; 32]);
+        ctx.hasher.update(&[0u8; 32]);
         ctx.hasher.update(&pk_seed[..N]);
         ctx.hasher.update(addr);
         ctx.hasher.update(&input[..N]);
 
-        let result = ctx.hasher.finalize_reset();
+        let result = ctx.hasher.clone().finalize();
 
         if N <= 32 {
             out.copy_from_slice(&result[..N]);

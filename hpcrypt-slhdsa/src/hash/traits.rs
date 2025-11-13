@@ -76,10 +76,23 @@ pub trait HashFunctionContext: HashFunction {
     fn new_context(&self) -> Self::Context;
 
     /// PRF with context reuse.
-    fn prf_with_context(&self, ctx: &mut Self::Context, key: &[u8], addr: &[u8; 32], out: &mut [u8]);
+    fn prf_with_context(
+        &self,
+        ctx: &mut Self::Context,
+        key: &[u8],
+        addr: &[u8; 32],
+        out: &mut [u8],
+    );
 
     /// F with context reuse (for WOTS+ chains).
-    fn f_with_context(&self, ctx: &mut Self::Context, pk_seed: &[u8], addr: &[u8; 32], input: &[u8], out: &mut [u8]);
+    fn f_with_context(
+        &self,
+        ctx: &mut Self::Context,
+        pk_seed: &[u8],
+        addr: &[u8; 32],
+        input: &[u8],
+        out: &mut [u8],
+    );
 }
 
 /// Helper trait for computing multiple hashes with a common prefix.

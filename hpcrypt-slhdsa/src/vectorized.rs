@@ -198,7 +198,18 @@ pub fn fors_trees_batch8<const N: usize, H: HashFunction>(
     roots: &mut [[u8; N]; 8],
 ) {
     debug_assert_eq!(H::N, N);
-    batch_fors_trees!(N, 8, sk_seed, pk_seed, tree_indices, leaf_indices, a, addrs, hash, roots);
+    batch_fors_trees!(
+        N,
+        8,
+        sk_seed,
+        pk_seed,
+        tree_indices,
+        leaf_indices,
+        a,
+        addrs,
+        hash,
+        roots
+    );
 }
 
 // ============================================================================
@@ -500,7 +511,13 @@ mod tests {
         let chain_indices = [0u32, 1, 2, 3, 4, 5, 6, 7];
         let mut batch_outputs = [[0u8; 16]; 8];
 
-        wots_prf_batch8(&sk_seed, &base_addr, &chain_indices, &hash, &mut batch_outputs);
+        wots_prf_batch8(
+            &sk_seed,
+            &base_addr,
+            &chain_indices,
+            &hash,
+            &mut batch_outputs,
+        );
 
         // Verify against sequential generation
         for i in 0..8 {
@@ -534,7 +551,14 @@ mod tests {
 
         let mut batch_outputs = [[0u8; 16]; 4];
 
-        wots_chains_batch4_same_length(&inputs, steps, &pk_seed, &mut addrs, &hash, &mut batch_outputs);
+        wots_chains_batch4_same_length(
+            &inputs,
+            steps,
+            &pk_seed,
+            &mut addrs,
+            &hash,
+            &mut batch_outputs,
+        );
 
         // Verify against sequential chain computation
         for i in 0..4 {

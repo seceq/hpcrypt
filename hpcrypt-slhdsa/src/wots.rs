@@ -134,7 +134,15 @@ pub fn wots_pk_gen<P: ParameterSet, H: HashFunction>(
                 hash.prf(sk_seed, &prf_addr, &mut sk_element);
                 addr.set_type(ADDR_TYPE_WOTS);
 
-                wots_chain::<H>(&sk_element, 0, P::W - 1, pk_seed, addr, hash, &mut pk_element);
+                wots_chain::<H>(
+                    &sk_element,
+                    0,
+                    P::W - 1,
+                    pk_seed,
+                    addr,
+                    hash,
+                    &mut pk_element,
+                );
                 wots_pk[i * 16..(i + 1) * 16].copy_from_slice(&pk_element);
             }
             24 => {
@@ -146,7 +154,15 @@ pub fn wots_pk_gen<P: ParameterSet, H: HashFunction>(
                 hash.prf(sk_seed, &prf_addr, &mut sk_element);
                 addr.set_type(ADDR_TYPE_WOTS);
 
-                wots_chain::<H>(&sk_element, 0, P::W - 1, pk_seed, addr, hash, &mut pk_element);
+                wots_chain::<H>(
+                    &sk_element,
+                    0,
+                    P::W - 1,
+                    pk_seed,
+                    addr,
+                    hash,
+                    &mut pk_element,
+                );
                 wots_pk[i * 24..(i + 1) * 24].copy_from_slice(&pk_element);
             }
             32 => {
@@ -158,7 +174,15 @@ pub fn wots_pk_gen<P: ParameterSet, H: HashFunction>(
                 hash.prf(sk_seed, &prf_addr, &mut sk_element);
                 addr.set_type(ADDR_TYPE_WOTS);
 
-                wots_chain::<H>(&sk_element, 0, P::W - 1, pk_seed, addr, hash, &mut pk_element);
+                wots_chain::<H>(
+                    &sk_element,
+                    0,
+                    P::W - 1,
+                    pk_seed,
+                    addr,
+                    hash,
+                    &mut pk_element,
+                );
                 wots_pk[i * 32..(i + 1) * 32].copy_from_slice(&pk_element);
             }
             _ => {
@@ -170,7 +194,15 @@ pub fn wots_pk_gen<P: ParameterSet, H: HashFunction>(
                 hash.prf(sk_seed, &prf_addr, &mut sk_element);
                 addr.set_type(ADDR_TYPE_WOTS);
 
-                wots_chain::<H>(&sk_element, 0, P::W - 1, pk_seed, addr, hash, &mut pk_element);
+                wots_chain::<H>(
+                    &sk_element,
+                    0,
+                    P::W - 1,
+                    pk_seed,
+                    addr,
+                    hash,
+                    &mut pk_element,
+                );
                 wots_pk[i * P::N..(i + 1) * P::N].copy_from_slice(&pk_element);
             }
         }
@@ -252,7 +284,15 @@ pub fn wots_sign<P: ParameterSet, H: HashFunction>(
                 addr.set_type(ADDR_TYPE_WOTS);
 
                 let steps = msg_base_w[i];
-                wots_chain::<H>(&sk_element, 0, steps, pk_seed, addr, hash, &mut signature[i * 16..(i + 1) * 16]);
+                wots_chain::<H>(
+                    &sk_element,
+                    0,
+                    steps,
+                    pk_seed,
+                    addr,
+                    hash,
+                    &mut signature[i * 16..(i + 1) * 16],
+                );
             }
         }
         24 => {
@@ -267,7 +307,15 @@ pub fn wots_sign<P: ParameterSet, H: HashFunction>(
                 addr.set_type(ADDR_TYPE_WOTS);
 
                 let steps = msg_base_w[i];
-                wots_chain::<H>(&sk_element, 0, steps, pk_seed, addr, hash, &mut signature[i * 24..(i + 1) * 24]);
+                wots_chain::<H>(
+                    &sk_element,
+                    0,
+                    steps,
+                    pk_seed,
+                    addr,
+                    hash,
+                    &mut signature[i * 24..(i + 1) * 24],
+                );
             }
         }
         32 => {
@@ -282,7 +330,15 @@ pub fn wots_sign<P: ParameterSet, H: HashFunction>(
                 addr.set_type(ADDR_TYPE_WOTS);
 
                 let steps = msg_base_w[i];
-                wots_chain::<H>(&sk_element, 0, steps, pk_seed, addr, hash, &mut signature[i * 32..(i + 1) * 32]);
+                wots_chain::<H>(
+                    &sk_element,
+                    0,
+                    steps,
+                    pk_seed,
+                    addr,
+                    hash,
+                    &mut signature[i * 32..(i + 1) * 32],
+                );
             }
         }
         _ => {
@@ -297,7 +353,15 @@ pub fn wots_sign<P: ParameterSet, H: HashFunction>(
                 addr.set_type(ADDR_TYPE_WOTS);
 
                 let steps = msg_base_w[i];
-                wots_chain::<H>(&sk_element, 0, steps, pk_seed, addr, hash, &mut signature[i * P::N..(i + 1) * P::N]);
+                wots_chain::<H>(
+                    &sk_element,
+                    0,
+                    steps,
+                    pk_seed,
+                    addr,
+                    hash,
+                    &mut signature[i * P::N..(i + 1) * P::N],
+                );
             }
         }
     }

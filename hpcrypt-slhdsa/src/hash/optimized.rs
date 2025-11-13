@@ -34,12 +34,12 @@ impl<const N: usize> PreInitializedSha2<N> {
 
         // Pre-initialize T_leaf/F context: padding + pk_seed
         let mut t_leaf_base = Sha256::new();
-        t_leaf_base.update([0u8; 32]);  // T_leaf padding
+        t_leaf_base.update([0u8; 32]); // T_leaf padding
         t_leaf_base.update(&pk_seed[..N]);
 
         // Pre-initialize T_node context: padding + pk_seed
         let mut t_node_base = Sha256::new();
-        t_node_base.update([1u8; 32]);  // T_node padding
+        t_node_base.update([1u8; 32]); // T_node padding
         t_node_base.update(&pk_seed[..N]);
 
         let mut pk_seed_array = [0u8; N];

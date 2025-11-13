@@ -7,7 +7,7 @@
 //! - Address update amortization when generating multiple leaves
 //! - Batch hashing for FORS root computation
 
-use crate::address::{Address, ADDR_TYPE_FORS_TREE, ADDR_TYPE_FORS_PRF, ADDR_TYPE_FORS_ROOTS};
+use crate::address::{Address, ADDR_TYPE_FORS_PRF, ADDR_TYPE_FORS_ROOTS, ADDR_TYPE_FORS_TREE};
 use crate::hash::traits::HashFunction;
 use crate::params::ParameterSet;
 use crate::utils::extract_bits;
@@ -104,7 +104,15 @@ fn fors_tree_hash<P: ParameterSet, H: HashFunction>(
             let mut stack: Vec<([u8; 16], usize)> = Vec::with_capacity(target_height + 1);
             for i in 0..n_leaves {
                 let mut sk_element = [0u8; 16];
-                fors_sk_gen::<P, H>(sk_seed, pk_seed, tree_idx, leaf_idx_offset + i, addr, hash, &mut sk_element);
+                fors_sk_gen::<P, H>(
+                    sk_seed,
+                    pk_seed,
+                    tree_idx,
+                    leaf_idx_offset + i,
+                    addr,
+                    hash,
+                    &mut sk_element,
+                );
 
                 addr.set_type(ADDR_TYPE_FORS_TREE);
                 addr.set_tree_height(0);
@@ -150,7 +158,15 @@ fn fors_tree_hash<P: ParameterSet, H: HashFunction>(
             let mut stack: Vec<([u8; 24], usize)> = Vec::with_capacity(target_height + 1);
             for i in 0..n_leaves {
                 let mut sk_element = [0u8; 24];
-                fors_sk_gen::<P, H>(sk_seed, pk_seed, tree_idx, leaf_idx_offset + i, addr, hash, &mut sk_element);
+                fors_sk_gen::<P, H>(
+                    sk_seed,
+                    pk_seed,
+                    tree_idx,
+                    leaf_idx_offset + i,
+                    addr,
+                    hash,
+                    &mut sk_element,
+                );
 
                 addr.set_type(ADDR_TYPE_FORS_TREE);
                 addr.set_tree_height(0);
@@ -196,7 +212,15 @@ fn fors_tree_hash<P: ParameterSet, H: HashFunction>(
             let mut stack: Vec<([u8; 32], usize)> = Vec::with_capacity(target_height + 1);
             for i in 0..n_leaves {
                 let mut sk_element = [0u8; 32];
-                fors_sk_gen::<P, H>(sk_seed, pk_seed, tree_idx, leaf_idx_offset + i, addr, hash, &mut sk_element);
+                fors_sk_gen::<P, H>(
+                    sk_seed,
+                    pk_seed,
+                    tree_idx,
+                    leaf_idx_offset + i,
+                    addr,
+                    hash,
+                    &mut sk_element,
+                );
 
                 addr.set_type(ADDR_TYPE_FORS_TREE);
                 addr.set_tree_height(0);
@@ -242,7 +266,15 @@ fn fors_tree_hash<P: ParameterSet, H: HashFunction>(
             let mut stack: Vec<(Vec<u8>, usize)> = Vec::with_capacity(target_height + 1);
             for i in 0..n_leaves {
                 let mut sk_element = vec![0u8; P::N];
-                fors_sk_gen::<P, H>(sk_seed, pk_seed, tree_idx, leaf_idx_offset + i, addr, hash, &mut sk_element);
+                fors_sk_gen::<P, H>(
+                    sk_seed,
+                    pk_seed,
+                    tree_idx,
+                    leaf_idx_offset + i,
+                    addr,
+                    hash,
+                    &mut sk_element,
+                );
 
                 addr.set_type(ADDR_TYPE_FORS_TREE);
                 addr.set_tree_height(0);
@@ -311,7 +343,15 @@ fn fors_sign_impl<P: ParameterSet, H: HashFunction, const N: usize>(
     for (tree_idx, &leaf_idx) in indices.iter().enumerate() {
         // OPTIMIZATION: Stack allocations instead of Vec for hot path buffers
         let mut sk_element = [0u8; N];
-        fors_sk_gen::<P, H>(sk_seed, pk_seed, tree_idx, leaf_idx, addr, hash, &mut sk_element);
+        fors_sk_gen::<P, H>(
+            sk_seed,
+            pk_seed,
+            tree_idx,
+            leaf_idx,
+            addr,
+            hash,
+            &mut sk_element,
+        );
         signature.extend_from_slice(&sk_element);
 
         addr.set_type(ADDR_TYPE_FORS_TREE);
@@ -327,7 +367,15 @@ fn fors_sign_impl<P: ParameterSet, H: HashFunction, const N: usize>(
 
             if height == 0 {
                 let mut sk_sibling = [0u8; N];
-                fors_sk_gen::<P, H>(sk_seed, pk_seed, tree_idx, sibling_idx, addr, hash, &mut sk_sibling);
+                fors_sk_gen::<P, H>(
+                    sk_seed,
+                    pk_seed,
+                    tree_idx,
+                    sibling_idx,
+                    addr,
+                    hash,
+                    &mut sk_sibling,
+                );
                 addr.set_type(ADDR_TYPE_FORS_TREE);
                 addr.set_tree_height(0);
                 addr.set_tree_index(sibling_idx as u32);
@@ -410,14 +458,46 @@ pub fn fors_sign<P: ParameterSet, H: HashFunction>(
     // OPTIMIZATION: Use match on N to enable stack allocations instead of heap
     // This avoids Vec allocations in the hot loop (14 trees × 12 auth nodes = 168+ allocations per signature)
     match P::N {
-        16 => fors_sign_impl::<P, H, 16>(sk_seed, pk_seed, &indices, addr, hash, &mut signature, &mut roots),
-        24 => fors_sign_impl::<P, H, 24>(sk_seed, pk_seed, &indices, addr, hash, &mut signature, &mut roots),
-        32 => fors_sign_impl::<P, H, 32>(sk_seed, pk_seed, &indices, addr, hash, &mut signature, &mut roots),
+        16 => fors_sign_impl::<P, H, 16>(
+            sk_seed,
+            pk_seed,
+            &indices,
+            addr,
+            hash,
+            &mut signature,
+            &mut roots,
+        ),
+        24 => fors_sign_impl::<P, H, 24>(
+            sk_seed,
+            pk_seed,
+            &indices,
+            addr,
+            hash,
+            &mut signature,
+            &mut roots,
+        ),
+        32 => fors_sign_impl::<P, H, 32>(
+            sk_seed,
+            pk_seed,
+            &indices,
+            addr,
+            hash,
+            &mut signature,
+            &mut roots,
+        ),
         _ => {
             // Fallback to Vec for non-standard N values
             for (tree_idx, &leaf_idx) in indices.iter().enumerate() {
                 let mut sk_element = vec![0u8; P::N];
-                fors_sk_gen::<P, H>(sk_seed, pk_seed, tree_idx, leaf_idx, addr, hash, &mut sk_element);
+                fors_sk_gen::<P, H>(
+                    sk_seed,
+                    pk_seed,
+                    tree_idx,
+                    leaf_idx,
+                    addr,
+                    hash,
+                    &mut sk_element,
+                );
                 signature.extend_from_slice(&sk_element);
 
                 addr.set_type(ADDR_TYPE_FORS_TREE);
@@ -433,7 +513,15 @@ pub fn fors_sign<P: ParameterSet, H: HashFunction>(
 
                     if height == 0 {
                         let mut sk_sibling = vec![0u8; P::N];
-                        fors_sk_gen::<P, H>(sk_seed, pk_seed, tree_idx, sibling_idx, addr, hash, &mut sk_sibling);
+                        fors_sk_gen::<P, H>(
+                            sk_seed,
+                            pk_seed,
+                            tree_idx,
+                            sibling_idx,
+                            addr,
+                            hash,
+                            &mut sk_sibling,
+                        );
                         addr.set_type(ADDR_TYPE_FORS_TREE);
                         addr.set_tree_height(0);
                         addr.set_tree_index(sibling_idx as u32);
@@ -627,7 +715,8 @@ mod tests {
         let message = [0xAAu8; Sha2_128s::FORS_MSG_BYTES];
 
         // Sign
-        let (signature, pk) = fors_sign::<Sha2_128s, _>(&message, &sk_seed, &pk_seed, &mut addr, &hash);
+        let (signature, pk) =
+            fors_sign::<Sha2_128s, _>(&message, &sk_seed, &pk_seed, &mut addr, &hash);
 
         // Signature should have correct size
         assert_eq!(signature.len(), Sha2_128s::K * (Sha2_128s::A + 1) * 16);
@@ -659,7 +748,8 @@ mod tests {
         let wrong_message = [0xBBu8; Sha2_128s::FORS_MSG_BYTES];
 
         // Sign with correct message
-        let (signature, pk) = fors_sign::<Sha2_128s, _>(&message, &sk_seed, &pk_seed, &mut addr, &hash);
+        let (signature, pk) =
+            fors_sign::<Sha2_128s, _>(&message, &sk_seed, &pk_seed, &mut addr, &hash);
 
         // Try to verify with wrong message
         let mut pk_from_sig = [0u8; 16];

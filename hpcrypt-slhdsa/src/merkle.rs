@@ -125,7 +125,14 @@ fn tree_hash_leaves_batch<P: ParameterSet, H: HashFunction>(
             for i in 0..remainder {
                 let leaf_idx = start_idx + full_batches * 8 + i;
                 let mut output = vec![0u8; 16];
-                tree_hash_leaf::<P, H>(sk_seed, pk_seed, leaf_idx, &mut addr_copy, hash, &mut output);
+                tree_hash_leaf::<P, H>(
+                    sk_seed,
+                    pk_seed,
+                    leaf_idx,
+                    &mut addr_copy,
+                    hash,
+                    &mut output,
+                );
                 outputs[full_batches * 8 + i] = output;
             }
         }
@@ -161,7 +168,14 @@ fn tree_hash_leaves_batch<P: ParameterSet, H: HashFunction>(
             for i in 0..remainder {
                 let leaf_idx = start_idx + full_batches * 8 + i;
                 let mut output = vec![0u8; 24];
-                tree_hash_leaf::<P, H>(sk_seed, pk_seed, leaf_idx, &mut addr_copy, hash, &mut output);
+                tree_hash_leaf::<P, H>(
+                    sk_seed,
+                    pk_seed,
+                    leaf_idx,
+                    &mut addr_copy,
+                    hash,
+                    &mut output,
+                );
                 outputs[full_batches * 8 + i] = output;
             }
         }
@@ -197,7 +211,14 @@ fn tree_hash_leaves_batch<P: ParameterSet, H: HashFunction>(
             for i in 0..remainder {
                 let leaf_idx = start_idx + full_batches * 8 + i;
                 let mut output = vec![0u8; 32];
-                tree_hash_leaf::<P, H>(sk_seed, pk_seed, leaf_idx, &mut addr_copy, hash, &mut output);
+                tree_hash_leaf::<P, H>(
+                    sk_seed,
+                    pk_seed,
+                    leaf_idx,
+                    &mut addr_copy,
+                    hash,
+                    &mut output,
+                );
                 outputs[full_batches * 8 + i] = output;
             }
         }
@@ -207,7 +228,14 @@ fn tree_hash_leaves_batch<P: ParameterSet, H: HashFunction>(
             for i in 0..count {
                 let leaf_idx = start_idx + i;
                 let mut output = vec![0u8; P::N];
-                tree_hash_leaf::<P, H>(sk_seed, pk_seed, leaf_idx, &mut addr_copy, hash, &mut output);
+                tree_hash_leaf::<P, H>(
+                    sk_seed,
+                    pk_seed,
+                    leaf_idx,
+                    &mut addr_copy,
+                    hash,
+                    &mut output,
+                );
                 outputs[i] = output;
             }
         }
@@ -249,7 +277,14 @@ pub fn treehash<P: ParameterSet, H: HashFunction>(
             for i in 0..n_leaves {
                 // Generate leaf
                 let mut node = [0u8; 16];
-                tree_hash_leaf::<P, H>(sk_seed, pk_seed, leaf_idx_offset + i, addr, hash, &mut node);
+                tree_hash_leaf::<P, H>(
+                    sk_seed,
+                    pk_seed,
+                    leaf_idx_offset + i,
+                    addr,
+                    hash,
+                    &mut node,
+                );
                 let mut node_height = 0usize;
 
                 // Merge with stack while heights match
@@ -296,7 +331,14 @@ pub fn treehash<P: ParameterSet, H: HashFunction>(
             for i in 0..n_leaves {
                 // Generate leaf
                 let mut node = [0u8; 24];
-                tree_hash_leaf::<P, H>(sk_seed, pk_seed, leaf_idx_offset + i, addr, hash, &mut node);
+                tree_hash_leaf::<P, H>(
+                    sk_seed,
+                    pk_seed,
+                    leaf_idx_offset + i,
+                    addr,
+                    hash,
+                    &mut node,
+                );
                 let mut node_height = 0usize;
 
                 // Merge with stack while heights match
@@ -343,7 +385,14 @@ pub fn treehash<P: ParameterSet, H: HashFunction>(
             for i in 0..n_leaves {
                 // Generate leaf
                 let mut node = [0u8; 32];
-                tree_hash_leaf::<P, H>(sk_seed, pk_seed, leaf_idx_offset + i, addr, hash, &mut node);
+                tree_hash_leaf::<P, H>(
+                    sk_seed,
+                    pk_seed,
+                    leaf_idx_offset + i,
+                    addr,
+                    hash,
+                    &mut node,
+                );
                 let mut node_height = 0usize;
 
                 // Merge with stack while heights match
@@ -390,7 +439,14 @@ pub fn treehash<P: ParameterSet, H: HashFunction>(
             for i in 0..n_leaves {
                 // Generate leaf
                 let mut node = vec![0u8; n];
-                tree_hash_leaf::<P, H>(sk_seed, pk_seed, leaf_idx_offset + i, addr, hash, &mut node);
+                tree_hash_leaf::<P, H>(
+                    sk_seed,
+                    pk_seed,
+                    leaf_idx_offset + i,
+                    addr,
+                    hash,
+                    &mut node,
+                );
                 let mut node_height = 0usize;
 
                 // Merge with stack while heights match
@@ -471,7 +527,15 @@ pub fn compute_auth_path<P: ParameterSet, H: HashFunction>(
                     // Sibling is a subtree root - compute its starting leaf index
                     // The sibling subtree starts at: (sibling_idx >> level) << level
                     let sibling_subtree_start = (sibling_idx >> level) << level;
-                    treehash::<P, H>(sk_seed, pk_seed, sibling_subtree_start, level, addr, hash, &mut sibling);
+                    treehash::<P, H>(
+                        sk_seed,
+                        pk_seed,
+                        sibling_subtree_start,
+                        level,
+                        addr,
+                        hash,
+                        &mut sibling,
+                    );
                 }
 
                 auth_path.push(sibling.to_vec());
@@ -501,7 +565,15 @@ pub fn compute_auth_path<P: ParameterSet, H: HashFunction>(
                     // Sibling is a subtree root - compute its starting leaf index
                     // The sibling subtree starts at: (sibling_idx >> level) << level
                     let sibling_subtree_start = (sibling_idx >> level) << level;
-                    treehash::<P, H>(sk_seed, pk_seed, sibling_subtree_start, level, addr, hash, &mut sibling);
+                    treehash::<P, H>(
+                        sk_seed,
+                        pk_seed,
+                        sibling_subtree_start,
+                        level,
+                        addr,
+                        hash,
+                        &mut sibling,
+                    );
                 }
 
                 auth_path.push(sibling);
@@ -688,7 +760,15 @@ mod tests {
 
         // Compute the tree root directly
         let mut expected_root = [0u8; 16];
-        treehash::<Sha2_128s, _>(&sk_seed, &pk_seed, 0, tree_height, &mut addr, &hash, &mut expected_root);
+        treehash::<Sha2_128s, _>(
+            &sk_seed,
+            &pk_seed,
+            0,
+            tree_height,
+            &mut addr,
+            &hash,
+            &mut expected_root,
+        );
 
         // Compute authentication path for leaf
         let auth_path = compute_auth_path::<Sha2_128s, _>(
@@ -736,7 +816,15 @@ mod tests {
 
         // Compute expected root
         let mut expected_root = [0u8; 16];
-        treehash::<Sha2_128s, _>(&sk_seed, &pk_seed, 0, tree_height, &mut addr, &hash, &mut expected_root);
+        treehash::<Sha2_128s, _>(
+            &sk_seed,
+            &pk_seed,
+            0,
+            tree_height,
+            &mut addr,
+            &hash,
+            &mut expected_root,
+        );
 
         // Compute auth path for correct leaf
         let auth_path = compute_auth_path::<Sha2_128s, _>(

@@ -48,25 +48,24 @@ use alloc::{vec, vec::Vec};
 
 // Core modules
 pub mod address;
+pub mod fors;
 pub mod hash;
-pub mod params;
-pub mod utils;
-pub mod wots;
+pub mod hypertree;
 pub mod merkle;
 pub mod merkle_cache;
-pub mod fors;
-pub mod hypertree;
+pub mod params;
 pub mod slhdsa;
+pub mod utils;
 pub mod vectorized;
+pub mod wots;
 
 // Re-exports
 pub use params::{
-    ParameterSet, HashType,
-    Sha2_128s, Sha2_128f, Sha2_192s, Sha2_192f, Sha2_256s, Sha2_256f,
-    Shake128s, Shake128f, Shake192s, Shake192f, Shake256s, Shake256f,
+    HashType, ParameterSet, Sha2_128f, Sha2_128s, Sha2_192f, Sha2_192s, Sha2_256f, Sha2_256s,
+    Shake128f, Shake128s, Shake192f, Shake192s, Shake256f, Shake256s,
 };
 
-pub use slhdsa::{KeyPair, SecretKey, PublicKey, sign, verify};
+pub use slhdsa::{sign, verify, KeyPair, PublicKey, SecretKey};
 
 #[cfg(test)]
 mod tests {

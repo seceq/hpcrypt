@@ -37,9 +37,7 @@ impl Address {
     /// Create a new zeroed address.
     #[inline(always)]
     pub const fn new() -> Self {
-        Self {
-            words: [0u32; 8],
-        }
+        Self { words: [0u32; 8] }
     }
 
     /// Set the layer address (word 0).
@@ -146,9 +144,9 @@ impl Address {
     /// Copy address, used when we need to preserve the original.
     #[inline(always)]
     pub fn copy_subtree_addr(&mut self, other: &Address) {
-        self.words[0] = other.words[0];  // layer
-        self.words[1] = other.words[1];  // tree (high)
-        self.words[2] = other.words[2];  // tree (low)
+        self.words[0] = other.words[0]; // layer
+        self.words[1] = other.words[1]; // tree (high)
+        self.words[2] = other.words[2]; // tree (low)
     }
 
     /// Convert to bytes for hashing (big-endian encoding).

@@ -1,10 +1,10 @@
 //! SHAKE256 based hash functions for SLH-DSA.
 //!
-//! This implementation uses the sha3 crate with optimizations for state
+//! This implementation uses hpcrypt-hash with optimizations for state
 //! cloning and variable-length output.
 
 use crate::hash::traits::{HashFunction, HashFunctionContext};
-use sha3::{Shake256, digest::{Update, ExtendableOutput, XofReader}};
+use hpcrypt_hash::Shake256;
 
 /// SHAKE256 hash function implementation for SLH-DSA.
 #[derive(Clone)]
@@ -28,7 +28,7 @@ impl<const N: usize> ShakeHashFunction<N> {
     fn shake256(&self, input: &[u8], outlen: usize, out: &mut [u8]) {
         debug_assert!(out.len() >= outlen);
 
-        let mut hasher = Shake256::default();
+        let mut hasher = Shake256::new();
         hasher.update(input);
         let mut reader = hasher.finalize_xof();
         reader.read(&mut out[..outlen]);
@@ -44,7 +44,7 @@ impl<const N: usize> HashFunction for ShakeHashFunction<N> {
         debug_assert_eq!(out.len(), N);
 
         // PRF: SHAKE256(toByte(0, 32) || key || addr)
-        let mut hasher = Shake256::default();
+        let mut hasher = Shake256::new();
         hasher.update(&[0u8; 32]);
         hasher.update(&key[..N]);
         hasher.update(addr);
@@ -59,7 +59,7 @@ impl<const N: usize> HashFunction for ShakeHashFunction<N> {
         debug_assert_eq!(out.len(), N);
 
         // PRF_msg: SHAKE256(toByte(2, 32) || sk_prf || opt_rand || msg)
-        let mut hasher = Shake256::default();
+        let mut hasher = Shake256::new();
         hasher.update(&[2u8; 32]);
         hasher.update(&sk_prf[..N]);
         hasher.update(opt_rand);
@@ -75,7 +75,7 @@ impl<const N: usize> HashFunction for ShakeHashFunction<N> {
         debug_assert_eq!(pk_root.len(), N);
 
         // H_msg: SHAKE256(toByte(3, 32) || r || pk_seed || pk_root || msg)
-        let mut hasher = Shake256::default();
+        let mut hasher = Shake256::new();
         hasher.update(&[3u8; 32]);
         hasher.update(r);
         hasher.update(&pk_seed[..N]);
@@ -92,7 +92,7 @@ impl<const N: usize> HashFunction for ShakeHashFunction<N> {
         debug_assert_eq!(out.len(), N);
 
         // T_l: SHAKE256(toByte(0, 32) || pk_seed || addr || leaf)
-        let mut hasher = Shake256::default();
+        let mut hasher = Shake256::new();
         hasher.update(&[0u8; 32]);
         hasher.update(&pk_seed[..N]);
         hasher.update(addr);
@@ -109,7 +109,7 @@ impl<const N: usize> HashFunction for ShakeHashFunction<N> {
         debug_assert_eq!(out.len(), N);
 
         // T_k: SHAKE256(toByte(1, 32) || pk_seed || addr || left || right)
-        let mut hasher = Shake256::default();
+        let mut hasher = Shake256::new();
         hasher.update(&[1u8; 32]);
         hasher.update(&pk_seed[..N]);
         hasher.update(addr);
@@ -135,8 +135,8 @@ impl<const N: usize> HashFunction for ShakeHashFunction<N> {
         debug_assert_eq!(out.len(), N);
 
         // Batch hash: T_l(pk_seed, addr, input[0] || input[1] || ... || input[n-1])
-        let mut hasher = Shake256::default();
-        hasher.update(&[0u8; 32]);  // T_l padding
+        let mut hasher = Shake256::new();
+        hasher.update(&[0u8; 32]); // T_l padding
         hasher.update(&pk_seed[..N]);
         hasher.update(addr);
 
@@ -169,13 +169,19 @@ impl<const N: usize> HashFunctionContext for ShakeHashFunction<N> {
 
     fn new_context(&self) -> Self::Context {
         ShakeContext {
-            hasher: Shake256::default(),
+            hasher: Shake256::new(),
         }
     }
 
-    fn prf_with_context(&self, ctx: &mut Self::Context, key: &[u8], addr: &[u8; 32], out: &mut [u8]) {
+    fn prf_with_context(
+        &self,
+        ctx: &mut Self::Context,
+        key: &[u8],
+        addr: &[u8; 32],
+        out: &mut [u8],
+    ) {
         // Reset and reuse context
-        ctx.hasher = Shake256::default();
+        ctx.hasher = Shake256::new();
         ctx.hasher.update(&[0u8; 32]);
         ctx.hasher.update(&key[..N]);
         ctx.hasher.update(addr);
@@ -183,8 +189,15 @@ impl<const N: usize> HashFunctionContext for ShakeHashFunction<N> {
         reader.read(&mut out[..N]);
     }
 
-    fn f_with_context(&self, ctx: &mut Self::Context, pk_seed: &[u8], addr: &[u8; 32], input: &[u8], out: &mut [u8]) {
-        ctx.hasher = Shake256::default();
+    fn f_with_context(
+        &self,
+        ctx: &mut Self::Context,
+        pk_seed: &[u8],
+        addr: &[u8; 32],
+        input: &[u8],
+        out: &mut [u8],
+    ) {
+        ctx.hasher = Shake256::new();
         ctx.hasher.update(&[0u8; 32]);
         ctx.hasher.update(&pk_seed[..N]);
         ctx.hasher.update(addr);

@@ -51,14 +51,8 @@ pub fn ht_sign<P: ParameterSet, H: HashFunction>(
         // If not the top layer, compute authentication path and root
         if layer < P::D - 1 {
             // Compute authentication path for this leaf
-            let auth_path = compute_auth_path::<P, H>(
-                sk_seed,
-                pk_seed,
-                leaf_idx,
-                P::TREE_HEIGHT,
-                addr,
-                hash,
-            );
+            let auth_path =
+                compute_auth_path::<P, H>(sk_seed, pk_seed, leaf_idx, P::TREE_HEIGHT, addr, hash);
 
             // Add authentication path to signature
             for sibling in &auth_path {
@@ -163,7 +157,14 @@ pub fn ht_sign_cached<P: ParameterSet, H: HashFunction>(
                     cached_path.clone()
                 } else {
                     // SLOW PATH: Compute on-demand (bottom layers not cached)
-                    compute_auth_path::<P, H>(sk_seed, pk_seed, leaf_idx, P::TREE_HEIGHT, addr, hash)
+                    compute_auth_path::<P, H>(
+                        sk_seed,
+                        pk_seed,
+                        leaf_idx,
+                        P::TREE_HEIGHT,
+                        addr,
+                        hash,
+                    )
                 }
             } else {
                 // No cache - compute everything on-demand

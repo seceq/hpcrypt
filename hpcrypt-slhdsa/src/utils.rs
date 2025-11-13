@@ -50,13 +50,7 @@ pub fn base16_encode(input: &[u8], output: &mut [u8]) {
 ///
 /// Encodes the message in base-w and appends a checksum to detect errors.
 /// For W=16, uses optimized nibble extraction.
-pub fn base_w_with_checksum(
-    msg: &[u8],
-    w: usize,
-    len1: usize,
-    len2: usize,
-    output: &mut [usize],
-) {
+pub fn base_w_with_checksum(msg: &[u8], w: usize, len1: usize, len2: usize, output: &mut [usize]) {
     debug_assert_eq!(output.len(), len1 + len2);
 
     match w {
