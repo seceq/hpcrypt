@@ -8,8 +8,10 @@
 //! 8 bits of headroom per limb for intermediate computations.
 
 use super::constants::ED448_P;
-use core::ops::{Add, Sub, Mul};
-use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq, ConstantTimeGreater, ConstantTimeLess};
+use crate::ct_utils::{
+    Choice, ConditionallySelectable, ConstantTimeEq, ConstantTimeGreater, ConstantTimeLess,
+};
+use core::ops::{Add, Mul, Sub};
 
 #[cfg(feature = "std")]
 extern crate std;
@@ -69,7 +71,8 @@ impl FieldElement {
 
         // Iterate reduction until no more carries
         // This handles cases where reduction creates new carries
-        for _ in 0..5 {  // Increased from 3 to 5 iterations
+        for _ in 0..5 {
+            // Increased from 3 to 5 iterations
             // Propagate carries through all limbs
             let mut carry = 0u64;
             for i in 0..8 {
@@ -152,7 +155,7 @@ impl FieldElement {
 
         // Constant-time: check if result >= p by comparing from high to low
         // We need to determine if we should use diff or result
-        use crate::ct_utils::{ConditionallySelectable, Choice};
+        use crate::ct_utils::{Choice, ConditionallySelectable};
 
         let mut is_ge = Choice::from(0u8);
         let mut found_difference = Choice::from(0u8);
@@ -163,7 +166,8 @@ impl FieldElement {
             let limb_lt = result.limbs[i].ct_lt(&ED448_P[i]);
 
             // If we haven't found a difference yet and this limb is greater, set is_ge
-            is_ge = Choice::conditional_select(&is_ge, &Choice::from(1u8), limb_gt & !found_difference);
+            is_ge =
+                Choice::conditional_select(&is_ge, &Choice::from(1u8), limb_gt & !found_difference);
 
             // Mark that we found a difference if this limb differs
             found_difference = found_difference | limb_gt | limb_lt;
@@ -202,7 +206,9 @@ impl FieldElement {
 
         // Single-pass carry propagation
         for i in 0..8 {
-            let sum = self.limbs[i].wrapping_add(other.limbs[i]).wrapping_add(carry);
+            let sum = self.limbs[i]
+                .wrapping_add(other.limbs[i])
+                .wrapping_add(carry);
             limbs[i] = sum & Self::LIMB_MASK;
             carry = sum >> Self::LIMB_BITS;
         }
@@ -221,7 +227,9 @@ impl FieldElement {
         // Compute self - other + p to avoid underflow
         let mut limbs = [0u64; 8];
         for i in 0..8 {
-            limbs[i] = self.limbs[i].wrapping_add(ED448_P[i]).wrapping_sub(other.limbs[i]);
+            limbs[i] = self.limbs[i]
+                .wrapping_add(ED448_P[i])
+                .wrapping_sub(other.limbs[i]);
         }
         Self { limbs }.weak_reduce()
     }
@@ -240,7 +248,10 @@ impl FieldElement {
 
         // Single-pass carry propagation
         for i in 0..8 {
-            let sum = self.limbs[i].wrapping_add(ED448_P[i]).wrapping_sub(other.limbs[i]).wrapping_add(carry);
+            let sum = self.limbs[i]
+                .wrapping_add(ED448_P[i])
+                .wrapping_sub(other.limbs[i])
+                .wrapping_add(carry);
             limbs[i] = sum & Self::LIMB_MASK;
             carry = sum >> Self::LIMB_BITS;
         }
@@ -261,13 +272,11 @@ impl FieldElement {
 
     /// Field multiplication
     ///
-    /// Uses schoolbook multiplication followed by Goldilocks reduction.
-    /// TODO: Implement Karatsuba multiplication for better performance.
+    /// Uses Karatsuba multiplication for optimal performance.
+    /// Karatsuba reduces complexity from O(n²) to O(n^1.585).
+    /// For 8 limbs: schoolbook needs 64 muls, Karatsuba needs ~27 muls.
     #[inline]
     pub fn mul(&self, other: &Self) -> Self {
-        // Use Karatsuba multiplication for better performance
-        // Karatsuba reduces complexity from O(n²) to O(n^1.585)
-        // For 8 limbs: schoolbook needs 64 muls, Karatsuba needs ~27 muls
         self.mul_karatsuba(other)
     }
 
@@ -295,8 +304,18 @@ impl FieldElement {
         // Split into low and high 4-limb chunks
         let a_lo = [self.limbs[0], self.limbs[1], self.limbs[2], self.limbs[3]];
         let a_hi = [self.limbs[4], self.limbs[5], self.limbs[6], self.limbs[7]];
-        let b_lo = [other.limbs[0], other.limbs[1], other.limbs[2], other.limbs[3]];
-        let b_hi = [other.limbs[4], other.limbs[5], other.limbs[6], other.limbs[7]];
+        let b_lo = [
+            other.limbs[0],
+            other.limbs[1],
+            other.limbs[2],
+            other.limbs[3],
+        ];
+        let b_hi = [
+            other.limbs[4],
+            other.limbs[5],
+            other.limbs[6],
+            other.limbs[7],
+        ];
 
         // Compute z0 = a_lo * b_lo (8 limbs)
         let z0 = Self::mul_4x4(&a_lo, &b_lo);
@@ -459,7 +478,8 @@ impl FieldElement {
         // Handle borrows
         for i in 0..9 {
             if result[i] < 0 {
-                let borrow = ((-result[i]) + ((1i128 << Self::LIMB_BITS) - 1)) / (1i128 << Self::LIMB_BITS);
+                let borrow =
+                    ((-result[i]) + ((1i128 << Self::LIMB_BITS) - 1)) / (1i128 << Self::LIMB_BITS);
                 result[i] += borrow * (1i128 << Self::LIMB_BITS);
                 result[i + 1] -= borrow;
             }
@@ -1058,8 +1078,11 @@ mod tests {
         let diff = product - one;
 
         // If product == 1 (mod p), then diff == 0 (mod p)
-        assert!(bool::from(diff.is_zero()),
-            "5 * 5^(-1) - 1 should be zero mod p, got diff = {:?}", diff);
+        assert!(
+            bool::from(diff.is_zero()),
+            "5 * 5^(-1) - 1 should be zero mod p, got diff = {:?}",
+            diff
+        );
     }
 
     #[test]
@@ -1067,16 +1090,22 @@ mod tests {
         // Critical micro-test: does 1 - 1 = 0?
         let one = FieldElement::one();
         let diff = one - one;
-        assert!(bool::from(diff.is_zero()),
-            "1 - 1 should be zero, got diff = {:?}", diff);
+        assert!(
+            bool::from(diff.is_zero()),
+            "1 - 1 should be zero, got diff = {:?}",
+            diff
+        );
     }
 
     #[test]
     fn test_five_minus_five() {
         let five = FieldElement::from_limbs([5, 0, 0, 0, 0, 0, 0, 0]);
         let diff = five - five;
-        assert!(bool::from(diff.is_zero()),
-            "5 - 5 should be zero, got diff = {:?}", diff);
+        assert!(
+            bool::from(diff.is_zero()),
+            "5 - 5 should be zero, got diff = {:?}",
+            diff
+        );
     }
 
     #[test]
@@ -1101,7 +1130,11 @@ mod tests {
 
         let expected = FieldElement::from_limbs([78125, 0, 0, 0, 0, 0, 0, 0]);
         let result_reduced = result.strong_reduce();
-        assert_eq!(result_reduced, expected, "5^7 should equal 78125, got {:?}", result_reduced);
+        assert_eq!(
+            result_reduced, expected,
+            "5^7 should equal 78125, got {:?}",
+            result_reduced
+        );
     }
 
     #[test]
@@ -1136,7 +1169,11 @@ mod tests {
             26121754397686118,
         ]);
         let result_reduced = result.strong_reduce();
-        assert_eq!(result_reduced, expected, "5^65536 should match Python calculation, got {:?}", result_reduced);
+        assert_eq!(
+            result_reduced, expected,
+            "5^65536 should match Python calculation, got {:?}",
+            result_reduced
+        );
     }
 
     #[test]
@@ -1163,7 +1200,10 @@ mod tests {
             3251209680580735,
         ]);
         let result_reduced = result.strong_reduce();
-        assert_eq!(result_reduced, expected, "5^1024 should match Python calculation");
+        assert_eq!(
+            result_reduced, expected,
+            "5^1024 should match Python calculation"
+        );
     }
 
     #[test]
@@ -1188,7 +1228,10 @@ mod tests {
             42865595208659151,
         ]);
         let result_reduced = result.strong_reduce();
-        assert_eq!(result_reduced, expected, "5^(2^20) should match Python calculation");
+        assert_eq!(
+            result_reduced, expected,
+            "5^(2^20) should match Python calculation"
+        );
     }
 
     #[test]
@@ -1225,7 +1268,10 @@ mod tests {
             8658949657363425,
         ]);
         let result_reduced = result.strong_reduce();
-        assert_eq!(result_reduced, expected, "5^131071 should match Python calculation");
+        assert_eq!(
+            result_reduced, expected,
+            "5^131071 should match Python calculation"
+        );
     }
 
     #[test]
@@ -1261,7 +1307,10 @@ mod tests {
             20969290328673519,
         ]);
         let result_reduced = result.strong_reduce();
-        assert_eq!(result_reduced, expected, "5^(2^30-1) should match Python calculation");
+        assert_eq!(
+            result_reduced, expected,
+            "5^(2^30-1) should match Python calculation"
+        );
     }
 
     #[test]
@@ -1269,11 +1318,7 @@ mod tests {
         // Test 5^(2^112 - 1) = 112 ones = two full 56-bit limbs
         // This tests if processing multiple limbs works
         let five = FieldElement::from_limbs([5, 0, 0, 0, 0, 0, 0, 0]);
-        let exp_limbs: [u64; 8] = [
-            0xffffffffffffff,
-            0xffffffffffffff,
-            0, 0, 0, 0, 0, 0
-        ];
+        let exp_limbs: [u64; 8] = [0xffffffffffffff, 0xffffffffffffff, 0, 0, 0, 0, 0, 0];
 
         let mut result = FieldElement::one();
         let mut base = five;
@@ -1301,7 +1346,10 @@ mod tests {
             16631951106767430,
         ]);
         let result_reduced = result.strong_reduce();
-        assert_eq!(result_reduced, expected, "5^(2^112-1) should match Python calculation");
+        assert_eq!(
+            result_reduced, expected,
+            "5^(2^112-1) should match Python calculation"
+        );
     }
 
     #[test]
@@ -1311,9 +1359,14 @@ mod tests {
         // Just like p-2 which is all 1s except bits 0,1 and bit 224
         let five = FieldElement::from_limbs([5, 0, 0, 0, 0, 0, 0, 0]);
         let exp_limbs: [u64; 8] = [
-            0xfffffffffffffd,  // bits 0-1 clear (the -3)
-            0xfffffffffffffe,  // bit 0 (=bit 56 overall) clear (the -2^56)
-            0, 0, 0, 0, 0, 0
+            0xfffffffffffffd, // bits 0-1 clear (the -3)
+            0xfffffffffffffe, // bit 0 (=bit 56 overall) clear (the -2^56)
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
         ];
 
         let mut result = FieldElement::one();
@@ -1342,7 +1395,10 @@ mod tests {
             60163337010848970,
         ]);
         let result_reduced = result.strong_reduce();
-        assert_eq!(result_reduced, expected, "5^(2^112-2^56-3) should match Python calculation");
+        assert_eq!(
+            result_reduced, expected,
+            "5^(2^112-2^56-3) should match Python calculation"
+        );
     }
 
     #[test]
@@ -1354,7 +1410,10 @@ mod tests {
             0xffffffffffffff,
             0xfffffffffffffe,
             0xffffffffffffff,
-            0, 0, 0, 0
+            0,
+            0,
+            0,
+            0,
         ];
 
         let mut result = FieldElement::one();
@@ -1383,7 +1442,10 @@ mod tests {
             71836003740306431,
         ]);
         let result_reduced = result.strong_reduce();
-        assert_eq!(result_reduced, expected, "5^(2^224-2^112-3) should match Python calculation");
+        assert_eq!(
+            result_reduced, expected,
+            "5^(2^224-2^112-3) should match Python calculation"
+        );
     }
 
     #[test]
@@ -1397,7 +1459,8 @@ mod tests {
             0xfffffffffffffe,
             0xffffffffffffff,
             0xffffffffffffff,
-            0, 0
+            0,
+            0,
         ];
 
         let mut result = FieldElement::one();
@@ -1426,7 +1489,10 @@ mod tests {
             62764797274438667,
         ]);
         let result_reduced = result.strong_reduce();
-        assert_eq!(result_reduced, expected, "5^(2^336-2^168-3) should match Python calculation");
+        assert_eq!(
+            result_reduced, expected,
+            "5^(2^336-2^168-3) should match Python calculation"
+        );
     }
 
     #[test]
@@ -1434,11 +1500,11 @@ mod tests {
         // Test 2^448 - 3 (only bits 0,1 clear)
         let five = FieldElement::from_limbs([5, 0, 0, 0, 0, 0, 0, 0]);
         let exp: [u64; 8] = [
-            72057594037927933,  // 0xfffffffffffffd
-            72057594037927935,  // 0xffffffffffffff
+            72057594037927933, // 0xfffffffffffffd
+            72057594037927935, // 0xffffffffffffff
             72057594037927935,
             72057594037927935,
-            72057594037927935,  // No bit 224 clear
+            72057594037927935, // No bit 224 clear
             72057594037927935,
             72057594037927935,
             72057594037927935,
@@ -1478,11 +1544,11 @@ mod tests {
         // Test 2^448 - 2^224 (only bit 224 clear)
         let five = FieldElement::from_limbs([5, 0, 0, 0, 0, 0, 0, 0]);
         let exp: [u64; 8] = [
-            0,  // All zeros in lower limbs
+            0, // All zeros in lower limbs
             0,
             0,
             0,
-            72057594037927935,  // 0xffffffffffffff (bit 224 clear)
+            72057594037927935, // 0xffffffffffffff (bit 224 clear)
             72057594037927935,
             72057594037927935,
             72057594037927935,
@@ -1502,9 +1568,7 @@ mod tests {
             }
         }
 
-        let expected = FieldElement::from_limbs([
-            25, 0, 0, 0, 0, 0, 0, 0,
-        ]);
+        let expected = FieldElement::from_limbs([25, 0, 0, 0, 0, 0, 0, 0]);
 
         let result_reduced = result.strong_reduce();
         assert_eq!(result_reduced, expected, "5^(2^448-2^224) should equal 5^2");
@@ -1515,11 +1579,11 @@ mod tests {
         // Test 2^448 - 2^224 - 1 (only bits 0,224 clear)
         let five = FieldElement::from_limbs([5, 0, 0, 0, 0, 0, 0, 0]);
         let exp: [u64; 8] = [
-            72057594037927935,  // 0xffffffffffffff (all 1s)
+            72057594037927935, // 0xffffffffffffff (all 1s)
             72057594037927935,
             72057594037927935,
             72057594037927935,
-            72057594037927934,  // 0xfffffffffffffe (bit 224 clear)
+            72057594037927934, // 0xfffffffffffffe (bit 224 clear)
             72057594037927935,
             72057594037927935,
             72057594037927935,
@@ -1539,9 +1603,7 @@ mod tests {
             }
         }
 
-        let expected = FieldElement::from_limbs([
-            5, 0, 0, 0, 0, 0, 0, 0,
-        ]);
+        let expected = FieldElement::from_limbs([5, 0, 0, 0, 0, 0, 0, 0]);
 
         let result_reduced = result.strong_reduce();
         assert_eq!(result_reduced, expected, "5^(2^448-2^224-1) should equal 5");
@@ -1552,11 +1614,11 @@ mod tests {
         // Test 2^448 - 2^224 - 2 (only bits 1,224 clear, bit 0 SET)
         let five = FieldElement::from_limbs([5, 0, 0, 0, 0, 0, 0, 0]);
         let exp: [u64; 8] = [
-            72057594037927934,  // 0xfffffffffffffe (bit 1 clear, bit 0 set)
-            72057594037927935,  // 0xffffffffffffff
+            72057594037927934, // 0xfffffffffffffe (bit 1 clear, bit 0 set)
+            72057594037927935, // 0xffffffffffffff
             72057594037927935,
             72057594037927935,
-            72057594037927934,  // 0xfffffffffffffe (bit 224 clear)
+            72057594037927934, // 0xfffffffffffffe (bit 224 clear)
             72057594037927935,
             72057594037927935,
             72057594037927935,
@@ -1576,9 +1638,7 @@ mod tests {
             }
         }
 
-        let expected = FieldElement::from_limbs([
-            1, 0, 0, 0, 0, 0, 0, 0,
-        ]);
+        let expected = FieldElement::from_limbs([1, 0, 0, 0, 0, 0, 0, 0]);
 
         let result_reduced = result.strong_reduce();
         assert_eq!(result_reduced, expected, "5^(2^448-2^224-2) should equal 1");
@@ -1589,11 +1649,11 @@ mod tests {
         // Test 2^448 - 2^224 - 4 (bits 2,224 clear)
         let five = FieldElement::from_limbs([5, 0, 0, 0, 0, 0, 0, 0]);
         let exp: [u64; 8] = [
-            72057594037927932,  // 0xfffffffffffffc (bit 2 clear)
+            72057594037927932, // 0xfffffffffffffc (bit 2 clear)
             72057594037927935,
             72057594037927935,
             72057594037927935,
-            72057594037927934,  // 0xfffffffffffffe (bit 224 clear)
+            72057594037927934, // 0xfffffffffffffe (bit 224 clear)
             72057594037927935,
             72057594037927935,
             72057594037927935,
@@ -1625,7 +1685,10 @@ mod tests {
         ]);
 
         let result_reduced = result.strong_reduce();
-        assert_eq!(result_reduced, expected, "5^(2^448-2^224-4) should match Python");
+        assert_eq!(
+            result_reduced, expected,
+            "5^(2^448-2^224-4) should match Python"
+        );
     }
 
     #[test]
@@ -1634,11 +1697,11 @@ mod tests {
         // This tests if bit 1 alone (without bit 224 clear) triggers the bug
         let five = FieldElement::from_limbs([5, 0, 0, 0, 0, 0, 0, 0]);
         let exp: [u64; 8] = [
-            72057594037927934,  // 0xfffffffffffffe (bit 1 clear, bit 0 set)
+            72057594037927934, // 0xfffffffffffffe (bit 1 clear, bit 0 set)
             72057594037927935,
             72057594037927935,
             72057594037927935,
-            72057594037927935,  // Bit 224 is SET
+            72057594037927935, // Bit 224 is SET
             72057594037927935,
             72057594037927935,
             72057594037927935,
@@ -1735,7 +1798,10 @@ mod tests {
         let product = five * result_reduced;
         let one = FieldElement::one();
         assert_eq!(product, one, "5 * result should equal 1");
-        assert_eq!(result_reduced, expected, "5^(p-2) should match Python calculation");
+        assert_eq!(
+            result_reduced, expected,
+            "5^(p-2) should match Python calculation"
+        );
     }
 
     #[test]
@@ -1746,11 +1812,11 @@ mod tests {
             0xfffffffffffffd,
             0xffffffffffffff,
             0xffffffffffffff,
-            0xffffffefffffff,  // Note: not all 1s
+            0xffffffefffffff, // Note: not all 1s
             0xffffffffffffff,
             0xffffffffffffff,
             0xffffffffffffff,
-            0  // Limb 7 is zero
+            0, // Limb 7 is zero
         ];
 
         let mut result = FieldElement::one();
@@ -1779,7 +1845,10 @@ mod tests {
             62223509979142167,
         ]);
         let result_reduced = result.strong_reduce();
-        assert_eq!(result_reduced, expected, "5^(2^392-2^196-3) should match Python calculation");
+        assert_eq!(
+            result_reduced, expected,
+            "5^(2^392-2^196-3) should match Python calculation"
+        );
     }
 
     #[test]
@@ -1792,8 +1861,8 @@ mod tests {
         let mut base = five;
 
         for _ in 0..100 {
-            result = result * base;  // Bit = 1, so multiply
-            base = base.square();     // Always square for next iteration
+            result = result * base; // Bit = 1, so multiply
+            base = base.square(); // Always square for next iteration
         }
 
         // From Python: result = 5^(2^100 - 1)
@@ -1823,8 +1892,14 @@ mod tests {
         let result_reduced = result.strong_reduce();
         let base_reduced = base.strong_reduce();
 
-        assert_eq!(result_reduced, expected_result, "Result after 100 mult+square should match");
-        assert_eq!(base_reduced, expected_base, "Base after 100 squares should match");
+        assert_eq!(
+            result_reduced, expected_result,
+            "Result after 100 mult+square should match"
+        );
+        assert_eq!(
+            base_reduced, expected_base,
+            "Base after 100 squares should match"
+        );
     }
 
     #[test]
@@ -1836,8 +1911,8 @@ mod tests {
         let mut base = five;
 
         for _ in 0..200 {
-            result = result * base;  // Bit = 1, so multiply
-            base = base.square();     // Always square for next iteration
+            result = result * base; // Bit = 1, so multiply
+            base = base.square(); // Always square for next iteration
         }
 
         // From Python: result = 5^(2^200 - 1)
@@ -1867,8 +1942,14 @@ mod tests {
         let result_reduced = result.strong_reduce();
         let base_reduced = base.strong_reduce();
 
-        assert_eq!(result_reduced, expected_result, "Result after 200 mult+square should match");
-        assert_eq!(base_reduced, expected_base, "Base after 200 squares should match");
+        assert_eq!(
+            result_reduced, expected_result,
+            "Result after 200 mult+square should match"
+        );
+        assert_eq!(
+            base_reduced, expected_base,
+            "Base after 200 squares should match"
+        );
     }
 
     #[test]
@@ -1880,8 +1961,8 @@ mod tests {
         let mut base = five;
 
         for _ in 0..300 {
-            result = result * base;  // Bit = 1, so multiply
-            base = base.square();     // Always square for next iteration
+            result = result * base; // Bit = 1, so multiply
+            base = base.square(); // Always square for next iteration
         }
 
         // From Python: result = 5^(2^300 - 1)
@@ -1911,8 +1992,14 @@ mod tests {
         let result_reduced = result.strong_reduce();
         let base_reduced = base.strong_reduce();
 
-        assert_eq!(result_reduced, expected_result, "Result after 300 mult+square should match");
-        assert_eq!(base_reduced, expected_base, "Base after 300 squares should match");
+        assert_eq!(
+            result_reduced, expected_result,
+            "Result after 300 mult+square should match"
+        );
+        assert_eq!(
+            base_reduced, expected_base,
+            "Base after 300 squares should match"
+        );
     }
 
     #[test]
@@ -1924,8 +2011,8 @@ mod tests {
         let mut base = five;
 
         for _ in 0..350 {
-            result = result * base;  // Bit = 1, so multiply
-            base = base.square();     // Always square for next iteration
+            result = result * base; // Bit = 1, so multiply
+            base = base.square(); // Always square for next iteration
         }
 
         // From Python: result = 5^(2^350 - 1)
@@ -1955,8 +2042,14 @@ mod tests {
         let result_reduced = result.strong_reduce();
         let base_reduced = base.strong_reduce();
 
-        assert_eq!(result_reduced, expected_result, "Result after 350 mult+square should match");
-        assert_eq!(base_reduced, expected_base, "Base after 350 squares should match");
+        assert_eq!(
+            result_reduced, expected_result,
+            "Result after 350 mult+square should match"
+        );
+        assert_eq!(
+            base_reduced, expected_base,
+            "Base after 350 squares should match"
+        );
     }
 
     #[test]
@@ -1968,8 +2061,8 @@ mod tests {
         let mut base = five;
 
         for _ in 0..390 {
-            result = result * base;  // Bit = 1, so multiply
-            base = base.square();     // Always square for next iteration
+            result = result * base; // Bit = 1, so multiply
+            base = base.square(); // Always square for next iteration
         }
 
         // From Python: result = 5^(2^390 - 1)
@@ -1999,8 +2092,14 @@ mod tests {
         let result_reduced = result.strong_reduce();
         let base_reduced = base.strong_reduce();
 
-        assert_eq!(result_reduced, expected_result, "Result after 390 mult+square should match");
-        assert_eq!(base_reduced, expected_base, "Base after 390 squares should match");
+        assert_eq!(
+            result_reduced, expected_result,
+            "Result after 390 mult+square should match"
+        );
+        assert_eq!(
+            base_reduced, expected_base,
+            "Base after 390 squares should match"
+        );
     }
 
     #[test]
@@ -2013,8 +2112,8 @@ mod tests {
         let mut base = five;
 
         for _ in 0..392 {
-            result = result * base;  // Bit = 1, so multiply
-            base = base.square();     // Always square for next iteration
+            result = result * base; // Bit = 1, so multiply
+            base = base.square(); // Always square for next iteration
         }
 
         // From Python: result = 5^(2^392 - 1)
@@ -2044,8 +2143,14 @@ mod tests {
         let result_reduced = result.strong_reduce();
         let base_reduced = base.strong_reduce();
 
-        assert_eq!(result_reduced, expected_result, "Result after 392 mult+square (all 1s) should match");
-        assert_eq!(base_reduced, expected_base, "Base after 392 squares should match");
+        assert_eq!(
+            result_reduced, expected_result,
+            "Result after 392 mult+square (all 1s) should match"
+        );
+        assert_eq!(
+            base_reduced, expected_base,
+            "Base after 392 squares should match"
+        );
     }
 
     #[test]
@@ -2072,7 +2177,10 @@ mod tests {
         ]);
 
         let val_reduced = val.strong_reduce();
-        assert_eq!(val_reduced, expected, "392 pure squarings should match Python");
+        assert_eq!(
+            val_reduced, expected,
+            "392 pure squarings should match Python"
+        );
     }
 
     #[test]
@@ -2081,14 +2189,14 @@ mod tests {
         // This processes: exponent = 2^392-1, but does 448 squarings (8*56)
         let five = FieldElement::from_limbs([5, 0, 0, 0, 0, 0, 0, 0]);
         let exp_all_ones: [u64; 8] = [
-            0xffffffffffffff,  // All 1s
+            0xffffffffffffff, // All 1s
             0xffffffffffffff,
             0xffffffffffffff,
             0xffffffffffffff,
             0xffffffffffffff,
             0xffffffffffffff,
             0xffffffffffffff,
-            0  // Limb 7 is zero - but we still iterate through its 56 bits!
+            0, // Limb 7 is zero - but we still iterate through its 56 bits!
         ];
 
         let mut result = FieldElement::one();
@@ -2132,8 +2240,14 @@ mod tests {
         let result_reduced = result.strong_reduce();
         let base_reduced = base.strong_reduce();
 
-        assert_eq!(result_reduced, expected_result, "Result after binary exp (exp=2^392-1) should match");
-        assert_eq!(base_reduced, expected_base, "Base after binary exp (448 squares) should match");
+        assert_eq!(
+            result_reduced, expected_result,
+            "Result after binary exp (exp=2^392-1) should match"
+        );
+        assert_eq!(
+            base_reduced, expected_base,
+            "Base after binary exp (448 squares) should match"
+        );
     }
 
     #[test]
@@ -2142,14 +2256,14 @@ mod tests {
         // Exponent = 2^448 - 2^392 (bits 392-447 set, bits 0-391 clear)
         let five = FieldElement::from_limbs([5, 0, 0, 0, 0, 0, 0, 0]);
         let exp_limb7_only: [u64; 8] = [
-            0,  // Limb 0: all zeros
-            0,  // Limb 1
-            0,  // Limb 2
-            0,  // Limb 3
-            0,  // Limb 4
-            0,  // Limb 5
-            0,  // Limb 6
-            0xffffffffffffff,  // Limb 7: all ones
+            0,                // Limb 0: all zeros
+            0,                // Limb 1
+            0,                // Limb 2
+            0,                // Limb 3
+            0,                // Limb 4
+            0,                // Limb 5
+            0,                // Limb 6
+            0xffffffffffffff, // Limb 7: all ones
         ];
 
         let mut result = FieldElement::one();
@@ -2193,8 +2307,14 @@ mod tests {
         let result_reduced = result.strong_reduce();
         let base_reduced = base.strong_reduce();
 
-        assert_eq!(result_reduced, expected_result, "Result with only limb[7] set should match");
-        assert_eq!(base_reduced, expected_base, "Base after 448 squares should match");
+        assert_eq!(
+            result_reduced, expected_result,
+            "Result with only limb[7] set should match"
+        );
+        assert_eq!(
+            base_reduced, expected_base,
+            "Base after 448 squares should match"
+        );
     }
 
     #[test]
@@ -2202,7 +2322,7 @@ mod tests {
         // Test with ALL 448 bits set (2^448 - 1)
         let five = FieldElement::from_limbs([5, 0, 0, 0, 0, 0, 0, 0]);
         let exp_all_ones: [u64; 8] = [
-            0xffffffffffffff,  // All limbs: all ones
+            0xffffffffffffff, // All limbs: all ones
             0xffffffffffffff,
             0xffffffffffffff,
             0xffffffffffffff,
@@ -2253,8 +2373,14 @@ mod tests {
         let result_reduced = result.strong_reduce();
         let base_reduced = base.strong_reduce();
 
-        assert_eq!(result_reduced, expected_result, "Result with all bits set should match");
-        assert_eq!(base_reduced, expected_base, "Base after 448 squares should match");
+        assert_eq!(
+            result_reduced, expected_result,
+            "Result with all bits set should match"
+        );
+        assert_eq!(
+            base_reduced, expected_base,
+            "Base after 448 squares should match"
+        );
     }
 
     #[test]
@@ -2266,11 +2392,11 @@ mod tests {
             0xfffffffffffffd,
             0xffffffffffffff,
             0xffffffffffffff,
-            0xffffffefffffff,  // Limb 3 has bit 220 clear (2^196 subtraction)
+            0xffffffefffffff, // Limb 3 has bit 220 clear (2^196 subtraction)
             0xffffffffffffff,
             0xffffffffffffff,
             0xffffffffffffff,
-            0  // Limb 7 is zero - this test processes through limb 6
+            0, // Limb 7 is zero - this test processes through limb 6
         ];
 
         let mut result = FieldElement::one();
@@ -2315,10 +2441,14 @@ mod tests {
         let result_reduced = result.strong_reduce();
         let base_reduced = base.strong_reduce();
 
-        assert_eq!(result_reduced, expected_result,
-            "Result after limb 6 should match Python");
-        assert_eq!(base_reduced, expected_base,
-            "Base after 392 squarings should match Python");
+        assert_eq!(
+            result_reduced, expected_result,
+            "Result after limb 6 should match Python"
+        );
+        assert_eq!(
+            base_reduced, expected_base,
+            "Base after 392 squarings should match Python"
+        );
     }
 
     #[test]
@@ -2332,7 +2462,8 @@ mod tests {
 
     #[test]
     fn test_bytes_roundtrip() {
-        let original = FieldElement::from_limbs([12345, 67890, 11111, 22222, 33333, 44444, 55555, 66666]);
+        let original =
+            FieldElement::from_limbs([12345, 67890, 11111, 22222, 33333, 44444, 55555, 66666]);
         let bytes = original.to_bytes();
         let recovered = FieldElement::from_bytes(&bytes);
 
@@ -2379,8 +2510,13 @@ mod tests {
         // Verify each element: inputs[i] * outputs[i] = 1
         for i in 0..inputs.len() {
             let product = inputs[i] * outputs[i];
-            assert_eq!(product, FieldElement::one(),
-                      "inputs[{}] * outputs[{}] should equal 1", i, i);
+            assert_eq!(
+                product,
+                FieldElement::one(),
+                "inputs[{}] * outputs[{}] should equal 1",
+                i,
+                i
+            );
         }
     }
 
@@ -2398,15 +2534,16 @@ mod tests {
         let batch_outputs = FieldElement::batch_invert(&inputs);
 
         // Individual inversions
-        let individual_outputs: Vec<FieldElement> = inputs.iter()
-            .map(|x| x.invert())
-            .collect();
+        let individual_outputs: Vec<FieldElement> = inputs.iter().map(|x| x.invert()).collect();
 
         // Compare results
         assert_eq!(batch_outputs.len(), individual_outputs.len());
         for i in 0..inputs.len() {
-            assert_eq!(batch_outputs[i], individual_outputs[i],
-                      "batch_outputs[{}] should match individual inversion", i);
+            assert_eq!(
+                batch_outputs[i], individual_outputs[i],
+                "batch_outputs[{}] should match individual inversion",
+                i
+            );
         }
     }
 
@@ -2425,8 +2562,13 @@ mod tests {
         // Verify all results
         for i in 0..inputs.len() {
             let product = inputs[i] * outputs[i];
-            assert_eq!(product, FieldElement::one(),
-                      "Large batch: inputs[{}] * outputs[{}] should equal 1", i, i);
+            assert_eq!(
+                product,
+                FieldElement::one(),
+                "Large batch: inputs[{}] * outputs[{}] should equal 1",
+                i,
+                i
+            );
         }
     }
 }
