@@ -1,5 +1,5 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use hpcrypt_mlkem::{KeyPair, MlKem512, MlKem768, MlKem1024};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use hpcrypt_mlkem::{KeyPair, MlKem1024, MlKem512, MlKem768};
 
 fn bench_decaps_512(c: &mut Criterion) {
     let keypair = KeyPair::generate::<MlKem512>();
@@ -61,5 +61,11 @@ fn bench_decaps_all(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_decaps_512, bench_decaps_768, bench_decaps_1024, bench_decaps_all);
+criterion_group!(
+    benches,
+    bench_decaps_512,
+    bench_decaps_768,
+    bench_decaps_1024,
+    bench_decaps_all
+);
 criterion_main!(benches);

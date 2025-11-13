@@ -23,8 +23,14 @@ fn main() -> Result<()> {
     println!("1. Generating key pair...");
     let keypair = KeyPair::generate::<MlKem768>();
     println!("   ✓ Key pair generated");
-    println!("   - Public key size: {} bytes", keypair.encapsulation_key().len());
-    println!("   - Private key size: {} bytes", keypair.decapsulation_key().len());
+    println!(
+        "   - Public key size: {} bytes",
+        keypair.encapsulation_key().len()
+    );
+    println!(
+        "   - Private key size: {} bytes",
+        keypair.decapsulation_key().len()
+    );
 
     // 2. Extract public key
     println!("\n2. Extracting public key...");

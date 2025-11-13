@@ -1,5 +1,5 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use hpcrypt_mlkem::{KeyPair, MlKem512, MlKem768, MlKem1024};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use hpcrypt_mlkem::{KeyPair, MlKem1024, MlKem512, MlKem768};
 
 fn bench_keygen_512(c: &mut Criterion) {
     c.bench_function("ML-KEM-512 KeyGen", |b| {
@@ -46,5 +46,11 @@ fn bench_keygen_all(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_keygen_512, bench_keygen_768, bench_keygen_1024, bench_keygen_all);
+criterion_group!(
+    benches,
+    bench_keygen_512,
+    bench_keygen_768,
+    bench_keygen_1024,
+    bench_keygen_all
+);
 criterion_main!(benches);
