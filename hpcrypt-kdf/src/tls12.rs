@@ -228,7 +228,12 @@ mod tests {
         seed.extend_from_slice(&server_random);
 
         let mut master_secret = [0u8; 48];
-        prf_sha256(&pre_master_secret, "master secret", &seed, &mut master_secret);
+        prf_sha256(
+            &pre_master_secret,
+            "master secret",
+            &seed,
+            &mut master_secret,
+        );
 
         assert_eq!(master_secret.len(), 48);
         assert_ne!(master_secret, [0u8; 48]);
@@ -279,7 +284,10 @@ mod tests {
         let mut output2 = [0u8; 48];
         prf_sha256(&secret, "key expansion", &seed, &mut output2);
 
-        assert_ne!(output1, output2, "Different labels should produce different outputs");
+        assert_ne!(
+            output1, output2,
+            "Different labels should produce different outputs"
+        );
     }
 
     #[test]
@@ -295,7 +303,10 @@ mod tests {
         let mut output2 = [0u8; 48];
         prf_sha256(&secret, label, &seed2, &mut output2);
 
-        assert_ne!(output1, output2, "Different seeds should produce different outputs");
+        assert_ne!(
+            output1, output2,
+            "Different seeds should produce different outputs"
+        );
     }
 
     #[test]
@@ -308,7 +319,12 @@ mod tests {
         for length in [1, 16, 32, 48, 64, 100, 200] {
             let mut output = vec![0u8; length];
             prf_sha256(&secret, label, &seed, &mut output);
-            assert_ne!(output, vec![0u8; length], "Output should not be all zeros for length {}", length);
+            assert_ne!(
+                output,
+                vec![0u8; length],
+                "Output should not be all zeros for length {}",
+                length
+            );
         }
     }
 
@@ -324,7 +340,10 @@ mod tests {
         let mut output_sha384 = [0u8; 48];
         prf_sha384(&secret, label, &seed, &mut output_sha384);
 
-        assert_ne!(output_sha256, output_sha384, "SHA-256 and SHA-384 PRFs should produce different outputs");
+        assert_ne!(
+            output_sha256, output_sha384,
+            "SHA-256 and SHA-384 PRFs should produce different outputs"
+        );
     }
 
     #[test]
@@ -367,7 +386,12 @@ mod tests {
         master_secret_seed.extend_from_slice(&server_random);
 
         let mut master_secret = [0u8; 48];
-        prf_sha256(&pre_master_secret, "master secret", &master_secret_seed, &mut master_secret);
+        prf_sha256(
+            &pre_master_secret,
+            "master secret",
+            &master_secret_seed,
+            &mut master_secret,
+        );
 
         // 2. Derive key material
         let mut key_expansion_seed = Vec::new();
@@ -375,7 +399,12 @@ mod tests {
         key_expansion_seed.extend_from_slice(&client_random);
 
         let mut key_material = [0u8; 104]; // Enough for AES-256-CBC + HMAC-SHA256
-        prf_sha256(&master_secret, "key expansion", &key_expansion_seed, &mut key_material);
+        prf_sha256(
+            &master_secret,
+            "key expansion",
+            &key_expansion_seed,
+            &mut key_material,
+        );
 
         // Verify we got non-zero material
         assert_ne!(master_secret, [0u8; 48]);

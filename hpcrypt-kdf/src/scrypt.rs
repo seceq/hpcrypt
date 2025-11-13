@@ -351,7 +351,11 @@ mod tests {
         // RFC 7914 Test Vector 2
         let password = b"password";
         let salt = b"NaCl";
-        let params = ScryptParams { n: 1024, r: 8, p: 16 };
+        let params = ScryptParams {
+            n: 1024,
+            r: 8,
+            p: 16,
+        };
 
         let output = scrypt(password, salt, &params, 64);
 

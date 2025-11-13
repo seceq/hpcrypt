@@ -3,7 +3,7 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-use hpcrypt_hash::{HmacSha256, HmacSha384, HmacSha512, HmacBlake2b};
+use hpcrypt_hash::{HmacBlake2b, HmacSha256, HmacSha384, HmacSha512};
 
 /// HKDF using SHA-256
 pub struct HkdfSha256 {
@@ -178,29 +178,33 @@ pub fn hkdf_sha256(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
     // Extract - PRK = HMAC-Hash(salt, IKM)
     // If salt is not provided, it is set to a string of HashLen zeros
     let zero_salt = [0u8; 32];
-    let salt_key = if salt.is_empty() { &zero_salt[..] } else { salt };
+    let salt_key = if salt.is_empty() {
+        &zero_salt[..]
+    } else {
+        salt
+    };
     let prk = HmacSha256::new(salt_key).compute(ikm);
-    
+
     // Expand
     let hash_len = 32;
     let n = output.len().div_ceil(hash_len);
-    
+
     if n > 255 {
         panic!("HKDF output too long");
     }
-    
+
     let mut t = Vec::new();
     let mut offset = 0;
-    
+
     for i in 1..=n {
         let mut data = Vec::new();
         data.extend_from_slice(&t);
         data.extend_from_slice(info);
         data.push(i as u8);
-        
+
         let hmac = HmacSha256::new(&prk);
         t = hmac.compute(&data).to_vec();
-        
+
         let to_copy = core::cmp::min(hash_len, output.len() - offset);
         output[offset..offset + to_copy].copy_from_slice(&t[..to_copy]);
         offset += to_copy;
@@ -211,7 +215,11 @@ pub fn hkdf_sha256(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
 pub fn hkdf_sha384(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
     // Extract - PRK = HMAC-Hash(salt, IKM)
     let zero_salt = [0u8; 48];
-    let salt_key = if salt.is_empty() { &zero_salt[..] } else { salt };
+    let salt_key = if salt.is_empty() {
+        &zero_salt[..]
+    } else {
+        salt
+    };
     let prk = HmacSha384::new(salt_key).compute(ikm);
 
     // Expand
@@ -244,7 +252,11 @@ pub fn hkdf_sha384(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
 pub fn hkdf_sha512(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
     // Extract - PRK = HMAC-Hash(salt, IKM)
     let zero_salt = [0u8; 64];
-    let salt_key = if salt.is_empty() { &zero_salt[..] } else { salt };
+    let salt_key = if salt.is_empty() {
+        &zero_salt[..]
+    } else {
+        salt
+    };
     let prk = HmacSha512::new(salt_key).compute(ikm);
 
     // Expand
@@ -277,7 +289,11 @@ pub fn hkdf_sha512(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
 pub fn hkdf_blake2b(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
     // Extract - PRK = HMAC-Hash(salt, IKM)
     let zero_salt = [0u8; 64];
-    let salt_key = if salt.is_empty() { &zero_salt[..] } else { salt };
+    let salt_key = if salt.is_empty() {
+        &zero_salt[..]
+    } else {
+        salt
+    };
     let prk = HmacBlake2b::new(salt_key).compute(ikm);
 
     // Expand
@@ -309,24 +325,24 @@ pub fn hkdf_blake2b(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_hkdf_sha256_rfc5869() {
         // RFC 5869 Test Case 1
         let ikm = hex_literal::hex!("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b");
         let salt = hex_literal::hex!("000102030405060708090a0b0c");
         let info = hex_literal::hex!("f0f1f2f3f4f5f6f7f8f9");
-        
+
         let mut okm = [0u8; 42];
         hkdf_sha256(&salt, &ikm, &info, &mut okm);
-        
+
         let expected = hex_literal::hex!(
             "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865"
         );
-        
+
         assert_eq!(okm, expected);
     }
-    
+
     #[test]
     fn test_hkdf_sha256_long_inputs() {
         // RFC 5869 Test Case 2 - SHA-256 with longer inputs
@@ -366,7 +382,7 @@ mod tests {
 
         assert_eq!(okm, expected);
     }
-    
+
     #[test]
     fn test_hkdf_sha384_basic() {
         let ikm = b"input keying material";

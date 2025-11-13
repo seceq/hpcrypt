@@ -18,7 +18,10 @@ pub mod tls13;
 pub mod x963;
 
 pub use argon2::{Argon2, Argon2d, Argon2i, Argon2id, Params};
-pub use hkdf::{HkdfSha256, HkdfSha384, HkdfSha512, HkdfBlake2b, hkdf_sha256, hkdf_sha384, hkdf_sha512, hkdf_blake2b};
+pub use hkdf::{
+    hkdf_blake2b, hkdf_sha256, hkdf_sha384, hkdf_sha512, HkdfBlake2b, HkdfSha256, HkdfSha384,
+    HkdfSha512,
+};
 pub use pbkdf2::{pbkdf2_hmac_sha256, pbkdf2_hmac_sha512};
 pub use scrypt::{scrypt, ScryptParams};
 pub use tls12::{prf_sha256, prf_sha384, prf_sha512};

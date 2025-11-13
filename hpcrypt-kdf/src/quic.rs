@@ -36,8 +36,8 @@
 //! ```
 
 extern crate alloc;
-use alloc::vec::Vec;
 use alloc::format;
+use alloc::vec::Vec;
 
 use hpcrypt_hash::{HmacSha256, HmacSha384, HmacSha512};
 
@@ -281,7 +281,10 @@ mod tests {
         let tls13_key = tls13_expand(&secret, "key", &[], 16);
 
         // They should be different due to different prefixes
-        assert_ne!(quic_key, tls13_key, "QUIC and TLS 1.3 should use different prefixes");
+        assert_ne!(
+            quic_key, tls13_key,
+            "QUIC and TLS 1.3 should use different prefixes"
+        );
     }
 
     #[test]
@@ -319,7 +322,10 @@ mod tests {
         let out1 = hkdf_expand_label_sha256(&secret, "quic key", &context1, 16);
         let out2 = hkdf_expand_label_sha256(&secret, "quic key", &context2, 16);
 
-        assert_ne!(out1, out2, "Different contexts should produce different outputs");
+        assert_ne!(
+            out1, out2,
+            "Different contexts should produce different outputs"
+        );
     }
 
     #[test]
@@ -350,8 +356,8 @@ mod tests {
         let client_hp = hkdf_expand_label_sha256(&initial_secret, "quic hp", &[], 16);
 
         assert_eq!(client_key.len(), 16); // AES-128 key
-        assert_eq!(client_iv.len(), 12);  // AEAD nonce
-        assert_eq!(client_hp.len(), 16);  // Header protection key
+        assert_eq!(client_iv.len(), 12); // AEAD nonce
+        assert_eq!(client_hp.len(), 16); // Header protection key
 
         // Verify all three are different
         assert_ne!(client_key, client_hp);
@@ -370,8 +376,8 @@ mod tests {
         let hp = hkdf_expand_label_sha384(&secret, "quic hp", &[], 32);
 
         assert_eq!(key.len(), 32); // AES-256 key
-        assert_eq!(iv.len(), 12);  // AEAD nonce
-        assert_eq!(hp.len(), 32);  // Header protection key for AES-256
+        assert_eq!(iv.len(), 12); // AEAD nonce
+        assert_eq!(hp.len(), 32); // Header protection key for AES-256
     }
 
     #[test]

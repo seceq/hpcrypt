@@ -41,12 +41,7 @@ use alloc::vec::Vec;
 /// let shared_info = b"optional context";
 /// let key = x963_kdf_sha256(shared_secret, shared_info, 32);
 /// ```
-pub fn x963_kdf<H>(
-    shared_secret: &[u8],
-    shared_info: &[u8],
-    key_len: usize,
-    hash_fn: H,
-) -> Vec<u8>
+pub fn x963_kdf<H>(shared_secret: &[u8], shared_info: &[u8], key_len: usize, hash_fn: H) -> Vec<u8>
 where
     H: Fn(&[u8]) -> Vec<u8>,
 {
@@ -73,14 +68,10 @@ where
 }
 
 /// X9.63 KDF with SHA-256
-pub fn x963_kdf_sha256(
-    shared_secret: &[u8],
-    shared_info: &[u8],
-    key_len: usize,
-) -> Vec<u8> {
+pub fn x963_kdf_sha256(shared_secret: &[u8], shared_info: &[u8], key_len: usize) -> Vec<u8> {
     x963_kdf(shared_secret, shared_info, key_len, |input| {
         // Use hpcrypt-hash SHA-256
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(input);
         hasher.finalize().to_vec()
@@ -88,13 +79,9 @@ pub fn x963_kdf_sha256(
 }
 
 /// X9.63 KDF with SHA-384
-pub fn x963_kdf_sha384(
-    shared_secret: &[u8],
-    shared_info: &[u8],
-    key_len: usize,
-) -> Vec<u8> {
+pub fn x963_kdf_sha384(shared_secret: &[u8], shared_info: &[u8], key_len: usize) -> Vec<u8> {
     x963_kdf(shared_secret, shared_info, key_len, |input| {
-        use sha2::{Sha384, Digest};
+        use sha2::{Digest, Sha384};
         let mut hasher = Sha384::new();
         hasher.update(input);
         hasher.finalize().to_vec()
@@ -102,13 +89,9 @@ pub fn x963_kdf_sha384(
 }
 
 /// X9.63 KDF with SHA-512
-pub fn x963_kdf_sha512(
-    shared_secret: &[u8],
-    shared_info: &[u8],
-    key_len: usize,
-) -> Vec<u8> {
+pub fn x963_kdf_sha512(shared_secret: &[u8], shared_info: &[u8], key_len: usize) -> Vec<u8> {
     x963_kdf(shared_secret, shared_info, key_len, |input| {
-        use sha2::{Sha512, Digest};
+        use sha2::{Digest, Sha512};
         let mut hasher = Sha512::new();
         hasher.update(input);
         hasher.finalize().to_vec()

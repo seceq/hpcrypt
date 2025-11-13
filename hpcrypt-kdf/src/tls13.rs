@@ -35,8 +35,8 @@
 //! ```
 
 extern crate alloc;
-use alloc::vec::Vec;
 use alloc::format;
+use alloc::vec::Vec;
 
 use hpcrypt_hash::{HmacSha256, HmacSha384, HmacSha512};
 
@@ -285,12 +285,7 @@ mod tests {
              27 ae 41 e4 64 9b 93 4c a4 95 99 1b 78 52 b8 55"
         );
 
-        let client_secret = hkdf_expand_label_sha256(
-            &secret,
-            "c hs traffic",
-            &context,
-            32
-        );
+        let client_secret = hkdf_expand_label_sha256(&secret, "c hs traffic", &context, 32);
 
         // Verify it produces 32 bytes
         assert_eq!(client_secret.len(), 32);
@@ -328,7 +323,10 @@ mod tests {
         let out1 = hkdf_expand_label_sha256(&secret, "key", &[], 16);
         let out2 = hkdf_expand_label_sha256(&secret, "iv", &[], 16);
 
-        assert_ne!(out1, out2, "Different labels should produce different outputs");
+        assert_ne!(
+            out1, out2,
+            "Different labels should produce different outputs"
+        );
     }
 
     #[test]
@@ -340,7 +338,10 @@ mod tests {
         let out1 = hkdf_expand_label_sha256(&secret, "key", &context1, 16);
         let out2 = hkdf_expand_label_sha256(&secret, "key", &context2, 16);
 
-        assert_ne!(out1, out2, "Different contexts should produce different outputs");
+        assert_ne!(
+            out1, out2,
+            "Different contexts should produce different outputs"
+        );
     }
 
     #[test]
@@ -366,19 +367,15 @@ mod tests {
         let transcript_hash = [0x11; 32];
 
         // Derive client handshake traffic secret
-        let client_hs_traffic = hkdf_expand_label_sha256(
-            &handshake_secret,
-            "c hs traffic",
-            &transcript_hash,
-            32
-        );
+        let client_hs_traffic =
+            hkdf_expand_label_sha256(&handshake_secret, "c hs traffic", &transcript_hash, 32);
 
         // Derive key and IV from traffic secret
         let key = hkdf_expand_label_sha256(&client_hs_traffic, "key", &[], 16);
         let iv = hkdf_expand_label_sha256(&client_hs_traffic, "iv", &[], 12);
 
         assert_eq!(key.len(), 16); // AES-128 key
-        assert_eq!(iv.len(), 12);  // GCM nonce
+        assert_eq!(iv.len(), 12); // GCM nonce
     }
 
     #[test]
@@ -388,18 +385,14 @@ mod tests {
         let transcript_hash = [0x11; 48];
 
         // Derive server handshake traffic secret
-        let server_hs_traffic = hkdf_expand_label_sha384(
-            &handshake_secret,
-            "s hs traffic",
-            &transcript_hash,
-            48
-        );
+        let server_hs_traffic =
+            hkdf_expand_label_sha384(&handshake_secret, "s hs traffic", &transcript_hash, 48);
 
         // Derive key and IV from traffic secret
         let key = hkdf_expand_label_sha384(&server_hs_traffic, "key", &[], 32);
         let iv = hkdf_expand_label_sha384(&server_hs_traffic, "iv", &[], 12);
 
         assert_eq!(key.len(), 32); // AES-256 key
-        assert_eq!(iv.len(), 12);  // GCM nonce
+        assert_eq!(iv.len(), 12); // GCM nonce
     }
 }
