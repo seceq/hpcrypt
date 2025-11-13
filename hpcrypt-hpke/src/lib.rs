@@ -1,6 +1,6 @@
 //! # HPCrypt-HPKE: Hybrid Public Key Encryption (RFC 9180)
 //!
-//! This crate provides a production-ready implementation of HPKE (Hybrid Public Key Encryption)
+//! This crate implements HPKE (Hybrid Public Key Encryption)
 //! as specified in [RFC 9180](https://www.rfc-editor.org/rfc/rfc9180.html).
 //!
 //! HPKE combines asymmetric and symmetric cryptography to provide efficient authenticated
@@ -12,13 +12,13 @@
 //!
 //! ## Features
 //!
-//! - ✅ **RFC 9180 Compliant** - Full implementation of the standard
-//! - ✅ **Four Modes** - Base, PSK, Auth, AuthPSK
-//! - ✅ **Multiple Cipher Suites** - P-256, P-384, P-521, X25519 (KEM)
-//! - ✅ **Multiple AEADs** - AES-128-GCM, AES-256-GCM, ChaCha20-Poly1305
-//! - ✅ **Stateful Encryption** - Automatic nonce management
-//! - ✅ **Export Secrets** - Derive application-specific secrets
-//! - ✅ **no_std Compatible** - Works in embedded environments
+//! - RFC 9180 Compliant - Full implementation of the standard
+//! - Four Modes - Base, PSK, Auth, AuthPSK
+//! - Multiple Cipher Suites - P-256, P-384, P-521, X25519 (KEM)
+//! - Multiple AEADs - AES-128-GCM, AES-256-GCM, ChaCha20-Poly1305
+//! - Stateful Encryption - Automatic nonce management
+//! - Export Secrets - Derive application-specific secrets
+//! - no_std Compatible - Works in embedded environments
 //!
 //! ## Quick Start
 //!
