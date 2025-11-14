@@ -1,3 +1,4 @@
+#![cfg(feature = "quic-header-protection")]
 //! QUIC Header Protection
 //!
 //! This module implements header protection as defined in RFC 9001 Section 5.4.

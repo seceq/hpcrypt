@@ -12,6 +12,8 @@ pub mod argon2;
 pub mod hkdf;
 pub mod pbkdf2;
 pub mod quic;
+#[cfg(feature = "quic-header-protection")]
+pub mod quic_header_protection;
 pub mod scrypt;
 pub mod tls12;
 pub mod tls13;
@@ -23,6 +25,10 @@ pub use hkdf::{
     HkdfSha512,
 };
 pub use pbkdf2::{pbkdf2_hmac_sha256, pbkdf2_hmac_sha512};
+#[cfg(feature = "quic-header-protection")]
+pub use quic_header_protection::{
+    HeaderProtection, HeaderProtectionAes128, HeaderProtectionAes256, HeaderProtectionChaCha20,
+};
 pub use scrypt::{scrypt, ScryptParams};
 pub use tls12::{prf_sha256, prf_sha384, prf_sha512};
 pub use x963::{x963_kdf, x963_kdf_sha256, x963_kdf_sha384, x963_kdf_sha512};

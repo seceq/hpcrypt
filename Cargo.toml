@@ -18,7 +18,6 @@ members = [
     "hpcrypt-kdf",
     "hpcrypt-pake",
     "hpcrypt-mac",
-    "hpcrypt-quic",
     "hpcrypt-rsa",
     "hpcrypt-threshold",
     "hpcrypt-srp",
@@ -57,7 +56,6 @@ hpcrypt-hpke = { path = "hpcrypt-hpke", version = "0.1.0", default-features = fa
 hpcrypt-kdf = { path = "hpcrypt-kdf", version = "0.1.0", default-features = false }
 hpcrypt-pake = { path = "hpcrypt-pake", version = "0.1.0", default-features = false }
 hpcrypt-mac = { path = "hpcrypt-mac", version = "0.1.0", default-features = false }
-hpcrypt-quic = { path = "hpcrypt-quic", version = "0.1.0", default-features = false }
 hpcrypt-rsa = { path = "hpcrypt-rsa", version = "0.1.0", default-features = false }
 hpcrypt-threshold = { path = "hpcrypt-threshold", version = "0.1.0", default-features = false }
 hpcrypt-srp = { path = "hpcrypt-srp", version = "0.1.0", default-features = false }
