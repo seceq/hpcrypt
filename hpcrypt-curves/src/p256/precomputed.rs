@@ -218,7 +218,7 @@ impl CompressedPrecomputedTable {
             let mut double_count = 0;
 
             // Reduce even values to odd by counting factors of 2
-            #[cfg_attr(clippy, allow(clippy::manual_is_multiple_of))]
+            #[allow(clippy::manual_is_multiple_of)]
             while current_value > 0 && current_value % 2 == 0 {
                 current_value /= 2;
                 double_count += 1;
