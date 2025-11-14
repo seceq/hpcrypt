@@ -104,7 +104,7 @@ use alloc::vec::Vec;
 use subtle::ConstantTimeEq;
 
 use crate::aes::{Aes, AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, BLOCK_SIZE};
-use crate::ghash_fast::GHashFast;
+use crate::ghash::GHashFast;
 
 /// GMAC tag size (128 bits)
 pub const TAG_SIZE: usize = 16;

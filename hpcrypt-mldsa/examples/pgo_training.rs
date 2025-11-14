@@ -34,7 +34,7 @@ fn main() {
 }
 
 /// Train on a specific security level
-fn train_security_level<P: mldsa::params::DsaParams>(level_name: &str) {
+fn train_security_level<P: hpcrypt_mldsa::params::DsaParams>(level_name: &str) {
     println!("Training on {}...", level_name);
 
     // Generate multiple keypairs to exercise keygen paths

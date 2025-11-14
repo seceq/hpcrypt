@@ -272,7 +272,7 @@ impl GHashFast {
 }
 
 /// Convenience function
-pub fn ghash_fast(h: &[u8; 16], data: &[u8]) -> [u8; 16] {
+pub fn ghash(h: &[u8; 16], data: &[u8]) -> [u8; 16] {
     let mut hasher = GHashFast::new_default(h);
     hasher.update_padded(data);
     hasher.finalize()
@@ -362,7 +362,7 @@ mod tests {
         let mut data = Vec::with_capacity(32);
         data.extend_from_slice(&block1);
         data.extend_from_slice(&block2);
-        let tag_single = ghash_fast(&h, &data);
+        let tag_single = ghash(&h, &data);
 
         assert_eq!(tag_incremental, tag_single);
     }
@@ -377,8 +377,8 @@ mod tests {
         // Test that various sizes work correctly (consistency check)
         for size in [16, 64, 128, 256, 1024] {
             let data = vec![0x42u8; size];
-            let tag1 = ghash_fast(&h, &data);
-            let tag2 = ghash_fast(&h, &data);
+            let tag1 = ghash(&h, &data);
+            let tag2 = ghash(&h, &data);
             assert_eq!(tag1, tag2, "Size {} must be deterministic", size);
         }
     }

@@ -50,7 +50,7 @@ pub mod chacha20;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod chacha20poly1305;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod ghash_fast; // Production GHASH implementation (4x faster than baseline)
+pub mod ghash; // Production GHASH implementation
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod gmac;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
@@ -80,7 +80,7 @@ pub use chacha20::ChaCha20;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use chacha20poly1305::{ChaCha20Poly1305, XChaCha20Poly1305};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use ghash_fast::{ghash_fast, GHashFast};
+pub use ghash::{ghash, GHashFast};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use gmac::{gmac128, gmac192, gmac256, Gmac128, Gmac192, Gmac256};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]

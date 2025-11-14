@@ -84,13 +84,62 @@ mod hex {
 }
 
 fn parse_private_key(private_key: &PrivateKey) -> Option<RsaPrivateKey> {
+    use num_traits::One;
+
     let n = BigUint::from_bytes_be(&private_key.modulus);
     let d = BigUint::from_bytes_be(&private_key.private_exponent);
     let e = BigUint::from_bytes_be(&private_key.public_exponent);
     let p = BigUint::from_bytes_be(&private_key.prime1);
     let q = BigUint::from_bytes_be(&private_key.prime2);
 
-    RsaPrivateKey::from_components(n, e, d, vec![p, q]).ok()
+    // Compute CRT parameters
+    let p_minus_1 = &p - BigUint::one();
+    let q_minus_1 = &q - BigUint::one();
+    let dp = &d % &p_minus_1;
+    let dq = &d % &q_minus_1;
+
+    // Compute qinv = q^(-1) mod p using extended GCD
+    let qinv = mod_inverse(&q, &p)?;
+
+    RsaPrivateKey::from_components(n, e, d, p, q, dp, dq, qinv).ok()
+}
+
+// Compute modular inverse using extended Euclidean algorithm
+fn mod_inverse(a: &BigUint, m: &BigUint) -> Option<BigUint> {
+    use num_bigint::Sign;
+    use num_traits::Zero;
+
+    let a_signed = num_bigint::BigInt::from_biguint(Sign::Plus, a.clone());
+    let m_signed = num_bigint::BigInt::from_biguint(Sign::Plus, m.clone());
+
+    let (gcd, x, _) = extended_gcd(&a_signed, &m_signed);
+
+    if gcd != num_bigint::BigInt::from(1) {
+        return None;
+    }
+
+    let result = if x.sign() == Sign::Minus {
+        &m_signed + x
+    } else {
+        x
+    };
+
+    result.to_biguint()
+}
+
+// Extended Euclidean algorithm
+fn extended_gcd(a: &num_bigint::BigInt, b: &num_bigint::BigInt) -> (num_bigint::BigInt, num_bigint::BigInt, num_bigint::BigInt) {
+    use num_traits::Zero;
+
+    if b.is_zero() {
+        return (a.clone(), num_bigint::BigInt::from(1), num_bigint::BigInt::from(0));
+    }
+
+    let (gcd, x1, y1) = extended_gcd(b, &(a % b));
+    let x = y1.clone();
+    let y = x1 - (a / b) * y1;
+
+    (gcd, x, y)
 }
 
 fn run_test(test: &TestCase, private_key: &RsaPrivateKey) -> bool {
