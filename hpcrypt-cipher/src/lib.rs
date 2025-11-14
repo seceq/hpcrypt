@@ -42,15 +42,17 @@
 //!
 //! ```rust
 //! use hpcrypt_cipher::AesCbc128;
-//! use hpcrypt_rng::OsRng;
 //!
+//! let key = [0u8; 16];  // In practice: use cryptographically secure random key
 //! let cipher = AesCbc128::new(&key);
 //!
 //! // Generate new random IV each time
-//! let iv1 = OsRng::generate_bytes::<16>();
+//! let iv1 = [0u8; 16];  // In practice: use cryptographically secure random IV
+//! let plaintext1 = b"Exactly 16 bytes";  // Must be block-aligned
 //! let ciphertext1 = cipher.encrypt(&iv1, plaintext1)?;
 //!
-//! let iv2 = OsRng::generate_bytes::<16>();
+//! let iv2 = [1u8; 16];  // Different IV for each encryption
+//! let plaintext2 = b"Second msg16byte";  // Must be block-aligned
 //! let ciphertext2 = cipher.encrypt(&iv2, plaintext2)?;
 //! # Ok::<(), hpcrypt_core::error::CipherError>(())
 //! ```
@@ -85,35 +87,32 @@
 //!
 //! ```rust
 //! use hpcrypt_cipher::AesCtr128;
-//! use hpcrypt_rng::OsRng;
 //!
 //! // Generate key (store securely!)
-//! let key = OsRng::generate_bytes::<16>();
+//! let key = [0u8; 16];  // In practice: use cryptographically secure random key
 //! let cipher = AesCtr128::new(&key);
 //!
 //! // Encryption
-//! let nonce = OsRng::generate_bytes::<16>();  // Unique nonce
+//! let nonce = [0u8; 16];  // In practice: use unique random nonce
 //! let plaintext = b"Secret message of any length";
-//! let ciphertext = cipher.encrypt(&nonce, plaintext);
+//! let ciphertext = cipher.process(&nonce, plaintext);
 //!
-//! // Decryption (CTR mode: encrypt = decrypt)
-//! let recovered = cipher.encrypt(&nonce, &ciphertext);
+//! // Decryption (CTR mode: encryption is symmetric)
+//! let recovered = cipher.process(&nonce, &ciphertext);
 //! assert_eq!(recovered, plaintext);
-//! # Ok::<(), hpcrypt_core::error::CipherError>(())
 //! ```
 //!
 //! ## AES-CBC (Legacy)
 //!
 //! ```rust
 //! use hpcrypt_cipher::AesCbc256;
-//! use hpcrypt_rng::OsRng;
 //!
-//! let key = OsRng::generate_bytes::<32>();
+//! let key = [0u8; 32];  // In practice: use cryptographically secure random key
 //! let cipher = AesCbc256::new(&key);
 //!
 //! // Plaintext MUST be padded to block size (16 bytes)
 //! let plaintext = b"Exactly 16 bytes";  // Already aligned
-//! let iv = OsRng::generate_bytes::<16>();  // Random IV
+//! let iv = [0u8; 16];  // In practice: use cryptographically secure random IV
 //!
 //! let ciphertext = cipher.encrypt(&iv, plaintext)?;
 //! let recovered = cipher.decrypt(&iv, &ciphertext)?;

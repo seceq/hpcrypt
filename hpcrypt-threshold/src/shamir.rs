@@ -62,7 +62,7 @@ pub struct Share {
 /// # Example
 ///
 /// ```
-/// use hpcrypt_shamir::shamir::split_secret;
+/// use hpcrypt_threshold::shamir::split_secret;
 ///
 /// let secret = b"my secret data";
 /// let shares = split_secret(secret, 3, 5).unwrap();
@@ -156,7 +156,7 @@ pub fn split_secret(
 /// # Example
 ///
 /// ```
-/// use hpcrypt_shamir::shamir::{split_secret, reconstruct_secret};
+/// use hpcrypt_threshold::shamir::{split_secret, reconstruct_secret};
 ///
 /// let secret = b"my secret data";
 /// let shares = split_secret(secret, 3, 5).unwrap();

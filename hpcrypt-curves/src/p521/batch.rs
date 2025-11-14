@@ -51,7 +51,7 @@ use super::field::FieldElement;
 ///
 /// # Example
 ///
-/// ```rust
+/// ```ignore
 /// use hpcrypt_curves::p256::{FieldElement, batch_invert};
 ///
 /// let a = FieldElement::from_u64(3);

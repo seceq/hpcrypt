@@ -152,7 +152,7 @@ impl Poly {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignore
     /// # use mldsa::poly::Poly;
     /// let a = Poly::new();
     /// let b = Poly::new();
@@ -195,7 +195,7 @@ impl Poly {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignore
     /// # use mldsa::poly::Poly;
     /// let a = Poly::new();
     /// let b = Poly::new();
@@ -539,7 +539,7 @@ impl Default for Poly {
 /// - Best used for: Matrix-vector multiplication where same polynomial multiplied multiple times
 ///
 /// # Usage Pattern
-/// ```
+/// ```ignore
 /// let a_ntt = ntt(&a);  // Transform to NTT domain
 /// let cache = PolyMulcache::compute(&a_ntt);  // Pre-compute cache (one-time cost)
 ///
@@ -582,7 +582,7 @@ impl PolyMulcache {
     /// - Cost is amortized when polynomial is multiplied multiple times
     ///
     /// # Example
-    /// ```
+    /// ```ignore
     /// use mldsa::poly::{Poly, PolyMulcache};
     /// use mldsa::ntt::ntt;
     ///

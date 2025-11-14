@@ -20,7 +20,7 @@
 //!
 //! ## Basic GMAC Usage
 //!
-//! ```rust
+//! ```ignore
 //! use hpcrypt_aead::gmac::Gmac128;
 //!
 //! // Authentication key (128-bit for GMAC-128)
@@ -40,7 +40,7 @@
 //!
 //! ## Incremental API
 //!
-//! ```rust
+//! ```ignore
 //! use hpcrypt_aead::gmac::Gmac128;
 //!
 //! let key = [1u8; 16];

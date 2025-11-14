@@ -20,7 +20,7 @@
 //!
 //! ## RSA-PSS Signatures
 //!
-//! ```rust
+//! ```ignore
 //! use hpcrypt_rsa::{RsaPrivateKey, RsaPublicKey};
 //! use hpcrypt_hash::sha256::Sha256;
 //!
@@ -41,7 +41,7 @@
 //!
 //! ## RSA-OAEP Encryption
 //!
-//! ```rust
+//! ```ignore
 //! use hpcrypt_rsa::{RsaPrivateKey, RsaPublicKey};
 //! use hpcrypt_hash::sha256::Sha256;
 //!

@@ -18,12 +18,9 @@
 //!
 //! ```no_run
 //! use hpcrypt_slhdsa::{Sha2_128f, KeyPair, sign, verify};
-//! use rand::rngs::OsRng;
-//!
-//! let mut rng = OsRng;
 //!
 //! // Generate a key pair
-//! let keypair = KeyPair::<Sha2_128f>::generate(&mut rng);
+//! let keypair = KeyPair::<Sha2_128f>::generate();
 //!
 //! // Sign a message
 //! let message = b"Hello, world!";

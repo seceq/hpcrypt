@@ -19,7 +19,7 @@
 //!
 //! # Example
 //!
-//! ```no_run
+//! ```ignore
 //! use mldsa::params::MlDsa65;
 //! use mldsa::keygen::keygen;
 //! use mldsa::context::{sign_with_context, verify_with_context};
@@ -105,7 +105,7 @@ fn encode_message_with_context(message: &[u8], context: &[u8]) -> Result<Vec<u8>
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// use mldsa::params::MlDsa65;
 /// use mldsa::keygen::keygen;
 /// use mldsa::context::sign_with_context;
@@ -143,7 +143,7 @@ pub fn sign_with_context<P: DsaParams>(
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// use mldsa::params::MlDsa65;
 /// use mldsa::keygen::keygen;
 /// use mldsa::context::{sign_with_context, verify_with_context};

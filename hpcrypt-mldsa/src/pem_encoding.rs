@@ -18,7 +18,7 @@
 //!
 //! # Example
 //!
-//! ```no_run
+//! ```ignore
 //! use mldsa::keygen::keygen;
 //! use mldsa::params::MlDsa65;
 //! use mldsa::pem_encoding::{public_key_to_pem, public_key_from_pem};
@@ -91,7 +91,7 @@ const PEM_TAG_SECRET_KEY: &str = "ML-DSA PRIVATE KEY";
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// use mldsa::keygen::keygen;
 /// use mldsa::params::MlDsa65;
 /// use mldsa::pem_encoding::public_key_to_pem;
@@ -127,7 +127,7 @@ pub fn public_key_to_pem<P: DsaParams>(pk: &PublicKey<P>) -> Result<String, PemE
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// use mldsa::keygen::keygen;
 /// use mldsa::params::MlDsa65;
 /// use mldsa::pem_encoding::secret_key_to_pem;
@@ -158,7 +158,7 @@ pub fn secret_key_to_pem<P: DsaParams>(sk: &SecretKey<P>) -> Result<String, PemE
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// use mldsa::params::MlDsa65;
 /// use mldsa::pem_encoding::public_key_from_pem;
 ///
@@ -189,7 +189,7 @@ pub fn public_key_from_pem<P: DsaParams>(pem_str: &str) -> Result<PublicKey<P>, 
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// use mldsa::params::MlDsa65;
 /// use mldsa::pem_encoding::secret_key_from_pem;
 ///

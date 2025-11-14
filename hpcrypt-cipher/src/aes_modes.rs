@@ -46,9 +46,8 @@ impl AesCbc128 {
     ///
     /// ```
     /// use hpcrypt_cipher::AesCbc128;
-    /// use hpcrypt_rng::OsRng;
     ///
-    /// let key = OsRng::generate_bytes::<16>();
+    /// let key = [0u8; 16];  // In practice: use cryptographically secure random key
     /// let cipher = AesCbc128::new(&key);
     /// ```
     pub fn new(key: &[u8; AES128_KEY_SIZE]) -> Self {
@@ -84,16 +83,15 @@ impl AesCbc128 {
     ///
     /// ```
     /// use hpcrypt_cipher::AesCbc128;
-    /// use hpcrypt_rng::OsRng;
     ///
-    /// let key = OsRng::generate_bytes::<16>();
+    /// let key = [0u8; 16];  // In practice: use cryptographically secure random key
     /// let cipher = AesCbc128::new(&key);
     ///
     /// // Plaintext must be block-aligned (16 bytes)
     /// let plaintext = b"Exactly 16 bytes";
     ///
     /// // Generate random IV for each encryption
-    /// let iv = OsRng::generate_bytes::<16>();
+    /// let iv = [0u8; 16];  // In practice: use cryptographically secure random IV
     /// let ciphertext = cipher.encrypt(&iv, plaintext)?;
     ///
     /// // Store/transmit: [IV || ciphertext]

@@ -700,7 +700,7 @@ impl CShake256 {
 ///
 /// # Example
 /// ```
-/// use hpcrypt_hash::Kmac128;
+/// use hpcrypt_mac::Kmac128;
 ///
 /// let key = b"my secret key";
 /// let message = b"hello world";
@@ -800,7 +800,7 @@ impl Kmac128 {
     ///
     /// # Example
     /// ```
-    /// use hpcrypt_hash::Kmac128;
+    /// use hpcrypt_mac::Kmac128;
     ///
     /// let key = b"secret key";
     /// let message = b"hello world";
@@ -844,7 +844,7 @@ impl Kmac128 {
 ///
 /// # Example
 /// ```
-/// use hpcrypt_hash::Kmac256;
+/// use hpcrypt_mac::Kmac256;
 ///
 /// let key = b"my secret key";
 /// let message = b"hello world";
@@ -944,7 +944,7 @@ impl Kmac256 {
     ///
     /// # Example
     /// ```
-    /// use hpcrypt_hash::Kmac256;
+    /// use hpcrypt_mac::Kmac256;
     ///
     /// let key = b"secret key";
     /// let message = b"hello world";
@@ -979,7 +979,7 @@ impl Kmac256 {
 ///
 /// # Example
 /// ```
-/// use hpcrypt_hash::kmac128;
+/// use hpcrypt_mac::kmac128;
 ///
 /// let key = b"secret key";
 /// let message = b"hello world";
@@ -1005,7 +1005,7 @@ pub fn kmac128(key: &[u8], message: &[u8], customization: &[u8], output_len: usi
 ///
 /// # Example
 /// ```
-/// use hpcrypt_hash::kmac256;
+/// use hpcrypt_mac::kmac256;
 ///
 /// let key = b"secret key";
 /// let message = b"hello world";

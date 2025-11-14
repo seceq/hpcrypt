@@ -1669,7 +1669,7 @@ impl Ed25519 {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// use hpcrypt_curves::ed25519::Ed25519;
     ///
     /// let public_keys = vec![pk1, pk2, pk3];

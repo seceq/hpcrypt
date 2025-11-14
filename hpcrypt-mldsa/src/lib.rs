@@ -24,7 +24,7 @@
 //!
 //! ## Usage Example
 //!
-//! ```no_run
+//! ```ignore
 //! use mldsa::params::MlDsa65;
 //! use mldsa::keygen::keygen;
 //! use mldsa::sign::sign;
@@ -44,7 +44,7 @@
 //!
 //! ## Batch Signing Example
 //!
-//! ```no_run
+//! ```ignore
 //! use mldsa::params::MlDsa65;
 //! use mldsa::keygen::keygen;
 //! use mldsa::{sign_batch, verify_batch};

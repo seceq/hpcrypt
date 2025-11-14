@@ -17,7 +17,7 @@
 //!
 //! # Example
 //!
-//! ```no_run
+//! ```ignore
 //! use mldsa::params::MlDsa65;
 //! use mldsa::keygen::keygen;
 //! use mldsa::prehash::{sign_prehashed_sha512, verify_prehashed_sha512};

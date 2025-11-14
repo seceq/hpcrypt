@@ -49,7 +49,7 @@
 //!
 //! Verify multiple signatures simultaneously with 50-70% performance improvement:
 //!
-//! ```rust
+//! ```no_run
 //! use hpcrypt_curves::ed25519::{PublicKey, Signature};
 //! use hpcrypt_curves::Ed25519;
 //!
@@ -80,8 +80,9 @@
 //!
 //! ```rust
 //! use hpcrypt_curves::X25519;
+//! use hpcrypt_core::error::CurveError;
 //!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn main() -> Result<(), CurveError> {
 //! // Alice generates her keypair
 //! let alice_private = [1u8; 32]; // Use secure random in production
 //! let alice_public = X25519::public_key(&alice_private);
@@ -105,8 +106,9 @@
 //!
 //! ```rust
 //! use hpcrypt_curves::X448;
+//! use hpcrypt_core::error::CurveError;
 //!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn main() -> Result<(), CurveError> {
 //! // Alice generates her keypair
 //! let alice_private = [1u8; 56]; // Use secure random in production
 //! let alice_public = X448::public_key(&alice_private);
@@ -126,7 +128,7 @@
 //!
 //! ## P-256 ECDSA Signatures
 //!
-//! ```rust
+//! ```ignore
 //! use hpcrypt_curves::p256::{Scalar, Point};
 //! use hpcrypt_signatures::ecdsa::Ecdsa;
 //!

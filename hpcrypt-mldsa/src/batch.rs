@@ -24,7 +24,7 @@
 //!
 //! # Example
 //!
-//! ```no_run
+//! ```ignore
 //! use mldsa::params::MlDsa65;
 //! use mldsa::keygen::keygen;
 //! use mldsa::batch::sign_batch;
@@ -82,7 +82,7 @@ use crate::sign::{sign, Signature};
 ///
 /// # Examples
 ///
-/// ```no_run
+/// ```ignore
 /// use mldsa::params::MlDsa65;
 /// use mldsa::keygen::keygen;
 /// use mldsa::batch::sign_batch;

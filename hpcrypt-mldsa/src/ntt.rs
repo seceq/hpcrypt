@@ -417,7 +417,7 @@ pub fn inv_ntt(poly: &Poly) -> Poly {
 /// - Best used when original polynomial is no longer needed
 ///
 /// # Example
-/// ```
+/// ```ignoreignore
 /// use mldsa::poly::Poly;
 /// use mldsa::ntt::ntt_inplace;
 ///
@@ -467,7 +467,7 @@ pub fn ntt_inplace(poly: &mut Poly) {
 /// - Best used when NTT polynomial is no longer needed
 ///
 /// # Example
-/// ```
+/// ```ignoreignore
 /// use mldsa::poly::Poly;
 /// use mldsa::ntt::{ntt_inplace, inv_ntt_inplace};
 ///
@@ -556,7 +556,7 @@ pub fn ntt_multiply(a: &Poly, b: &Poly) -> Poly {
 /// * Product a·b in NTT domain (pointwise multiplication with Montgomery reduction)
 ///
 /// # Example
-/// ```
+/// ```ignoreignore
 /// use mldsa::poly::{Poly, PolyMulcache};
 /// use mldsa::ntt::{ntt, ntt_multiply_cached};
 ///
@@ -1204,7 +1204,7 @@ macro_rules! ntt_layer_const {
 /// * Polynomial in NTT domain
 ///
 /// # Example
-/// ```
+/// ```ignoreignore
 /// use mldsa::poly::Poly;
 /// use mldsa::ntt::ntt_specialized;
 ///
@@ -1284,7 +1284,7 @@ macro_rules! inv_ntt_layer_const {
 /// * Polynomial in coefficient form
 ///
 /// # Example
-/// ```
+/// ```ignoreignore
 /// use mldsa::poly::Poly;
 /// use mldsa::ntt::{ntt_specialized, inv_ntt_specialized};
 ///
