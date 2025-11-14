@@ -25,11 +25,11 @@ The library is organized into focused, composable crates:
 | Crate | Description | Standards |
 |-------|-------------|-----------|
 | **hpcrypt-core** | Core utilities, error types, traits | - |
-| **hpcrypt-hash** | Hash functions (SHA-2, SHA-3, BLAKE2/3, KMAC) | FIPS 180-4, FIPS 202, RFC 7693 |
-| **hpcrypt-mac** | Message authentication codes (HMAC, CMAC, PMAC, Poly1305) | FIPS 198-1, RFC 2104, RFC 4493 |
-| **hpcrypt-aead** | Authenticated encryption (AES-GCM, ChaCha20-Poly1305, AES-SIV) | RFC 5116, RFC 7539, RFC 5297 |
-| **hpcrypt-cipher** | Block cipher modes (CBC, CTR, XTS) | NIST SP 800-38A/E |
-| **hpcrypt-kdf** | Key derivation (HKDF, PBKDF2, Argon2, scrypt, TLS KDF) | RFC 5869, RFC 2898, RFC 9106 |
+| **hpcrypt-hash** | Hash functions (SHA-2, SHA-3, BLAKE2/3) | FIPS 180-4, FIPS 202, RFC 7693 |
+| **hpcrypt-cipher** | Block ciphers (AES, ChaCha20) and modes (CBC, CTR, XTS) | NIST SP 800-38A/E |
+| **hpcrypt-mac** | MACs (HMAC, CMAC, KMAC, GMAC, Poly1305) and universal hashes (GHASH, Polyval) | FIPS 198-1, RFC 2104, RFC 4493 |
+| **hpcrypt-aead** | Authenticated encryption (AES-GCM, ChaCha20-Poly1305, Ascon) | RFC 5116, RFC 7539, RFC 5297 |
+| **hpcrypt-kdf** | Key derivation (HKDF, PBKDF2, Argon2, scrypt, TLS/QUIC KDF) | RFC 5869, RFC 2898, RFC 9106 |
 | **hpcrypt-rng** | Cryptographically secure random generation | - |
 
 ### Elliptic Curve Cryptography
@@ -146,29 +146,30 @@ assert_eq!(output, verify);
 ### Hash Functions
 
 - **SHA-2 Family**: SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/256
-- **SHA-3 Family**: SHA3-224, SHA3-256, SHA3-384, SHA3-512, SHAKE128, SHAKE256
+- **SHA-3 Family**: SHA3-224, SHA3-256, SHA3-384, SHA3-512, SHAKE128, SHAKE256, TurboShake
 - **BLAKE Family**: BLAKE2b, BLAKE2s, BLAKE3
-- **Other**: KMAC, cSHAKE
 
 ### Message Authentication
 
-- HMAC (with any hash function)
+- HMAC (with SHA-256, SHA-384, SHA-512, BLAKE2b)
+- KMAC (KMAC128, KMAC256, cSHAKE)
 - CMAC (AES-based)
-- PMAC
+- GMAC (Galois MAC for AES)
 - Poly1305
-- GMAC
+- GHASH (universal hash for GCM)
+- Polyval (universal hash for AES-GCM-SIV)
 
 ### Authenticated Encryption (AEAD)
 
-- AES-GCM (128/192/256)
-- AES-CCM (128/256)
-- AES-GCM-SIV
-- AES-SIV
+- AES-GCM (128/192/256-bit keys)
+- AES-GCM-SIV (nonce misuse-resistant)
+- AES-CCM (128/256-bit keys)
+- AES-SIV (deterministic AEAD)
 - AES-EAX
-- AES-OCB
+- AES-OCB3
 - ChaCha20-Poly1305
 - XChaCha20-Poly1305
-- Ascon-128, Ascon-128a, Ascon-80pq
+- Ascon-128, Ascon-128a (NIST lightweight crypto winner)
 
 ### Elliptic Curves
 
@@ -204,19 +205,29 @@ HPCrypt focuses on **cryptographic primitives**, not protocol implementations:
 - **QUIC header protection** is in `hpcrypt-kdf` with `quic-header-protection` feature
 - This maintains architectural consistency and reduces crate proliferation
 
-### Authenticated vs. Unauthenticated Encryption
+### Cipher Architecture
 
-- **Use `hpcrypt-aead`** for almost all encryption needs (AES-GCM, ChaCha20-Poly1305)
-- **Use `hpcrypt-cipher`** only for:
-  - Legacy protocol requirements (TLS 1.2 CBC, SSH)
-  - Disk encryption (XTS mode)
-  - Building custom authenticated constructions
+HPCrypt maintains clear separation of concerns:
 
-### Module Organization
+- **`hpcrypt-cipher`**: Block ciphers (AES, ChaCha20) and cipher modes (CBC, CTR, CFB, OFB, XTS)
+- **`hpcrypt-mac`**: All MAC implementations and universal hashes
+- **`hpcrypt-aead`**: Authenticated encryption schemes combining ciphers and MACs
 
-- **Renamed modules** for clarity: `ghash_fast` → `ghash`
-- **Removed obsolete code**: 3,000+ lines of unmaintainable tests/examples
-- **Consistent APIs** across all crates
+For encryption, **prefer `hpcrypt-aead`** (AES-GCM, ChaCha20-Poly1305) which provides both confidentiality and authentication. Only use `hpcrypt-cipher` for legacy protocols or disk encryption.
+
+### Dependency Hierarchy
+
+Clean, acyclic dependency structure:
+
+```
+hpcrypt-cipher (block ciphers, modes)
+    ↓
+hpcrypt-mac (depends on cipher for AES-based MACs)
+    ↓
+hpcrypt-aead (depends on both cipher and mac)
+```
+
+This eliminates circular dependencies and provides clear module boundaries.
 
 ## Security
 
@@ -277,11 +288,14 @@ This project requires Rust **1.70** or later.
 
 ## Recent Changes
 
-- **Removed `hpcrypt-quic`**: Moved QUIC header protection to `hpcrypt-kdf` for architectural consistency
-- **Renamed modules**: `ghash_fast` → `ghash` for clarity
-- **Cleaned codebase**: Removed 3,000+ lines of obsolete code
+- **Reorganized cryptographic primitives**: Consolidated block ciphers to `hpcrypt-cipher` and all MACs to `hpcrypt-mac`
+- **Moved AES and ChaCha20**: From `hpcrypt-aead` to `hpcrypt-cipher` where they architecturally belong
+- **Consolidated MAC implementations**: HMAC, KMAC moved from `hpcrypt-hash` to `hpcrypt-mac`
+- **Moved universal hashes**: GHASH and Polyval now in `hpcrypt-mac` alongside other MACs
+- **Fixed dependency hierarchy**: Eliminated circular dependencies between cipher, mac, and aead crates
+- **Cleaned codebase**: Removed 4,000+ lines of debug files, Python scripts, and obsolete code
+- **Renamed modules**: `quic_header_protection` → `quic_header` for clarity
 - **Fixed critical bugs**: P-256 Montgomery reduction bug fix
-- **Improved tests**: Fixed ML-DSA and SLH-DSA test compatibility
 
 ## License
 
