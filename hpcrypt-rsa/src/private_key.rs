@@ -36,6 +36,57 @@ pub struct RsaPrivateKey {
 }
 
 impl RsaPrivateKey {
+    /// Create an RSA private key from components
+    ///
+    /// # Arguments
+    ///
+    /// * `n` - Modulus (n = p * q)
+    /// * `e` - Public exponent
+    /// * `d` - Private exponent
+    /// * `p` - First prime factor
+    /// * `q` - Second prime factor
+    /// * `dp` - CRT exponent d mod (p-1)
+    /// * `dq` - CRT exponent d mod (q-1)
+    /// * `qinv` - CRT coefficient q^-1 mod p
+    ///
+    /// # Security
+    ///
+    /// This function validates the public key components but does NOT validate
+    /// the mathematical relationships between all parameters. Only use with
+    /// trusted, properly generated keys.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use hpcrypt_rsa::RsaPrivateKey;
+    /// use num_bigint::BigUint;
+    ///
+    /// let key = RsaPrivateKey::from_components(n, e, d, p, q, dp, dq, qinv).unwrap();
+    /// ```
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_components(
+        n: BigUint,
+        e: BigUint,
+        d: BigUint,
+        p: BigUint,
+        q: BigUint,
+        dp: BigUint,
+        dq: BigUint,
+        qinv: BigUint,
+    ) -> Result<Self> {
+        let public_key = RsaPublicKey::new(n, e)?;
+
+        Ok(Self {
+            public_key,
+            d,
+            p,
+            q,
+            dp,
+            dq,
+            qinv,
+        })
+    }
+
     /// Generate a new RSA private key
     ///
     /// # Arguments
