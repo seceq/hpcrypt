@@ -1254,7 +1254,6 @@ impl Point {
         k2: &[u8; 32],
         q: &Point,
     ) -> Point {
-
         // Precompute lookup table
         let table = [
             Point::infinity(), // 00: neither
