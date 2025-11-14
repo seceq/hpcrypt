@@ -197,6 +197,7 @@ fn run_test(test: &TestCase, private_key: &RsaPrivateKey) -> bool {
 }
 
 #[test]
+#[ignore = "Wycheproof test vectors not included in dist release"]
 fn wycheproof_rsa_oaep_2048_sha256_mgf1sha256() {
     let test_data = include_str!(
         "../../../wycheproof/testvectors_v1/rsa_oaep_2048_sha256_mgf1sha256_test.json"
@@ -245,6 +246,7 @@ fn wycheproof_rsa_oaep_2048_sha256_mgf1sha256() {
 }
 
 #[test]
+#[ignore = "Wycheproof test vectors not included in dist release"]
 fn wycheproof_rsa_oaep_3072_sha256_mgf1sha256() {
     let test_data = include_str!(
         "../../../wycheproof/testvectors_v1/rsa_oaep_3072_sha256_mgf1sha256_test.json"
@@ -292,6 +294,7 @@ fn wycheproof_rsa_oaep_3072_sha256_mgf1sha256() {
 }
 
 #[test]
+#[ignore = "Wycheproof test vectors not included in dist release"]
 fn wycheproof_rsa_oaep_4096_sha256_mgf1sha256() {
     let test_data = include_str!(
         "../../../wycheproof/testvectors_v1/rsa_oaep_4096_sha256_mgf1sha256_test.json"
