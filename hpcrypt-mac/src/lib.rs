@@ -16,9 +16,6 @@
 #[cfg(feature = "std")]
 extern crate std;
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
-
 // MAC implementations
 pub mod cmac;
 pub mod ghash;
