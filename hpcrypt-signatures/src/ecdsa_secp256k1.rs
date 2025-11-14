@@ -225,7 +225,6 @@ impl SigningKey {
     /// - Never reused or exposed
     pub fn from_bytes(bytes: &[u8; 32]) -> Result<Self, CurveError> {
         // Validate that bytes represents a scalar in range [1, n-1]
-        use hpcrypt_curves::secp256k1::Scalar;
 
         let scalar = Scalar::from_bytes(bytes);
 
@@ -264,7 +263,6 @@ impl SigningKey {
     /// ```
     #[cfg(feature = "std")]
     pub fn generate() -> Result<Self, CurveError> {
-        use hpcrypt_curves::secp256k1::Scalar;
         use hpcrypt_rng::generate_random_bytes;
 
         // Try up to 100 times to generate a valid key
