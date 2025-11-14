@@ -19,12 +19,12 @@
 //! # Standards
 //!
 //! - NIST Lightweight Cryptography Winner (2023)
-//! - Specified in: https://ascon.iaik.tugraz.at/
+//! - Specified in: <https://ascon.iaik.tugraz.at/>
 //!
 //! # References
 //!
 //! - Dobraunig, Eichlseder, Mendel, Schläffer: "Ascon v1.2"
-//! - NIST LWC Standardization: https://csrc.nist.gov/projects/lightweight-cryptography
+//! - NIST LWC Standardization: <https://csrc.nist.gov/projects/lightweight-cryptography>
 
 extern crate alloc;
 

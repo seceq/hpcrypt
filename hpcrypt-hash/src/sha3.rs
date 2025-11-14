@@ -237,7 +237,7 @@ pub const SHA3_512_OUTPUT_SIZE: usize = 64;
 /// Keccak state size in 64-bit words
 pub(crate) const STATE_SIZE: usize = 25;
 
-/// Round constants for Keccak-f[1600]
+/// Round constants for Keccak-f\[1600]
 const ROUND_CONSTANTS: [u64; 24] = [
     0x0000000000000001,
     0x0000000000008082,
@@ -265,7 +265,7 @@ const ROUND_CONSTANTS: [u64; 24] = [
     0x8000000080008008,
 ];
 
-/// Rotation offsets for Keccak-f[1600] (used only with lane-complement feature)
+/// Rotation offsets for Keccak-f\[1600] (used only with lane-complement feature)
 #[cfg(feature = "lane-complement")]
 const ROTATION_OFFSETS: [u32; 24] = [
     1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14, 27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44,
@@ -1124,23 +1124,23 @@ impl<const RATE: usize, const ROUNDS: usize> ShakeCore<RATE, ROUNDS> {
 
 /// SHAKE128 - Extendable Output Function with 128-bit security
 ///
-/// Uses 24-round Keccak-f[1600] permutation with rate=168 bytes (1344 bits).
+/// Uses 24-round Keccak-f\[1600\] permutation with rate=168 bytes (1344 bits).
 pub type Shake128 = ShakeCore<168, 24>;
 
 /// SHAKE256 - Extendable Output Function with 256-bit security
 ///
-/// Uses 24-round Keccak-f[1600] permutation with rate=136 bytes (1088 bits).
+/// Uses 24-round Keccak-f\[1600\] permutation with rate=136 bytes (1088 bits).
 pub type Shake256 = ShakeCore<136, 24>;
 
 /// TurboSHAKE128 - Fast XOF with 128-bit security (~2x faster than SHAKE128)
 ///
-/// Uses 12-round Keccak-p[1600,12] permutation with rate=168 bytes (1344 bits).
+/// Uses 12-round Keccak-p\[1600,12] permutation with rate=168 bytes (1344 bits).
 /// Defined in RFC 9861.
 pub type TurboShake128 = ShakeCore<168, 12>;
 
 /// TurboSHAKE256 - Fast XOF with 256-bit security (~2x faster than SHAKE256)
 ///
-/// Uses 12-round Keccak-p[1600,12] permutation with rate=136 bytes (1088 bits).
+/// Uses 12-round Keccak-p\[1600,12] permutation with rate=136 bytes (1088 bits).
 /// Defined in RFC 9861.
 pub type TurboShake256 = ShakeCore<136, 12>;
 
@@ -1260,10 +1260,10 @@ impl TurboShake256 {
 
 // ===== End of Phase 3: TurboSHAKE Structs =====
 
-// ===== Phase 3: Keccak-p[1600,12] Permutation =====
+// ===== Phase 3: Keccak-p\[1600,12] Permutation =====
 
 /// Keccak-p[1600, 12] permutation - 12-round variant for TurboSHAKE
-/// This is approximately 2x faster than the full 24-round Keccak-f[1600]
+/// This is approximately 2x faster than the full 24-round Keccak-f\[1600]
 /// Used by TurboSHAKE128 and TurboSHAKE256 (RFC 9861)
 #[inline(always)]
 #[cfg(not(feature = "lane-complement"))]
@@ -1369,9 +1369,9 @@ fn keccak_p_12(state: &mut [u64; 25]) {
     }
 }
 
-// ===== End of Phase 3: Keccak-p[1600,12] =====
+// ===== End of Phase 3: Keccak-p\[1600,12] =====
 
-/// Keccak-f[1600] permutation
+/// Keccak-f\[1600] permutation
 /// Phase 2 optimizations: Theta/Chi/Rho-Pi step unrolling
 #[inline(always)]
 #[cfg(not(feature = "lane-complement"))]
@@ -1390,7 +1390,7 @@ fn keccak_f(state: &mut [u64; 25]) {
     }
 }
 
-/// Keccak-f[1600] permutation with lane complementing optimization
+/// Keccak-f\[1600] permutation with lane complementing optimization
 ///
 /// This variant stores lanes 1, 2, 8, 12, 17, and 20 in complemented form to reduce
 /// NOT operations in the chi step from 25 per round to 8 per round.

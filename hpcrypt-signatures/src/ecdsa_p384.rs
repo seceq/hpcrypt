@@ -56,7 +56,7 @@ impl Signature {
     /// Returns a variable-length byte array in DER format.
     /// Maximum size is 104 bytes for P-384 (48-byte integers).
     ///
-    /// Format: 0x30 [total-len] 0x02 [r-len] [r] 0x02 [s-len] [s]
+    /// Format: 0x30 \[total-len\] 0x02 \[r-len\] \[r\] 0x02 \[s-len\] \[s\]
     pub fn to_der(&self) -> ([u8; 104], usize) {
         let mut der = [0u8; 104];
         let mut pos = 0;
@@ -110,7 +110,7 @@ impl Signature {
     /// Parse signature from DER encoding
     ///
     /// Accepts DER-encoded ECDSA signatures in the format:
-    /// 0x30 [total-len] 0x02 [r-len] [r] 0x02 [s-len] [s]
+    /// 0x30 \[total-len\] 0x02 \[r-len\] \[r\] 0x02 \[s-len\] \[s\]
     pub fn from_der(der: &[u8]) -> Result<Self, CurveError> {
         if der.len() < 8 {
             return Err(CurveError::InvalidSignature);

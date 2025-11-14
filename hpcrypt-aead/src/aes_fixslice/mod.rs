@@ -8,7 +8,7 @@
 //! # References
 //!
 //! - Adomnicai & Peyrin (2020): "Fixslicing AES-like Ciphers" (IACR TCHES 2021)
-//!   https://eprint.iacr.org/2020/1123
+//!   <https://eprint.iacr.org/2020/1123>
 //! - Boyar & Peralta (2010): "A depth-16 circuit for the AES S-box"
 
 #![allow(dead_code)] // Remove this as we implement

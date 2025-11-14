@@ -18,7 +18,7 @@ use alloc::vec::Vec;
 /// Keccak state size in 64-bit words
 const STATE_SIZE: usize = 25;
 
-/// Round constants for Keccak-f[1600] (from sha3.rs)
+/// Round constants for Keccak-f\[1600\] (from sha3.rs)
 pub const ROUND_CONSTANTS: [u64; 24] = [
     0x0000000000000001,
     0x0000000000008082,

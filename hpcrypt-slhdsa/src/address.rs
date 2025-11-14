@@ -23,11 +23,11 @@ pub const ADDR_TYPE_FORS_PRF: u32 = 6;
 /// Optimized address structure stored as u32 array.
 ///
 /// Layout (8 words, 32 bytes total):
-/// - words[0]: layer address
-/// - words[1]: tree address (high 32 bits)
-/// - words[2]: tree address (low 32 bits)
-/// - words[3]: type (WOTS, FORS, etc.)
-/// - words[4-7]: type-specific fields (keypair, chain, hash, tree height, tree index)
+/// - words\[0\]: layer address
+/// - words\[1\]: tree address (high 32 bits)
+/// - words\[2\]: tree address (low 32 bits)
+/// - words\[3\]: type (WOTS, FORS, etc.)
+/// - words\[4-7\]: type-specific fields (keypair, chain, hash, tree height, tree index)
 #[derive(Clone, Copy, Debug)]
 pub struct Address {
     words: [u32; 8],
