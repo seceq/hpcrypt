@@ -602,9 +602,9 @@ mod tests {
     use alloc::vec;
 
     use super::*;
-    use crate::{MlDsa44, MlDsa65, MlDsa87};
     use crate::keygen::keygen_from_seed;
     use crate::verify::verify;
+    use crate::{MlDsa44, MlDsa65, MlDsa87};
 
     #[test]
     fn test_sign_succeeds() {

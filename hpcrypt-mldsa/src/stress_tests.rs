@@ -7,11 +7,11 @@ mod tests {
     use alloc::{format, vec};
 
     use super::*;
-    use crate::{MlDsa44, MlDsa65, MlDsa87};
     use crate::keygen::keygen_from_seed;
+    use crate::serialize::{deserialize_signature, serialize_signature};
     use crate::sign::{sign, sign_deterministic};
     use crate::verify::verify;
-    use crate::serialize::{serialize_signature, deserialize_signature};
+    use crate::{MlDsa44, MlDsa65, MlDsa87};
 
     /// Test multiple sign/verify cycles with the same keypair
     #[test]

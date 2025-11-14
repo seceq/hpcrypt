@@ -418,11 +418,11 @@ fn poly_multiply(a: &Poly, b: &Poly) -> Poly {
 
 mod tests {
     use super::*;
-    use crate::{MlDsa44, MlDsa65, MlDsa87, Q};
     use crate::keygen::keygen_from_seed;
+    use crate::serialize::{deserialize_signature, serialize_signature};
     use crate::sign::{sign, sign_deterministic};
     use crate::verify::verify;
-    use crate::serialize::{serialize_signature, deserialize_signature};
+    use crate::{MlDsa44, MlDsa65, MlDsa87, Q};
 
     #[test]
     fn test_keygen_deterministic() {
