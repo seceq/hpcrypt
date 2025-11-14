@@ -5,7 +5,7 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-use hpcrypt_hash::{HmacSha256, HmacSha512};
+use hpcrypt_mac::{HmacSha256, HmacSha512};
 
 /// PBKDF2 with HMAC-SHA256
 pub fn pbkdf2_hmac_sha256(password: &[u8], salt: &[u8], iterations: u32, output: &mut [u8]) {

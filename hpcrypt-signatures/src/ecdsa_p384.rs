@@ -31,7 +31,7 @@ use hpcrypt_core::error::CurveError;
 use hpcrypt_curves::p384::{Point, Scalar};
 // Note: scalar_mul_generator_fast disabled due to bug in precomputed table
 use hpcrypt_curves::ct_utils::ConstantTimeEq;
-use hpcrypt_hash::hmac::HmacSha384;
+use hpcrypt_mac::HmacSha384;
 use hpcrypt_hash::sha384::Sha384;
 
 /// ECDSA-P384 signature (r, s) components

@@ -12,6 +12,8 @@ categories.workspace = true
 
 [dependencies]
 hpcrypt-core = { workspace = true }
+hpcrypt-cipher = { workspace = true }
+hpcrypt-mac = { workspace = true }
 subtle = { workspace = true }
 zeroize = { workspace = true }
 
@@ -26,8 +28,8 @@ serde = { version = "1.0", features = ["derive"] }
 
 [features]
 default = ["std", "alloc"]
-std = ["hpcrypt-core/std", "alloc"]
-alloc = ["hpcrypt-core/alloc"]
+std = ["hpcrypt-core/std", "hpcrypt-cipher/std", "hpcrypt-mac/std", "alloc"]
+alloc = ["hpcrypt-core/alloc", "hpcrypt-cipher/alloc", "hpcrypt-mac/alloc"]
 
 # Ascon-only build (NIST Lightweight Cryptography Winner)
 # Excludes all other AEAD algorithms to minimize binary size

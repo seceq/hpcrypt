@@ -39,8 +39,8 @@
 
 extern crate alloc;
 
-use crate::aes::Aes;
-use crate::polyval::Polyval;
+use hpcrypt_cipher::Aes;
+use hpcrypt_mac::Polyval;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::convert::TryInto;

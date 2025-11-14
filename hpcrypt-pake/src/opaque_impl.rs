@@ -7,7 +7,8 @@ use crate::opaque::{Config, HashFunction, KdfFunction, KsfFunction, MacFunction,
 use crate::oprf::{EvaluatedElement, OprfError};
 
 use hpcrypt_curves::ed25519::{base_point, EdwardsPoint, Scalar};
-use hpcrypt_hash::{sha512, HmacSha256, HmacSha512};
+use hpcrypt_hash::sha512;
+use hpcrypt_mac::{HmacSha256, HmacSha512};
 use hpcrypt_kdf::{HkdfSha256, HkdfSha512};
 
 #[cfg(feature = "alloc")]

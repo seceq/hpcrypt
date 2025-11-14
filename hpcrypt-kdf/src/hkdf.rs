@@ -5,7 +5,7 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-use hpcrypt_hash::{HmacBlake2b, HmacSha256, HmacSha384, HmacSha512};
+use hpcrypt_mac::{HmacBlake2b, HmacSha256, HmacSha384, HmacSha512};
 
 /// HKDF using SHA-256
 pub struct HkdfSha256 {

@@ -27,16 +27,11 @@ extern crate std;
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-// Note: When --all-features is used, both 'std' and 'ascon-only' get enabled
-// We give precedence to std/alloc features (normal build) over ascon-only
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod aes;
+// AEAD mode implementations
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod aes_ccm;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod aes_eax;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod aes_fixslice; // Fixslicing implementation - constant-time, 4-block parallel
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod aes_gcm;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
@@ -46,23 +41,12 @@ pub mod aes_ocb;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod aes_siv;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod chacha20;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod chacha20poly1305;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod ghash; // Production GHASH implementation
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod gmac;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod poly1305;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub mod polyval;
 
-// Ascon is always available
+// Lightweight AEAD
 pub mod ascon;
 
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use aes::{Aes, AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, BLOCK_SIZE};
+// AEAD mode exports
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use aes_ccm::{Aes128Ccm, Aes256Ccm, CcmError};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
@@ -76,17 +60,18 @@ pub use aes_ocb::{Aes128Ocb, Aes256Ocb};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use aes_siv::{Aes128Siv, Aes256Siv};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use chacha20::ChaCha20;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use chacha20poly1305::{ChaCha20Poly1305, XChaCha20Poly1305};
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use ghash::{ghash, GHashFast};
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use gmac::{gmac128, gmac192, gmac256, Gmac128, Gmac192, Gmac256};
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use poly1305::Poly1305;
-#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use polyval::Polyval;
 
-// Ascon is always exported
+// Re-export from hpcrypt-cipher for convenience
+#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
+pub use hpcrypt_cipher::{
+    Aes, ChaCha20, AES128_KEY_SIZE, AES192_KEY_SIZE,
+    AES256_KEY_SIZE, BLOCK_SIZE,
+};
+
+// Re-export Ascon from local module
 pub use ascon::{Ascon128, Ascon128a};
+
+// Re-export from hpcrypt-mac for convenience
+#[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
+pub use hpcrypt_mac::{ghash, gmac128, gmac192, gmac256, GHashFast, Gmac128, Gmac192, Gmac256, Poly1305, Polyval};

@@ -9,8 +9,8 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 
-use crate::chacha20::{ChaCha20, XChaCha20};
-use crate::poly1305::{Poly1305, KEY_SIZE as POLY_KEY_SIZE, TAG_SIZE};
+use hpcrypt_cipher::chacha20::{ChaCha20, XChaCha20};
+use hpcrypt_mac::poly1305::{Poly1305, KEY_SIZE as POLY_KEY_SIZE, TAG_SIZE};
 use hpcrypt_core::utils::write_u64_le;
 use subtle::ConstantTimeEq;
 use zeroize::Zeroize;

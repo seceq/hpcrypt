@@ -14,6 +14,7 @@ categories.workspace = true
 hpcrypt-core = { workspace = true }
 hpcrypt-curves = { workspace = true }
 hpcrypt-hash = { workspace = true }
+hpcrypt-mac = { workspace = true }
 hpcrypt-kdf = { workspace = true }
 hpcrypt-rng = { workspace = true, features = ["os-rng"] }
 subtle = { workspace = true }
@@ -24,5 +25,5 @@ hex-literal = { workspace = true }
 
 [features]
 default = ["std", "alloc"]
-std = ["hpcrypt-core/std", "hpcrypt-curves/std", "hpcrypt-hash/std", "hpcrypt-kdf/std"]
-alloc = ["hpcrypt-core/alloc", "hpcrypt-curves/alloc", "hpcrypt-hash/alloc", "hpcrypt-kdf/alloc"]
+std = ["hpcrypt-core/std", "hpcrypt-curves/std", "hpcrypt-hash/std", "hpcrypt-mac/std", "hpcrypt-kdf/std"]
+alloc = ["hpcrypt-core/alloc", "hpcrypt-curves/alloc", "hpcrypt-hash/alloc", "hpcrypt-mac/alloc", "hpcrypt-kdf/alloc"]

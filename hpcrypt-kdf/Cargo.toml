@@ -7,6 +7,7 @@ license.workspace = true
 [dependencies]
 hpcrypt-core = { workspace = true }
 hpcrypt-hash = { workspace = true }
+hpcrypt-mac = { workspace = true }
 hpcrypt-aead = { workspace = true, optional = true }
 subtle = { workspace = true }
 zeroize = { workspace = true }
@@ -21,6 +22,6 @@ serde = { version = "1.0", features = ["derive"] }
 
 [features]
 default = ["std"]
-std = ["hpcrypt-core/std", "hpcrypt-aead?/std"]
-alloc = ["hpcrypt-core/alloc", "hpcrypt-aead?/alloc"]
+std = ["hpcrypt-core/std", "hpcrypt-hash/std", "hpcrypt-mac/std", "hpcrypt-aead?/std"]
+alloc = ["hpcrypt-core/alloc", "hpcrypt-hash/alloc", "hpcrypt-mac/alloc", "hpcrypt-aead?/alloc"]
 quic-header-protection = ["dep:hpcrypt-aead"]

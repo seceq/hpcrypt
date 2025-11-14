@@ -176,8 +176,19 @@ extern crate std;
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+// Block ciphers
+pub mod aes;
+pub mod aes_fixslice;
+pub mod chacha20;
+
+// Cipher modes
 pub mod aes_modes;
 
+// Re-exports - Block ciphers
+pub use aes::{Aes, AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, BLOCK_SIZE};
+pub use chacha20::ChaCha20;
+
+// Re-exports - Cipher modes
 pub use aes_modes::{
     AesCbc128, AesCbc192, AesCbc256, AesCfb128, AesCfb192, AesCfb256, AesCtr128, AesCtr192,
     AesCtr256, AesOfb128, AesOfb192, AesOfb256, AesXts128, AesXts256,

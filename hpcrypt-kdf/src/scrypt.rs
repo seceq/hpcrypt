@@ -20,7 +20,7 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 
-use hpcrypt_hash::HmacSha256;
+use hpcrypt_mac::HmacSha256;
 
 /// Scrypt parameters
 #[derive(Debug, Clone, Copy)]

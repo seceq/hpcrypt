@@ -39,7 +39,7 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-use hpcrypt_hash::{HmacSha256, HmacSha384, HmacSha512};
+use hpcrypt_mac::{HmacSha256, HmacSha384, HmacSha512};
 
 /// TLS 1.2 PRF using SHA-256
 ///

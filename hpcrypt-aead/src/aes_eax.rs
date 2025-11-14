@@ -22,7 +22,7 @@ extern crate alloc;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
-use crate::aes::{Aes, BLOCK_SIZE};
+use hpcrypt_cipher::{Aes, BLOCK_SIZE};
 use hpcrypt_core::error::AeadError;
 
 const TAG_SIZE: usize = 16;

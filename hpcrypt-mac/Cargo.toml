@@ -12,7 +12,10 @@ categories.workspace = true
 
 [dependencies]
 hpcrypt-core = { workspace = true }
-hpcrypt-aead = { workspace = true }
+hpcrypt-cipher = { workspace = true }
+hpcrypt-hash = { workspace = true }
+subtle = { workspace = true }
+zeroize = { workspace = true }
 
 [dev-dependencies]
 hex-literal = { workspace = true }
@@ -22,6 +25,6 @@ hex = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 
 [features]
-default = ["std"]
-std = ["hpcrypt-core/std", "hpcrypt-aead/std"]
-alloc = ["hpcrypt-core/alloc", "hpcrypt-aead/alloc"]
+default = ["std", "alloc"]
+std = ["hpcrypt-core/std", "hpcrypt-cipher/std", "hpcrypt-hash/std", "alloc"]
+alloc = ["hpcrypt-core/alloc", "hpcrypt-cipher/alloc", "hpcrypt-hash/alloc"]

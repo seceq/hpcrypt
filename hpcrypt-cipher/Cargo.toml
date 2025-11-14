@@ -12,7 +12,6 @@ categories.workspace = true
 
 [dependencies]
 hpcrypt-core = { workspace = true }
-hpcrypt-aead = { workspace = true }
 subtle = { workspace = true }
 zeroize = { workspace = true }
 num-bigint = { version = "0.4", default-features = false }
@@ -24,5 +23,5 @@ hex-literal = { workspace = true }
 
 [features]
 default = ["std", "alloc"]
-std = ["hpcrypt-core/std", "hpcrypt-aead/std", "alloc"]
-alloc = ["hpcrypt-core/alloc", "hpcrypt-aead/alloc"]
+std = ["hpcrypt-core/std", "alloc"]
+alloc = ["hpcrypt-core/alloc"]

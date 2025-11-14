@@ -27,7 +27,7 @@ pub struct HmacSha256 {
 impl HmacSha256 {
     /// Create a new HMAC-SHA256 instance with the given key
     pub fn new(key: &[u8]) -> Self {
-        use crate::sha256::{Sha256, BLOCK_LEN};
+        use hpcrypt_hash::sha256::{Sha256, BLOCK_LEN};
 
         let mut derived_key = Vec::with_capacity(BLOCK_LEN);
 
@@ -51,7 +51,7 @@ impl HmacSha256 {
 
     /// Compute HMAC-SHA256
     pub fn compute(&self, data: &[u8]) -> [u8; 32] {
-        use crate::sha256::{Sha256, BLOCK_LEN};
+        use hpcrypt_hash::sha256::{Sha256, BLOCK_LEN};
 
         // Compute inner hash: H((K ⊕ ipad) || message)
         let mut inner = Sha256::new();
@@ -95,7 +95,7 @@ pub struct HmacSha384 {
 
 impl HmacSha384 {
     pub fn new(key: &[u8]) -> Self {
-        use crate::sha384::{Sha384, BLOCK_LEN};
+        use hpcrypt_hash::sha384::{Sha384, BLOCK_LEN};
 
         let mut derived_key = Vec::with_capacity(BLOCK_LEN);
 
@@ -116,7 +116,7 @@ impl HmacSha384 {
     }
 
     pub fn compute(&self, data: &[u8]) -> [u8; 48] {
-        use crate::sha384::{Sha384, BLOCK_LEN};
+        use hpcrypt_hash::sha384::{Sha384, BLOCK_LEN};
 
         // Compute inner hash: H((K ⊕ ipad) || message)
         let mut inner = Sha384::new();
@@ -155,7 +155,7 @@ pub struct HmacSha512 {
 
 impl HmacSha512 {
     pub fn new(key: &[u8]) -> Self {
-        use crate::sha512::{Sha512, BLOCK_LEN};
+        use hpcrypt_hash::sha512::{Sha512, BLOCK_LEN};
 
         let mut derived_key = Vec::with_capacity(BLOCK_LEN);
 
@@ -176,7 +176,7 @@ impl HmacSha512 {
     }
 
     pub fn compute(&self, data: &[u8]) -> [u8; 64] {
-        use crate::sha512::{Sha512, BLOCK_LEN};
+        use hpcrypt_hash::sha512::{Sha512, BLOCK_LEN};
 
         // Compute inner hash: H((K ⊕ ipad) || message)
         let mut inner = Sha512::new();
@@ -215,12 +215,12 @@ pub struct HmacBlake2b {
 
 impl HmacBlake2b {
     pub fn new(key: &[u8]) -> Self {
-        use crate::blake2b::BLOCK_LEN;
+        use hpcrypt_hash::blake2b::BLOCK_LEN;
 
         let mut derived_key = Vec::with_capacity(BLOCK_LEN);
 
         if key.len() > BLOCK_LEN {
-            let hash = crate::blake2b::blake2b(key);
+            let hash = hpcrypt_hash::blake2b::blake2b(key);
             derived_key.extend_from_slice(&hash);
         } else {
             derived_key.extend_from_slice(key);
@@ -232,7 +232,7 @@ impl HmacBlake2b {
     }
 
     pub fn compute(&self, data: &[u8]) -> Vec<u8> {
-        use crate::blake2b::{Blake2b, BLOCK_LEN};
+        use hpcrypt_hash::blake2b::{Blake2b, BLOCK_LEN};
 
         // Compute inner hash: H((K ⊕ ipad) || message)
         let mut inner = Blake2b::new();

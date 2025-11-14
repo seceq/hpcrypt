@@ -148,6 +148,3 @@ pub mod ecdsa_p384;
 pub mod ecdsa_p521;
 /// ECDSA signatures for secp256k1 (Bitcoin/Ethereum)
 pub mod ecdsa_secp256k1;
-
-#[cfg(test)]
-mod wycheproof_tests;

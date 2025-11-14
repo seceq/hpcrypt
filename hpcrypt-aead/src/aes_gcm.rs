@@ -10,8 +10,8 @@ use alloc::vec::Vec;
 use hpcrypt_core::traits::AeadError;
 use subtle::ConstantTimeEq;
 
-use crate::aes::{Aes, AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, BLOCK_SIZE};
-use crate::ghash::GHashFast;
+use hpcrypt_cipher::{Aes, AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, BLOCK_SIZE};
+use hpcrypt_mac::ghash::GHashFast;
 
 /// AES-128-GCM tag size (128 bits)
 pub const TAG_SIZE: usize = 16;

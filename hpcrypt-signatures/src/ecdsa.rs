@@ -31,7 +31,7 @@ use hpcrypt_curves::ct_utils::ConstantTimeEq;
 use hpcrypt_curves::p256::{
     scalar_mul_generator, AffinePoint, FieldElement, Point, Scalar, P256_B,
 };
-use hpcrypt_hash::hmac::HmacSha256;
+use hpcrypt_mac::HmacSha256;
 use hpcrypt_hash::sha256::Sha256;
 
 /// ECDSA signature (r, s) components

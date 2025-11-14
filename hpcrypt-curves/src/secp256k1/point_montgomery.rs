@@ -988,10 +988,6 @@ impl MontgomeryPoint {
     }
 }
 
-// Debug tests for step-by-step verification
-#[path = "test_doubling_debug.rs"]
-mod test_doubling_debug;
-
 #[cfg(test)]
 mod glv_tests {
     use super::*;

@@ -9,7 +9,7 @@
 //! - [NIST SP 800-38B: Recommendation for Block Cipher Modes of Operation: The CMAC Mode for Authentication](https://csrc.nist.gov/publications/detail/sp/800-38b/final)
 //! - [RFC 4493: The AES-CMAC Algorithm](https://tools.ietf.org/html/rfc4493)
 
-use hpcrypt_aead::Aes;
+use hpcrypt_cipher::Aes;
 
 const BLOCK_SIZE: usize = 16; // AES block size
 

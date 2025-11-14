@@ -40,7 +40,7 @@ extern crate alloc;
 use alloc::format;
 use alloc::vec::Vec;
 
-use hpcrypt_hash::{HmacSha256, HmacSha384, HmacSha512};
+use hpcrypt_mac::{HmacSha256, HmacSha384, HmacSha512};
 
 /// HKDF-Expand-Label with SHA-256
 ///

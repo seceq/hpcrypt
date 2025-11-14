@@ -27,7 +27,7 @@
 use hpcrypt_core::error::CurveError;
 use hpcrypt_curves::ct_utils::ConstantTimeEq;
 use hpcrypt_curves::secp256k1::{Point, Scalar};
-use hpcrypt_hash::hmac::HmacSha256;
+use hpcrypt_mac::HmacSha256;
 use hpcrypt_hash::sha256::Sha256;
 
 #[cfg(not(feature = "std"))]
