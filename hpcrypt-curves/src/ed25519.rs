@@ -1523,6 +1523,7 @@ impl Ed25519 {
     ///
     /// Panics if scalars.len() != points.len()
     #[cfg(feature = "std")]
+    #[allow(clippy::manual_div_ceil)] // MSRV 1.70 compatibility - div_ceil stabilized in 1.73
     pub fn pippenger_msm(scalars: &[[u8; 32]], points: &[EdwardsPoint]) -> EdwardsPoint {
         assert_eq!(
             scalars.len(),
@@ -1543,7 +1544,7 @@ impl Ed25519 {
         // Select optimal window size based on batch size
         let window_size = Self::optimal_window_size(n);
         let num_buckets = 1usize << window_size; // 2^window_size
-        let num_windows = 256_usize.div_ceil(window_size); // Ceiling division
+        let num_windows = (256_usize + window_size - 1) / window_size; // Ceiling division
 
         // Result accumulator
         let mut result = EdwardsPoint::identity();

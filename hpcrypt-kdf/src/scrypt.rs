@@ -3,6 +3,8 @@
 //! Scrypt is a password-based key derivation function designed to be more secure against
 //! hardware brute-force attacks than alternatives like PBKDF2 by being memory-hard.
 //!
+
+#![allow(clippy::manual_div_ceil)] // MSRV 1.70 compatibility - div_ceil stabilized in 1.73
 //! # Security
 //!
 //! The security of scrypt relies on three parameters:
@@ -296,7 +298,7 @@ fn integerify(b: &[u8], r: usize) -> usize {
 /// Simple PBKDF2-HMAC-SHA256 implementation for scrypt
 fn pbkdf2_hmac_sha256(password: &[u8], salt: &[u8], iterations: usize, output: &mut [u8]) {
     let hlen = 32; // SHA-256 output length
-    let blocks_needed = output.len().div_ceil(hlen);
+    let blocks_needed = (output.len() + hlen - 1) / hlen;
 
     for block_index in 1..=blocks_needed {
         let mut block = [0u8; 32];

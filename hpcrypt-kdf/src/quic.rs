@@ -3,6 +3,8 @@
 //! This module implements QUIC-specific key derivation functions as defined in RFC 9001.
 //!
 //! # HKDF-Expand-Label for QUIC
+
+#![allow(clippy::manual_div_ceil)] // MSRV 1.70 compatibility - div_ceil stabilized in 1.73
 //!
 //! QUIC uses the same HKDF-Expand-Label structure as TLS 1.3, but with "quic " prefix
 //! instead of "tls13 ":
@@ -152,7 +154,7 @@ pub fn hkdf_expand_label_sha512(
 // Internal HKDF-Expand implementation for SHA-256
 fn hkdf_expand_sha256(prk: &[u8], info: &[u8], length: usize) -> Vec<u8> {
     let hash_len = 32;
-    let n = length.div_ceil(hash_len);
+    let n = (length + hash_len - 1) / hash_len;
 
     if n > 255 {
         panic!("HKDF output too long");
@@ -180,7 +182,7 @@ fn hkdf_expand_sha256(prk: &[u8], info: &[u8], length: usize) -> Vec<u8> {
 // Internal HKDF-Expand implementation for SHA-384
 fn hkdf_expand_sha384(prk: &[u8], info: &[u8], length: usize) -> Vec<u8> {
     let hash_len = 48;
-    let n = length.div_ceil(hash_len);
+    let n = (length + hash_len - 1) / hash_len;
 
     if n > 255 {
         panic!("HKDF output too long");
@@ -208,7 +210,7 @@ fn hkdf_expand_sha384(prk: &[u8], info: &[u8], length: usize) -> Vec<u8> {
 // Internal HKDF-Expand implementation for SHA-512
 fn hkdf_expand_sha512(prk: &[u8], info: &[u8], length: usize) -> Vec<u8> {
     let hash_len = 64;
-    let n = length.div_ceil(hash_len);
+    let n = (length + hash_len - 1) / hash_len;
 
     if n > 255 {
         panic!("HKDF output too long");

@@ -7,6 +7,8 @@
 //! - Address update amortization
 //! - Batch hashing for WOTS+ PK computation
 
+#![allow(clippy::manual_div_ceil)] // MSRV 1.70 compatibility - div_ceil stabilized in 1.73
+
 use crate::address::{Address, ADDR_TYPE_WOTS, ADDR_TYPE_WOTS_PK, ADDR_TYPE_WOTS_PRF};
 use crate::hash::traits::HashFunction;
 use crate::params::ParameterSet;
@@ -262,7 +264,7 @@ pub fn wots_sign<P: ParameterSet, H: HashFunction>(
     // NOTE: msg_base_w uses Vec allocation (tested stack allocation but caused 8% regression)
     // The heap allocation is small (35-67 usize = 280-536 bytes) and allocator is efficient
     let mut msg_base_w = vec![0usize; P::WOTS_LEN];
-    let len1 = (8 * P::N).div_ceil(P::LOG2_W);
+    let len1 = (8 * P::N + P::LOG2_W - 1) / P::LOG2_W;
     let len2 = P::WOTS_LEN - len1;
     base_w_with_checksum(msg, P::W, len1, len2, &mut msg_base_w);
 
@@ -393,7 +395,7 @@ pub fn wots_pk_from_sig<P: ParameterSet, H: HashFunction>(
     // NOTE: msg_base_w uses Vec allocation (tested stack allocation but caused 8% regression)
     // The heap allocation is small (35-67 usize = 280-536 bytes) and allocator is efficient
     let mut msg_base_w = vec![0usize; P::WOTS_LEN];
-    let len1 = (8 * P::N).div_ceil(P::LOG2_W);
+    let len1 = (8 * P::N + P::LOG2_W - 1) / P::LOG2_W;
     let len2 = P::WOTS_LEN - len1;
     base_w_with_checksum(msg, P::W, len1, len2, &mut msg_base_w);
 

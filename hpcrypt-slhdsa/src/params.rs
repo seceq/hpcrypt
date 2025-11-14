@@ -3,6 +3,8 @@
 //! This module provides all 12 parameter sets using const generics for
 //! compile-time specialization and zero-cost abstractions.
 
+#![allow(clippy::manual_div_ceil)] // MSRV 1.70 compatibility - div_ceil stabilized in 1.73
+
 /// Cold path for unsupported Winternitz parameter error.
 ///
 /// Marked cold to keep error handling out of hot paths, improving
@@ -50,7 +52,7 @@ pub trait ParameterSet: 'static + Copy + Clone {
     /// Number of chain elements in WOTS+
     const WOTS_LEN: usize = {
         // len1: number of chains for message encoding
-        let len1 = (8 * Self::N).div_ceil(Self::LOG2_W);
+        let len1 = (8 * Self::N + Self::LOG2_W - 1) / Self::LOG2_W;
 
         // len2: number of chains for checksum
         // len2 = floor(log_w(len1 * (w-1))) + 1 = number of base-w digits for checksum
@@ -84,7 +86,7 @@ pub trait ParameterSet: 'static + Copy + Clone {
     };
 
     /// Length of FORS message in bytes
-    const FORS_MSG_BYTES: usize = (Self::K * Self::A).div_ceil(8);
+    const FORS_MSG_BYTES: usize = (Self::K * Self::A + 7) / 8;
 
     /// FORS signature bytes
     const FORS_SIG_BYTES: usize = Self::K * (Self::A + 1) * Self::N;

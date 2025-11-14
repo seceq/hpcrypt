@@ -1,5 +1,7 @@
 //! PBKDF2 - Password-Based Key Derivation Function 2 (RFC 2898)
 
+#![allow(clippy::manual_div_ceil)] // MSRV 1.70 compatibility - div_ceil stabilized in 1.73
+
 extern crate alloc;
 use alloc::vec::Vec;
 
@@ -27,7 +29,7 @@ fn pbkdf2_inner<const N: usize>(
     prf: impl Fn(&[u8], &[u8]) -> [u8; N],
 ) {
     let h_len = N;
-    let blocks = output.len().div_ceil(h_len);
+    let blocks = (output.len() + h_len - 1) / h_len;
 
     for block_index in 1..=blocks {
         // U_1 = PRF(password, salt || INT(i))

@@ -1,5 +1,7 @@
 //! HKDF - HMAC-based Extract-and-Expand Key Derivation Function (RFC 5869)
 
+#![allow(clippy::manual_div_ceil)] // MSRV 1.70 compatibility - div_ceil stabilized in 1.73
+
 extern crate alloc;
 use alloc::vec::Vec;
 
@@ -20,7 +22,7 @@ impl HkdfSha256 {
     /// Expand the PRK to derive output keying material
     pub fn expand(&self, info: &[u8], output: &mut [u8]) -> Result<(), &'static str> {
         let hash_len = 32;
-        let n = output.len().div_ceil(hash_len);
+        let n = (output.len() + hash_len - 1) / hash_len;
 
         if n > 255 {
             return Err("HKDF output too long");
@@ -62,7 +64,7 @@ impl HkdfSha384 {
     /// Expand the PRK to derive output keying material
     pub fn expand(&self, info: &[u8], output: &mut [u8]) -> Result<(), &'static str> {
         let hash_len = 48; // SHA-384 produces 48 bytes
-        let n = output.len().div_ceil(hash_len);
+        let n = (output.len() + hash_len - 1) / hash_len;
 
         if n > 255 {
             return Err("HKDF output too long");
@@ -104,7 +106,7 @@ impl HkdfSha512 {
     /// Expand the PRK to derive output keying material
     pub fn expand(&self, info: &[u8], output: &mut [u8]) -> Result<(), &'static str> {
         let hash_len = 64;
-        let n = output.len().div_ceil(hash_len);
+        let n = (output.len() + hash_len - 1) / hash_len;
 
         if n > 255 {
             return Err("HKDF output too long");
@@ -146,7 +148,7 @@ impl HkdfBlake2b {
     /// Expand the PRK to derive output keying material
     pub fn expand(&self, info: &[u8], output: &mut [u8]) -> Result<(), &'static str> {
         let hash_len = 64;
-        let n = output.len().div_ceil(hash_len);
+        let n = (output.len() + hash_len - 1) / hash_len;
 
         if n > 255 {
             return Err("HKDF output too long");
@@ -187,7 +189,7 @@ pub fn hkdf_sha256(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
 
     // Expand
     let hash_len = 32;
-    let n = output.len().div_ceil(hash_len);
+    let n = (output.len() + hash_len - 1) / hash_len;
 
     if n > 255 {
         panic!("HKDF output too long");
@@ -224,7 +226,7 @@ pub fn hkdf_sha384(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
 
     // Expand
     let hash_len = 48;
-    let n = output.len().div_ceil(hash_len);
+    let n = (output.len() + hash_len - 1) / hash_len;
 
     if n > 255 {
         panic!("HKDF output too long");
@@ -261,7 +263,7 @@ pub fn hkdf_sha512(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
 
     // Expand
     let hash_len = 64;
-    let n = output.len().div_ceil(hash_len);
+    let n = (output.len() + hash_len - 1) / hash_len;
 
     if n > 255 {
         panic!("HKDF output too long");
@@ -298,7 +300,7 @@ pub fn hkdf_blake2b(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
 
     // Expand
     let hash_len = 64;
-    let n = output.len().div_ceil(hash_len);
+    let n = (output.len() + hash_len - 1) / hash_len;
 
     if n > 255 {
         panic!("HKDF output too long");
