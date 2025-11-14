@@ -316,12 +316,6 @@ Contributions are welcome! Please ensure:
 4. Add tests for new features
 5. Update documentation as needed
 
-## Disclaimer
-
-This library has been developed with care and tested against official test vectors. However, it has not undergone an independent security audit. Users are advised to conduct their own security review before using this library in production systems.
-
-**Use at your own risk.** No warranty is provided.
-
 ## Acknowledgments
 
 Special thanks to:

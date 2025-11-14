@@ -296,7 +296,6 @@ impl Argon2 {
 
         for idx in start_idx..segment_length {
             let current_idx = lane * lane_length + slice * segment_length + idx;
-            #[allow(clippy::manual_is_multiple_of)]
             let prev_idx = if current_idx % lane_length == 0 {
                 current_idx + lane_length - 1
             } else {

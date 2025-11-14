@@ -619,7 +619,6 @@ pub fn compute_root_from_path<P: ParameterSet, H: HashFunction>(
 
                 let mut parent = [0u8; 16];
 
-                #[allow(clippy::manual_is_multiple_of)]
                 if idx % 2 == 0 {
                     // Current node is left child
                     hash.t_node(pk_seed, &addr_bytes, output, sibling, &mut parent);
@@ -640,7 +639,6 @@ pub fn compute_root_from_path<P: ParameterSet, H: HashFunction>(
 
                 let mut parent = [0u8; 24];
 
-                #[allow(clippy::manual_is_multiple_of)]
                 if idx % 2 == 0 {
                     // Current node is left child
                     hash.t_node(pk_seed, &addr_bytes, output, sibling, &mut parent);
@@ -661,7 +659,6 @@ pub fn compute_root_from_path<P: ParameterSet, H: HashFunction>(
 
                 let mut parent = [0u8; 32];
 
-                #[allow(clippy::manual_is_multiple_of)]
                 if idx % 2 == 0 {
                     // Current node is left child
                     hash.t_node(pk_seed, &addr_bytes, output, sibling, &mut parent);
@@ -682,7 +679,6 @@ pub fn compute_root_from_path<P: ParameterSet, H: HashFunction>(
 
                 let mut parent = vec![0u8; n];
 
-                #[allow(clippy::manual_is_multiple_of)]
                 if idx % 2 == 0 {
                     // Current node is left child
                     hash.t_node(pk_seed, &addr_bytes, output, sibling, &mut parent);

@@ -74,7 +74,6 @@ pub fn ht_sign<P: ParameterSet, H: HashFunction>(
                 addr.set_tree_index((current_idx >> 1) as u32);
 
                 // Determine order (left sibling or right sibling)
-                #[allow(clippy::manual_is_multiple_of)]
                 if current_idx % 2 == 0 {
                     // Current node is left child
                     hash.t_node(pk_seed, &addr.to_bytes(), &buffer1, sibling, &mut buffer2);
@@ -191,7 +190,6 @@ pub fn ht_sign_cached<P: ParameterSet, H: HashFunction>(
                 addr.set_tree_index((current_idx >> 1) as u32);
 
                 // Determine order (left sibling or right sibling)
-                #[allow(clippy::manual_is_multiple_of)]
                 if current_idx % 2 == 0 {
                     // Current node is left child
                     hash.t_node(pk_seed, &addr.to_bytes(), &buffer1, sibling, &mut buffer2);

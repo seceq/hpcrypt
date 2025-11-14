@@ -642,7 +642,7 @@ impl FieldElement52 {
         let mut carry = 0u128;
 
         for i in 0..5 {
-            let sum = carry;
+            let sum = carry + result[i];
             limbs[i] = (sum & (LIMB_MASK as u128)) as u64;
             carry = sum >> LIMB_BITS;
         }

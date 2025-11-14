@@ -1046,8 +1046,6 @@ impl FieldElement {
 
             // term4: high_val * 2^128 at position 128 bits (2 limbs)
             result_extended[2] = result_extended[2].wrapping_add(high_val);
-
-            result_extended[6] = 0;
         }
 
         // Now propagate carries in the first 6 limbs
