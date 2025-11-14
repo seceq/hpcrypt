@@ -4,9 +4,9 @@
 //! CCM combines CTR mode encryption with CBC-MAC for authentication.
 
 extern crate alloc;
-use hpcrypt_cipher::{Aes, BLOCK_SIZE};
 use alloc::vec;
 use alloc::vec::Vec;
+use hpcrypt_cipher::{Aes, BLOCK_SIZE};
 
 /// CCM error types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

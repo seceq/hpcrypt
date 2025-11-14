@@ -65,8 +65,7 @@ pub use chacha20poly1305::{ChaCha20Poly1305, XChaCha20Poly1305};
 // Re-export from hpcrypt-cipher for convenience
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use hpcrypt_cipher::{
-    Aes, ChaCha20, AES128_KEY_SIZE, AES192_KEY_SIZE,
-    AES256_KEY_SIZE, BLOCK_SIZE,
+    Aes, ChaCha20, AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, BLOCK_SIZE,
 };
 
 // Re-export Ascon from local module
@@ -74,4 +73,6 @@ pub use ascon::{Ascon128, Ascon128a};
 
 // Re-export from hpcrypt-mac for convenience
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use hpcrypt_mac::{ghash, gmac128, gmac192, gmac256, GHashFast, Gmac128, Gmac192, Gmac256, Poly1305, Polyval};
+pub use hpcrypt_mac::{
+    ghash, gmac128, gmac192, gmac256, GHashFast, Gmac128, Gmac192, Gmac256, Poly1305, Polyval,
+};

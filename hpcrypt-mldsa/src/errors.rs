@@ -190,7 +190,6 @@ mod tests {
     use super::*;
     extern crate alloc;
     use alloc::string::ToString;
-    use alloc::vec;
 
     #[test]
     fn test_sign_error_display() {

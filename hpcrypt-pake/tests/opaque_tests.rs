@@ -98,7 +98,7 @@ fn test_opaque_wrong_password_fails() {
 
     // Authentication with wrong password
     let (client_auth, ke1) = OpaqueClient::generate_ke1(wrong_password, &config).unwrap();
-    let (server_auth, ke2) =
+    let (_server_auth, ke2) =
         OpaqueServer::generate_ke2(&ke1, &reg_record, server_id, &config).unwrap();
     let result = OpaqueClient::generate_ke3(&client_auth, &ke2, client_id, server_id, &config);
 
@@ -170,14 +170,14 @@ fn test_oprf_client_server_flow() {
     let (blind, blinded_element) = OprfClient::blind(input).unwrap();
 
     // Server evaluates
-    let evaluated_element = OprfServer::evaluate(&oprf_key, &blinded_element).unwrap();
+    let evaluated_element = OprfServer::evaluate(&blinded_element, &oprf_key).unwrap();
 
     // Client finalizes
     let output = OprfClient::finalize(input, &blind, &evaluated_element).unwrap();
 
     // Output should be deterministic for same input
     let (blind2, blinded_element2) = OprfClient::blind(input).unwrap();
-    let evaluated_element2 = OprfServer::evaluate(&oprf_key, &blinded_element2).unwrap();
+    let evaluated_element2 = OprfServer::evaluate(&blinded_element2, &oprf_key).unwrap();
     let output2 = OprfClient::finalize(input, &blind2, &evaluated_element2).unwrap();
 
     assert_eq!(output, output2);

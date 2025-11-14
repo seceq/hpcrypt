@@ -13,9 +13,12 @@ use hpcrypt_aead::{Aes128Gcm, Aes192Gcm, Aes256Gcm};
 #[serde(rename_all = "camelCase")]
 struct TestGroup {
     #[serde(rename = "type")]
+    #[allow(dead_code)]
     test_type: String,
     key_size: usize,
+    #[allow(dead_code)]
     iv_size: usize,
+    #[allow(dead_code)]
     tag_size: usize,
     tests: Vec<TestCase>,
 }
@@ -38,6 +41,7 @@ struct TestCase {
     #[serde(with = "hex")]
     tag: Vec<u8>,
     result: TestResult,
+    #[allow(dead_code)]
     flags: Vec<String>,
 }
 
@@ -52,6 +56,7 @@ enum TestResult {
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct TestFile {
+    #[allow(dead_code)]
     algorithm: String,
     number_of_tests: usize,
     test_groups: Vec<TestGroup>,

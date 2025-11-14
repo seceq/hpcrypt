@@ -263,8 +263,6 @@ mod tests {
     use super::*;
     use crate::keygen::keygen;
     use crate::params::MlDsa65;
-    extern crate alloc;
-    use alloc::vec;
 
     #[test]
     fn test_prehashed_sha512_basic() {

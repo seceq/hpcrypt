@@ -3,7 +3,7 @@
 use hpcrypt_mldsa::hints::use_hint_poly;
 use hpcrypt_mldsa::keygen::keygen_from_seed;
 use hpcrypt_mldsa::ntt::{matrix_vector_mul_ntt, ntt, poly_mul_ntt};
-use hpcrypt_mldsa::params::{DsaParams, MlDsa65, Q};
+use hpcrypt_mldsa::params::{DsaParams, MlDsa65};
 use hpcrypt_mldsa::poly::Poly;
 use hpcrypt_mldsa::rounding::high_bits;
 use hpcrypt_mldsa::sampling::{expand_matrix_a, sample_in_ball};
@@ -30,7 +30,7 @@ fn test_w1_recovery() {
     }
     let az = matrix_vector_mul_ntt(&matrix_a, &z_ntt, MlDsa65::K, MlDsa65::L);
 
-    let two_pow_d = 1i32 << MlDsa65::D;
+    let _two_pow_d = 1i32 << MlDsa65::D;
     let mut w_prime = Vec::with_capacity(MlDsa65::K);
     for i in 0..MlDsa65::K {
         // Compute t1·2^d

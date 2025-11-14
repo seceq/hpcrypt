@@ -8,14 +8,16 @@
 //! - RFC 2104 (HMAC)
 //! - NIST SP 800-38B (CMAC)
 
-use hpcrypt_mac::{aes_cmac_128, aes_cmac_256, AesCmac128, AesCmac256};
+use hpcrypt_mac::{aes_cmac_128, aes_cmac_256};
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct TestGroup {
     #[serde(rename = "type")]
+    #[allow(dead_code)]
     test_type: String,
     key_size: usize,
+    #[allow(dead_code)]
     tag_size: usize,
     tests: Vec<TestCase>,
 }
@@ -46,6 +48,7 @@ enum TestResult {
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct TestFile {
+    #[allow(dead_code)]
     algorithm: String,
     number_of_tests: usize,
     test_groups: Vec<TestGroup>,

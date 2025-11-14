@@ -13,9 +13,13 @@ use hpcrypt_aead::ChaCha20Poly1305;
 #[serde(rename_all = "camelCase")]
 struct TestGroup {
     #[serde(rename = "type")]
+    #[allow(dead_code)]
     test_type: String,
+    #[allow(dead_code)]
     key_size: usize,
+    #[allow(dead_code)]
     iv_size: usize,
+    #[allow(dead_code)]
     tag_size: usize,
     tests: Vec<TestCase>,
 }
@@ -52,6 +56,7 @@ enum TestResult {
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct TestFile {
+    #[allow(dead_code)]
     algorithm: String,
     number_of_tests: usize,
     test_groups: Vec<TestGroup>,
@@ -153,7 +158,7 @@ fn wycheproof_chacha20_poly1305() {
 
     let mut total_tests = 0;
     let mut passed_tests = 0;
-    let mut skipped_tests = 0;
+    let skipped_tests = 0;
 
     for group in test_file.test_groups {
         for test in group.tests {

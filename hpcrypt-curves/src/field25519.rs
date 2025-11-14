@@ -1411,6 +1411,7 @@ mod proptests {
     use super::*;
     use proptest::prelude::*;
 
+    #[allow(dead_code)]
     fn arbitrary_field_element() -> impl Strategy<Value = FieldElement> {
         any::<[u8; 32]>().prop_map(|bytes| FieldElement::from_bytes(&bytes))
     }

@@ -170,7 +170,6 @@ fn test_verify_mathematical_relationship() {
     eprintln!("\n=== TESTING: t vs A·s1 + s2 ===");
     // We need to get t from keygen, but we don't have it directly
     // We can reconstruct it from t1 and t0
-    use hpcrypt_mldsa::rounding::power2round;
     let mut t_from_t1t0 = Vec::with_capacity(MlDsa65::K);
     for i in 0..MlDsa65::K {
         let mut t_i = Poly::new();

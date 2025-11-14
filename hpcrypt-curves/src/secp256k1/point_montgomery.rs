@@ -1180,7 +1180,6 @@ mod glv_tests {
         let result_affine = result.to_affine();
 
         // Should not panic and should give valid point (or infinity)
-        use crate::ct_utils::ConstantTimeEq;
         assert!(result_affine.is_some() || bool::from(result.is_infinity()));
     }
 }

@@ -19,9 +19,6 @@
 use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 use crate::p256::constants::{BARRETT_MU_SCALAR, P256_ORDER};
 
-#[cfg(test)]
-use num_bigint::BigUint;
-
 /// A scalar value modulo the P-256 curve order n
 ///
 /// Internally represented as 4 x 64-bit limbs in little-endian order.
@@ -1567,7 +1564,7 @@ mod barrett_tests {
 
         // 7^-1 mod n = 0x49249248db6db6dbb6db6db6db6db6db5a8b230d0b2b51dcd7ebf0c9fef7c185
         // In limbs (little-endian):
-        let inv7_limbs = [
+        let _inv7_limbs = [
             0xD7EBF0C9FEF7C185u64,
             0x5A8B230D0B2B51DCu64,
             0xB6DB6DB6DB6DB6DBu64,

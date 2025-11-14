@@ -5,7 +5,7 @@
 
 use hpcrypt_mldsa::keygen::keygen;
 use hpcrypt_mldsa::MlDsa65;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::AtomicU64;
 use std::time::Instant;
 
 // Global timing accumulators (atomic for thread safety)

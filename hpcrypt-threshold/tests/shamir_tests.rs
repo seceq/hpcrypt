@@ -133,7 +133,7 @@ fn test_shares_are_different() {
     // All shares should be different from each other
     for i in 0..shares.len() {
         for j in (i + 1)..shares.len() {
-            assert_ne!(shares[i].data, shares[j].data);
+            assert_ne!(shares[i].y, shares[j].y);
         }
     }
 }
@@ -145,7 +145,7 @@ fn test_shares_different_from_secret() {
 
     // No share should be identical to the secret
     for share in &shares {
-        assert_ne!(&share.data[..], &secret[..]);
+        assert_ne!(&share.y[..], &secret[..]);
     }
 }
 
@@ -160,7 +160,7 @@ fn test_deterministic_sharing() {
     // At least one share should be different
     let mut found_difference = false;
     for i in 0..5 {
-        if shares1[i].data != shares2[i].data {
+        if shares1[i].y != shares2[i].y {
             found_difference = true;
             break;
         }

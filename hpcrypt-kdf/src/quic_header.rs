@@ -1,4 +1,3 @@
-#![cfg(feature = "quic-header-protection")]
 //! QUIC Header Protection
 //!
 //! This module implements header protection as defined in RFC 9001 Section 5.4.
@@ -15,8 +14,7 @@
 //!
 //! Where `sample` is 16 bytes extracted from the packet.
 
-use hpcrypt_aead::aes::Aes;
-use hpcrypt_aead::chacha20::ChaCha20;
+use hpcrypt_aead::{Aes, ChaCha20};
 
 /// Header Protection trait
 pub trait HeaderProtection {

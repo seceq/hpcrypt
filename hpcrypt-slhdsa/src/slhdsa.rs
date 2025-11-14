@@ -456,7 +456,6 @@ pub fn verify<P: ParameterSet>(
 mod tests {
     use super::*;
     use crate::params::Sha2_128s;
-    use rand::rngs::OsRng;
 
     #[test]
     fn test_keygen() {

@@ -103,8 +103,8 @@ use alloc::vec::Vec;
 
 use subtle::ConstantTimeEq;
 
-use hpcrypt_cipher::{Aes, AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, BLOCK_SIZE};
 use crate::ghash::GHashFast;
+use hpcrypt_cipher::{Aes, AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, BLOCK_SIZE};
 
 /// GMAC tag size (128 bits)
 pub const TAG_SIZE: usize = 16;
@@ -614,13 +614,13 @@ mod tests {
         let mut gmac = Gmac128::new(&key, &nonce);
         gmac.update(data1);
         gmac.update(data2);
-        let tag_incremental = gmac.finalize();
+        let _tag_incremental = gmac.finalize();
 
         // Compute in one shot
         let mut combined = Vec::new();
         combined.extend_from_slice(data1);
         combined.extend_from_slice(data2);
-        let tag_oneshot = Gmac128::mac(&key, &nonce, &combined);
+        let _tag_oneshot = Gmac128::mac(&key, &nonce, &combined);
 
         // Also verify against GCM with empty plaintext
     }
@@ -727,10 +727,9 @@ mod tests {
         let nonce = hex!("000000000000000000000000");
         let data = hex!("00000000000000000000000000000000");
 
-        let gmac_tag = Gmac128::mac(&key, &nonce, &data);
+        let _gmac_tag = Gmac128::mac(&key, &nonce, &data);
 
         // Compare with GCM (plaintext=empty, aad=data)
-
     }
 
     #[test]
@@ -741,10 +740,9 @@ mod tests {
         let nonce = hex!("cafebabefacedbaddecaf888");
         let data = hex!("feedfacedeadbeeffeedfacedeadbeefabaddad2");
 
-        let gmac_tag = Gmac128::mac(&key, &nonce, &data);
+        let _gmac_tag = Gmac128::mac(&key, &nonce, &data);
 
         // Compare with GCM (plaintext=empty, aad=data)
-
     }
 
     #[test]

@@ -94,6 +94,7 @@ pub struct HmacSha384 {
 }
 
 impl HmacSha384 {
+    /// Creates a new HMAC-SHA384 instance with the given key
     pub fn new(key: &[u8]) -> Self {
         use hpcrypt_hash::sha384::{Sha384, BLOCK_LEN};
 
@@ -115,6 +116,7 @@ impl HmacSha384 {
         Self { key: derived_key }
     }
 
+    /// Computes the HMAC-SHA384 tag for the given data
     pub fn compute(&self, data: &[u8]) -> [u8; 48] {
         use hpcrypt_hash::sha384::{Sha384, BLOCK_LEN};
 
@@ -141,6 +143,7 @@ impl HmacSha384 {
         outer.finalize()
     }
 
+    /// Verifies the HMAC-SHA384 tag for the given data in constant time
     pub fn verify(&self, data: &[u8], tag: &[u8; 48]) -> bool {
         use hpcrypt_core::ct::CtEqual;
         let computed = self.compute(data);
@@ -154,6 +157,7 @@ pub struct HmacSha512 {
 }
 
 impl HmacSha512 {
+    /// Creates a new HMAC-SHA512 instance with the given key
     pub fn new(key: &[u8]) -> Self {
         use hpcrypt_hash::sha512::{Sha512, BLOCK_LEN};
 
@@ -175,6 +179,7 @@ impl HmacSha512 {
         Self { key: derived_key }
     }
 
+    /// Computes the HMAC-SHA512 tag for the given data
     pub fn compute(&self, data: &[u8]) -> [u8; 64] {
         use hpcrypt_hash::sha512::{Sha512, BLOCK_LEN};
 
@@ -201,6 +206,7 @@ impl HmacSha512 {
         outer.finalize()
     }
 
+    /// Verifies the HMAC-SHA512 tag for the given data in constant time
     pub fn verify(&self, data: &[u8], tag: &[u8; 64]) -> bool {
         use hpcrypt_core::ct::CtEqual;
         let computed = self.compute(data);
@@ -214,6 +220,7 @@ pub struct HmacBlake2b {
 }
 
 impl HmacBlake2b {
+    /// Creates a new HMAC-BLAKE2b instance with the given key
     pub fn new(key: &[u8]) -> Self {
         use hpcrypt_hash::blake2b::BLOCK_LEN;
 
@@ -231,6 +238,7 @@ impl HmacBlake2b {
         Self { key: derived_key }
     }
 
+    /// Computes the HMAC-BLAKE2b tag for the given data
     pub fn compute(&self, data: &[u8]) -> Vec<u8> {
         use hpcrypt_hash::blake2b::{Blake2b, BLOCK_LEN};
 

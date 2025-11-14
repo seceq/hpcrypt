@@ -1018,6 +1018,7 @@ mod tests {
 
     #[test]
     #[ignore] // Obsolete: Tests old divstep approach which was replaced with binary GCD
+    #[allow(unused_assignments)]
     fn test_find_correct_formula() {
         // Test which formula gives correct result for both mod 17 and mod 31
 

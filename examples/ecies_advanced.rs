@@ -6,7 +6,7 @@
 //! - Multi-recipient encryption
 //! - Authenticated sender encryption
 
-use hpcrypt_ecies::{EciesError, EciesP256};
+use hpcrypt_ecies::EciesP256;
 use rand::thread_rng;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -70,7 +70,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Combine ECIES with digital signatures\n");
 
     // Sender (Alice) has both encryption and signing keys
-    let (sender_secret, sender_public) = EciesP256::generate_keypair(&mut rng)?;
+    let (_sender_secret, _sender_public) = EciesP256::generate_keypair(&mut rng)?;
     let (recipient_secret, recipient_public) = EciesP256::generate_keypair(&mut rng)?;
 
     let message = b"Authenticated message from Alice";

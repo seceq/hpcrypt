@@ -14,6 +14,7 @@ use hpcrypt_aead::chacha20poly1305::ChaCha20Poly1305;
 #[serde(rename_all = "camelCase")]
 struct TestGroup {
     #[serde(rename = "type")]
+    #[allow(dead_code)]
     test_type: String,
     key_size: usize,
     iv_size: usize,
@@ -53,6 +54,7 @@ enum TestResult {
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct TestFile {
+    #[allow(dead_code)]
     algorithm: String,
     number_of_tests: usize,
     test_groups: Vec<TestGroup>,

@@ -3,7 +3,7 @@
 //! Test vectors from NIST SP 800-185 and additional functional tests
 
 use hex_literal::hex;
-use hpcrypt_hash::kmac::{kmac128, kmac256, Kmac128, Kmac256};
+use hpcrypt_mac::kmac::{kmac128, kmac256, Kmac128, Kmac256};
 
 // ===== NIST SP 800-185 Test Vectors =====
 

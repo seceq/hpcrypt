@@ -27,8 +27,8 @@
 use hpcrypt_core::error::CurveError;
 use hpcrypt_curves::ct_utils::ConstantTimeEq;
 use hpcrypt_curves::secp256k1::{Point, Scalar};
-use hpcrypt_mac::HmacSha256;
 use hpcrypt_hash::sha256::Sha256;
+use hpcrypt_mac::HmacSha256;
 
 #[cfg(not(feature = "std"))]
 extern crate alloc;
@@ -888,7 +888,7 @@ mod tests {
         let secret = [0x42; 32];
         let signing_key = SigningKey::from_bytes(&secret).unwrap();
         let verifying_key = signing_key.verifying_key();
-        let d = Scalar::from_bytes(&secret);
+        let _d = Scalar::from_bytes(&secret);
 
         // Case 1: Known to work
         let msg1 = b"Hello, ECDSA!";

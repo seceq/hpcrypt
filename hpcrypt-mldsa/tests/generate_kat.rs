@@ -4,7 +4,7 @@
 // to validate the implementation against the FIPS 204 standard.
 
 use hpcrypt_mldsa::keygen::keygen_from_seed;
-use hpcrypt_mldsa::params::{DsaParams, MlDsa44, MlDsa65, MlDsa87};
+use hpcrypt_mldsa::params::{DsaParams, MlDsa65};
 use hpcrypt_mldsa::serialize::{serialize_public_key, serialize_secret_key, serialize_signature};
 use hpcrypt_mldsa::sign::sign_deterministic;
 

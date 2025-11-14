@@ -13,6 +13,7 @@ use hpcrypt_curves::ed25519::Ed25519;
 #[serde(rename_all = "camelCase")]
 struct TestGroup {
     #[serde(rename = "type")]
+    #[allow(dead_code)]
     test_type: String,
     public_key: PublicKey,
     tests: Vec<TestCase>,
@@ -22,8 +23,11 @@ struct TestGroup {
 #[serde(rename_all = "camelCase")]
 struct PublicKey {
     #[serde(rename = "type")]
+    #[allow(dead_code)]
     key_type: String,
+    #[allow(dead_code)]
     curve: String,
+    #[allow(dead_code)]
     key_size: usize,
     #[serde(with = "hex")]
     pk: Vec<u8>,
@@ -53,6 +57,7 @@ enum TestResult {
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct TestFile {
+    #[allow(dead_code)]
     algorithm: String,
     number_of_tests: usize,
     test_groups: Vec<TestGroup>,

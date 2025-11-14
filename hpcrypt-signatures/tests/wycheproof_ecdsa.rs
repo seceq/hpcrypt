@@ -12,6 +12,7 @@ use hpcrypt_signatures::ecdsa::{Signature, VerifyingKey};
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 struct TestGroup {
     #[serde(rename = "type")]
     test_type: String,
@@ -32,6 +33,7 @@ struct PublicKey {
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 struct PublicKeyDetails {
     curve: String,
     key_size: usize,
@@ -66,6 +68,7 @@ enum TestResult {
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 struct TestFile {
     algorithm: String,
     number_of_tests: usize,
@@ -228,12 +231,26 @@ fn wycheproof_ecdsa_secp256k1_sha256() {
 
     for group in test_file.test_groups {
         // Create verifying key from public key coordinates
-        let verifying_key = match Secp256k1VerifyingKey::from_affine_coords(
-            &group.public_key.wx,
-            &group.public_key.wy,
-        ) {
-            Ok(key) => key,
-            Err(_) => {
+        let verifying_key = match (group.public_key.wx.len(), group.public_key.wy.len()) {
+            (32, 32) => {
+                use hpcrypt_curves::secp256k1::{point::AffinePoint, FieldElement, Point};
+                let mut x_bytes = [0u8; 32];
+                let mut y_bytes = [0u8; 32];
+                x_bytes.copy_from_slice(&group.public_key.wx);
+                y_bytes.copy_from_slice(&group.public_key.wy);
+
+                let x = FieldElement::from_bytes(&x_bytes);
+                let y = FieldElement::from_bytes(&y_bytes);
+                let affine = AffinePoint { x, y };
+                let point = Point::from_affine(&affine);
+
+                if !bool::from(point.is_on_curve()) {
+                    continue;
+                }
+
+                Secp256k1VerifyingKey::from_point(point)
+            }
+            _ => {
                 // If we can't create the key, skip this group
                 // (Wycheproof may include invalid keys as part of the test)
                 continue;

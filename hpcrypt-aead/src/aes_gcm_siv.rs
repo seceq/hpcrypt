@@ -39,11 +39,11 @@
 
 extern crate alloc;
 
-use hpcrypt_cipher::Aes;
-use hpcrypt_mac::Polyval;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::convert::TryInto;
+use hpcrypt_cipher::Aes;
+use hpcrypt_mac::Polyval;
 
 /// AES-128-GCM-SIV (128-bit key)
 #[derive(Debug)]

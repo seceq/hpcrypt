@@ -12,9 +12,6 @@
 use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
 use crate::secp256k1::constants::{BARRETT_MU_SCALAR, SECP256K1_ORDER};
 
-#[cfg(test)]
-use num_bigint::BigUint;
-
 /// A scalar value modulo the secp256k1 curve order n
 ///
 /// Internally represented as 4 x 64-bit limbs in little-endian order.

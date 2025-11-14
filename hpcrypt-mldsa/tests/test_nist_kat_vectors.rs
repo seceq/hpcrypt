@@ -263,7 +263,7 @@ fn test_kat_signature_sizes() {
         let mut seed = [0u8; 32];
         seed.copy_from_slice(&vector.seed[..32]);
 
-        let (pk, sk) = keygen_from_seed::<MlDsa65>(&seed);
+        let (_pk, sk) = keygen_from_seed::<MlDsa65>(&seed);
 
         let rnd = [0u8; 32];
         let sig = sign_deterministic::<MlDsa65>(&sk, &vector.msg, &rnd)

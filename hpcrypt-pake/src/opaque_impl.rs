@@ -8,8 +8,8 @@ use crate::oprf::{EvaluatedElement, OprfError};
 
 use hpcrypt_curves::ed25519::{base_point, EdwardsPoint, Scalar};
 use hpcrypt_hash::sha512;
-use hpcrypt_mac::{HmacSha256, HmacSha512};
 use hpcrypt_kdf::{HkdfSha256, HkdfSha512};
+use hpcrypt_mac::{HmacSha256, HmacSha512};
 
 #[cfg(feature = "alloc")]
 extern crate alloc;

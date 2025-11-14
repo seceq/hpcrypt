@@ -16,10 +16,15 @@ use num_bigint::BigUint;
 #[serde(rename_all = "camelCase")]
 struct TestGroup {
     #[serde(rename = "type")]
+    #[allow(dead_code)]
     test_type: String,
+    #[allow(dead_code)]
     key_size: usize,
+    #[allow(dead_code)]
     sha: String,
+    #[allow(dead_code)]
     mgf: String,
+    #[allow(dead_code)]
     mgf_sha: String,
     private_key: PrivateKey,
     tests: Vec<TestCase>,
@@ -66,6 +71,7 @@ enum TestResult {
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct TestFile {
+    #[allow(dead_code)]
     algorithm: String,
     number_of_tests: usize,
     test_groups: Vec<TestGroup>,
@@ -107,7 +113,6 @@ fn parse_private_key(private_key: &PrivateKey) -> Option<RsaPrivateKey> {
 // Compute modular inverse using extended Euclidean algorithm
 fn mod_inverse(a: &BigUint, m: &BigUint) -> Option<BigUint> {
     use num_bigint::Sign;
-    use num_traits::Zero;
 
     let a_signed = num_bigint::BigInt::from_biguint(Sign::Plus, a.clone());
     let m_signed = num_bigint::BigInt::from_biguint(Sign::Plus, m.clone());
@@ -128,11 +133,18 @@ fn mod_inverse(a: &BigUint, m: &BigUint) -> Option<BigUint> {
 }
 
 // Extended Euclidean algorithm
-fn extended_gcd(a: &num_bigint::BigInt, b: &num_bigint::BigInt) -> (num_bigint::BigInt, num_bigint::BigInt, num_bigint::BigInt) {
+fn extended_gcd(
+    a: &num_bigint::BigInt,
+    b: &num_bigint::BigInt,
+) -> (num_bigint::BigInt, num_bigint::BigInt, num_bigint::BigInt) {
     use num_traits::Zero;
 
     if b.is_zero() {
-        return (a.clone(), num_bigint::BigInt::from(1), num_bigint::BigInt::from(0));
+        return (
+            a.clone(),
+            num_bigint::BigInt::from(1),
+            num_bigint::BigInt::from(0),
+        );
     }
 
     let (gcd, x1, y1) = extended_gcd(b, &(a % b));

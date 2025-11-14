@@ -5,7 +5,6 @@
 
 use hpcrypt_mldsa::keygen::keygen_from_seed;
 use hpcrypt_mldsa::params::MlDsa65;
-use hpcrypt_mldsa::serialize::{deserialize_public_key, deserialize_secret_key, deserialize_signature};
 use hpcrypt_mldsa::serialize::{serialize_public_key, serialize_secret_key, serialize_signature};
 use hpcrypt_mldsa::sign::sign_deterministic;
 use hpcrypt_mldsa::verify::verify;

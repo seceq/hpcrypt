@@ -1644,7 +1644,7 @@ mod comb_tests {
         // table[1][j] should be (j+1) * 256 * B
         let table = CombTable::generate();
         let base = Point::generator();
-        let identity = Point::identity();
+        let _identity = Point::identity();
 
         // Compute 256B manually (256 = 2^8, so 8 doublings)
         let mut base_256 = base;

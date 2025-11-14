@@ -11,6 +11,7 @@ use hpcrypt_curves::Ed25519;
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 struct TestGroup {
     #[serde(rename = "type")]
     test_type: String,
@@ -48,6 +49,7 @@ enum TestResult {
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 struct TestFile {
     algorithm: String,
     number_of_tests: usize,
