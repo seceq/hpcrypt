@@ -443,6 +443,7 @@ pub fn expand_mask_x4_avx2(rho_prime: &[u8; 64], kappas: [u16; 4]) -> [Vec<u8>; 
     )
 }
 
+#[allow(unused_imports)]
 mod tests {
     use super::*;
 

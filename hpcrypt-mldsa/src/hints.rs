@@ -277,6 +277,7 @@ pub fn poly_hint_count(h: &Poly) -> usize {
     count
 }
 
+#[allow(unused_imports)]
 mod tests {
     extern crate alloc;
     use alloc::vec;

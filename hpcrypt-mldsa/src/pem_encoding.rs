@@ -275,7 +275,6 @@ mod tests {
     use crate::{MlDsa44, MlDsa65, MlDsa87};
     extern crate alloc;
     use crate::keygen::keygen_from_seed;
-    use crate::params::MlDsa65;
     use alloc::vec;
 
     #[test]

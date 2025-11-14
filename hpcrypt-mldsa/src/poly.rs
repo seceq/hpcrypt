@@ -745,6 +745,7 @@ pub fn uncenter_coeff(a: i32) -> i32 {
     }
 }
 
+#[allow(unused_imports)]
 mod tests {
     use super::*;
 

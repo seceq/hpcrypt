@@ -2,6 +2,7 @@
 //!
 //! These tests validate robustness, edge cases, and performance characteristics.
 
+#[allow(unused_imports)]
 mod tests {
     extern crate alloc;
     use alloc::{format, vec};

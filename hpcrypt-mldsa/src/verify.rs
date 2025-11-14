@@ -167,6 +167,7 @@ fn encode_w1<P: DsaParams>(w1: &[Poly]) -> Vec<u8> {
     bytes
 }
 
+#[allow(unused_imports)]
 mod tests {
     extern crate alloc;
     use alloc::vec;

@@ -1315,6 +1315,7 @@ pub fn inv_ntt_specialized(poly: &Poly) -> Poly {
     a
 }
 
+#[allow(unused_imports)]
 mod tests {
     use super::*;
 

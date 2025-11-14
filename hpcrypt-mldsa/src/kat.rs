@@ -173,6 +173,7 @@ pub fn parse_kat_file(content: &str) -> Result<Vec<KatVector>, &'static str> {
     Ok(vectors)
 }
 
+#[allow(unused_imports)]
 mod tests {
     extern crate alloc;
     use alloc::vec;

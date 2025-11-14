@@ -367,6 +367,7 @@ pub fn low_bits_poly(poly: &Poly, alpha: i32) -> Poly {
     result
 }
 
+#[allow(unused_imports)]
 mod tests {
     use super::*;
     use crate::{MlDsa44, MlDsa65, MlDsa87};

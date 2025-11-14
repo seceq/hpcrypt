@@ -626,6 +626,7 @@ pub fn deserialize_signature<P: DsaParams>(bytes: &[u8]) -> Result<Signature<P>,
     Ok(Signature::new(c_tilde, z, h))
 }
 
+#[allow(unused_imports)]
 mod tests {
     extern crate alloc;
     use alloc::vec;

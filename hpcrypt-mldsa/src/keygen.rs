@@ -416,6 +416,7 @@ fn poly_multiply(a: &Poly, b: &Poly) -> Poly {
     crate::ntt::poly_mul_ntt(a, b)
 }
 
+#[allow(unused_imports)]
 mod tests {
     use super::*;
     use crate::keygen::keygen_from_seed;

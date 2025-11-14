@@ -106,6 +106,7 @@ pub fn ct_swap_i32(swap: u8, a: &mut i32, b: &mut i32) {
     *b ^= diff;
 }
 
+#[allow(unused_imports)]
 mod tests {
     use super::*;
 

@@ -165,6 +165,7 @@ impl DsaParams for MlDsa87 {
     const NAME: &'static str = "ML-DSA-87";
 }
 
+#[allow(unused_imports)]
 mod tests {
     use super::*;
 

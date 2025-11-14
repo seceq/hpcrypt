@@ -1015,6 +1015,7 @@ fn rej_uniform(coeffs: &mut [i32], start: usize, len: usize, buf: &[u8], buflen:
     ctr
 }
 
+#[allow(unused_imports)]
 mod tests {
     extern crate alloc;
     use alloc::vec;
