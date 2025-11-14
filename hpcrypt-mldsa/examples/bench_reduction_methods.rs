@@ -111,9 +111,11 @@ fn barrett_mul_shoup(a: i32, b_shoup: &BarrettShoup) -> i32 {
 //==============================================================================
 
 // Lazy reduction allows values up to some bound before reducing
+#[allow(dead_code)]
 const LAZY_BOUND: i64 = Q as i64 * 8; // Allow 8× Q accumulation
 
 #[inline(always)]
+#[allow(dead_code)]
 fn lazy_reduce_final(a: i64) -> i32 {
     let mut r = (a % Q as i64) as i32;
     if r < 0 {
@@ -123,6 +125,7 @@ fn lazy_reduce_final(a: i64) -> i32 {
 }
 
 #[inline(always)]
+#[allow(dead_code)]
 fn lazy_mul(a: i32, b: i32) -> i64 {
     // Return i64 without reduction
     (a as i64).wrapping_mul(b as i64)
@@ -133,12 +136,14 @@ fn lazy_mul(a: i32, b: i32) -> i64 {
 //==============================================================================
 
 // Precompute a scaled version for faster final reduction
+#[allow(dead_code)]
 fn precompute_lazy_shoup(b: i32) -> i32 {
     // For lazy reduction, we can precompute Barrett helper
     b // In this simple version, just return b (could add more precomputation)
 }
 
 #[inline(always)]
+#[allow(dead_code)]
 fn lazy_mul_shoup(a: i32, b: i32) -> i64 {
     // Similar to lazy_mul but with potential for optimization
     (a as i64).wrapping_mul(b as i64)

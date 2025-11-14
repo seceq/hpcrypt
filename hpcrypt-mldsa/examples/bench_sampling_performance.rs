@@ -56,7 +56,7 @@ fn main() {
     let start = Instant::now();
     let mut successful_verifies = 0;
     for _ in 0..ITERATIONS {
-        if mldsa::verify::verify::<MlDsa65>(&pk, message, &sig) {
+        if hpcrypt_mldsa::verify::verify::<MlDsa65>(&pk, message, &sig) {
             successful_verifies += 1;
         }
     }

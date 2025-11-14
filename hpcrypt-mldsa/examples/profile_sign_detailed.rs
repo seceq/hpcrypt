@@ -9,23 +9,40 @@ use std::sync::atomic::AtomicU64;
 use std::time::Instant;
 
 // Global timing accumulators (atomic for thread safety)
+#[allow(dead_code)]
 static TIME_MU_HASH: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TIME_RHO_PRIME_HASH: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TIME_EXPAND_A: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TIME_SAMPLE_Y: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TIME_EARLY_CHECK: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TIME_MATRIX_MUL: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TIME_HIGH_BITS: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TIME_CHALLENGE_HASH: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TIME_SAMPLE_C: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TIME_COMPUTE_Z: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TIME_CHECK_Z: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TIME_COMPUTE_R: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TIME_CHECK_R0: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TIME_HINTS: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TIME_CHECK_HINTS: AtomicU64 = AtomicU64::new(0);
 
+#[allow(dead_code)]
 static TOTAL_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
+#[allow(dead_code)]
 static TOTAL_SIGNS: AtomicU64 = AtomicU64::new(0);
 
 fn main() {
@@ -37,7 +54,7 @@ fn main() {
     println!("For fine-grained profiling, we would need to instrument sign.rs directly.\n");
 
     // Generate keypair
-    let (pk, sk) = keygen::<MlDsa65>();
+    let (_pk, sk) = keygen::<MlDsa65>();
     let message = b"Profiling message for detailed bottleneck analysis";
 
     // Warmup

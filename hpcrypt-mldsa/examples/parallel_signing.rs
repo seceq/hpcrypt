@@ -22,6 +22,7 @@ use hpcrypt_mldsa::keygen::keygen;
 use hpcrypt_mldsa::params::MlDsa65;
 use hpcrypt_mldsa::sign::sign;
 use hpcrypt_mldsa::verify::verify;
+use std::sync::Arc;
 use std::time::Instant;
 
 /// Example 1: Parallel signing with Rayon (recommended for CPU-bound work)
@@ -35,6 +36,9 @@ fn example_rayon() {
     // [dependencies]
     // rayon = "1.8"
 
+    #[allow(unexpected_cfgs)]
+    {
+    #[cfg_attr(not(feature = "rayon_example"), allow(unreachable_code))]
     #[cfg(feature = "rayon_example")]
     {
         use rayon::prelude::*;
@@ -80,6 +84,7 @@ fn example_rayon() {
         println!("      .collect();");
     }
 
+    #[cfg_attr(feature = "rayon_example", allow(unreachable_code))]
     #[cfg(not(feature = "rayon_example"))]
     {
         println!("Rayon example not enabled.");
@@ -87,6 +92,7 @@ fn example_rayon() {
         println!("  [dependencies]");
         println!("  rayon = \"1.8\"");
         println!("\nThen uncomment the rayon example code.");
+    }
     }
 }
 
@@ -97,7 +103,6 @@ fn example_rayon() {
 fn example_thread_pool() {
     println!("\n=== Example 2: Manual Thread Pool ===\n");
 
-    use std::sync::Arc;
     use std::thread;
 
     let (pk, sk) = keygen::<MlDsa65>();
@@ -110,7 +115,9 @@ fn example_thread_pool() {
         .collect();
     let messages = Arc::new(messages);
 
-    let num_threads = num_cpus::get();
+    let num_threads = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1);
     let chunk_size = (messages.len() + num_threads - 1) / num_threads;
 
     println!("Messages:     100");
@@ -181,6 +188,9 @@ fn example_tokio() {
     // [dependencies]
     // tokio = { version = "1", features = ["full"] }
 
+    #[allow(unexpected_cfgs)]
+    {
+    #[cfg_attr(not(feature = "tokio_example"), allow(unreachable_code))]
     #[cfg(feature = "tokio_example")]
     {
         use tokio::task;
@@ -240,6 +250,7 @@ fn example_tokio() {
         });
     }
 
+    #[cfg_attr(feature = "tokio_example", allow(unreachable_code))]
     #[cfg(not(feature = "tokio_example"))]
     {
         println!("Tokio example not enabled.");
@@ -247,6 +258,7 @@ fn example_tokio() {
         println!("  [dependencies]");
         println!("  tokio = {{ version = \"1\", features = [\"full\"] }}");
         println!("\nThen uncomment the tokio example code.");
+    }
     }
 }
 

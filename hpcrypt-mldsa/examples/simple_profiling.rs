@@ -10,7 +10,7 @@ use hpcrypt_mldsa::sign::sign_deterministic;
 use hpcrypt_mldsa::verify::verify;
 use std::time::Instant;
 
-fn measure<F, R>(name: &str, iterations: usize, mut f: F) -> (R, u128)
+fn measure<F, R>(_name: &str, iterations: usize, mut f: F) -> (R, u128)
 where
     F: FnMut() -> R,
 {
@@ -149,16 +149,19 @@ fn main() {
     println!("\nOK Profiling complete!");
 
     // Print AVX2 status
-    #[cfg(all(feature = "simd", target_arch = "x86_64"))]
+    #[allow(unexpected_cfgs)]
     {
-        if mldsa::simd::dispatch::has_avx2() {
-            println!("\nOK AVX2 SIMD is ENABLED and being used for NTT operations");
-        } else {
-            println!("\nFAIL AVX2 SIMD is NOT available (using scalar fallback)");
+        #[cfg(all(feature = "simd", target_arch = "x86_64"))]
+        {
+            if hpcrypt_mldsa::simd::dispatch::has_avx2() {
+                println!("\nOK AVX2 SIMD is ENABLED and being used for NTT operations");
+            } else {
+                println!("\nFAIL AVX2 SIMD is NOT available (using scalar fallback)");
+            }
         }
-    }
-    #[cfg(not(all(feature = "simd", target_arch = "x86_64")))]
-    {
-        println!("\nFAIL SIMD features not enabled");
+        #[cfg(not(all(feature = "simd", target_arch = "x86_64")))]
+        {
+            println!("\nFAIL SIMD features not enabled");
+        }
     }
 }

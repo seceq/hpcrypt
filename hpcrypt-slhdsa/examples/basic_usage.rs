@@ -10,12 +10,12 @@ fn main() {
     println!("SLH-DSA (SPHINCS+) Basic Usage Example");
     println!("=======================================\n");
 
-    // Initialize RNG
-    let mut rng = OsRng;
+    // Initialize RNG (not needed for this generation variant)
+    let _rng = OsRng;
 
     // Generate a key pair using SHA2-128f parameter set
     println!("Generating key pair (SHA2-128f)...");
-    let keypair = KeyPair::<Sha2_128f>::generate(&mut rng);
+    let keypair = KeyPair::<Sha2_128f>::generate();
     println!("Key generation complete!");
     println!(
         "  Public key size: {} bytes",

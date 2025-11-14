@@ -4,7 +4,6 @@
 
 use hpcrypt_mldsa::keygen::keygen;
 use hpcrypt_mldsa::MlDsa65;
-use std::time::Instant;
 
 // We'll need to create a custom instrumented version of sign
 // For now, let's analyze what we can from existing benchmarks
@@ -14,8 +13,8 @@ fn main() {
     println!("ML-DSA-65 Signing Breakdown Analysis");
     println!("================================================================================\n");
 
-    let (pk, sk) = keygen::<MlDsa65>();
-    let message = b"Profiling message";
+    let (_pk, _sk) = keygen::<MlDsa65>();
+    let _message = b"Profiling message";
 
     // Current best approach: Use existing micro-benchmarks
     println!("Current Performance Status:");

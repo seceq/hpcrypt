@@ -33,10 +33,10 @@ fn main() {
 
     // Overall signing
     let start = Instant::now();
-    let mut successful_signs = 0;
+    let mut _successful_signs = 0;
     for _ in 0..ITERATIONS {
         if sign::sign::<MlDsa65>(&sk, message).is_some() {
-            successful_signs += 1;
+            _successful_signs += 1;
         }
     }
     let total_sign_time = start.elapsed();
@@ -58,10 +58,10 @@ fn main() {
     let sig = sign::sign::<MlDsa65>(&sk, message).expect("Failed to sign");
 
     let start = Instant::now();
-    let mut successful_verifies = 0;
+    let mut _successful_verifies = 0;
     for _ in 0..ITERATIONS {
         if verify::verify::<MlDsa65>(&pk, message, &sig) {
-            successful_verifies += 1;
+            _successful_verifies += 1;
         }
     }
     let total_verify_time = start.elapsed();

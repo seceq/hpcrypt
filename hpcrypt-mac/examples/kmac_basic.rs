@@ -2,7 +2,7 @@
 //!
 //! Demonstrates various use cases for KMAC128 and KMAC256
 
-use hpcrypt_hash::kmac::{kmac128, kmac256, Kmac128};
+use hpcrypt_mac::{kmac128, kmac256, Kmac128};
 
 fn main() {
     println!("=== KMAC Examples ===\n");

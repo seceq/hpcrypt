@@ -13,7 +13,7 @@ type P = MlDsa65;
 fn benchmark_signing(iterations: usize, name: &str) -> f64 {
     // Generate test keypair
     let seed = [42u8; 32];
-    let (pk, sk) = keygen_from_seed::<P>(&seed);
+    let (_pk, sk) = keygen_from_seed::<P>(&seed);
 
     // Test message
     let message = b"Benchmark message for Barrett+Shoup performance test";

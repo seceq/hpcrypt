@@ -65,7 +65,7 @@ fn train_security_level<P: hpcrypt_mldsa::params::DsaParams>(level_name: &str) {
             for _ in 0..14 {
                 // 5 keypairs × 7 messages × 14 = ~490 signatures
                 let sig = sign(sk, msg).expect("Signing failed");
-                signatures.push((pk.clone(), sig, msg.clone()));
+                signatures.push((pk, sig, msg.clone()));
             }
         }
     }

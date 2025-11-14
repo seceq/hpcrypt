@@ -78,7 +78,8 @@ fn compute_zeta_onthefly(k: usize) -> i32 {
 /// Alternative: Iterative computation (faster but still overhead)
 /// Build up powers incrementally
 #[inline(always)]
-fn compute_zeta_iterative(k: usize, prev: i32) -> i32 {
+#[allow(dead_code)]
+fn compute_zeta_iterative(_k: usize, prev: i32) -> i32 {
     // This would need state tracking across calls
     // Simplified version - still requires modular multiplication
     ((prev as i64 * ZETA as i64) % Q as i64) as i32
