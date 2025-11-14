@@ -38,61 +38,61 @@ fn example_rayon() {
 
     #[allow(unexpected_cfgs)]
     {
-    #[cfg_attr(not(feature = "rayon_example"), allow(unreachable_code))]
-    #[cfg(feature = "rayon_example")]
-    {
-        use rayon::prelude::*;
+        #[cfg_attr(not(feature = "rayon_example"), allow(unreachable_code))]
+        #[cfg(feature = "rayon_example")]
+        {
+            use rayon::prelude::*;
 
-        let (pk, sk) = keygen::<MlDsa65>();
+            let (pk, sk) = keygen::<MlDsa65>();
 
-        // Generate test messages
-        let messages: Vec<Vec<u8>> = (0..100)
-            .map(|i| format!("Message {}", i).into_bytes())
-            .collect();
-        let msg_refs: Vec<&[u8]> = messages.iter().map(|m| m.as_slice()).collect();
+            // Generate test messages
+            let messages: Vec<Vec<u8>> = (0..100)
+                .map(|i| format!("Message {}", i).into_bytes())
+                .collect();
+            let msg_refs: Vec<&[u8]> = messages.iter().map(|m| m.as_slice()).collect();
 
-        // Benchmark sequential
-        let start = Instant::now();
-        let _sigs_seq: Vec<_> = msg_refs.iter().map(|msg| sign(&sk, msg)).collect();
-        let seq_time = start.elapsed();
+            // Benchmark sequential
+            let start = Instant::now();
+            let _sigs_seq: Vec<_> = msg_refs.iter().map(|msg| sign(&sk, msg)).collect();
+            let seq_time = start.elapsed();
 
-        // Benchmark parallel
-        let start = Instant::now();
-        let sigs_par: Vec<_> = msg_refs.par_iter().map(|msg| sign(&sk, msg)).collect();
-        let par_time = start.elapsed();
+            // Benchmark parallel
+            let start = Instant::now();
+            let sigs_par: Vec<_> = msg_refs.par_iter().map(|msg| sign(&sk, msg)).collect();
+            let par_time = start.elapsed();
 
-        // Verify all signatures
-        let all_valid = messages.iter().zip(sigs_par.iter()).all(|(msg, sig_opt)| {
-            sig_opt
-                .as_ref()
-                .map(|sig| verify(&pk, msg, sig))
-                .unwrap_or(false)
-        });
+            // Verify all signatures
+            let all_valid = messages.iter().zip(sigs_par.iter()).all(|(msg, sig_opt)| {
+                sig_opt
+                    .as_ref()
+                    .map(|sig| verify(&pk, msg, sig))
+                    .unwrap_or(false)
+            });
 
-        println!("Messages:        100");
-        println!("Sequential time: {:?}", seq_time);
-        println!("Parallel time:   {:?}", par_time);
-        println!(
-            "Speedup:         {:.2}x",
-            seq_time.as_secs_f64() / par_time.as_secs_f64()
-        );
-        println!("All valid:       {}", all_valid);
-        println!("\nCode:");
-        println!("  use rayon::prelude::*;");
-        println!("  let sigs: Vec<_> = messages.par_iter()");
-        println!("      .map(|msg| sign(&sk, msg))");
-        println!("      .collect();");
-    }
+            println!("Messages:        100");
+            println!("Sequential time: {:?}", seq_time);
+            println!("Parallel time:   {:?}", par_time);
+            println!(
+                "Speedup:         {:.2}x",
+                seq_time.as_secs_f64() / par_time.as_secs_f64()
+            );
+            println!("All valid:       {}", all_valid);
+            println!("\nCode:");
+            println!("  use rayon::prelude::*;");
+            println!("  let sigs: Vec<_> = messages.par_iter()");
+            println!("      .map(|msg| sign(&sk, msg))");
+            println!("      .collect();");
+        }
 
-    #[cfg_attr(feature = "rayon_example", allow(unreachable_code))]
-    #[cfg(not(feature = "rayon_example"))]
-    {
-        println!("Rayon example not enabled.");
-        println!("\nTo run this example, add to Cargo.toml:");
-        println!("  [dependencies]");
-        println!("  rayon = \"1.8\"");
-        println!("\nThen uncomment the rayon example code.");
-    }
+        #[cfg_attr(feature = "rayon_example", allow(unreachable_code))]
+        #[cfg(not(feature = "rayon_example"))]
+        {
+            println!("Rayon example not enabled.");
+            println!("\nTo run this example, add to Cargo.toml:");
+            println!("  [dependencies]");
+            println!("  rayon = \"1.8\"");
+            println!("\nThen uncomment the rayon example code.");
+        }
     }
 }
 
@@ -190,75 +190,75 @@ fn example_tokio() {
 
     #[allow(unexpected_cfgs)]
     {
-    #[cfg_attr(not(feature = "tokio_example"), allow(unreachable_code))]
-    #[cfg(feature = "tokio_example")]
-    {
-        use tokio::task;
+        #[cfg_attr(not(feature = "tokio_example"), allow(unreachable_code))]
+        #[cfg(feature = "tokio_example")]
+        {
+            use tokio::task;
 
-        let rt = tokio::runtime::Runtime::new().unwrap();
+            let rt = tokio::runtime::Runtime::new().unwrap();
 
-        rt.block_on(async {
-            let (pk, sk) = keygen::<MlDsa65>();
-            let sk = Arc::new(sk);
-            let pk = Arc::new(pk);
+            rt.block_on(async {
+                let (pk, sk) = keygen::<MlDsa65>();
+                let sk = Arc::new(sk);
+                let pk = Arc::new(pk);
 
-            // Generate test messages
-            let messages: Vec<Vec<u8>> = (0..100)
-                .map(|i| format!("Message {}", i).into_bytes())
-                .collect();
+                // Generate test messages
+                let messages: Vec<Vec<u8>> = (0..100)
+                    .map(|i| format!("Message {}", i).into_bytes())
+                    .collect();
 
-            println!("Messages: 100");
+                println!("Messages: 100");
 
-            let start = Instant::now();
+                let start = Instant::now();
 
-            // Spawn blocking tasks
-            let mut handles = Vec::new();
-            for msg in messages.iter() {
-                let sk = Arc::clone(&sk);
-                let msg = msg.clone();
+                // Spawn blocking tasks
+                let mut handles = Vec::new();
+                for msg in messages.iter() {
+                    let sk = Arc::clone(&sk);
+                    let msg = msg.clone();
 
-                let handle = task::spawn_blocking(move || sign(&sk, &msg));
+                    let handle = task::spawn_blocking(move || sign(&sk, &msg));
 
-                handles.push(handle);
-            }
+                    handles.push(handle);
+                }
 
-            // Await all results
-            let mut sigs = Vec::new();
-            for handle in handles {
-                let sig = handle.await.unwrap();
-                sigs.push(sig);
-            }
+                // Await all results
+                let mut sigs = Vec::new();
+                for handle in handles {
+                    let sig = handle.await.unwrap();
+                    sigs.push(sig);
+                }
 
-            let elapsed = start.elapsed();
+                let elapsed = start.elapsed();
 
-            // Verify
-            let all_valid = messages.iter().zip(sigs.iter()).all(|(msg, sig_opt)| {
-                sig_opt
-                    .as_ref()
-                    .map(|sig| verify(&pk, msg, sig))
-                    .unwrap_or(false)
+                // Verify
+                let all_valid = messages.iter().zip(sigs.iter()).all(|(msg, sig_opt)| {
+                    sig_opt
+                        .as_ref()
+                        .map(|sig| verify(&pk, msg, sig))
+                        .unwrap_or(false)
+                });
+
+                println!("Time:       {:?}", elapsed);
+                println!("Throughput: {:.0} sigs/sec", 100.0 / elapsed.as_secs_f64());
+                println!("All valid:  {}", all_valid);
+                println!("\nCode:");
+                println!("  let handle = tokio::task::spawn_blocking(move || {{");
+                println!("      sign(&sk, &msg)");
+                println!("  }});");
+                println!("  let sig = handle.await?;");
             });
+        }
 
-            println!("Time:       {:?}", elapsed);
-            println!("Throughput: {:.0} sigs/sec", 100.0 / elapsed.as_secs_f64());
-            println!("All valid:  {}", all_valid);
-            println!("\nCode:");
-            println!("  let handle = tokio::task::spawn_blocking(move || {{");
-            println!("      sign(&sk, &msg)");
-            println!("  }});");
-            println!("  let sig = handle.await?;");
-        });
-    }
-
-    #[cfg_attr(feature = "tokio_example", allow(unreachable_code))]
-    #[cfg(not(feature = "tokio_example"))]
-    {
-        println!("Tokio example not enabled.");
-        println!("\nTo run this example, add to Cargo.toml:");
-        println!("  [dependencies]");
-        println!("  tokio = {{ version = \"1\", features = [\"full\"] }}");
-        println!("\nThen uncomment the tokio example code.");
-    }
+        #[cfg_attr(feature = "tokio_example", allow(unreachable_code))]
+        #[cfg(not(feature = "tokio_example"))]
+        {
+            println!("Tokio example not enabled.");
+            println!("\nTo run this example, add to Cargo.toml:");
+            println!("  [dependencies]");
+            println!("  tokio = {{ version = \"1\", features = [\"full\"] }}");
+            println!("\nThen uncomment the tokio example code.");
+        }
     }
 }
 
