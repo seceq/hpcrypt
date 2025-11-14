@@ -460,8 +460,7 @@ mod tests {
 
     #[test]
     fn test_keygen() {
-        let mut rng = OsRng;
-        let keypair = KeyPair::<Sha2_128s>::generate(&mut rng);
+        let keypair = KeyPair::<Sha2_128s>::generate();
 
         assert_eq!(keypair.secret_key.sk_seed().len(), 16);
         assert_eq!(keypair.public_key.pk_root().len(), 16);
@@ -469,8 +468,7 @@ mod tests {
 
     #[test]
     fn test_sign_verify() {
-        let mut rng = OsRng;
-        let keypair = KeyPair::<Sha2_128s>::generate(&mut rng);
+        let keypair = KeyPair::<Sha2_128s>::generate();
 
         let message = b"Hello, world!";
         let signature = sign(&keypair.secret_key, message);
@@ -482,8 +480,7 @@ mod tests {
     #[test]
     #[ignore] // Temporarily ignored: simplified hypertree doesn't fully validate multi-layer
     fn test_verify_wrong_message_fails() {
-        let mut rng = OsRng;
-        let keypair = KeyPair::<Sha2_128s>::generate(&mut rng);
+        let keypair = KeyPair::<Sha2_128s>::generate();
 
         let message = b"Hello, world!";
         let wrong_message = b"Goodbye, world!";
