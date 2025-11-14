@@ -180,12 +180,19 @@ impl RsaPrivateKey {
         let m2 = c_mod_q.modpow(&self.dq, &self.q);
 
         // h = qinv * (m1 - m2) mod p
+        // Use modular arithmetic to avoid potential underflow
         let h = if m1 >= m2 {
-            (&self.qinv * (m1 - &m2)) % &self.p
+            (&self.qinv * (&m1 - &m2)) % &self.p
         } else {
-            // Handle m1 < m2: add p before subtracting
-            let diff = &self.p + &m1 - &m2;
-            (&self.qinv * diff) % &self.p
+            // m1 < m2: compute (m1 + p - m2) mod p to avoid underflow
+            // Since m1 < p and m2 < q, and we ensure p >= q during key generation,
+            // (m1 + p) will always be >= m2
+            let sum = &m1 + &self.p;
+            // Additional safety check to prevent underflow
+            if sum < m2 {
+                return Err(RsaError::InvalidCiphertext);
+            }
+            (&self.qinv * (sum - &m2)) % &self.p
         };
 
         // m = m2 + h * q
@@ -209,11 +216,20 @@ impl RsaPrivateKey {
         let m_mod_q = m % &self.q;
         let s2 = m_mod_q.modpow(&self.dq, &self.q);
 
+        // h = qinv * (s1 - s2) mod p
+        // Use modular arithmetic to avoid potential underflow
         let h = if s1 >= s2 {
-            (&self.qinv * (s1 - &s2)) % &self.p
+            (&self.qinv * (&s1 - &s2)) % &self.p
         } else {
-            let diff = &self.p + &s1 - &s2;
-            (&self.qinv * diff) % &self.p
+            // s1 < s2: compute (s1 + p - s2) mod p to avoid underflow
+            // Since s1 < p and s2 < q, and we ensure p >= q during key generation,
+            // (s1 + p) will always be >= s2
+            let sum = &s1 + &self.p;
+            // Additional safety check to prevent underflow
+            if sum < s2 {
+                return Err(RsaError::MessageTooLong);
+            }
+            (&self.qinv * (sum - &s2)) % &self.p
         };
 
         let s = s2 + (h * &self.q);

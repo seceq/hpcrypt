@@ -86,8 +86,7 @@ fn bench_sign_baseline(c: &mut Criterion) {
 
     // SHA2-128s (tree_height = 9)
     {
-        let mut rng = OsRng;
-        let keypair = KeyPair::<Sha2_128s>::generate(&mut rng);
+        let keypair = KeyPair::<Sha2_128s>::generate();
         let message = b"Test message for Merkle to_vec() optimization";
 
         group.bench_function("sha2_128s_baseline", |b| {
@@ -100,8 +99,7 @@ fn bench_sign_baseline(c: &mut Criterion) {
 
     // SHA2-128f (tree_height = 9, more signatures)
     {
-        let mut rng = OsRng;
-        let keypair = KeyPair::<Sha2_128f>::generate(&mut rng);
+        let keypair = KeyPair::<Sha2_128f>::generate();
         let message = b"Test message for Merkle to_vec() optimization";
 
         group.bench_function("sha2_128f_baseline", |b| {
@@ -114,8 +112,7 @@ fn bench_sign_baseline(c: &mut Criterion) {
 
     // SHA2-192s (tree_height = 11)
     {
-        let mut rng = OsRng;
-        let keypair = KeyPair::<Sha2_192s>::generate(&mut rng);
+        let keypair = KeyPair::<Sha2_192s>::generate();
         let message = b"Test message for Merkle to_vec() optimization";
 
         group.bench_function("sha2_192s_baseline", |b| {
@@ -128,8 +125,7 @@ fn bench_sign_baseline(c: &mut Criterion) {
 
     // SHA2-256s (tree_height = 15)
     {
-        let mut rng = OsRng;
-        let keypair = KeyPair::<Sha2_256s>::generate(&mut rng);
+        let keypair = KeyPair::<Sha2_256s>::generate();
         let message = b"Test message for Merkle to_vec() optimization";
 
         group.bench_function("sha2_256s_baseline", |b| {
@@ -148,8 +144,7 @@ fn bench_verify_baseline(c: &mut Criterion) {
 
     // SHA2-128s
     {
-        let mut rng = OsRng;
-        let keypair = KeyPair::<Sha2_128s>::generate(&mut rng);
+        let keypair = KeyPair::<Sha2_128s>::generate();
         let message = b"Test message for Merkle to_vec() optimization";
         let signature = hpcrypt_slhdsa::sign(&keypair.secret_key, message);
 
@@ -167,8 +162,7 @@ fn bench_verify_baseline(c: &mut Criterion) {
 
     // SHA2-192s
     {
-        let mut rng = OsRng;
-        let keypair = KeyPair::<Sha2_192s>::generate(&mut rng);
+        let keypair = KeyPair::<Sha2_192s>::generate();
         let message = b"Test message for Merkle to_vec() optimization";
         let signature = hpcrypt_slhdsa::sign(&keypair.secret_key, message);
 
