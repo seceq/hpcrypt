@@ -538,11 +538,10 @@ impl Scalar {
     /// Returns an array of 448 signed digits, each in {-1, 0, 1}.
     ///
     /// # Example
-    /// ```ignore
-    /// // Binary:  ...110... (two consecutive 1s)
-    /// // NAF:     ...1-10... (no adjacent non-zeros)
-    /// // Same value: 2^(i+1) + 2^i = 2^(i+1) - 2^i + 2^(i+1) = 2^(i+2) - 2^i
-    /// ```
+    ///
+    /// Binary:  ...110... (two consecutive 1s)
+    /// NAF:     ...1-10... (no adjacent non-zeros)
+    /// Same value: 2^(i+1) + 2^i = 2^(i+1) - 2^i + 2^(i+1) = 2^(i+2) - 2^i
     pub fn to_naf(&self) -> [i8; 448] {
         let mut naf = [0i8; 448];
         let reduced = self.reduce();

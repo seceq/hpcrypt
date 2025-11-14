@@ -26,11 +26,11 @@
 //!
 //! # Implementation Details
 //!
-//! The algorithm computes (c * p)(x) = ∑ c[i] · x^i · p(x) mod (x^n + 1)
+//! The algorithm computes (c * p)(x) = ∑ c\[i\] · x^i · p(x) mod (x^n + 1)
 //!
-//! For each non-zero coefficient c[i] at position i:
-//! 1. If c[i] = 1: Add rotated p by i positions to result
-//! 2. If c[i] = -1: Subtract rotated p by i positions from result
+//! For each non-zero coefficient c\[i\] at position i:
+//! 1. If c\[i\] = 1: Add rotated p by i positions to result
+//! 2. If c\[i\] = -1: Subtract rotated p by i positions from result
 //! 3. Handle wraparound: coefficients beyond n-1 wrap with negation (x^n = -1)
 //!
 //! **Constant-time properties**:
@@ -117,8 +117,8 @@ impl SparsePoly {
 ///
 /// # Algorithm
 ///
-/// For each non-zero term c[i]·x^i in c:
-///   result += c[i] · (x^i · p(x))  mod (x^n + 1)
+/// For each non-zero term c\[i\]·x^i in c:
+///   result += c\[i\] · (x^i · p(x))  mod (x^n + 1)
 ///
 /// Rotation by i positions:
 /// - Coefficients [0..n-i) -> positions [i..n) (no sign change)
@@ -291,8 +291,9 @@ fn rotate_and_accumulate_macro(result: &mut Poly, p: &Poly, pos: usize, multipli
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::vec;
     use crate::ntt::poly_mul_ntt;
+    extern crate alloc;
+    use alloc::vec;
 
     /// Test sparse representation extraction
     #[test]

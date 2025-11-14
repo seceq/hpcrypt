@@ -124,7 +124,7 @@ fn keccak_f(state: &mut [u64; 25]) {
 /// - 8 bytes for the value (maximum usize on 64-bit platforms)
 ///
 /// Using stack allocation provides significant performance improvements (3-6x speedup)
-/// compared to heap-allocated Vec<u8> for these small, fixed-size encodings.
+/// compared to heap-allocated `Vec<u8>` for these small, fixed-size encodings.
 #[derive(Clone, Copy)]
 pub struct EncodedValue {
     /// Stack-allocated buffer (max 9 bytes: 1 length + 8 data bytes for usize on 64-bit)
@@ -752,7 +752,7 @@ impl Kmac128 {
     /// * `output_len` - Desired MAC length in bytes (recommended: >= 16 bytes)
     ///
     /// # Returns
-    /// The computed MAC as a Vec<u8>
+    /// The computed MAC as a `Vec<u8>`
     #[cfg(feature = "alloc")]
     pub fn finalize(mut self, output_len: usize) -> Vec<u8> {
         // Append right_encode(output_len in bits)
@@ -896,7 +896,7 @@ impl Kmac256 {
     /// * `output_len` - Desired MAC length in bytes (recommended: >= 16 bytes)
     ///
     /// # Returns
-    /// The computed MAC as a Vec<u8>
+    /// The computed MAC as a `Vec<u8>`
     #[cfg(feature = "alloc")]
     pub fn finalize(mut self, output_len: usize) -> Vec<u8> {
         // Append right_encode(output_len in bits)

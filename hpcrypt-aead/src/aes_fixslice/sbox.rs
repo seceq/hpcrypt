@@ -6,7 +6,7 @@
 //! # References
 //!
 //! - Boyar & Peralta (2010): "A depth-16 circuit for the AES S-box"
-//! - RustCrypto AES: Scheduled using https://github.com/Ko-/aes-armcortexm
+//! - RustCrypto AES: Scheduled using <https://github.com/Ko-/aes-armcortexm>
 
 use super::State;
 

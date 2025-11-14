@@ -2,7 +2,7 @@
 //!
 //! Implements the NTT-based polynomial multiplication for ML-DSA (FIPS 204).
 //!
-//! The NTT transforms polynomials in R_q = Z_q[X]/(X^256 + 1) into the frequency domain
+//! The NTT transforms polynomials in R_q = Z_q\[X\]/(X^256 + 1) into the frequency domain
 //! where multiplication becomes O(n) pointwise multiplication instead of O(n²) convolution.
 //!
 //! # Algorithm
@@ -961,7 +961,7 @@ pub fn poly_mul_ntt(a: &Poly, b: &Poly) -> Poly {
 /// - result is in coefficient form (K polynomials)
 ///
 /// This matches the FIPS 204 reference implementation flow:
-/// 1. For each row i, accumulate A[i][j] · v[j] in NTT domain
+/// 1. For each row i, accumulate A\[i\]\[j\] · v\[j\] in NTT domain
 /// 2. Apply inverse NTT once at the end per row
 ///
 /// # Arguments

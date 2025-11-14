@@ -902,7 +902,7 @@ pub fn expand_secret_vec<const K: usize>(
 /// Expand public matrix A from seed
 ///
 /// Expands the k×ℓ matrix A from a 32-byte seed using SHAKE-128.
-/// Each element A[i][j] is a polynomial sampled uniformly from R_q.
+/// Each element A\[i\]\[j\] is a polynomial sampled uniformly from R_q.
 ///
 /// # Arguments
 /// * `rho` - 32-byte seed

@@ -1,6 +1,6 @@
 //! Polynomial arithmetic for ML-DSA
 //!
-//! This module implements polynomial operations over the ring R_q = Z_q[X]/(X^n + 1)
+//! This module implements polynomial operations over the ring R_q = Z_q\[X\]/(X^n + 1)
 //! where q = 8380417 and n = 256.
 //!
 //! Polynomials are represented in coefficient form for the reference implementation.
@@ -10,7 +10,7 @@ use crate::params::{N, Q};
 
 /// Polynomial with 256 coefficients in Z_q
 ///
-/// Represents an element of R_q = Z_q[X]/(X^256 + 1) where q = 8380417
+/// Represents an element of R_q = Z_q\[X\]/(X^256 + 1) where q = 8380417
 ///
 /// The struct is aligned to 64-byte cache lines for better cache utilization.
 /// Uses i32 coefficients since q = 8380417 doesn't fit in i16.
@@ -317,7 +317,7 @@ impl Poly {
 
     /// Compute infinity norm of polynomial
     ///
-    /// Returns max(|coeffs[i]|) where coefficients are in centered representation [-q/2, q/2]
+    /// Returns max(|coeffs\[i\]|) where coefficients are in centered representation [-q/2, q/2]
     pub fn infinity_norm(&self) -> i32 {
         #[cfg(all(feature = "avx2", target_arch = "x86_64"))]
         {
@@ -357,7 +357,7 @@ impl Poly {
 
     /// Compute infinity norm with early exit threshold
     ///
-    /// Returns max(|coeffs[i]|) but stops early if any coefficient exceeds threshold.
+    /// Returns max(|coeffs\[i\]|) but stops early if any coefficient exceeds threshold.
     /// This is useful for rejection checks where we only care if norm > threshold.
     ///
     /// # Arguments
@@ -525,7 +525,7 @@ impl Default for Poly {
 /// Pre-computed multiplication cache for NTT polynomial
 ///
 /// Stores precomputed values for optimized NTT pointwise multiplication.
-/// In standard NTT multiplication, we perform: result[i] = a[i] * b[i]
+/// In standard NTT multiplication, we perform: result\[i\] = a\[i\] * b\[i\]
 /// This cache stores intermediate values that can be reused across multiple multiplications.
 ///
 /// # Memory Layout
@@ -664,7 +664,7 @@ impl<const K: usize> PolyVec<K> {
 
     /// Compute infinity norm of vector
     ///
-    /// Returns max(||polys[i]||_∞) for all polynomials in the vector
+    /// Returns max(||polys\[i\]||_∞) for all polynomials in the vector
     pub fn infinity_norm(&self) -> i32 {
         let mut max = 0;
         for poly in &self.polys {

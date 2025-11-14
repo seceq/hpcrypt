@@ -30,7 +30,7 @@
 //! # References
 //!
 //! - "DudeCT: Practical Constant-Time Leakage Detection" (CCS 2017)
-//! - https://github.com/oreparaz/dudect
+//! - <https://github.com/oreparaz/dudect>
 
 use std::time::Instant;
 use std::vec::Vec;

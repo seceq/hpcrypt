@@ -832,7 +832,7 @@ impl Point {
     /// # Algorithm
     ///
     /// Complete addition formula for curves with a = -3 (all NIST curves).
-    /// Reference: https://eprint.iacr.org/2015/1060 (Algorithm 4)
+    /// Reference: <https://eprint.iacr.org/2015/1060> (Algorithm 4)
     ///
     /// # Security
     ///

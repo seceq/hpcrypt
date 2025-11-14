@@ -328,10 +328,11 @@ fn encode_w1<P: DsaParams>(w1: &[Poly]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::vec;
     use crate::keygen::keygen;
     use crate::params::MlDsa65;
     use crate::verify::verify;
+    extern crate alloc;
+    use alloc::vec;
 
     #[test]
     fn test_sign_batch_basic() {

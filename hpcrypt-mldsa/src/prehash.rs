@@ -261,10 +261,8 @@ pub fn sign_prehashed_sha512_deterministic<P: DsaParams>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::vec;
     use crate::keygen::keygen;
     use crate::params::MlDsa65;
-
     extern crate alloc;
     use alloc::vec;
 

@@ -188,9 +188,9 @@ impl std::error::Error for SerializationError {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::vec;
     extern crate alloc;
     use alloc::string::ToString;
+    use alloc::vec;
 
     #[test]
     fn test_sign_error_display() {
