@@ -78,5 +78,5 @@ pub use hpcrypt_curves as curves;
 #[cfg(feature = "signatures")]
 pub use hpcrypt_signatures as signatures;
 
-#[cfg(feature = "kex")]
-pub use hpcrypt_kex as kex;
+#[cfg(feature = "pake")]
+pub use hpcrypt_pake as pake;

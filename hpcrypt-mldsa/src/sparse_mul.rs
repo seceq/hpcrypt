@@ -291,6 +291,7 @@ fn rotate_and_accumulate_macro(result: &mut Poly, p: &Poly, pos: usize, multipli
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec;
     use crate::ntt::poly_mul_ntt;
 
     /// Test sparse representation extraction

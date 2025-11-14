@@ -188,6 +188,7 @@ impl std::error::Error for SerializationError {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec;
     extern crate alloc;
     use alloc::string::ToString;
 

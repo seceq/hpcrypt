@@ -19,7 +19,7 @@ hpcrypt-cipher = { path = "../hpcrypt-cipher", version = "0.1.0", optional = tru
 hpcrypt-kdf = { workspace = true, optional = true }
 hpcrypt-curves = { workspace = true, optional = true }
 hpcrypt-signatures = { workspace = true, optional = true }
-hpcrypt-kex = { workspace = true, optional = true }
+hpcrypt-pake = { workspace = true, optional = true }
 hpcrypt-rng = { workspace = true, optional = true }
 hpcrypt-ecies = { path = "../hpcrypt-ecies", version = "0.1.0", optional = true }
 hpcrypt-hpke = { path = "../hpcrypt-hpke", version = "0.1.0", optional = true }
@@ -36,7 +36,7 @@ std = [
     "hpcrypt-kdf?/std",
     "hpcrypt-curves?/std",
     "hpcrypt-signatures?/std",
-    "hpcrypt-kex?/std",
+    "hpcrypt-pake?/std",
     "hpcrypt-rng?/std",
     "hpcrypt-ecies?/std",
     "hpcrypt-hpke?/std",
@@ -51,7 +51,7 @@ alloc = [
     "hpcrypt-kdf?/alloc",
     "hpcrypt-curves?/alloc",
     "hpcrypt-signatures?/alloc",
-    "hpcrypt-kex?/alloc",
+    "hpcrypt-pake?/alloc",
     "hpcrypt-rng?/alloc",
     "hpcrypt-ecies?/alloc",
     "hpcrypt-hpke?/alloc",
@@ -66,7 +66,7 @@ cipher = ["dep:hpcrypt-cipher"]
 kdf = ["dep:hpcrypt-kdf"]
 curves = ["dep:hpcrypt-curves"]
 signatures = ["dep:hpcrypt-signatures"]
-kex = ["dep:hpcrypt-kex"]
+pake = ["dep:hpcrypt-pake"]
 rng = ["dep:hpcrypt-rng", "hpcrypt-rng?/os-rng"]
 ecies = ["dep:hpcrypt-ecies", "curves", "aead", "kdf"]
 hpke = ["dep:hpcrypt-hpke", "curves", "aead", "kdf", "hash"]
