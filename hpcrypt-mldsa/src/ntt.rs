@@ -1316,6 +1316,7 @@ pub fn inv_ntt_specialized(poly: &Poly) -> Poly {
 }
 
 mod tests {
+    use super::*;
 
     #[test]
     #[cfg(feature = "std")]

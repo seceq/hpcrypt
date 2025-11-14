@@ -746,6 +746,7 @@ pub fn uncenter_coeff(a: i32) -> i32 {
 }
 
 mod tests {
+    use super::*;
 
     #[test]
     fn test_poly_new() {

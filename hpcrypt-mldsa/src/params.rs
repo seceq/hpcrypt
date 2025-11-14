@@ -166,6 +166,7 @@ impl DsaParams for MlDsa87 {
 }
 
 mod tests {
+    use super::*;
 
     #[test]
     fn test_mldsa44_params() {

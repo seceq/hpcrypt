@@ -168,6 +168,15 @@ fn encode_w1<P: DsaParams>(w1: &[Poly]) -> Vec<u8> {
 }
 
 mod tests {
+    extern crate alloc;
+    use alloc::vec;
+
+    use super::*;
+    use crate::{MlDsa44, MlDsa65, MlDsa87};
+    use crate::keygen::keygen_from_seed;
+    use crate::sign::{sign, sign_deterministic};
+    use crate::verify::verify;
+    use crate::serialize::{serialize_signature, deserialize_signature};
 
     #[test]
     fn test_verify_valid_signature() {

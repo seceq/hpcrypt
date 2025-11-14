@@ -9,6 +9,7 @@
 //! These sampling operations are critical for key generation, signing, and verification.
 
 extern crate alloc;
+use alloc::vec;
 use alloc::vec::Vec;
 
 use crate::params::{DsaParams, N, Q};
@@ -1015,6 +1016,11 @@ fn rej_uniform(coeffs: &mut [i32], start: usize, len: usize, buf: &[u8], buflen:
 }
 
 mod tests {
+    extern crate alloc;
+    use alloc::vec;
+
+    use super::*;
+    use crate::{MlDsa44, MlDsa65, MlDsa87};
 
     #[test]
     fn test_sample_in_ball_count() {

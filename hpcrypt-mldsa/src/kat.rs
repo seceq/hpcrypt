@@ -174,6 +174,10 @@ pub fn parse_kat_file(content: &str) -> Result<Vec<KatVector>, &'static str> {
 }
 
 mod tests {
+    extern crate alloc;
+    use alloc::vec;
+
+    use super::*;
 
     #[test]
     fn test_parse_hex() {

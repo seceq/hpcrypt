@@ -107,6 +107,7 @@ pub fn ct_swap_i32(swap: u8, a: &mut i32, b: &mut i32) {
 }
 
 mod tests {
+    use super::*;
 
     #[test]
     fn test_ct_compare_equal() {

@@ -272,6 +272,7 @@ pub fn secret_key_from_der<P: DsaParams>(der_bytes: &[u8]) -> Result<SecretKey<P
 #[cfg(all(test, feature = "pem"))]
 mod tests {
     use super::*;
+    use crate::{MlDsa44, MlDsa65, MlDsa87};
     extern crate alloc;
     use crate::keygen::keygen_from_seed;
     use crate::params::MlDsa65;

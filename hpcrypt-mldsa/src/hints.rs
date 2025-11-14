@@ -278,6 +278,10 @@ pub fn poly_hint_count(h: &Poly) -> usize {
 }
 
 mod tests {
+    extern crate alloc;
+    use alloc::vec;
+
+    use super::*;
 
     #[test]
     fn test_make_hint_no_change() {
