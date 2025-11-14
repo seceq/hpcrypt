@@ -577,12 +577,15 @@ pub fn create_envelope(
     Ok(envelope)
 }
 
+/// Result type for envelope recovery
+type EnvelopeRecovery = (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>);
+
 /// Recover credentials from encrypted envelope
 pub fn recover_envelope(
     randomized_pwd: &[u8],
     envelope_bytes: &[u8],
     config: &Config,
-) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>), OpaqueError> {
+) -> Result<EnvelopeRecovery, OpaqueError> {
     // Derive envelope encryption key
     let envelope_key = kdf_expand(randomized_pwd, b"OPAQUE-EnvelopeKey", 32, config)?;
 
@@ -655,8 +658,11 @@ pub fn recover_envelope(
     ))
 }
 
+/// Result type for envelope deserialization
+type EnvelopeData = (Vec<u8>, Vec<u8>, Vec<u8>);
+
 /// Deserialize envelope
-fn deserialize_envelope(bytes: &[u8]) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>), OpaqueError> {
+fn deserialize_envelope(bytes: &[u8]) -> Result<EnvelopeData, OpaqueError> {
     if bytes.len() < 12 {
         return Err(OpaqueError::InvalidLength);
     }

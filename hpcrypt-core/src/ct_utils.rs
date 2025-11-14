@@ -226,7 +226,7 @@ impl ConditionallySelectable for u64 {
 impl ConditionallySelectable for u8 {
     #[inline]
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
-        let mask = (choice.0 as u8).wrapping_neg();
+        let mask = choice.0.wrapping_neg();
         (a & !mask) | (b & mask)
     }
 }
@@ -271,7 +271,7 @@ impl ConstantTimeEq for u8 {
     #[inline]
     fn ct_eq(&self, other: &Self) -> Choice {
         let xor = self ^ other;
-        let result = ((xor | xor.wrapping_neg()) >> 7) as u8;
+        let result = (xor | xor.wrapping_neg()) >> 7;
         Choice(1 - result)
     }
 }
@@ -322,7 +322,7 @@ impl ConstantTimeEq for [u64] {
 
         let mut result = Choice::TRUE();
         for (a, b) in self.iter().zip(other.iter()) {
-            result = result & a.ct_eq(b);
+            result &= a.ct_eq(b);
         }
         result
     }
@@ -337,7 +337,7 @@ impl ConstantTimeEq for [u8] {
 
         let mut result = Choice::TRUE();
         for (a, b) in self.iter().zip(other.iter()) {
-            result = result & a.ct_eq(b);
+            result &= a.ct_eq(b);
         }
         result
     }
@@ -352,7 +352,7 @@ macro_rules! impl_ct_eq_array {
                 fn ct_eq(&self, other: &Self) -> Choice {
                     let mut result = Choice::TRUE();
                     for i in 0..$n {
-                        result = result & self[i].ct_eq(&other[i]);
+                        result &= self[i].ct_eq(&other[i]);
                     }
                     result
                 }
@@ -372,7 +372,7 @@ macro_rules! impl_ct_eq_array_i64 {
                 fn ct_eq(&self, other: &Self) -> Choice {
                     let mut result = Choice::TRUE();
                     for i in 0..$n {
-                        result = result & self[i].ct_eq(&other[i]);
+                        result &= self[i].ct_eq(&other[i]);
                     }
                     result
                 }

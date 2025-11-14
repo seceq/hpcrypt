@@ -588,7 +588,7 @@ impl FF1 {
     /// Validate inputs
     fn validate_inputs(&self, input: &str, tweak: &[u8], radix: u32) -> Result<(), FF1Error> {
         // Validate radix
-        if radix < 2 || radix > 65536 {
+        if !(2..=65536).contains(&radix) {
             return Err(FF1Error::InvalidRadix);
         }
 

@@ -193,8 +193,10 @@ pub fn montgomery_reduce(a: i64) -> i32 {
 /// Returns: (x * zeta) mod Q in range approximately [-Q, Q)
 ///
 /// This method performs two independent multiplications that can execute in parallel:
+///
 /// 1. x * zeta (the actual product)
 /// 2. x * zeta_shoup >> 32 (quotient approximation)
+///
 /// Then combines them: x * zeta - quotient * Q
 ///
 /// Benefits over Montgomery reduction:
@@ -202,6 +204,7 @@ pub fn montgomery_reduce(a: i64) -> i32 {
 /// - Better CPU pipeline utilization
 /// - ~5-10% faster NTT operations on modern CPUs
 #[inline(always)]
+#[allow(dead_code)]
 fn shoup_multiply(x: i32, zeta: i32, zeta_shoup: u32) -> i32 {
     // Shoup's algorithm combined with Montgomery form conversion
     //
@@ -292,7 +295,9 @@ pub fn from_montgomery(a: i32) -> i32 {
 /// * `poly` - Polynomial in coefficient form
 ///
 /// # Returns
-/// * Polynomial in NTT domain
+///
+/// Polynomial in NTT domain
+///
 /// Public NTT function with SIMD dispatch
 pub fn ntt(poly: &Poly) -> Poly {
     #[cfg(feature = "simd")]
@@ -925,6 +930,7 @@ pub fn inv_ntt_merged(poly: &Poly) -> Poly {
 /// - ntt(a), ntt(b): Transform to NTT domain
 /// - pointwise_montgomery: Multiply and apply Montgomery reduction (÷ 2^32)
 /// - invntt_tomont: Inverse NTT and multiply by 2^32
+///
 /// The two Montgomery operations cancel out, giving standard form result.
 ///
 /// # Arguments

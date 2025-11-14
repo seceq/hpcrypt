@@ -734,8 +734,7 @@ pub fn expand_mask_poly(rho_prime: &[u8; 64], kappa: u16, _index: u8, gamma1: i3
     let mut coeffs_generated = 0;
 
     let bytes_per_coeff = (bits_per_coeff + 7) / 8; // Round up to bytes
-    let mut buf = Vec::with_capacity(bytes_per_coeff * 256);
-    buf.resize(bytes_per_coeff * 256, 0u8);
+    let mut buf = vec![0u8; bytes_per_coeff * 256];
 
     xof.read(&mut buf);
 

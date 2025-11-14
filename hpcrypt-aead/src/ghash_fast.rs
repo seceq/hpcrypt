@@ -228,6 +228,7 @@ impl GHashFast {
 
         // Process remaining blocks
         let mut result = acc_with_first;
+        #[allow(clippy::needless_range_loop)]
         for i in 1..n {
             let mut block_reversed = blocks[i];
             block_reversed.reverse();

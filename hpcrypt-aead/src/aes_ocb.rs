@@ -132,6 +132,7 @@ fn ocb_encrypt(cipher: &Aes, nonce: &[u8], plaintext: &[u8], aad: &[u8]) -> Vec<
     let shift_bytes = (bottom / 8) as usize;
     let shift_bits = (bottom % 8) as usize;
 
+    #[allow(clippy::needless_range_loop)]
     for i in 0..BLOCK_SIZE {
         let idx = shift_bytes + i;
         if shift_bits == 0 {
@@ -234,6 +235,7 @@ fn ocb_decrypt(
     let shift_bytes = (bottom / 8) as usize;
     let shift_bits = (bottom % 8) as usize;
 
+    #[allow(clippy::needless_range_loop)]
     for i in 0..BLOCK_SIZE {
         let idx = shift_bytes + i;
         if shift_bits == 0 {
@@ -320,7 +322,7 @@ fn process_aad(cipher: &Aes, l_star: &[u8; BLOCK_SIZE], aad: &[u8]) -> [u8; BLOC
     // Process final AAD block if partial
     let remaining = aad.len() % BLOCK_SIZE;
     if remaining > 0 {
-        xor_block(&mut offset, &l_star);
+        xor_block(&mut offset, l_star);
 
         let mut final_block = [0u8; BLOCK_SIZE];
         final_block[..remaining].copy_from_slice(&aad[full_blocks * BLOCK_SIZE..]);

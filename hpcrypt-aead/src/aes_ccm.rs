@@ -332,9 +332,7 @@ fn compute_cbc_mac(
 
         // Pad with zeros if partial block
         if to_copy < BLOCK_SIZE {
-            for i in to_copy..BLOCK_SIZE {
-                msg_block[i] = 0;
-            }
+            msg_block[to_copy..].fill(0);
         }
 
         for i in 0..BLOCK_SIZE {

@@ -357,6 +357,7 @@ impl AesCbc256 {
 // ============================================================================
 
 /// AES-128-CTR cipher
+#[derive(Debug)]
 pub struct AesCtr128 {
     cipher: Aes,
 }
@@ -393,6 +394,7 @@ impl AesCtr128 {
 }
 
 /// AES-192-CTR cipher
+#[derive(Debug)]
 pub struct AesCtr192 {
     cipher: Aes,
 }
@@ -422,6 +424,7 @@ impl AesCtr192 {
 }
 
 /// AES-256-CTR cipher
+#[derive(Debug)]
 pub struct AesCtr256 {
     cipher: Aes,
 }
@@ -466,6 +469,7 @@ fn increment_counter(counter: &mut [u8; 16]) {
 // ============================================================================
 
 /// AES-128-CFB cipher (CFB-128: full block feedback)
+#[derive(Debug)]
 pub struct AesCfb128 {
     cipher: Aes,
 }
@@ -543,6 +547,7 @@ impl AesCfb128 {
 }
 
 /// AES-192-CFB cipher
+#[derive(Debug)]
 pub struct AesCfb192 {
     cipher: Aes,
 }
@@ -601,6 +606,7 @@ impl AesCfb192 {
 }
 
 /// AES-256-CFB cipher
+#[derive(Debug)]
 pub struct AesCfb256 {
     cipher: Aes,
 }
@@ -664,6 +670,7 @@ impl AesCfb256 {
 // ============================================================================
 
 /// AES-128-OFB cipher
+#[derive(Debug)]
 pub struct AesOfb128 {
     cipher: Aes,
 }
@@ -697,6 +704,7 @@ impl AesOfb128 {
 }
 
 /// AES-192-OFB cipher
+#[derive(Debug)]
 pub struct AesOfb192 {
     cipher: Aes,
 }
@@ -725,6 +733,7 @@ impl AesOfb192 {
 }
 
 /// AES-256-OFB cipher
+#[derive(Debug)]
 pub struct AesOfb256 {
     cipher: Aes,
 }
@@ -759,6 +768,7 @@ impl AesOfb256 {
 // ============================================================================
 
 /// AES-128-XTS cipher (uses 256-bit key: two 128-bit keys)
+#[derive(Debug)]
 pub struct AesXts128 {
     cipher1: Aes, // Data encryption key
     cipher2: Aes, // Tweak encryption key
@@ -992,6 +1002,7 @@ impl AesXts128 {
 }
 
 /// AES-256-XTS cipher (uses 512-bit key: two 256-bit keys)
+#[derive(Debug)]
 pub struct AesXts256 {
     cipher1: Aes,
     cipher2: Aes,

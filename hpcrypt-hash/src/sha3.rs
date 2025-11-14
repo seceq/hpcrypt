@@ -9,6 +9,7 @@
 ///
 /// This replaces the slow byte-at-a-time extraction with word-at-a-time extraction.
 /// Expected improvement: 40-50% for small outputs
+#[allow(unused_macros)]
 macro_rules! squeeze_words_no_complement {
     ($state:expr, $output:expr, $offset:expr, $to_copy:expr) => {{
         // Extract complete u64 words
@@ -71,6 +72,7 @@ macro_rules! squeeze_words_with_complement {
 ///
 /// Unrolls the Theta column parity computation and D array calculation
 /// Expected improvement: Part of 15-20% cumulative gain
+#[allow(unused_macros)]
 macro_rules! theta_unrolled {
     ($state:expr, $c:ident, $d:ident) => {{
         // Compute column parities (unrolled)
@@ -120,6 +122,7 @@ macro_rules! theta_unrolled {
 ///
 /// Unrolls the 5 rows of Chi step completely
 /// Expected improvement: Part of 15-20% cumulative gain
+#[allow(unused_macros)]
 macro_rules! chi_unrolled {
     ($state:expr, $b:expr) => {{
         // Row 0 (unrolled)
@@ -188,6 +191,7 @@ macro_rules! chi_unrolled {
 ///
 /// Unrolls the Rho-Pi permutation completely with hardcoded rotation offsets
 /// Expected improvement: 5-8%
+#[allow(unused_macros)]
 macro_rules! rho_pi_unrolled {
     ($state:expr, $b:expr) => {{
         // Rho-Pi unrolled with explicit rotation offsets (corrected mapping)
@@ -1288,6 +1292,7 @@ fn keccak_p_12(state: &mut [u64; 25]) {
 #[cfg(feature = "lane-complement")]
 fn keccak_p_12(state: &mut [u64; 25]) {
     // Lane complementing implementation - 12 rounds (12-23)
+    #[allow(clippy::needless_range_loop)]
     for round in 12..24 {
         // Theta step
         let mut c = [0u64; 5];
@@ -1312,6 +1317,7 @@ fn keccak_p_12(state: &mut [u64; 25]) {
 
         let mut x = 1;
         let mut y = 0;
+        #[allow(clippy::needless_range_loop)]
         for i in 0..24 {
             b[y + 5 * ((2 * x + 3 * y) % 5)] = state[x + 5 * y].rotate_left(ROTATION_OFFSETS[i]);
             let temp = y;
@@ -1401,6 +1407,7 @@ fn keccak_f(state: &mut [u64; 25]) {
     // Lane complementing implementation based on XKCP's "bebigokimisa" pattern
     // Lanes stored complemented: 1, 2, 8, 12, 17, 20
 
+    #[allow(clippy::needless_range_loop)]
     for round in 0..24 {
         // Theta step - works identically with or without lane complementing
         let mut c = [0u64; 5];

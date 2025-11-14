@@ -139,6 +139,7 @@ impl<const RATE: usize, const ROUNDS: usize> XofReader<RATE, ROUNDS> {
 
             // Extract complete u64 words with complementing
             let words = RATE / 8;
+            #[allow(clippy::needless_range_loop)]
             for i in 0..words {
                 let lane = if COMPLEMENTED[i] {
                     !self.state[i]

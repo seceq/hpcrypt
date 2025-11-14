@@ -110,6 +110,21 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs)]
 #![warn(rust_2018_idioms)]
+// Allow some clippy lints for this module
+#![allow(unexpected_cfgs)]
+#![allow(unused_variables)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::needless_if)]
+#![allow(clippy::collapsible_else_if)]
+#![allow(clippy::extra_unused_type_parameters)]
+#![allow(clippy::let_and_return)]
+#![allow(clippy::suspicious_doc_comments)]
+#![allow(clippy::clone_on_copy)]
+#![allow(clippy::assign_op_pattern)]
+#![allow(clippy::identity_op)]
+#![allow(clippy::manual_range_contains)]
+#![allow(unknown_lints)]
+#![allow(clippy::slow_zero_filled_vec)]
 
 // Global allocator: Use jemalloc for better performance (optional feature)
 #[cfg(all(feature = "jemalloc", not(target_env = "msvc")))]

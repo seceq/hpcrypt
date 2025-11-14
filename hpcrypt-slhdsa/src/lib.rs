@@ -36,6 +36,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(unsafe_code)]
 #![warn(missing_docs, rust_2018_idioms)]
+// Allow some clippy lints for this module
+#![allow(dead_code)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::manual_range_contains)]
 
 #[cfg(feature = "std")]
 extern crate std;

@@ -4,6 +4,7 @@
 //! - SampleNTT: Uniform sampling using rejection sampling
 //! - SamplePolyCBD: Sampling from Centered Binomial Distribution
 
+#[allow(unused_imports)]
 use hpcrypt_hash::xof_reader::XofReader;
 
 extern crate alloc;

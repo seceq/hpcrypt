@@ -114,11 +114,13 @@ impl ChaCha20 {
         }
 
         // Add initial state
+        #[allow(clippy::needless_range_loop)]
         for i in 0..STATE_WORDS {
             working_state[i] = working_state[i].wrapping_add(self.state[i]);
         }
 
         // Serialize to bytes (little-endian)
+        #[allow(clippy::needless_range_loop)]
         for i in 0..STATE_WORDS {
             write_u32_le(&mut self.keystream[i * 4..], working_state[i]);
         }

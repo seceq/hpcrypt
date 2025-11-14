@@ -357,11 +357,9 @@ fn encode_hints_fips204<P: DsaParams>(h: &[Poly]) -> Vec<u8> {
     for (poly_idx, h_i) in h.iter().enumerate() {
         // List positions where hint=1 in this polynomial
         for j in 0..N {
-            if h_i.coeffs[j] != 0 {
-                if index < P::OMEGA {
-                    bytes[index] = j as u8;
-                    index += 1;
-                }
+            if h_i.coeffs[j] != 0 && index < P::OMEGA {
+                bytes[index] = j as u8;
+                index += 1;
             }
         }
 

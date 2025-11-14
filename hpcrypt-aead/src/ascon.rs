@@ -217,6 +217,7 @@ impl Ascon128a {
 }
 
 /// Ascon encryption
+#[allow(clippy::too_many_arguments)]
 fn ascon_encrypt(
     key: &[u8; 16],
     nonce: &[u8; 16],
@@ -251,6 +252,7 @@ fn ascon_encrypt(
 }
 
 /// Ascon decryption
+#[allow(clippy::too_many_arguments)]
 fn ascon_decrypt(
     key: &[u8; 16],
     nonce: &[u8; 16],
@@ -677,6 +679,7 @@ fn ascon_finalize(state: &mut AsconState, key: &[u8; 16], rounds: usize) -> [u8;
 fn ascon_permutation(state: &mut AsconState, rounds: usize) {
     let start_round = 12 - rounds;
 
+    #[allow(clippy::needless_range_loop)]
     for i in start_round..12 {
         // Add round constant
         state[2] ^= ROUND_CONSTANTS[i];

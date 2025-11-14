@@ -1138,7 +1138,7 @@ impl OpaqueServer {
     ) -> Result<(ServerAuthState, KE2), OpaqueError> {
         // Evaluate OPRF
         let credential_response =
-            Self::oprf_evaluate(&ke1.credential_request, &oprf_seed, server_identity, config)?;
+            Self::oprf_evaluate(&ke1.credential_request, oprf_seed, server_identity, config)?;
 
         // Generate server ephemeral keypair (use ephemeral version!)
         let (server_ephemeral_private, server_ephemeral_public) =
@@ -1153,7 +1153,7 @@ impl OpaqueServer {
         // Compute 3DH shared secret (server side)
         let session_key = Self::triple_dh(
             &server_ephemeral_private,
-            &server_private_key,
+            server_private_key,
             &ke1.client_ephemeral_public,
             &record.client_public_key,
             config,
