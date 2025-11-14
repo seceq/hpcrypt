@@ -180,7 +180,6 @@ fn verify_batch_optimized<P: DsaParams>(
     use crate::hints::{poly_hint_count, use_hint_poly};
     use crate::ntt::poly_mul_ntt;
     use crate::params::N;
-    use crate::poly::Poly;
 
     let batch_size = signatures.len();
     let mut results = vec![true; batch_size];
