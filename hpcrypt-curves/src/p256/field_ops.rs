@@ -1396,7 +1396,7 @@ impl FieldElement {
                 let product = (m as u128) * (P256_MODULUS[j] as u128);
 
                 // Add product to acc[i+j] with carry from previous iteration
-                let sum = product + carry;
+                let sum = acc[i + j] + product + carry;
 
                 // Store low 64 bits, carry high 64 bits
                 acc[i + j] = sum & 0xFFFFFFFFFFFFFFFF;
@@ -1404,7 +1404,7 @@ impl FieldElement {
             }
 
             // Propagate final carry
-            let sum_with_carry = carry;
+            let sum_with_carry = acc[i + 4] + carry;
             acc[i + 4] = sum_with_carry & 0xFFFFFFFFFFFFFFFF;
 
             // If there's a carry out of this addition, propagate it
