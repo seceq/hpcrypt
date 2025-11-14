@@ -6,10 +6,10 @@
 // - End-to-end ML-DSA performance
 // - Statistical analysis (mean, variance)
 
-use mldsa::keygen::keygen;
-use mldsa::sign::sign;
-use mldsa::verify::verify;
-use mldsa::MlDsa65;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::sign::sign;
+use hpcrypt_mldsa::verify::verify;
+use hpcrypt_mldsa::MlDsa65;
 use std::time::{Duration, Instant};
 
 fn mean_duration(durations: &[Duration]) -> Duration {
@@ -40,7 +40,7 @@ fn main() {
     // Check AVX2 availability
     #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
     {
-        use mldsa::simd::dispatch::has_avx2;
+        use hpcrypt_mldsa::simd::dispatch::has_avx2;
         if has_avx2() {
             println!(" AVX2 detected and active");
         } else {

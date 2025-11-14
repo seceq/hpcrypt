@@ -2,8 +2,8 @@
 //!
 //! Instruments the signing algorithm to identify current bottlenecks
 
-use mldsa::keygen::keygen;
-use mldsa::MlDsa65;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::MlDsa65;
 use std::time::Instant;
 
 // We'll need to create a custom instrumented version of sign

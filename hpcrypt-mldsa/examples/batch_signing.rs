@@ -8,9 +8,9 @@
 //! cargo run --release --example batch_signing --features avx2,simd
 //! ```
 
-use mldsa::keygen::keygen;
-use mldsa::params::MlDsa65;
-use mldsa::{sign_batch, verify_batch};
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::params::MlDsa65;
+use hpcrypt_mldsa::{sign_batch, verify_batch};
 use std::time::Instant;
 
 fn main() {
@@ -20,7 +20,7 @@ fn main() {
     // Generate keypair
     println!("Generating ML-DSA-65 keypair...");
     let (pk, sk) = keygen::<MlDsa65>();
-    println!("✓ Keypair generated\n");
+    println!("OK Keypair generated\n");
 
     // Create batch of messages
     let batch_sizes = [1, 4, 8, 16, 32];

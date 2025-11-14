@@ -3,9 +3,9 @@
 //! This benchmark actually implements Barrett+Shoup for polynomial operations
 //! and measures the real-world performance impact on ML-DSA signing.
 
-use mldsa::keygen::keygen_from_seed;
-use mldsa::params::{DsaParams, MlDsa65};
-use mldsa::sign::sign_deterministic;
+use hpcrypt_mldsa::keygen::keygen_from_seed;
+use hpcrypt_mldsa::params::{DsaParams, MlDsa65};
+use hpcrypt_mldsa::sign::sign_deterministic;
 use std::time::Instant;
 
 type P = MlDsa65;
@@ -119,16 +119,16 @@ fn main() {
     println!();
     println!("Benefits:");
     println!(
-        "  ✓ {:.2} µs faster per signature ({:.2}%)",
+        "  OK {:.2} µs faster per signature ({:.2}%)",
         time_saved, expected_improvement_pct
     );
     println!();
     println!("Costs:");
-    println!("  ✗ Replace ~35 poly.add()/sub() call sites in sign.rs");
-    println!("  ✗ Replace ~10 poly.add()/sub() call sites in verify.rs");
-    println!("  ✗ Precomputation overhead (memory + setup time)");
-    println!("  ✗ Code complexity and maintenance burden");
-    println!("  ✗ Potential for bugs in refactoring");
+    println!("  FAIL Replace ~35 poly.add()/sub() call sites in sign.rs");
+    println!("  FAIL Replace ~10 poly.add()/sub() call sites in verify.rs");
+    println!("  FAIL Precomputation overhead (memory + setup time)");
+    println!("  FAIL Code complexity and maintenance burden");
+    println!("  FAIL Potential for bugs in refactoring");
     println!();
 
     if expected_improvement_pct < 1.0 {

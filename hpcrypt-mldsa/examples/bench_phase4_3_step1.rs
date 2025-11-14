@@ -3,10 +3,10 @@
 // This benchmark measures the impact of the early rejection optimization
 // that checks ||y||∞ before computing expensive A·y matrix multiply.
 
-use mldsa::keygen::keygen;
-use mldsa::sign::sign;
-use mldsa::verify::verify;
-use mldsa::MlDsa65;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::sign::sign;
+use hpcrypt_mldsa::verify::verify;
+use hpcrypt_mldsa::MlDsa65;
 use std::time::Instant;
 
 fn main() {
@@ -19,7 +19,7 @@ fn main() {
     // Check AVX2 availability
     #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
     {
-        use mldsa::simd::dispatch::has_avx2;
+        use hpcrypt_mldsa::simd::dispatch::has_avx2;
         if has_avx2() {
             println!(" AVX2 detected and active");
         } else {
@@ -137,11 +137,11 @@ fn main() {
     println!("     • Challenge sampling");
     println!();
     println!(" Benefits:");
-    println!("   ✓ Simple implementation (~40 lines of code)");
-    println!("   ✓ Very low false positive rate (<1%)");
-    println!("   ✓ No security impact (rejection count is public)");
-    println!("   ✓ No correctness issues (conservative threshold)");
-    println!("   ✓ Compatible with all security levels");
+    println!("   OK Simple implementation (~40 lines of code)");
+    println!("   OK Very low false positive rate (<1%)");
+    println!("   OK No security impact (rejection count is public)");
+    println!("   OK No correctness issues (conservative threshold)");
+    println!("   OK Compatible with all security levels");
     println!();
     println!("{}", "=".repeat(80));
     println!("=== Historical Progress ===");

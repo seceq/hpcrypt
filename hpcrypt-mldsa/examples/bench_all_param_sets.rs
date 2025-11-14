@@ -2,11 +2,11 @@
 //!
 //! Measures signing and verification performance for ML-DSA-44, ML-DSA-65, and ML-DSA-87
 
-use mldsa::keygen::keygen;
-use mldsa::params::DsaParams;
-use mldsa::sign;
-use mldsa::verify::verify;
-use mldsa::{MlDsa44, MlDsa65, MlDsa87};
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::params::DsaParams;
+use hpcrypt_mldsa::sign;
+use hpcrypt_mldsa::verify::verify;
+use hpcrypt_mldsa::{MlDsa44, MlDsa65, MlDsa87};
 use std::time::Instant;
 
 fn benchmark_param_set<P: DsaParams>() -> (u128, u128) {
@@ -59,17 +59,17 @@ fn main() {
     // ML-DSA-44
     println!("Benchmarking ML-DSA-44 (Security Level 2)...");
     let (sign_44, verify_44) = benchmark_param_set::<MlDsa44>();
-    println!("  ✓ Complete\n");
+    println!("  OK Complete\n");
 
     // ML-DSA-65
     println!("Benchmarking ML-DSA-65 (Security Level 3)...");
     let (sign_65, verify_65) = benchmark_param_set::<MlDsa65>();
-    println!("  ✓ Complete\n");
+    println!("  OK Complete\n");
 
     // ML-DSA-87
     println!("Benchmarking ML-DSA-87 (Security Level 5)...");
     let (sign_87, verify_87) = benchmark_param_set::<MlDsa87>();
-    println!("  ✓ Complete\n");
+    println!("  OK Complete\n");
 
     // Results table
     println!("════════════════════════════════════════════════════════════");

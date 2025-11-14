@@ -2,9 +2,9 @@
 //!
 //! Measures signing performance before and after AVX2 sampling optimization
 
-use mldsa::keygen::keygen;
-use mldsa::sign;
-use mldsa::MlDsa65;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::sign;
+use hpcrypt_mldsa::MlDsa65;
 use std::time::Instant;
 
 fn main() {

@@ -1,7 +1,7 @@
 // Benchmark different infinity_norm implementations
 
-use mldsa::params::N;
-use mldsa::poly::Poly;
+use hpcrypt_mldsa::params::N;
+use hpcrypt_mldsa::poly::Poly;
 use std::time::Instant;
 
 fn main() {

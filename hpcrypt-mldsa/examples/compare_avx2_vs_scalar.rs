@@ -4,10 +4,10 @@
 
 #![cfg(feature = "std")]
 
-use mldsa::keygen::keygen;
-use mldsa::params::MlDsa65;
-use mldsa::sign::sign;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::params::MlDsa65;
+use hpcrypt_mldsa::sign::sign;
+use hpcrypt_mldsa::verify::verify;
 use std::time::Instant;
 
 fn main() {
@@ -22,7 +22,7 @@ fn main() {
     // Check if AVX2 is available
     #[cfg(all(feature = "avx2", feature = "simd", target_arch = "x86_64"))]
     {
-        use mldsa::simd::dispatch::has_avx2;
+        use hpcrypt_mldsa::simd::dispatch::has_avx2;
         if has_avx2() {
             println!(" AVX2 detected and active\n");
         } else {
@@ -91,7 +91,7 @@ fn main() {
     // Expected improvements with AVX2
     #[cfg(all(feature = "avx2", feature = "simd", target_arch = "x86_64"))]
     {
-        use mldsa::simd::dispatch::has_avx2;
+        use hpcrypt_mldsa::simd::dispatch::has_avx2;
         if has_avx2() {
             println!("\n=== AVX2 Impact ===");
             println!("Expected improvements:");

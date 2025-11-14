@@ -3,10 +3,10 @@
 //! Re-profile ML-DSA after all optimizations (Phases 1-4 + Quick Wins + Sampling)
 //! to identify actual current bottlenecks.
 
-use mldsa::keygen::keygen;
-use mldsa::sign;
-use mldsa::verify;
-use mldsa::MlDsa65;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::sign;
+use hpcrypt_mldsa::verify;
+use hpcrypt_mldsa::MlDsa65;
 use std::time::Instant;
 
 fn main() {

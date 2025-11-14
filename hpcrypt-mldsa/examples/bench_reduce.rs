@@ -1,6 +1,6 @@
 //! Benchmark for poly_reduce() to measure AVX2 optimization impact
 
-use mldsa::poly::Poly;
+use hpcrypt_mldsa::poly::Poly;
 use std::time::Instant;
 
 fn main() {

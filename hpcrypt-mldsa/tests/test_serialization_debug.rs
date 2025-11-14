@@ -1,10 +1,10 @@
 // Debug test for serialization issue
 
-use mldsa::keygen::keygen_from_seed;
-use mldsa::params::MlDsa65;
-use mldsa::serialize::{deserialize_signature, serialize_signature};
-use mldsa::sign::sign;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::keygen::keygen_from_seed;
+use hpcrypt_mldsa::params::MlDsa65;
+use hpcrypt_mldsa::serialize::{deserialize_signature, serialize_signature};
+use hpcrypt_mldsa::sign::sign;
+use hpcrypt_mldsa::verify::verify;
 
 #[test]
 fn test_serialization_debug() {

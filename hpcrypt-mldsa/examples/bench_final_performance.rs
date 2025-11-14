@@ -3,10 +3,10 @@
 //! Demonstrates the current optimized performance after all improvements.
 //! Run with: cargo run --release --features avx2,simd --example bench_final_performance
 
-use mldsa::keygen::keygen;
-use mldsa::params::MlDsa65;
-use mldsa::sign::sign;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::params::MlDsa65;
+use hpcrypt_mldsa::sign::sign;
+use hpcrypt_mldsa::verify::verify;
 use std::time::Instant;
 
 fn main() {
@@ -20,17 +20,17 @@ fn main() {
         println!(
             "  AVX2: {}",
             if std::arch::is_x86_feature_detected!("avx2") {
-                "✓ Enabled"
+                "OK Enabled"
             } else {
-                "✗ Not available"
+                "FAIL Not available"
             }
         );
         println!(
             "  AVX-512: {}",
             if std::arch::is_x86_feature_detected!("avx512f") {
-                "✓ Available (not used)"
+                "OK Available (not used)"
             } else {
-                "✗ Not available"
+                "FAIL Not available"
             }
         );
     }
@@ -157,14 +157,14 @@ fn main() {
 
     // Optimization Status
     println!("\n=== Optimization Status ===");
-    println!("✓ AVX2 NTT              (~9% improvement)");
-    println!("✓ AVX2 SHAKE256         (~11% improvement)");
-    println!("✓ Shoup's butterfly     (~3% improvement)");
-    println!("✓ Early rejection       (~12% improvement)");
-    println!("✓ Cache-line alignment  (included)");
+    println!("OK AVX2 NTT              (~9% improvement)");
+    println!("OK AVX2 SHAKE256         (~11% improvement)");
+    println!("OK Shoup's butterfly     (~3% improvement)");
+    println!("OK Early rejection       (~12% improvement)");
+    println!("OK Cache-line alignment  (included)");
     println!("⋯ AVX-512 NTT           (future work, +2-3%)");
     println!("⋯ Batch signing         (future work, +15-30% for batches)");
     println!("\nTotal improvement: ~36% faster signing vs baseline");
-    println!("\n✓ All optimizations complete for single-signature use case");
-    println!("✓ Production-ready performance");
+    println!("\nOK All optimizations complete for single-signature use case");
+    println!("OK Production-ready performance");
 }

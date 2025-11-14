@@ -1,12 +1,12 @@
 // Test to verify the mathematical relationship: w' = w - c·s2 + c·t0
 
-use mldsa::keygen::keygen_from_seed;
-use mldsa::ntt::poly_mul_ntt;
-use mldsa::params::Q;
-use mldsa::params::{DsaParams, MlDsa65};
-use mldsa::poly::Poly;
-use mldsa::sampling::{expand_matrix_a, sample_in_ball};
-use mldsa::sign::sign;
+use hpcrypt_mldsa::keygen::keygen_from_seed;
+use hpcrypt_mldsa::ntt::poly_mul_ntt;
+use hpcrypt_mldsa::params::Q;
+use hpcrypt_mldsa::params::{DsaParams, MlDsa65};
+use hpcrypt_mldsa::poly::Poly;
+use hpcrypt_mldsa::sampling::{expand_matrix_a, sample_in_ball};
+use hpcrypt_mldsa::sign::sign;
 
 #[test]
 fn test_verify_mathematical_relationship() {
@@ -141,10 +141,10 @@ fn test_verify_mathematical_relationship() {
     // This is critical - must match the keygen approach exactly
     let mut s1_ntt = Vec::with_capacity(MlDsa65::L);
     for s1_i in &sk.s1 {
-        s1_ntt.push(mldsa::ntt::ntt(s1_i));
+        s1_ntt.push(hpcrypt_mldsa::ntt::ntt(s1_i));
     }
 
-    let as1 = mldsa::ntt::matrix_vector_mul_ntt(&matrix_a, &s1_ntt, MlDsa65::K, MlDsa65::L);
+    let as1 = hpcrypt_mldsa::ntt::matrix_vector_mul_ntt(&matrix_a, &s1_ntt, MlDsa65::K, MlDsa65::L);
 
     let mut c_as1 = Vec::with_capacity(MlDsa65::K);
     for i in 0..MlDsa65::K {
@@ -170,7 +170,7 @@ fn test_verify_mathematical_relationship() {
     eprintln!("\n=== TESTING: t vs A·s1 + s2 ===");
     // We need to get t from keygen, but we don't have it directly
     // We can reconstruct it from t1 and t0
-    use mldsa::rounding::power2round;
+    use hpcrypt_mldsa::rounding::power2round;
     let mut t_from_t1t0 = Vec::with_capacity(MlDsa65::K);
     for i in 0..MlDsa65::K {
         let mut t_i = Poly::new();

@@ -3,11 +3,11 @@
 //! This test module validates the ML-DSA implementation against official
 //! NIST/Dilithium test vectors downloaded from the dilithium-py repository.
 
-use mldsa::keygen::keygen_from_seed;
-use mldsa::params::MlDsa65;
-use mldsa::serialize::{serialize_public_key, serialize_secret_key, serialize_signature};
-use mldsa::sign::sign_deterministic;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::keygen::keygen_from_seed;
+use hpcrypt_mldsa::params::MlDsa65;
+use hpcrypt_mldsa::serialize::{serialize_public_key, serialize_secret_key, serialize_signature};
+use hpcrypt_mldsa::sign::sign_deterministic;
+use hpcrypt_mldsa::verify::verify;
 
 /// Parse hex string to bytes
 fn parse_hex(hex: &str) -> Vec<u8> {
@@ -161,7 +161,7 @@ fn test_parse_kat_vectors() {
     );
     assert_eq!(v0.sm.len(), v0.smlen);
 
-    println!("✓ KAT vector parsing successful");
+    println!("OK KAT vector parsing successful");
 }
 
 #[test]
@@ -203,7 +203,7 @@ fn test_kat_keygen_first_vector() {
     // may use a different seed expansion or parameter set
     // This test just verifies our implementation produces valid keys
 
-    println!("✓ Keygen completes successfully");
+    println!("OK Keygen completes successfully");
 }
 
 #[test]
@@ -241,10 +241,10 @@ fn test_kat_sign_verify_cycle() {
         let valid = verify::<MlDsa65>(&pk, &vector.msg, &sig);
 
         assert!(valid, "Signature verification failed for vector {}", i);
-        println!("✓ Vector {} sign/verify cycle successful", i);
+        println!("OK Vector {} sign/verify cycle successful", i);
     }
 
-    println!("\n✓ All sign/verify cycles passed");
+    println!("\nOK All sign/verify cycles passed");
 }
 
 #[test]
@@ -287,7 +287,7 @@ fn test_kat_signature_sizes() {
         );
     }
 
-    println!("✓ All signature sizes correct");
+    println!("OK All signature sizes correct");
 }
 
 #[test]
@@ -326,5 +326,5 @@ fn test_kat_cross_vector_verification() {
         "Signature should NOT verify with wrong key"
     );
 
-    println!("✓ Cross-vector verification test passed");
+    println!("OK Cross-vector verification test passed");
 }

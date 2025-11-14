@@ -3,14 +3,11 @@
 //! Run with: cargo run --release --example timing_analysis
 
 use hpcrypt_slhdsa::{sign, KeyPair, Sha2_128s};
-use rand::rngs::OsRng;
 use std::time::Instant;
 
 fn main() {
-    let mut rng = OsRng;
-
     println!("Generating key pair...");
-    let keypair = KeyPair::<Sha2_128s>::generate(&mut rng);
+    let keypair = KeyPair::<Sha2_128s>::generate();
     let message = b"Performance analysis message for timing breakdown";
 
     println!("\n==================================================");

@@ -1,7 +1,7 @@
 // Test to compare C FFI NTT vs Native Rust NTT output
 // This will help identify exactly where the implementations diverge
 
-use mldsa::poly::Poly;
+use hpcrypt_mldsa::poly::Poly;
 
 #[test]
 fn compare_ntt_implementations() {
@@ -11,7 +11,7 @@ fn compare_ntt_implementations() {
     // Create a test polynomial with known values
     let mut test_poly = Poly::new();
     for i in 0..256 {
-        test_poly.coeffs[i] = (i as i32 * 1234 + 5678) % mldsa::params::Q;
+        test_poly.coeffs[i] = (i as i32 * 1234 + 5678) % hpcrypt_mldsa::params::Q;
     }
 
     println!("Input polynomial (first 16 coeffs):");
@@ -25,15 +25,15 @@ fn compare_ntt_implementations() {
 
     // Test with C FFI (default)
     let mut poly_c = test_poly.clone();
-    mldsa::simd::avx2::init_qdata();
+    hpcrypt_mldsa::simd::avx2::init_qdata();
     unsafe {
-        mldsa::simd::avx2::ntt_avx2_ffi(&mut poly_c);
+        hpcrypt_mldsa::simd::avx2::ntt_avx2_ffi(&mut poly_c);
     }
 
     // Test with Native Rust
     let mut poly_rust = test_poly.clone();
     unsafe {
-        mldsa::simd::ntt_native::ntt_native(&mut poly_rust);
+        hpcrypt_mldsa::simd::ntt_native::ntt_native(&mut poly_rust);
     }
 
     // Compare outputs
@@ -67,9 +67,9 @@ fn compare_ntt_implementations() {
     }
 
     if mismatch_count == 0 {
-        println!("✓ Forward NTT: All 256 coefficients match!");
+        println!("Forward NTT: All 256 coefficients match!");
     } else {
-        println!("\n✗ Forward NTT: {} mismatches found", mismatch_count);
+        println!("\nForward NTT: {} mismatches found", mismatch_count);
         println!("  First mismatch at index: {}", first_mismatch_idx.unwrap());
     }
 
@@ -78,12 +78,12 @@ fn compare_ntt_implementations() {
 
     let mut poly_c_inv = poly_c.clone();
     unsafe {
-        mldsa::simd::avx2::invntt_avx2_ffi(&mut poly_c_inv);
+        hpcrypt_mldsa::simd::avx2::invntt_avx2_ffi(&mut poly_c_inv);
     }
 
     let mut poly_rust_inv = poly_rust.clone();
     unsafe {
-        mldsa::simd::ntt_native::invntt_native(&mut poly_rust_inv);
+        hpcrypt_mldsa::simd::ntt_native::invntt_native(&mut poly_rust_inv);
     }
 
     println!("Index | C FFI      | Native Rust | Difference");
@@ -115,9 +115,9 @@ fn compare_ntt_implementations() {
     }
 
     if inv_mismatch_count == 0 {
-        println!("✓ Inverse NTT: All 256 coefficients match!");
+        println!("Inverse NTT: All 256 coefficients match!");
     } else {
-        println!("\n✗ Inverse NTT: {} mismatches found", inv_mismatch_count);
+        println!("\nInverse NTT: {} mismatches found", inv_mismatch_count);
         if let Some(idx) = first_inv_mismatch_idx {
             println!("  First mismatch at index: {}", idx);
         }

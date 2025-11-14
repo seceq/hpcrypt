@@ -4,10 +4,10 @@
 
 #![cfg(feature = "std")]
 
-use mldsa::keygen::keygen;
-use mldsa::params::MlDsa65;
-use mldsa::sign::sign;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::params::MlDsa65;
+use hpcrypt_mldsa::sign::sign;
+use hpcrypt_mldsa::verify::verify;
 use std::time::Instant;
 
 fn main() {
@@ -69,7 +69,7 @@ fn main() {
 
     #[cfg(all(feature = "avx2", feature = "simd", target_arch = "x86_64"))]
     {
-        use mldsa::simd::dispatch::has_avx2;
+        use hpcrypt_mldsa::simd::dispatch::has_avx2;
         if has_avx2() {
             println!("\n AVX2 SHAKE256 optimization is ACTIVE");
             println!("Expected improvement vs scalar: ~20-22%");

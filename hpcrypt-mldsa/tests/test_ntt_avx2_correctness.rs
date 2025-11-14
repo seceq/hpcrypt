@@ -5,11 +5,11 @@
 
 #[cfg(all(test, feature = "avx2", target_arch = "x86_64"))]
 mod avx2_tests {
-    use mldsa::ntt::{ntt_scalar, ZETAS};
-    use mldsa::params::N;
-    use mldsa::poly::Poly;
-    use mldsa::simd::avx2::init_qdata;
-    use mldsa::simd::dispatch::ntt_simd;
+    use hpcrypt_mldsa::ntt::{ntt_scalar, ZETAS};
+    use hpcrypt_mldsa::params::N;
+    use hpcrypt_mldsa::poly::Poly;
+    use hpcrypt_mldsa::simd::avx2::init_qdata;
+    use hpcrypt_mldsa::simd::dispatch::ntt_simd;
 
     #[test]
     fn test_ntt_avx2_vs_scalar_zeros() {

@@ -3,10 +3,10 @@
 // This program generates deterministic test vectors that can be used
 // to validate the implementation against the FIPS 204 standard.
 
-use mldsa::keygen::keygen_from_seed;
-use mldsa::params::{DsaParams, MlDsa44, MlDsa65, MlDsa87};
-use mldsa::serialize::{serialize_public_key, serialize_secret_key, serialize_signature};
-use mldsa::sign::sign_deterministic;
+use hpcrypt_mldsa::keygen::keygen_from_seed;
+use hpcrypt_mldsa::params::{DsaParams, MlDsa44, MlDsa65, MlDsa87};
+use hpcrypt_mldsa::serialize::{serialize_public_key, serialize_secret_key, serialize_signature};
+use hpcrypt_mldsa::sign::sign_deterministic;
 
 fn hex_encode(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{:02x}", b)).collect()

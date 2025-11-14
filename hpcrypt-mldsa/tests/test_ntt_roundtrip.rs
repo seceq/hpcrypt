@@ -1,9 +1,9 @@
 //! Test NTT round-trip property to verify correctness
 
-use mldsa::ntt::{inv_ntt, ntt};
-use mldsa::poly::Poly;
-use mldsa::sampling::sample_poly_eta;
-use mldsa::symmetric::expand_s;
+use hpcrypt_mldsa::ntt::{inv_ntt, ntt};
+use hpcrypt_mldsa::poly::Poly;
+use hpcrypt_mldsa::sampling::sample_poly_eta;
+use hpcrypt_mldsa::symmetric::expand_s;
 
 #[test]
 fn test_ntt_roundtrip_with_kat_seed() {
@@ -20,7 +20,7 @@ fn test_ntt_roundtrip_with_kat_seed() {
     seedbuf[32] = 6; // K
     seedbuf[33] = 5; // L
 
-    let expanded = mldsa::symmetric::h128(&seedbuf);
+    let expanded = hpcrypt_mldsa::symmetric::h128(&seedbuf);
     let rho_prime: [u8; 64] = expanded[32..96].try_into().unwrap();
 
     // Sample s1[0] - the actual polynomial from KAT
@@ -44,7 +44,7 @@ fn test_ntt_roundtrip_with_kat_seed() {
     let mut recovered = Poly::new();
     const Q: i32 = 8380417;
     for i in 0..256 {
-        let mut val = mldsa::ntt::from_montgomery(recovered_mont.coeffs[i]);
+        let mut val = hpcrypt_mldsa::ntt::from_montgomery(recovered_mont.coeffs[i]);
         // Convert from [0, Q) to centered representation [-(Q-1)/2, (Q-1)/2]
         if val > Q / 2 {
             val -= Q;
@@ -103,7 +103,7 @@ fn test_ntt_roundtrip_simple() {
     let mut recovered = Poly::new();
     const Q: i32 = 8380417;
     for i in 0..256 {
-        let mut val = mldsa::ntt::from_montgomery(recovered_mont.coeffs[i]);
+        let mut val = hpcrypt_mldsa::ntt::from_montgomery(recovered_mont.coeffs[i]);
         // Convert from [0, Q) to centered representation
         if val > Q / 2 {
             val -= Q;

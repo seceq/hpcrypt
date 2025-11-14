@@ -3,8 +3,8 @@
 //! This inserts timing measurements at key points in the signing algorithm
 //! to identify actual bottlenecks.
 
-use mldsa::keygen::keygen;
-use mldsa::MlDsa65;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::MlDsa65;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
@@ -43,7 +43,7 @@ fn main() {
     // Warmup
     println!("Warming up (100 signatures)...");
     for _ in 0..100 {
-        let _ = mldsa::sign::sign::<MlDsa65>(&sk, message);
+        let _ = hpcrypt_mldsa::sign::sign::<MlDsa65>(&sk, message);
     }
 
     println!("Running instrumented benchmark (1000 signatures)...\n");
@@ -56,7 +56,7 @@ fn main() {
     let start = Instant::now();
     let mut successful = 0;
     for _ in 0..ITERATIONS {
-        if mldsa::sign::sign::<MlDsa65>(&sk, message).is_some() {
+        if hpcrypt_mldsa::sign::sign::<MlDsa65>(&sk, message).is_some() {
             successful += 1;
         }
     }

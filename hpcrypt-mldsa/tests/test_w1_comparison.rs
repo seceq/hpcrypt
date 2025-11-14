@@ -1,13 +1,13 @@
 // Test to compare w1 from signing vs w1' from verification
 
-use mldsa::hints::use_hint_poly;
-use mldsa::keygen::keygen_from_seed;
-use mldsa::ntt::{matrix_vector_mul_ntt, ntt, poly_mul_ntt};
-use mldsa::params::{DsaParams, MlDsa65, Q};
-use mldsa::poly::Poly;
-use mldsa::rounding::high_bits;
-use mldsa::sampling::{expand_matrix_a, sample_in_ball};
-use mldsa::sign::sign;
+use hpcrypt_mldsa::hints::use_hint_poly;
+use hpcrypt_mldsa::keygen::keygen_from_seed;
+use hpcrypt_mldsa::ntt::{matrix_vector_mul_ntt, ntt, poly_mul_ntt};
+use hpcrypt_mldsa::params::{DsaParams, MlDsa65, Q};
+use hpcrypt_mldsa::poly::Poly;
+use hpcrypt_mldsa::rounding::high_bits;
+use hpcrypt_mldsa::sampling::{expand_matrix_a, sample_in_ball};
+use hpcrypt_mldsa::sign::sign;
 
 #[test]
 fn test_w1_recovery() {

@@ -22,7 +22,7 @@ fn shake256_reference(input: &[u8], outlen: usize) -> Vec<u8> {
 
 /// Test helper: run 4-way AVX2 and compare each output with reference
 fn test_shake256x4_against_reference(inputs: [&[u8]; 4], output_len: usize, test_name: &str) {
-    use mldsa::simd::keccak::shake256x4_batch;
+    use hpcrypt_mldsa::simd::keccak::shake256x4_batch;
 
     // Compute with AVX2
     let avx2_outputs = shake256x4_batch(inputs, output_len);
@@ -125,7 +125,7 @@ fn test_10_all_ones() {
 #[test]
 fn test_11_incremental_squeezing() {
     // Test that incremental squeezing produces same result as all-at-once
-    use mldsa::simd::keccak::{Shake256X4, SHAKE256_RATE};
+    use hpcrypt_mldsa::simd::keccak::{Shake256X4, SHAKE256_RATE};
 
     let inputs = [b"test0" as &[u8], b"test1", b"test2", b"test3"];
 
@@ -161,7 +161,7 @@ fn test_12_nist_kat_vectors() {
         0x57, 0x39,
     ];
 
-    use mldsa::simd::keccak::shake256x4_batch;
+    use hpcrypt_mldsa::simd::keccak::shake256x4_batch;
     let outputs = shake256x4_batch([input; 4], 32);
 
     for i in 0..4 {
@@ -177,7 +177,7 @@ fn test_12_nist_kat_vectors() {
 #[test]
 fn test_13_different_inputs_different_outputs() {
     // Verify that different inputs produce different outputs (no collisions)
-    use mldsa::simd::keccak::shake256x4_batch;
+    use hpcrypt_mldsa::simd::keccak::shake256x4_batch;
 
     let inputs = [b"input0" as &[u8], b"input1", b"input2", b"input3"];
 
@@ -198,7 +198,7 @@ fn test_13_different_inputs_different_outputs() {
 #[test]
 fn test_14_determinism() {
     // Same input should always produce same output (deterministic)
-    use mldsa::simd::keccak::shake256x4_batch;
+    use hpcrypt_mldsa::simd::keccak::shake256x4_batch;
 
     let inputs = [b"determinism" as &[u8]; 4];
 

@@ -9,10 +9,10 @@
 //   3. Merge profiles: llvm-profdata merge -o /tmp/merged.profdata /tmp/pgo-data
 //   4. Build with PGO: RUSTFLAGS="-C profile-use=/tmp/merged.profdata" cargo build --release
 
-use mldsa::keygen::keygen;
-use mldsa::params::{MlDsa44, MlDsa65, MlDsa87};
-use mldsa::sign::sign;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::params::{MlDsa44, MlDsa65, MlDsa87};
+use hpcrypt_mldsa::sign::sign;
+use hpcrypt_mldsa::verify::verify;
 
 fn main() {
     println!("═══════════════════════════════════════════════════════");
@@ -26,7 +26,7 @@ fn main() {
     train_security_level::<MlDsa87>("ML-DSA-87");
 
     println!();
-    println!("✓ PGO training workload complete!");
+    println!("OK PGO training workload complete!");
     println!();
     println!("Next steps:");
     println!("  1. Merge profiles: llvm-profdata merge -o /tmp/merged.profdata /tmp/pgo-data");
@@ -116,6 +116,6 @@ fn train_security_level<P: mldsa::params::DsaParams>(level_name: &str) {
         }
     }
 
-    println!("  ✓ {} training complete", level_name);
+    println!("  OK {} training complete", level_name);
     println!();
 }

@@ -7,9 +7,9 @@
 //!
 //! Goal: Determine if Barrett+Shoup would provide meaningful speedup
 
-use mldsa::params::{MlDsa65, N};
-use mldsa::poly::Poly;
-use mldsa::DsaParams;
+use hpcrypt_mldsa::params::{MlDsa65, N};
+use hpcrypt_mldsa::poly::Poly;
+use hpcrypt_mldsa::DsaParams;
 use std::time::Instant;
 
 const Q: i32 = 8380417;
@@ -271,7 +271,7 @@ fn main() {
         println!("  3. Implementation complexity not justified");
         println!("  4. Memory overhead (3× larger tables) for minimal gain");
         println!();
-        println!("Recommendation: Keep current Barrett implementation ✓");
+        println!("Recommendation: Keep current Barrett implementation OK");
     } else if overall_improvement < 3.0 {
         println!(
             "  MARGINAL - Barrett+Shoup would provide {:.2}% overall improvement",

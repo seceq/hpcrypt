@@ -3,8 +3,8 @@
 // Directly measures NTT and inverse NTT performance
 // to isolate Shoup's impact from other operations
 
-use mldsa::ntt::{inv_ntt, ntt};
-use mldsa::poly::Poly;
+use hpcrypt_mldsa::ntt::{inv_ntt, ntt};
+use hpcrypt_mldsa::poly::Poly;
 use std::time::Instant;
 
 fn main() {
@@ -17,7 +17,7 @@ fn main() {
     // Check AVX2
     #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
     {
-        use mldsa::simd::dispatch::has_avx2;
+        use hpcrypt_mldsa::simd::dispatch::has_avx2;
         if has_avx2() {
             println!(" AVX2 with Shoup optimization active");
         } else {

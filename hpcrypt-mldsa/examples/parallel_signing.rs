@@ -18,10 +18,10 @@
 //! cargo run --example parallel_signing --release --features avx2,simd,std tokio
 //! ```
 
-use mldsa::keygen::keygen;
-use mldsa::params::MlDsa65;
-use mldsa::sign::sign;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::params::MlDsa65;
+use hpcrypt_mldsa::sign::sign;
+use hpcrypt_mldsa::verify::verify;
 use std::time::Instant;
 
 /// Example 1: Parallel signing with Rayon (recommended for CPU-bound work)

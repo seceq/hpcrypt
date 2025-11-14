@@ -3,12 +3,12 @@
 // This test generates deterministic test vectors and validates that
 // the implementation produces consistent, reproducible results.
 
-use mldsa::keygen::keygen_from_seed;
-use mldsa::params::MlDsa65;
-use mldsa::serialize::{deserialize_public_key, deserialize_secret_key, deserialize_signature};
-use mldsa::serialize::{serialize_public_key, serialize_secret_key, serialize_signature};
-use mldsa::sign::sign_deterministic;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::keygen::keygen_from_seed;
+use hpcrypt_mldsa::params::MlDsa65;
+use hpcrypt_mldsa::serialize::{deserialize_public_key, deserialize_secret_key, deserialize_signature};
+use hpcrypt_mldsa::serialize::{serialize_public_key, serialize_secret_key, serialize_signature};
+use hpcrypt_mldsa::sign::sign_deterministic;
+use hpcrypt_mldsa::verify::verify;
 
 #[test]
 fn test_kat_deterministic_keygen() {
@@ -24,7 +24,7 @@ fn test_kat_deterministic_keygen() {
     assert_eq!(sk1.s1, sk2.s1, "Secret key s1 should be identical");
     assert_eq!(sk1.s2, sk2.s2, "Secret key s2 should be identical");
 
-    eprintln!("✓ Deterministic keygen validated");
+    eprintln!("OK Deterministic keygen validated");
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn test_kat_deterministic_signing() {
         "Signature 2 should verify"
     );
 
-    eprintln!("✓ Deterministic signing validated");
+    eprintln!("OK Deterministic signing validated");
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn test_kat_serialization_roundtrip() {
     // Note: This test is covered by stress_tests::test_serialize_deserialize_preserves_validity
     // which uses randomized signing. Deterministic signing serialization is validated
     // through the KAT vector tests below.
-    eprintln!("✓ Serialization roundtrip validated (see stress tests)");
+    eprintln!("OK Serialization roundtrip validated (see stress tests)");
 }
 
 #[test]
@@ -97,7 +97,7 @@ fn test_kat_vector_1_empty_message() {
         "sig size: {} bytes",
         serialize_signature::<MlDsa65>(&sig).len()
     );
-    eprintln!("✓ KAT vector 1 validated");
+    eprintln!("OK KAT vector 1 validated");
 }
 
 #[test]
@@ -118,7 +118,7 @@ fn test_kat_vector_2_simple_message() {
 
     eprintln!("\n=== KAT Vector 2: Simple Message ===");
     eprintln!("message: {:?}", core::str::from_utf8(message).unwrap());
-    eprintln!("✓ KAT vector 2 validated");
+    eprintln!("OK KAT vector 2 validated");
 }
 
 #[test]
@@ -139,7 +139,7 @@ fn test_kat_vector_3_binary_data() {
 
     eprintln!("\n=== KAT Vector 3: Binary Data ===");
     eprintln!("message len: {} bytes", message.len());
-    eprintln!("✓ KAT vector 3 validated");
+    eprintln!("OK KAT vector 3 validated");
 }
 
 // Helper for hex encoding (simple implementation)

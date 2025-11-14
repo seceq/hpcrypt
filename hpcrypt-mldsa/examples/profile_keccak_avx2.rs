@@ -11,7 +11,7 @@ use sha3::{
 use std::time::Instant;
 
 #[cfg(all(feature = "avx2", target_arch = "x86_64"))]
-use mldsa::simd::keccak::shake256x4_batch;
+use hpcrypt_mldsa::simd::keccak::shake256x4_batch;
 
 /// Reference SHAKE256 using sha3 crate (scalar)
 fn shake256_scalar(input: &[u8], outlen: usize) -> Vec<u8> {
@@ -74,9 +74,9 @@ fn main() {
         if speedup >= 2.0 {
             println!("\n Target achieved! (2X+ speedup)");
         } else if speedup >= 1.5 {
-            println!("\n🟡 Good speedup, but below 2X target");
+            println!("\nWARNING Good speedup, but below 2X target");
         } else {
-            println!("\n🔴 Speedup lower than expected");
+            println!("\nERROR Speedup lower than expected");
         }
     }
 

@@ -2,8 +2,8 @@
 //
 // This tool breaks down signing performance to identify the next optimization target
 
-use mldsa::keygen::keygen;
-use mldsa::MlDsa65;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::MlDsa65;
 use std::time::Instant;
 
 fn main() {
@@ -25,7 +25,7 @@ fn main() {
     let start = Instant::now();
     let mut successful_signs = 0;
     for _ in 0..iterations {
-        if let Some(_sig) = mldsa::sign::sign::<MlDsa65>(&sk, message) {
+        if let Some(_sig) = hpcrypt_mldsa::sign::sign::<MlDsa65>(&sk, message) {
             successful_signs += 1;
         }
     }
@@ -40,11 +40,11 @@ fn main() {
     println!();
 
     // Verification benchmark
-    let sig = mldsa::sign::sign::<MlDsa65>(&sk, message).unwrap();
+    let sig = hpcrypt_mldsa::sign::sign::<MlDsa65>(&sk, message).unwrap();
     let start = Instant::now();
     let mut successful_verifies = 0;
     for _ in 0..iterations {
-        if mldsa::verify::verify::<MlDsa65>(&pk, message, &sig) {
+        if hpcrypt_mldsa::verify::verify::<MlDsa65>(&pk, message, &sig) {
             successful_verifies += 1;
         }
     }

@@ -1,10 +1,10 @@
 //! Count actual NTT calls during operations
 //! This uses a thread-local counter to track NTT invocations
 
-use mldsa::keygen::keygen_from_seed;
-use mldsa::params::MlDsa65;
-use mldsa::sign::sign_deterministic;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::keygen::keygen_from_seed;
+use hpcrypt_mldsa::params::MlDsa65;
+use hpcrypt_mldsa::sign::sign_deterministic;
+use hpcrypt_mldsa::verify::verify;
 use std::cell::Cell;
 use std::time::Instant;
 
@@ -131,5 +131,5 @@ fn main() {
     println!("    - SHAKE256 hashing (~20-30% of time)");
     println!("    - Polynomial arithmetic (~10-20% of time)");
     println!("    - Hint generation/checking (~5-10% of time)");
-    println!("\n✓ Analysis complete!");
+    println!("\nOK Analysis complete!");
 }

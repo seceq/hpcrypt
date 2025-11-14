@@ -1,13 +1,13 @@
 //! Simple profiling of public API
 //! Run with: cargo run --release --example simple_profiling --features std,simd,avx2
 
-use mldsa::keygen::keygen_from_seed;
-use mldsa::ntt::{inv_ntt, ntt, ntt_multiply};
-use mldsa::params::MlDsa65;
-use mldsa::params::N;
-use mldsa::poly::Poly;
-use mldsa::sign::sign_deterministic;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::keygen::keygen_from_seed;
+use hpcrypt_mldsa::ntt::{inv_ntt, ntt, ntt_multiply};
+use hpcrypt_mldsa::params::MlDsa65;
+use hpcrypt_mldsa::params::N;
+use hpcrypt_mldsa::poly::Poly;
+use hpcrypt_mldsa::sign::sign_deterministic;
+use hpcrypt_mldsa::verify::verify;
 use std::time::Instant;
 
 fn measure<F, R>(name: &str, iterations: usize, mut f: F) -> (R, u128)
@@ -146,19 +146,19 @@ fn main() {
     println!("    - Polynomial coefficient operations");
     println!("    - Hint generation/checking");
 
-    println!("\n✓ Profiling complete!");
+    println!("\nOK Profiling complete!");
 
     // Print AVX2 status
     #[cfg(all(feature = "simd", target_arch = "x86_64"))]
     {
         if mldsa::simd::dispatch::has_avx2() {
-            println!("\n✓ AVX2 SIMD is ENABLED and being used for NTT operations");
+            println!("\nOK AVX2 SIMD is ENABLED and being used for NTT operations");
         } else {
-            println!("\n✗ AVX2 SIMD is NOT available (using scalar fallback)");
+            println!("\nFAIL AVX2 SIMD is NOT available (using scalar fallback)");
         }
     }
     #[cfg(not(all(feature = "simd", target_arch = "x86_64")))]
     {
-        println!("\n✗ SIMD features not enabled");
+        println!("\nFAIL SIMD features not enabled");
     }
 }
