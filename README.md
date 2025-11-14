@@ -1,61 +1,63 @@
-# HPCrypt Curves
+# HPCrypt
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE-MIT)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![no_std compatible](https://img.shields.io/badge/no__std-compatible-success)](https://docs.rust-embedded.org/book/intro/no-std.html)
 
-A high-performance elliptic curve cryptography library written in 100% safe Rust, providing production-ready implementations of modern elliptic curves with a focus on security, performance, and usability.
+A comprehensive, high-performance cryptography library written in pure Rust, providing production-ready implementations of modern cryptographic primitives with a focus on security, performance, and usability.
 
 ## Features
 
 - **100% Safe Rust** - Zero unsafe code, memory-safe by design
 - **no_std Compatible** - Runs in embedded and constrained environments
 - **Standards Compliant** - Full RFC and NIST FIPS compliance
+- **Post-Quantum Ready** - ML-DSA, ML-KEM, SLH-DSA implementations
 - **Comprehensive Testing** - Validated against official test vectors including Wycheproof
 - **Constant-Time Operations** - Protection against timing side-channel attacks
-- **Secure by Default** - Automatic memory zeroization, deterministic signatures
+- **Modular Design** - Use only what you need
 
-## Supported Curves
-
-### Curve25519 Family (RFC 7748, RFC 8032)
-
-| Curve | Type | Key Size | Security Level | Use Case |
-|-------|------|----------|----------------|----------|
-| **X25519** | ECDH | 32 bytes | ~128-bit | Key exchange |
-| **Ed25519** | EdDSA | 32 bytes | ~128-bit | Digital signatures |
-
-### Curve448 Family (RFC 7748, RFC 8032)
-
-| Curve | Type | Key Size | Security Level | Use Case |
-|-------|------|----------|----------------|----------|
-| **X448** | ECDH | 56 bytes | ~224-bit | High-security key exchange |
-| **Ed448** | EdDSA | 57 bytes | ~224-bit | High-security signatures |
-
-### NIST Curves (FIPS 186-4)
-
-| Curve | Type | Key Size | Security Level | Use Case |
-|-------|------|----------|----------------|----------|
-| **P-256** | ECDSA/ECDH | 32 bytes | 128-bit | General purpose, TLS |
-| **P-384** | ECDSA/ECDH | 48 bytes | 192-bit | High security |
-| **P-521** | ECDSA/ECDH | 66 bytes | 256-bit | Maximum security |
-
-### secp256k1 (SEC 2)
-
-| Curve | Type | Key Size | Security Level | Use Case |
-|-------|------|----------|----------------|----------|
-| **secp256k1** | ECDSA/ECDH | 32 bytes | 128-bit | Bitcoin, Ethereum, cryptocurrency |
-
-## Crates
+## Crates Overview
 
 The library is organized into focused, composable crates:
 
-| Crate | Description | Version |
-|-------|-------------|---------|
-| **hpcrypt-curves** | Elliptic curve implementations | 0.1.0 |
-| **hpcrypt-signatures** | Digital signature schemes (Ed25519, Ed448, ECDSA) | 0.1.0 |
-| **hpcrypt-hash** | Cryptographic hash functions (SHA-2, SHA-3, BLAKE2/3) | 0.1.0 |
-| **hpcrypt-rng** | Cryptographically secure random number generation | 0.1.0 |
-| **hpcrypt-core** | Core utilities and error types | 0.1.0 |
+### Core Primitives
+
+| Crate | Description | Standards |
+|-------|-------------|-----------|
+| **hpcrypt-core** | Core utilities, error types, traits | - |
+| **hpcrypt-hash** | Hash functions (SHA-2, SHA-3, BLAKE2/3, KMAC) | FIPS 180-4, FIPS 202, RFC 7693 |
+| **hpcrypt-mac** | Message authentication codes (HMAC, CMAC, PMAC, Poly1305) | FIPS 198-1, RFC 2104, RFC 4493 |
+| **hpcrypt-aead** | Authenticated encryption (AES-GCM, ChaCha20-Poly1305, AES-SIV) | RFC 5116, RFC 7539, RFC 5297 |
+| **hpcrypt-cipher** | Block cipher modes (CBC, CTR, XTS) | NIST SP 800-38A/E |
+| **hpcrypt-kdf** | Key derivation (HKDF, PBKDF2, Argon2, scrypt, TLS KDF) | RFC 5869, RFC 2898, RFC 9106 |
+| **hpcrypt-rng** | Cryptographically secure random generation | - |
+
+### Elliptic Curve Cryptography
+
+| Crate | Description | Standards |
+|-------|-------------|-----------|
+| **hpcrypt-curves** | Elliptic curves (Curve25519, P-256, P-384, P-521, secp256k1) | RFC 7748, RFC 8032, FIPS 186-4, SEC 2 |
+| **hpcrypt-signatures** | Digital signatures (Ed25519, Ed448, ECDSA, Schnorr) | RFC 8032, FIPS 186-4, BIP-340 |
+| **hpcrypt-ecies** | Hybrid encryption scheme | ISO/IEC 18033-2 |
+
+### Post-Quantum Cryptography
+
+| Crate | Description | Standards |
+|-------|-------------|-----------|
+| **hpcrypt-mlkem** | ML-KEM (Kyber) key encapsulation | FIPS 203 |
+| **hpcrypt-mldsa** | ML-DSA (Dilithium) signatures | FIPS 204 |
+| **hpcrypt-slhdsa** | SLH-DSA (SPHINCS+) signatures | FIPS 205 |
+
+### High-Level Protocols
+
+| Crate | Description | Standards |
+|-------|-------------|-----------|
+| **hpcrypt-rsa** | RSA encryption and signatures (OAEP, PSS, PKCS#1) | RFC 8017 |
+| **hpcrypt-hpke** | Hybrid Public Key Encryption | RFC 9180 |
+| **hpcrypt-pake** | Password-authenticated key exchange (OPAQUE) | RFC 9497 |
+| **hpcrypt-srp** | Secure Remote Password protocol | RFC 2945, RFC 5054 |
+| **hpcrypt-fpe** | Format-preserving encryption (FF1) | NIST SP 800-38G |
+| **hpcrypt-threshold** | Threshold cryptography (Shamir secret sharing) | - |
 
 ## Quick Start
 
@@ -63,38 +65,37 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hpcrypt-curves = "0.1"
-hpcrypt-signatures = "0.1"
-hpcrypt-rng = "0.1"
+hpcrypt = { version = "0.1", features = ["curves", "aead", "hash"] }
 ```
 
-### X25519 Key Exchange
+### AES-GCM Authenticated Encryption
 
 ```rust
-use hpcrypt_curves::X25519;
+use hpcrypt::aead::{Aes256Gcm, Aead};
+use hpcrypt::rng::OsRng;
 
-// Alice generates keypair
-let alice_private = [/* 32 random bytes */];
-let alice_public = X25519::public_key(&alice_private);
+// Generate random key and nonce
+let key = OsRng::generate_bytes::<32>();
+let nonce = OsRng::generate_bytes::<12>();
 
-// Bob generates keypair
-let bob_private = [/* 32 random bytes */];
-let bob_public = X25519::public_key(&bob_private);
+// Encrypt
+let cipher = Aes256Gcm::new(&key);
+let plaintext = b"Secret message";
+let ciphertext = cipher.encrypt(&nonce, plaintext, &[])?;
 
-// Compute shared secret
-let alice_shared = X25519::shared_secret(&alice_private, &bob_public)?;
-let bob_shared = X25519::shared_secret(&bob_private, &alice_public)?;
-
-assert_eq!(alice_shared, bob_shared);
+// Decrypt
+let recovered = cipher.decrypt(&nonce, &ciphertext, &[])?;
+assert_eq!(recovered, plaintext);
 ```
 
 ### Ed25519 Digital Signatures
 
 ```rust
-use hpcrypt_curves::Ed25519;
+use hpcrypt::curves::Ed25519;
+use hpcrypt::rng::OsRng;
 
 // Generate keypair
-let private_key = [/* 32 random bytes */];
+let private_key = OsRng::generate_bytes::<32>();
 let public_key = Ed25519::public_key(&private_key);
 
 // Sign message
@@ -102,127 +103,159 @@ let message = b"Important message";
 let signature = Ed25519::sign(&private_key, message);
 
 // Verify signature
-let is_valid = Ed25519::verify(&public_key, message, &signature);
-assert!(is_valid);
+assert!(Ed25519::verify(&public_key, message, &signature));
 ```
 
-### ECDSA Signatures
+### ML-DSA Post-Quantum Signatures
 
 ```rust
-use hpcrypt_signatures::EcdsaP256;
-use hpcrypt_rng::generate_key;
+use hpcrypt_mldsa::{MlDsa65, keygen::keygen};
 
-// Generate keypair
-let private_key: [u8; 32] = generate_key()?;
-let public_key = EcdsaP256::public_key(&private_key)?;
+// Generate post-quantum keypair
+let (pk, sk) = keygen::<MlDsa65>();
 
 // Sign message
-let message = b"Transaction data";
-let signature = EcdsaP256::sign(&private_key, message)?;
+let message = b"Future-proof signature";
+let signature = sk.sign(message)?;
 
 // Verify signature
-let is_valid = EcdsaP256::verify(&public_key, message, &signature)?;
-assert!(is_valid);
+assert!(pk.verify(message, &signature));
 ```
 
-## Hash Functions
+### Password Hashing with Argon2
 
-| Algorithm | Output Size | Standard | Use Case |
-|-----------|-------------|----------|----------|
-| **SHA-256** | 32 bytes | FIPS 180-4 | General purpose |
-| **SHA-384** | 48 bytes | FIPS 180-4 | High security |
-| **SHA-512** | 64 bytes | FIPS 180-4 | High security |
-| **SHA3-256** | 32 bytes | FIPS 202 | NIST standard |
-| **SHA3-512** | 64 bytes | FIPS 202 | NIST standard |
-| **BLAKE2b** | 1-64 bytes | RFC 7693 | Fast hashing, MACs |
-| **BLAKE3** | 32 bytes | Official spec | High-performance hashing |
+```rust
+use hpcrypt::kdf::Argon2id;
 
-## Examples
+let password = b"user_password";
+let salt = b"unique_salt_16bt";
 
-The [`examples/`](examples/) directory contains working examples:
+// Hash password
+let params = Argon2id::default_params();
+let mut output = [0u8; 32];
+Argon2id::hash(password, salt, &params, &mut output)?;
 
-- [ed25519_signatures.rs](examples/ed25519_signatures.rs) - Ed25519 signing and verification
-- [x25519_key_exchange.rs](examples/x25519_key_exchange.rs) - X25519 ECDH
-- [ecdsa_signatures.rs](examples/ecdsa_signatures.rs) - ECDSA with NIST curves
-- [schnorr_bitcoin.rs](examples/schnorr_bitcoin.rs) - Schnorr signatures
-- [ecies_secp256k1.rs](examples/ecies_secp256k1.rs) - ECIES hybrid encryption
-- [ecies_p521_high_security.rs](examples/ecies_p521_high_security.rs) - High-security ECIES
-
-Run an example:
-
-```bash
-cargo run --example ed25519_signatures
-cargo run --example x25519_key_exchange
+// Verify password
+let mut verify = [0u8; 32];
+Argon2id::hash(password, salt, &params, &mut verify)?;
+assert_eq!(output, verify);
 ```
 
-## Testing
+## Supported Algorithms
 
-Run the complete test suite:
+### Hash Functions
 
-```bash
-cargo test --workspace
-```
+- **SHA-2 Family**: SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/256
+- **SHA-3 Family**: SHA3-224, SHA3-256, SHA3-384, SHA3-512, SHAKE128, SHAKE256
+- **BLAKE Family**: BLAKE2b, BLAKE2s, BLAKE3
+- **Other**: KMAC, cSHAKE
 
-Run tests for a specific crate:
+### Message Authentication
 
-```bash
-cargo test -p hpcrypt-curves
-cargo test -p hpcrypt-signatures
-cargo test -p hpcrypt-hash
-```
+- HMAC (with any hash function)
+- CMAC (AES-based)
+- PMAC
+- Poly1305
+- GMAC
 
-Run benchmarks:
+### Authenticated Encryption (AEAD)
 
-```bash
-cargo bench
-```
+- AES-GCM (128/192/256)
+- AES-CCM (128/256)
+- AES-GCM-SIV
+- AES-SIV
+- AES-EAX
+- AES-OCB
+- ChaCha20-Poly1305
+- XChaCha20-Poly1305
+- Ascon-128, Ascon-128a, Ascon-80pq
+
+### Elliptic Curves
+
+- **Curve25519**: X25519 (ECDH), Ed25519 (signatures)
+- **Curve448**: X448 (ECDH), Ed448 (signatures)
+- **NIST Curves**: P-256, P-384, P-521
+- **secp256k1**: Bitcoin/Ethereum curve
+
+### Key Derivation
+
+- HKDF (with SHA-256, SHA-384, SHA-512)
+- PBKDF2
+- Argon2 (Argon2i, Argon2d, Argon2id)
+- scrypt
+- X9.63 KDF
+- TLS 1.2 PRF
+- TLS 1.3 HKDF-Expand-Label
+- QUIC HKDF-Expand-Label
+
+### Post-Quantum Cryptography
+
+- **ML-KEM** (FIPS 203): ML-KEM-512, ML-KEM-768, ML-KEM-1024
+- **ML-DSA** (FIPS 204): ML-DSA-44, ML-DSA-65, ML-DSA-87
+- **SLH-DSA** (FIPS 205): Multiple parameter sets
+
+## Architecture Decisions
+
+### No Protocol-Specific Crates
+
+HPCrypt focuses on **cryptographic primitives**, not protocol implementations:
+
+- **KDF functions** for TLS, QUIC are in `hpcrypt-kdf` (not separate `hpcrypt-tls` or `hpcrypt-quic` crates)
+- **QUIC header protection** is in `hpcrypt-kdf` with `quic-header-protection` feature
+- This maintains architectural consistency and reduces crate proliferation
+
+### Authenticated vs. Unauthenticated Encryption
+
+- **Use `hpcrypt-aead`** for almost all encryption needs (AES-GCM, ChaCha20-Poly1305)
+- **Use `hpcrypt-cipher`** only for:
+  - Legacy protocol requirements (TLS 1.2 CBC, SSH)
+  - Disk encryption (XTS mode)
+  - Building custom authenticated constructions
+
+### Module Organization
+
+- **Renamed modules** for clarity: `ghash_fast` → `ghash`
+- **Removed obsolete code**: 3,000+ lines of unmaintainable tests/examples
+- **Consistent APIs** across all crates
 
 ## Security
 
 ### Constant-Time Operations
 
-Critical operations use constant-time algorithms to prevent timing side-channel attacks:
+Critical operations use constant-time algorithms to prevent timing attacks:
 - Field arithmetic uses the `subtle` crate for constant-time comparisons
 - Scalar multiplication avoids data-dependent branches
 - Memory comparisons are constant-time
 
 ### Memory Safety
 
-- **100% safe Rust** - No unsafe code blocks
+- **100% safe Rust** - No unsafe code except in performance-critical SIMD code
 - Automatic memory zeroization on drop via `zeroize` crate
-- No buffer overflows, use-after-free, or memory corruption vulnerabilities
-
-### Secure Random Number Generation
-
-The RNG module provides cryptographically secure random number generation:
-- OS-based entropy via `getrandom`
-- Type-safe API with compile-time size checking
-- Suitable for key generation and nonce creation
+- No buffer overflows or memory corruption vulnerabilities
 
 ### Standards Compliance
 
-All implementations are validated against official test vectors:
+All implementations validated against official test vectors:
 
-- **RFC 7748** - Curve25519 and Curve448 (X25519, X448)
-- **RFC 8032** - Edwards-Curve Digital Signature Algorithm (Ed25519, Ed448)
-- **RFC 6979** - Deterministic ECDSA
-- **NIST FIPS 186-4** - Digital Signature Standard (ECDSA P-256/P-384/P-521)
-- **SEC 2** - Recommended Elliptic Curve Domain Parameters (secp256k1)
-- **NIST FIPS 180-4** - Secure Hash Standard (SHA-2)
-- **NIST FIPS 202** - SHA-3 Standard
-- **RFC 7693** - BLAKE2 Cryptographic Hash
-- **Wycheproof** - Google's cryptographic test suite for edge cases
+- **NIST**: FIPS 180-4, 186-4, 197, 198-1, 202, 203, 204, 205
+- **RFCs**: 2104, 2898, 2945, 5054, 5116, 5297, 5869, 6979, 7539, 7693, 7748, 8017, 8032, 9106, 9180, 9497
+- **Wycheproof**: Google's cryptographic test suite for edge cases
 
-## Performance
+## Testing
 
-The library is optimized for performance while maintaining security:
+Run the complete test suite:
 
-- Efficient field arithmetic with lazy reduction techniques
-- Optimized scalar multiplication with windowing methods
-- SIMD-friendly implementations where applicable
-- Minimal dependencies for fast compilation
+```bash
+cargo test --workspace --all-features
+```
 
-See [`benches/`](benches/) for detailed performance benchmarks.
+Run tests for specific package:
+
+```bash
+cargo test --package hpcrypt-aead
+cargo test --package hpcrypt-mldsa
+cargo test --package hpcrypt-rsa
+```
 
 ## no_std Support
 
@@ -230,9 +263,8 @@ All crates support `no_std` environments:
 
 ```toml
 [dependencies]
-hpcrypt-curves = { version = "0.1", default-features = false }
-hpcrypt-signatures = { version = "0.1", default-features = false }
 hpcrypt-hash = { version = "0.1", default-features = false }
+hpcrypt-aead = { version = "0.1", default-features = false, features = ["alloc"] }
 ```
 
 Features:
@@ -241,7 +273,15 @@ Features:
 
 ## Minimum Supported Rust Version (MSRV)
 
-This crate requires Rust 1.70 or later.
+This project requires Rust **1.70** or later.
+
+## Recent Changes
+
+- **Removed `hpcrypt-quic`**: Moved QUIC header protection to `hpcrypt-kdf` for architectural consistency
+- **Renamed modules**: `ghash_fast` → `ghash` for clarity
+- **Cleaned codebase**: Removed 3,000+ lines of obsolete code
+- **Fixed critical bugs**: P-256 Montgomery reduction bug fix
+- **Improved tests**: Fixed ML-DSA and SLH-DSA test compatibility
 
 ## License
 
@@ -256,9 +296,9 @@ at your option.
 
 Contributions are welcome! Please ensure:
 
-1. All tests pass: `cargo test --workspace`
+1. All tests pass: `cargo test --workspace --all-features`
 2. Code is formatted: `cargo fmt --all`
-3. No clippy warnings: `cargo clippy --workspace -- -D warnings`
+3. No clippy warnings: `cargo clippy --workspace --all-features -- -D warnings`
 4. Add tests for new features
 5. Update documentation as needed
 
@@ -270,10 +310,9 @@ This library has been developed with care and tested against official test vecto
 
 ## Acknowledgments
 
-This project implements cryptographic algorithms as specified in:
-- IETF RFCs 6979, 7748, 8032
-- NIST FIPS 186-4, 180-4, 202
-- SEC 2 v2.0
-- Official BLAKE2 and BLAKE3 specifications
-
-Special thanks to the Rust community and the authors of the cryptographic specifications.
+Special thanks to:
+- The Rust community
+- NIST for cryptographic standards
+- IETF for RFCs
+- Google's Wycheproof project
+- Authors of cryptographic specifications
