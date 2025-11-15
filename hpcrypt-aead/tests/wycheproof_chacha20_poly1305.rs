@@ -146,6 +146,7 @@ fn run_chacha20_poly1305_test(test: &TestCase) -> bool {
 }
 
 #[test]
+#[cfg(wycheproof_test_vectors)]
 fn wycheproof_chacha20_poly1305() {
     let test_data = include_str!("../../../wycheproof/testvectors_v1/chacha20_poly1305_test.json");
     let test_file: TestFile = serde_json::from_str(test_data)

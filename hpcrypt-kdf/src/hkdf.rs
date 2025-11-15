@@ -13,10 +13,36 @@ pub struct HkdfSha256 {
 }
 
 impl HkdfSha256 {
+    /// Perform the HKDF-Extract step and return a pseudorandom key.
+    ///
+    /// This is the first step of the HKDF process as defined in RFC 5869.
+    /// It extracts a fixed-length pseudorandom key from the input keying material.
+    /// If salt is empty, a string of zeros equal to the hash output length is used.
+    pub fn extract(salt: &[u8], ikm: &[u8]) -> [u8; 32] {
+        let zero_salt = [0u8; 32];
+        let salt_key = if salt.is_empty() { &zero_salt } else { salt };
+
+        let prk = HmacSha256::new(salt_key).compute(ikm);
+        let mut result = [0u8; 32];
+        result.copy_from_slice(&prk);
+        result
+    }
+
+    /// Create an HKDF instance from a pre-computed pseudorandom key.
+    ///
+    /// This allows reusing the same PRK for multiple expand operations,
+    /// which is useful in protocols like TLS 1.3 where the same PRK
+    /// needs to derive multiple keys.
+    pub fn from_prk(prk: &[u8]) -> Self {
+        Self {
+            prk: prk.to_vec(),
+        }
+    }
+
     /// Create a new HKDF instance from input keying material
     pub fn new(salt: &[u8], ikm: &[u8]) -> Self {
-        let prk = HmacSha256::new(salt).compute(ikm).to_vec();
-        Self { prk }
+        let prk = Self::extract(salt, ikm);
+        Self::from_prk(&prk)
     }
 
     /// Expand the PRK to derive output keying material
@@ -55,10 +81,36 @@ pub struct HkdfSha384 {
 }
 
 impl HkdfSha384 {
+    /// Perform the HKDF-Extract step and return a pseudorandom key.
+    ///
+    /// This is the first step of the HKDF process as defined in RFC 5869.
+    /// It extracts a fixed-length pseudorandom key from the input keying material.
+    /// If salt is empty, a string of zeros equal to the hash output length is used.
+    pub fn extract(salt: &[u8], ikm: &[u8]) -> [u8; 48] {
+        let zero_salt = [0u8; 48];
+        let salt_key = if salt.is_empty() { &zero_salt } else { salt };
+
+        let prk = HmacSha384::new(salt_key).compute(ikm);
+        let mut result = [0u8; 48];
+        result.copy_from_slice(&prk);
+        result
+    }
+
+    /// Create an HKDF instance from a pre-computed pseudorandom key.
+    ///
+    /// This allows reusing the same PRK for multiple expand operations,
+    /// which is useful in protocols like TLS 1.3 where the same PRK
+    /// needs to derive multiple keys.
+    pub fn from_prk(prk: &[u8]) -> Self {
+        Self {
+            prk: prk.to_vec(),
+        }
+    }
+
     /// Create a new HKDF instance from input keying material
     pub fn new(salt: &[u8], ikm: &[u8]) -> Self {
-        let prk = HmacSha384::new(salt).compute(ikm).to_vec();
-        Self { prk }
+        let prk = Self::extract(salt, ikm);
+        Self::from_prk(&prk)
     }
 
     /// Expand the PRK to derive output keying material
@@ -97,10 +149,36 @@ pub struct HkdfSha512 {
 }
 
 impl HkdfSha512 {
+    /// Perform the HKDF-Extract step and return a pseudorandom key.
+    ///
+    /// This is the first step of the HKDF process as defined in RFC 5869.
+    /// It extracts a fixed-length pseudorandom key from the input keying material.
+    /// If salt is empty, a string of zeros equal to the hash output length is used.
+    pub fn extract(salt: &[u8], ikm: &[u8]) -> [u8; 64] {
+        let zero_salt = [0u8; 64];
+        let salt_key = if salt.is_empty() { &zero_salt } else { salt };
+
+        let prk = HmacSha512::new(salt_key).compute(ikm);
+        let mut result = [0u8; 64];
+        result.copy_from_slice(&prk);
+        result
+    }
+
+    /// Create an HKDF instance from a pre-computed pseudorandom key.
+    ///
+    /// This allows reusing the same PRK for multiple expand operations,
+    /// which is useful in protocols like TLS 1.3 where the same PRK
+    /// needs to derive multiple keys.
+    pub fn from_prk(prk: &[u8]) -> Self {
+        Self {
+            prk: prk.to_vec(),
+        }
+    }
+
     /// Create a new HKDF instance from input keying material
     pub fn new(salt: &[u8], ikm: &[u8]) -> Self {
-        let prk = HmacSha512::new(salt).compute(ikm).to_vec();
-        Self { prk }
+        let prk = Self::extract(salt, ikm);
+        Self::from_prk(&prk)
     }
 
     /// Expand the PRK to derive output keying material
@@ -139,10 +217,36 @@ pub struct HkdfBlake2b {
 }
 
 impl HkdfBlake2b {
+    /// Perform the HKDF-Extract step and return a pseudorandom key.
+    ///
+    /// This is the first step of the HKDF process as defined in RFC 5869.
+    /// It extracts a fixed-length pseudorandom key from the input keying material.
+    /// If salt is empty, a string of zeros equal to the hash output length is used.
+    pub fn extract(salt: &[u8], ikm: &[u8]) -> [u8; 64] {
+        let zero_salt = [0u8; 64];
+        let salt_key = if salt.is_empty() { &zero_salt } else { salt };
+
+        let prk = HmacBlake2b::new(salt_key).compute(ikm);
+        let mut result = [0u8; 64];
+        result.copy_from_slice(&prk);
+        result
+    }
+
+    /// Create an HKDF instance from a pre-computed pseudorandom key.
+    ///
+    /// This allows reusing the same PRK for multiple expand operations,
+    /// which is useful in protocols like TLS 1.3 where the same PRK
+    /// needs to derive multiple keys.
+    pub fn from_prk(prk: &[u8]) -> Self {
+        Self {
+            prk: prk.to_vec(),
+        }
+    }
+
     /// Create a new HKDF instance from input keying material
     pub fn new(salt: &[u8], ikm: &[u8]) -> Self {
-        let prk = HmacBlake2b::new(salt).compute(ikm).to_vec();
-        Self { prk }
+        let prk = Self::extract(salt, ikm);
+        Self::from_prk(&prk)
     }
 
     /// Expand the PRK to derive output keying material
@@ -409,5 +513,105 @@ mod tests {
 
         // Just verify it produces output without panicking
         assert_ne!(okm, [0u8; 64]);
+    }
+
+    #[test]
+    fn test_extract_sha256() {
+        let ikm = hex_literal::hex!("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b");
+        let salt = hex_literal::hex!("000102030405060708090a0b0c");
+
+        let prk = HkdfSha256::extract(&salt, &ikm);
+
+        let expected_prk = hex_literal::hex!(
+            "077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5"
+        );
+
+        assert_eq!(prk, expected_prk);
+    }
+
+    #[test]
+    fn test_from_prk_sha256() {
+        let ikm = hex_literal::hex!("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b");
+        let salt = hex_literal::hex!("000102030405060708090a0b0c");
+        let info = hex_literal::hex!("f0f1f2f3f4f5f6f7f8f9");
+
+        let prk = HkdfSha256::extract(&salt, &ikm);
+        let hkdf = HkdfSha256::from_prk(&prk);
+
+        let mut okm = [0u8; 42];
+        hkdf.expand(&info, &mut okm).unwrap();
+
+        let expected = hex_literal::hex!(
+            "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865"
+        );
+
+        assert_eq!(okm, expected);
+    }
+
+    #[test]
+    fn test_new_equals_extract_from_prk() {
+        let ikm = b"test input keying material";
+        let salt = b"test salt";
+        let info = b"test info";
+
+        let hkdf1 = HkdfSha256::new(salt, ikm);
+        let prk = HkdfSha256::extract(salt, ikm);
+        let hkdf2 = HkdfSha256::from_prk(&prk);
+
+        let mut okm1 = [0u8; 42];
+        let mut okm2 = [0u8; 42];
+
+        hkdf1.expand(info, &mut okm1).unwrap();
+        hkdf2.expand(info, &mut okm2).unwrap();
+
+        assert_eq!(okm1, okm2);
+    }
+
+    #[test]
+    fn test_prk_reuse() {
+        let ikm = b"input keying material";
+        let salt = b"salt";
+        let info1 = b"context 1";
+        let info2 = b"context 2";
+
+        let prk = HkdfSha256::extract(salt, ikm);
+        let hkdf = HkdfSha256::from_prk(&prk);
+
+        let mut okm1 = [0u8; 32];
+        let mut okm2 = [0u8; 32];
+
+        hkdf.expand(info1, &mut okm1).unwrap();
+        hkdf.expand(info2, &mut okm2).unwrap();
+
+        assert_ne!(okm1, okm2);
+        assert_ne!(okm1, [0u8; 32]);
+        assert_ne!(okm2, [0u8; 32]);
+    }
+
+    #[test]
+    fn test_extract_empty_salt() {
+        let ikm = b"test input";
+        let empty_salt: &[u8] = &[];
+
+        let prk = HkdfSha256::extract(empty_salt, ikm);
+
+        assert_eq!(prk.len(), 32);
+        assert_ne!(prk, [0u8; 32]);
+    }
+
+    #[test]
+    fn test_prk_sizes() {
+        let ikm = b"test";
+        let salt = b"salt";
+
+        let prk256 = HkdfSha256::extract(salt, ikm);
+        let prk384 = HkdfSha384::extract(salt, ikm);
+        let prk512 = HkdfSha512::extract(salt, ikm);
+        let prk_blake2b = HkdfBlake2b::extract(salt, ikm);
+
+        assert_eq!(prk256.len(), 32);
+        assert_eq!(prk384.len(), 48);
+        assert_eq!(prk512.len(), 64);
+        assert_eq!(prk_blake2b.len(), 64);
     }
 }

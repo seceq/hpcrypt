@@ -149,6 +149,7 @@ fn run_ecdsa_test(test: &TestCase, verifying_key: &VerifyingKey, test_type: &str
 }
 
 #[test]
+#[cfg(wycheproof_test_vectors)]
 fn wycheproof_ecdsa_secp256r1_sha256() {
     let test_data =
         include_str!("../../../wycheproof/testvectors_v1/ecdsa_secp256r1_sha256_test.json");
@@ -211,6 +212,7 @@ fn wycheproof_ecdsa_secp521r1_sha512() {
 }
 
 #[test]
+#[cfg(wycheproof_test_vectors)]
 fn wycheproof_ecdsa_secp256k1_sha256() {
     use hpcrypt_signatures::ecdsa_secp256k1::{
         Signature as Secp256k1Signature, VerifyingKey as Secp256k1VerifyingKey,

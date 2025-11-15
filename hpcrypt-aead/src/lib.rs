@@ -24,9 +24,6 @@
 #[cfg(feature = "std")]
 extern crate std;
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
-
 // AEAD mode implementations
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub mod aes_ccm;

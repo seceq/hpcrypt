@@ -11,9 +11,6 @@
 #[cfg(feature = "std")]
 extern crate std;
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
-
 pub mod opaque;
 mod opaque_impl;
 pub mod oprf;

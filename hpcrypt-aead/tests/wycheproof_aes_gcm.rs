@@ -260,6 +260,7 @@ fn run_aes256_gcm_test(test: &TestCase) -> bool {
 }
 
 #[test]
+#[cfg(wycheproof_test_vectors)]
 fn wycheproof_aes_gcm() {
     let test_data = include_str!("../../../wycheproof/testvectors_v1/aes_gcm_test.json");
     let test_file: TestFile =

@@ -143,6 +143,7 @@ fn run_ed25519_test(test: &TestCase, public_key: &[u8; 32]) -> bool {
 }
 
 #[test]
+#[cfg(wycheproof_test_vectors)]
 fn wycheproof_ed25519() {
     let test_data = include_str!("../../../wycheproof/testvectors_v1/ed25519_test.json");
     let test_file: TestFile =

@@ -246,6 +246,7 @@ fn run_test(test: &TestCase, public_key: &RsaPublicKey, sha_algorithm: &str) -> 
 }
 
 #[test]
+#[cfg(wycheproof_test_vectors)]
 fn wycheproof_rsa_pkcs1_2048_sig_gen() {
     let test_data =
         include_str!("../../../wycheproof/testvectors_v1/rsa_pkcs1_2048_sig_gen_test.json");
@@ -295,6 +296,7 @@ fn wycheproof_rsa_pkcs1_2048_sig_gen() {
 }
 
 #[test]
+#[cfg(wycheproof_test_vectors)]
 fn wycheproof_rsa_pkcs1_3072_sig_gen() {
     let test_data =
         include_str!("../../../wycheproof/testvectors_v1/rsa_pkcs1_3072_sig_gen_test.json");
@@ -343,6 +345,7 @@ fn wycheproof_rsa_pkcs1_3072_sig_gen() {
 }
 
 #[test]
+#[cfg(wycheproof_test_vectors)]
 fn wycheproof_rsa_pkcs1_4096_sig_gen() {
     let test_data =
         include_str!("../../../wycheproof/testvectors_v1/rsa_pkcs1_4096_sig_gen_test.json");

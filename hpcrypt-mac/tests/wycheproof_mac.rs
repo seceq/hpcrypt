@@ -180,6 +180,7 @@ fn run_cmac_aes256_test(test: &TestCase) -> bool {
 }
 
 #[test]
+#[cfg(wycheproof_test_vectors)]
 fn wycheproof_aes_cmac() {
     let test_data = include_str!("../../../wycheproof/testvectors_v1/aes_cmac_test.json");
     let test_file: TestFile =

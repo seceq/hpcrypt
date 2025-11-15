@@ -255,6 +255,7 @@ fn run_hkdf_sha512_test(test: &TestCase) -> bool {
 }
 
 #[test]
+#[cfg(wycheproof_test_vectors)]
 fn wycheproof_hkdf_sha256() {
     let test_data = include_str!("../../../wycheproof/testvectors_v1/hkdf_sha256_test.json");
     let test_file: TestFile = serde_json::from_str(test_data)
@@ -287,6 +288,7 @@ fn wycheproof_hkdf_sha256() {
 }
 
 #[test]
+#[cfg(wycheproof_test_vectors)]
 fn wycheproof_hkdf_sha384() {
     let test_data = include_str!("../../../wycheproof/testvectors_v1/hkdf_sha384_test.json");
     let test_file: TestFile = serde_json::from_str(test_data)
@@ -319,6 +321,7 @@ fn wycheproof_hkdf_sha384() {
 }
 
 #[test]
+#[cfg(wycheproof_test_vectors)]
 fn wycheproof_hkdf_sha512() {
     let test_data = include_str!("../../../wycheproof/testvectors_v1/hkdf_sha512_test.json");
     let test_file: TestFile = serde_json::from_str(test_data)
