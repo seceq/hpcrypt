@@ -334,7 +334,15 @@ fn decode_poly_t0(bytes: &[u8], d: usize) -> Result<Poly, SerializeError> {
             bit_pos += 1;
         }
 
-        poly.coeffs[i] = val;
+        // Convert from [0, 2^d) back to signed centered range (-2^(d-1), 2^(d-1)]
+        // This matches the encoding which uses rem_euclid(1 << d)
+        // Note: 2^(d-1) is a valid positive value, only values > 2^(d-1) become negative
+        let half = 1 << (d - 1);
+        poly.coeffs[i] = if val > half {
+            val - (1 << d)  // Convert large positive to negative
+        } else {
+            val
+        };
     }
 
     Ok(poly)
