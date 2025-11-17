@@ -12,13 +12,13 @@
 //!
 //! ## Features
 //!
-//! - ✅ **RFC 9180 Compliant** - Full implementation of the standard
-//! - ✅ **Four Modes** - Base, PSK, Auth, AuthPSK
-//! - ✅ **Multiple Cipher Suites** - P-256, P-384, P-521, X25519 (KEM)
-//! - ✅ **Multiple AEADs** - AES-128-GCM, AES-256-GCM, ChaCha20-Poly1305
-//! - ✅ **Stateful Encryption** - Automatic nonce management
-//! - ✅ **Export Secrets** - Derive application-specific secrets
-//! - ✅ **no_std Compatible** - Works in embedded environments
+//! - RFC 9180 compliant implementation
+//! - Four modes: Base, PSK, Auth, AuthPSK
+//! - Multiple KEM algorithms: P-256, X25519 (more coming soon)
+//! - Multiple AEADs: AES-128-GCM, AES-256-GCM, ChaCha20-Poly1305
+//! - Stateful encryption with automatic nonce management
+//! - Export secrets for deriving application-specific keys
+//! - no_std compatible for embedded environments
 //!
 //! ## Quick Start
 //!
@@ -138,7 +138,7 @@
 //!
 //! ## Cipher Suites
 //!
-//! ### P-256 (default)
+//! ### P-256
 //!
 //! ```rust
 //! use hpcrypt_hpke::HpkeP256;
@@ -146,6 +146,16 @@
 //! let hpke = HpkeP256::new();              // AES-128-GCM
 //! let hpke = HpkeP256::with_aes256();      // AES-256-GCM
 //! let hpke = HpkeP256::with_chacha();      // ChaCha20-Poly1305
+//! ```
+//!
+//! ### X25519
+//!
+//! ```rust
+//! use hpcrypt_hpke::HpkeX25519;
+//!
+//! let hpke = HpkeX25519::new();            // AES-128-GCM
+//! let hpke = HpkeX25519::with_aes256();    // AES-256-GCM
+//! let hpke = HpkeX25519::with_chacha();    // ChaCha20-Poly1305
 //! ```
 //!
 //! ## Security Considerations
@@ -175,5 +185,5 @@ pub mod kem;
 
 pub use context::{AeadId, CipherSuite, HpkeContext, KdfId, Mode};
 pub use error::{HpkeError, Result};
-pub use hpke::HpkeP256;
-pub use kem::{DhkemP256, Kem, KemId};
+pub use hpke::{HpkeP256, HpkeX25519};
+pub use kem::{DhkemP256, DhkemX25519, Kem, KemId};

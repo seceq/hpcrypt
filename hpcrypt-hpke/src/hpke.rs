@@ -8,7 +8,7 @@
 
 use crate::context::{AeadId, CipherSuite, HpkeContext, KdfId, Mode};
 use crate::error::{HpkeError, Result};
-use crate::kem::{DhkemP256, Kem, KemId};
+use crate::kem::{DhkemP256, DhkemX25519, Kem, KemId};
 use alloc::vec::Vec;
 
 /// HPKE for P-256 with default cipher suite
@@ -295,6 +295,393 @@ impl Default for HpkeP256 {
     }
 }
 
+/// HPKE for X25519 with configurable cipher suite
+///
+/// High-level API for Hybrid Public Key Encryption using X25519 as the KEM.
+/// Implements all four modes defined in RFC 9180:
+/// - Base mode: Standard public key encryption
+/// - PSK mode: Pre-shared key authentication
+/// - Auth mode: Sender authentication via public key
+/// - AuthPSK mode: Both PSK and sender authentication
+///
+/// # Cipher Suite
+///
+/// - KEM: DHKEM(X25519, HKDF-SHA256)
+/// - KDF: HKDF-SHA256
+/// - AEAD: Configurable (AES-128-GCM, AES-256-GCM, or ChaCha20-Poly1305)
+///
+/// # Why X25519?
+///
+/// X25519 provides several benefits:
+/// - Compact keys: 32-byte keys (vs 65 bytes for uncompressed P-256)
+/// - Fast: Excellent performance on modern CPUs
+/// - Safe: Designed to be resistant to timing attacks
+/// - Widely supported: Used in TLS 1.3, WireGuard, Signal, etc.
+///
+/// # Example
+///
+/// ```
+/// use hpcrypt_hpke::HpkeX25519;
+/// use rand::thread_rng;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let mut rng = thread_rng();
+/// let hpke = HpkeX25519::new();
+///
+/// // Generate recipient keypair
+/// let (sk_r, pk_r) = HpkeX25519::generate_keypair(&mut rng)?;
+///
+/// let info = b"application context";
+/// let aad = b"associated data";
+/// let plaintext = b"secret message";
+///
+/// // Sender: encrypt
+/// let (enc, mut sender_ctx) = hpke.setup_base_sender(&pk_r, info, &mut rng)?;
+/// let ciphertext = sender_ctx.seal(aad, plaintext)?;
+///
+/// // Recipient: decrypt
+/// let mut recipient_ctx = hpke.setup_base_recipient(&enc, &sk_r, info)?;
+/// let decrypted = recipient_ctx.open(aad, &ciphertext)?;
+///
+/// assert_eq!(decrypted, plaintext);
+/// # Ok(())
+/// # }
+/// ```
+pub struct HpkeX25519 {
+    suite: CipherSuite,
+}
+
+impl HpkeX25519 {
+    /// Create a new HPKE instance with AES-128-GCM AEAD
+    ///
+    /// This is the default and recommended configuration for most use cases.
+    /// AES-128-GCM provides excellent performance on modern hardware with AES-NI.
+    ///
+    /// # Cipher Suite
+    ///
+    /// - KEM: DHKEM(X25519, HKDF-SHA256)
+    /// - KDF: HKDF-SHA256
+    /// - AEAD: AES-128-GCM
+    pub fn new() -> Self {
+        Self {
+            suite: CipherSuite {
+                kem: KemId::DhkemX25519HkdfSha256,
+                kdf: KdfId::HkdfSha256,
+                aead: AeadId::Aes128Gcm,
+            },
+        }
+    }
+
+    /// Create with AES-256-GCM AEAD
+    ///
+    /// Use this if you need 256-bit security level or have compliance requirements
+    /// that mandate AES-256. Note that AES-128 is considered secure and performs better.
+    ///
+    /// # Cipher Suite
+    ///
+    /// - KEM: DHKEM(X25519, HKDF-SHA256)
+    /// - KDF: HKDF-SHA256
+    /// - AEAD: AES-256-GCM
+    pub fn with_aes256() -> Self {
+        Self {
+            suite: CipherSuite {
+                kem: KemId::DhkemX25519HkdfSha256,
+                kdf: KdfId::HkdfSha256,
+                aead: AeadId::Aes256Gcm,
+            },
+        }
+    }
+
+    /// Create with ChaCha20-Poly1305 AEAD
+    ///
+    /// Use this for platforms without AES-NI hardware acceleration or when you
+    /// need constant-time AEAD operations in software. ChaCha20-Poly1305 is faster
+    /// than AES-GCM on systems without hardware acceleration.
+    ///
+    /// # Cipher Suite
+    ///
+    /// - KEM: DHKEM(X25519, HKDF-SHA256)
+    /// - KDF: HKDF-SHA256
+    /// - AEAD: ChaCha20-Poly1305
+    pub fn with_chacha() -> Self {
+        Self {
+            suite: CipherSuite {
+                kem: KemId::DhkemX25519HkdfSha256,
+                kdf: KdfId::HkdfSha256,
+                aead: AeadId::ChaCha20Poly1305,
+            },
+        }
+    }
+
+    /// Generate a fresh X25519 keypair for HPKE
+    ///
+    /// Generates a random 32-byte secret key and derives the corresponding
+    /// 32-byte public key using X25519 base point multiplication.
+    ///
+    /// # Arguments
+    ///
+    /// * `rng` - Cryptographically secure random number generator
+    ///
+    /// # Returns
+    ///
+    /// A tuple of (secret_key, public_key), both as 32-byte vectors
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use hpcrypt_hpke::HpkeX25519;
+    /// use rand::thread_rng;
+    ///
+    /// let mut rng = thread_rng();
+    /// let (sk, pk) = HpkeX25519::generate_keypair(&mut rng).unwrap();
+    ///
+    /// assert_eq!(sk.len(), 32); // Secret key is 32 bytes
+    /// assert_eq!(pk.len(), 32); // Public key is 32 bytes
+    /// ```
+    pub fn generate_keypair<R: rand::Rng>(rng: &mut R) -> Result<(Vec<u8>, Vec<u8>)> {
+        DhkemX25519::generate_keypair(rng)
+    }
+
+    // ========== BASE MODE ==========
+
+    /// Setup sender context in base mode
+    ///
+    /// Returns (encapsulated_key, sender_context)
+    pub fn setup_base_sender<R: rand::Rng>(
+        &self,
+        pk_r: &[u8],
+        info: &[u8],
+        rng: &mut R,
+    ) -> Result<(Vec<u8>, HpkeContext)> {
+        // Encapsulate to get shared secret
+        let (shared_secret, enc) = DhkemX25519::encap(pk_r, rng)?;
+
+        // Create context with no PSK
+        let context = HpkeContext::new(
+            self.suite,
+            &shared_secret,
+            info,
+            &[], // no PSK
+            &[], // no PSK ID
+            Mode::Base,
+        )?;
+
+        Ok((enc, context))
+    }
+
+    /// Setup recipient context in base mode
+    pub fn setup_base_recipient(
+        &self,
+        enc: &[u8],
+        sk_r: &[u8],
+        info: &[u8],
+    ) -> Result<HpkeContext> {
+        // Decapsulate to get shared secret
+        let shared_secret = DhkemX25519::decap(enc, sk_r)?;
+
+        // Create context with no PSK
+        HpkeContext::new(
+            self.suite,
+            &shared_secret,
+            info,
+            &[], // no PSK
+            &[], // no PSK ID
+            Mode::Base,
+        )
+    }
+
+    // ========== PSK MODE ==========
+
+    /// Setup sender context in PSK mode
+    ///
+    /// Returns (encapsulated_key, sender_context)
+    pub fn setup_psk_sender<R: rand::Rng>(
+        &self,
+        pk_r: &[u8],
+        info: &[u8],
+        psk: &[u8],
+        psk_id: &[u8],
+        rng: &mut R,
+    ) -> Result<(Vec<u8>, HpkeContext)> {
+        if psk.is_empty() {
+            return Err(HpkeError::InvalidPsk);
+        }
+
+        // Encapsulate to get shared secret
+        let (shared_secret, enc) = DhkemX25519::encap(pk_r, rng)?;
+
+        // Create context with PSK
+        let context = HpkeContext::new(self.suite, &shared_secret, info, psk, psk_id, Mode::Psk)?;
+
+        Ok((enc, context))
+    }
+
+    /// Setup recipient context in PSK mode
+    pub fn setup_psk_recipient(
+        &self,
+        enc: &[u8],
+        sk_r: &[u8],
+        info: &[u8],
+        psk: &[u8],
+        psk_id: &[u8],
+    ) -> Result<HpkeContext> {
+        if psk.is_empty() {
+            return Err(HpkeError::InvalidPsk);
+        }
+
+        // Decapsulate to get shared secret
+        let shared_secret = DhkemX25519::decap(enc, sk_r)?;
+
+        // Create context with PSK
+        HpkeContext::new(self.suite, &shared_secret, info, psk, psk_id, Mode::Psk)
+    }
+
+    // ========== AUTH MODE ==========
+
+    /// Setup sender context in Auth mode
+    ///
+    /// Returns (encapsulated_key, sender_context)
+    pub fn setup_auth_sender<R: rand::Rng>(
+        &self,
+        pk_r: &[u8],
+        info: &[u8],
+        sk_s: &[u8],
+        rng: &mut R,
+    ) -> Result<(Vec<u8>, HpkeContext)> {
+        // Authenticated encapsulate
+        let (shared_secret, enc) = DhkemX25519::auth_encap(pk_r, sk_s, rng)?;
+
+        // Create context with no PSK
+        let context = HpkeContext::new(
+            self.suite,
+            &shared_secret,
+            info,
+            &[], // no PSK
+            &[], // no PSK ID
+            Mode::Auth,
+        )?;
+
+        Ok((enc, context))
+    }
+
+    /// Setup recipient context in Auth mode
+    pub fn setup_auth_recipient(
+        &self,
+        enc: &[u8],
+        sk_r: &[u8],
+        info: &[u8],
+        pk_s: &[u8],
+    ) -> Result<HpkeContext> {
+        // Authenticated decapsulate
+        let shared_secret = DhkemX25519::auth_decap(enc, sk_r, pk_s)?;
+
+        // Create context with no PSK
+        HpkeContext::new(
+            self.suite,
+            &shared_secret,
+            info,
+            &[], // no PSK
+            &[], // no PSK ID
+            Mode::Auth,
+        )
+    }
+
+    // ========== AUTH-PSK MODE ==========
+
+    /// Setup sender context in AuthPSK mode
+    ///
+    /// Returns (encapsulated_key, sender_context)
+    pub fn setup_auth_psk_sender<R: rand::Rng>(
+        &self,
+        pk_r: &[u8],
+        info: &[u8],
+        psk: &[u8],
+        psk_id: &[u8],
+        sk_s: &[u8],
+        rng: &mut R,
+    ) -> Result<(Vec<u8>, HpkeContext)> {
+        if psk.is_empty() {
+            return Err(HpkeError::InvalidPsk);
+        }
+
+        // Authenticated encapsulate
+        let (shared_secret, enc) = DhkemX25519::auth_encap(pk_r, sk_s, rng)?;
+
+        // Create context with PSK
+        let context =
+            HpkeContext::new(self.suite, &shared_secret, info, psk, psk_id, Mode::AuthPsk)?;
+
+        Ok((enc, context))
+    }
+
+    /// Setup recipient context in AuthPSK mode
+    pub fn setup_auth_psk_recipient(
+        &self,
+        enc: &[u8],
+        sk_r: &[u8],
+        info: &[u8],
+        psk: &[u8],
+        psk_id: &[u8],
+        pk_s: &[u8],
+    ) -> Result<HpkeContext> {
+        if psk.is_empty() {
+            return Err(HpkeError::InvalidPsk);
+        }
+
+        // Authenticated decapsulate
+        let shared_secret = DhkemX25519::auth_decap(enc, sk_r, pk_s)?;
+
+        // Create context with PSK
+        HpkeContext::new(self.suite, &shared_secret, info, psk, psk_id, Mode::AuthPsk)
+    }
+
+    // ========== SINGLE-SHOT API ==========
+
+    /// Single-shot encryption in base mode
+    pub fn seal_base<R: rand::Rng>(
+        &self,
+        pk_r: &[u8],
+        info: &[u8],
+        aad: &[u8],
+        plaintext: &[u8],
+        rng: &mut R,
+    ) -> Result<Vec<u8>> {
+        let (enc, mut context) = self.setup_base_sender(pk_r, info, rng)?;
+        let ciphertext = context.seal(aad, plaintext)?;
+
+        // Return enc || ciphertext
+        let mut output = enc;
+        output.extend_from_slice(&ciphertext);
+        Ok(output)
+    }
+
+    /// Single-shot decryption in base mode
+    pub fn open_base(
+        &self,
+        enc_and_ciphertext: &[u8],
+        sk_r: &[u8],
+        info: &[u8],
+        aad: &[u8],
+    ) -> Result<Vec<u8>> {
+        let nenc = self.suite.kem.nenc();
+        if enc_and_ciphertext.len() < nenc {
+            return Err(HpkeError::InvalidCiphertext);
+        }
+
+        let enc = &enc_and_ciphertext[..nenc];
+        let ciphertext = &enc_and_ciphertext[nenc..];
+
+        let mut context = self.setup_base_recipient(enc, sk_r, info)?;
+        context.open(aad, ciphertext)
+    }
+}
+
+impl Default for HpkeX25519 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -487,5 +874,132 @@ mod tests {
         // Both should derive the same secret
         assert_eq!(sender_export, recipient_export);
         assert_eq!(sender_export.len(), 32);
+    }
+
+    // ========== X25519 Tests ==========
+
+    #[test]
+    fn test_hpke_x25519_base_mode() {
+        let mut rng = thread_rng();
+        let hpke = HpkeX25519::new();
+
+        // Generate recipient keypair
+        let (sk_r, pk_r) = HpkeX25519::generate_keypair(&mut rng).unwrap();
+
+        // Verify key sizes
+        assert_eq!(sk_r.len(), 32);
+        assert_eq!(pk_r.len(), 32);
+
+        let info = b"test info";
+        let aad = b"associated data";
+        let plaintext = b"secret message";
+
+        // Sender setup
+        let (enc, mut sender_ctx) = hpke.setup_base_sender(&pk_r, info, &mut rng).unwrap();
+        assert_eq!(enc.len(), 32); // X25519 public key size
+
+        // Encrypt
+        let ciphertext = sender_ctx.seal(aad, plaintext).unwrap();
+
+        // Recipient setup
+        let mut recipient_ctx = hpke.setup_base_recipient(&enc, &sk_r, info).unwrap();
+
+        // Decrypt
+        let decrypted = recipient_ctx.open(aad, &ciphertext).unwrap();
+
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_hpke_x25519_auth_mode() {
+        let mut rng = thread_rng();
+        let hpke = HpkeX25519::new();
+
+        // Generate keypairs
+        let (sk_r, pk_r) = HpkeX25519::generate_keypair(&mut rng).unwrap();
+        let (sk_s, pk_s) = HpkeX25519::generate_keypair(&mut rng).unwrap();
+
+        let info = b"test info";
+        let aad = b"associated data";
+        let plaintext = b"secret message";
+
+        // Sender setup with authentication
+        let (enc, mut sender_ctx) = hpke
+            .setup_auth_sender(&pk_r, info, &sk_s, &mut rng)
+            .unwrap();
+
+        // Encrypt
+        let ciphertext = sender_ctx.seal(aad, plaintext).unwrap();
+
+        // Recipient setup with sender's public key
+        let mut recipient_ctx = hpke.setup_auth_recipient(&enc, &sk_r, info, &pk_s).unwrap();
+
+        // Decrypt
+        let decrypted = recipient_ctx.open(aad, &ciphertext).unwrap();
+
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_hpke_x25519_single_shot() {
+        let mut rng = thread_rng();
+        let hpke = HpkeX25519::new();
+
+        let (sk_r, pk_r) = HpkeX25519::generate_keypair(&mut rng).unwrap();
+
+        let info = b"app context";
+        let aad = b"metadata";
+        let plaintext = b"confidential data";
+
+        // Single-shot seal
+        let enc_and_ct = hpke
+            .seal_base(&pk_r, info, aad, plaintext, &mut rng)
+            .unwrap();
+
+        // Single-shot open
+        let decrypted = hpke.open_base(&enc_and_ct, &sk_r, info, aad).unwrap();
+
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_hpke_x25519_with_chacha() {
+        let mut rng = thread_rng();
+        let hpke = HpkeX25519::with_chacha();
+
+        let (sk_r, pk_r) = HpkeX25519::generate_keypair(&mut rng).unwrap();
+
+        let info = b"test";
+        let aad = b"aad";
+        let plaintext = b"message";
+
+        let (enc, mut sender_ctx) = hpke.setup_base_sender(&pk_r, info, &mut rng).unwrap();
+        let ciphertext = sender_ctx.seal(aad, plaintext).unwrap();
+
+        let mut recipient_ctx = hpke.setup_base_recipient(&enc, &sk_r, info).unwrap();
+        let decrypted = recipient_ctx.open(aad, &ciphertext).unwrap();
+
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_hpke_x25519_multiple_messages() {
+        let mut rng = thread_rng();
+        let hpke = HpkeX25519::new();
+
+        let (sk_r, pk_r) = HpkeX25519::generate_keypair(&mut rng).unwrap();
+        let info = b"session";
+
+        // Setup contexts
+        let (enc, mut sender_ctx) = hpke.setup_base_sender(&pk_r, info, &mut rng).unwrap();
+        let mut recipient_ctx = hpke.setup_base_recipient(&enc, &sk_r, info).unwrap();
+
+        // Send multiple messages
+        for i in 0..5 {
+            let msg = format!("Message {}", i);
+            let ct = sender_ctx.seal(&[], msg.as_bytes()).unwrap();
+            let pt = recipient_ctx.open(&[], &ct).unwrap();
+            assert_eq!(pt, msg.as_bytes());
+        }
     }
 }

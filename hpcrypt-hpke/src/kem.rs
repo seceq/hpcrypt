@@ -397,6 +397,236 @@ impl Kem for DhkemP256 {
     }
 }
 
+/// DHKEM for X25519 curve with HKDF-SHA256
+///
+/// Implements DHKEM(X25519, HKDF-SHA256) as specified in RFC 9180 Section 7.1.
+///
+/// This KEM provides:
+/// - Algorithm ID: 0x0020
+/// - Nenc: 32 bytes (X25519 public key)
+/// - Npk: 32 bytes (X25519 public key)
+/// - Nsk: 32 bytes (X25519 secret key)
+/// - Nsecret: 32 bytes (shared secret output)
+///
+/// X25519 offers several advantages over NIST curves:
+/// - Simpler key format (32 bytes vs 65 bytes for uncompressed P-256)
+/// - Constant-time operations by design
+/// - Widely supported and battle-tested
+/// - Excellent performance characteristics
+///
+/// # Security Properties
+///
+/// - IND-CCA2 secure when used with HKDF-SHA256
+/// - Forward secrecy through ephemeral key generation
+/// - Constant-time DH operations (timing-attack resistant)
+/// - Low-order point rejection built into X25519
+///
+/// # Example
+///
+/// ```
+/// use hpcrypt_hpke::{DhkemX25519, Kem};
+/// use rand::thread_rng;
+///
+/// let mut rng = thread_rng();
+///
+/// // Generate recipient keypair
+/// let (sk_r, pk_r) = DhkemX25519::generate_keypair(&mut rng).unwrap();
+///
+/// // Encapsulate: sender generates shared secret
+/// let (shared_secret_sender, enc) = DhkemX25519::encap(&pk_r, &mut rng).unwrap();
+///
+/// // Decapsulate: recipient derives same shared secret
+/// let shared_secret_recipient = DhkemX25519::decap(&enc, &sk_r).unwrap();
+///
+/// assert_eq!(shared_secret_sender, shared_secret_recipient);
+/// ```
+pub struct DhkemX25519;
+
+impl DhkemX25519 {
+    const KEM_ID: KemId = KemId::DhkemX25519HkdfSha256;
+
+    /// Hash function (SHA-256) used for KDF operations
+    fn hash(data: &[u8]) -> Vec<u8> {
+        sha256(data).to_vec()
+    }
+
+    /// Perform X25519 Diffie-Hellman operation
+    ///
+    /// Computes the shared secret from a secret key and public key.
+    /// This is a constant-time operation that includes low-order point checks.
+    ///
+    /// # Arguments
+    ///
+    /// * `sk` - Secret key (32 bytes)
+    /// * `pk` - Public key (32 bytes)
+    ///
+    /// # Returns
+    ///
+    /// The DH shared secret (32 bytes) or an error if keys are invalid
+    ///
+    /// # Errors
+    ///
+    /// - `InvalidSecretKey` if secret key length is not 32 bytes
+    /// - `InvalidPublicKey` if public key length is not 32 bytes or represents identity/low-order point
+    fn dh(sk: &[u8], pk: &[u8]) -> Result<Vec<u8>> {
+        use hpcrypt_curves::x25519::X25519;
+
+        // Validate and parse secret key
+        if sk.len() != 32 {
+            return Err(HpkeError::InvalidSecretKey);
+        }
+        let mut sk_bytes = [0u8; 32];
+        sk_bytes.copy_from_slice(sk);
+
+        // Validate and parse public key
+        if pk.len() != 32 {
+            return Err(HpkeError::InvalidPublicKey);
+        }
+        let mut pk_bytes = [0u8; 32];
+        pk_bytes.copy_from_slice(pk);
+
+        // Perform X25519 DH operation with automatic clamping and low-order point rejection
+        let shared_secret = X25519::shared_secret(&sk_bytes, &pk_bytes)
+            .map_err(|_| HpkeError::InvalidPublicKey)?;
+
+        Ok(shared_secret.to_vec())
+    }
+}
+
+impl Kem for DhkemX25519 {
+    fn generate_keypair<R: rand::Rng>(rng: &mut R) -> Result<(Vec<u8>, Vec<u8>)> {
+        use hpcrypt_curves::x25519::X25519;
+
+        // Generate random secret key
+        let mut sk_bytes = [0u8; 32];
+        rng.fill(&mut sk_bytes[..]);
+
+        // Compute public key
+        let pk_bytes = X25519::public_key(&sk_bytes);
+
+        Ok((sk_bytes.to_vec(), pk_bytes.to_vec()))
+    }
+
+    fn encap<R: rand::Rng>(pk_r: &[u8], rng: &mut R) -> Result<(Vec<u8>, Vec<u8>)> {
+        // Generate ephemeral keypair
+        let (sk_e, pk_e) = Self::generate_keypair(rng)?;
+
+        // Compute DH shared secret
+        let dh_output = Self::dh(&sk_e, pk_r)?;
+
+        // kem_context = enc || pkR
+        let mut kem_context = Vec::new();
+        kem_context.extend_from_slice(&pk_e);
+        kem_context.extend_from_slice(pk_r);
+
+        // Derive shared secret
+        let shared_secret = extract_and_expand(Self::KEM_ID, &dh_output, &kem_context, Self::hash);
+
+        Ok((shared_secret, pk_e))
+    }
+
+    fn decap(enc: &[u8], sk_r: &[u8]) -> Result<Vec<u8>> {
+        // Validate encapsulated key length
+        if enc.len() != Self::KEM_ID.nenc() {
+            return Err(HpkeError::InvalidCiphertext);
+        }
+
+        // Derive recipient's public key for kem_context
+        use hpcrypt_curves::x25519::X25519;
+
+        let mut sk_bytes = [0u8; 32];
+        sk_bytes.copy_from_slice(sk_r);
+
+        let pk_r = X25519::public_key(&sk_bytes);
+
+        // Compute DH shared secret
+        let dh_output = Self::dh(sk_r, enc)?;
+
+        // kem_context = enc || pkR
+        let mut kem_context = Vec::new();
+        kem_context.extend_from_slice(enc);
+        kem_context.extend_from_slice(&pk_r);
+
+        // Derive shared secret
+        let shared_secret = extract_and_expand(Self::KEM_ID, &dh_output, &kem_context, Self::hash);
+
+        Ok(shared_secret)
+    }
+
+    fn auth_encap<R: rand::Rng>(
+        pk_r: &[u8],
+        sk_s: &[u8],
+        rng: &mut R,
+    ) -> Result<(Vec<u8>, Vec<u8>)> {
+        // Generate ephemeral keypair
+        let (sk_e, pk_e) = Self::generate_keypair(rng)?;
+
+        // Compute two DH operations: DH(skE, pkR) and DH(skS, pkR)
+        let dh_er = Self::dh(&sk_e, pk_r)?;
+        let dh_sr = Self::dh(sk_s, pk_r)?;
+
+        // Concatenate DH outputs
+        let mut dh_output = Vec::new();
+        dh_output.extend_from_slice(&dh_er);
+        dh_output.extend_from_slice(&dh_sr);
+
+        // Derive sender's public key for kem_context
+        use hpcrypt_curves::x25519::X25519;
+
+        let mut sk_s_bytes = [0u8; 32];
+        sk_s_bytes.copy_from_slice(sk_s);
+        let pk_s = X25519::public_key(&sk_s_bytes);
+
+        // kem_context = enc || pkR || pkS
+        let mut kem_context = Vec::new();
+        kem_context.extend_from_slice(&pk_e);
+        kem_context.extend_from_slice(pk_r);
+        kem_context.extend_from_slice(&pk_s);
+
+        // Derive shared secret
+        let shared_secret = extract_and_expand(Self::KEM_ID, &dh_output, &kem_context, Self::hash);
+
+        Ok((shared_secret, pk_e))
+    }
+
+    fn auth_decap(enc: &[u8], sk_r: &[u8], pk_s: &[u8]) -> Result<Vec<u8>> {
+        // Validate inputs
+        if enc.len() != Self::KEM_ID.nenc() {
+            return Err(HpkeError::InvalidCiphertext);
+        }
+        if pk_s.len() != Self::KEM_ID.npk() {
+            return Err(HpkeError::InvalidPublicKey);
+        }
+
+        // Derive recipient's public key for kem_context
+        use hpcrypt_curves::x25519::X25519;
+
+        let mut sk_bytes = [0u8; 32];
+        sk_bytes.copy_from_slice(sk_r);
+        let pk_r = X25519::public_key(&sk_bytes);
+
+        // Compute two DH operations: DH(skR, enc) and DH(skR, pkS)
+        let dh_re = Self::dh(sk_r, enc)?;
+        let dh_rs = Self::dh(sk_r, pk_s)?;
+
+        // Concatenate DH outputs
+        let mut dh_output = Vec::new();
+        dh_output.extend_from_slice(&dh_re);
+        dh_output.extend_from_slice(&dh_rs);
+
+        // kem_context = enc || pkR || pkS
+        let mut kem_context = Vec::new();
+        kem_context.extend_from_slice(enc);
+        kem_context.extend_from_slice(&pk_r);
+        kem_context.extend_from_slice(pk_s);
+
+        // Derive shared secret
+        let shared_secret = extract_and_expand(Self::KEM_ID, &dh_output, &kem_context, Self::hash);
+
+        Ok(shared_secret)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -437,5 +667,82 @@ mod tests {
         // Shared secrets should match
         assert_eq!(shared_secret_sender, shared_secret_recipient);
         assert_eq!(shared_secret_sender.len(), 32); // Nsecret for P-256
+    }
+
+    #[test]
+    fn test_x25519_kem_encap_decap() {
+        let mut rng = thread_rng();
+
+        // Generate recipient keypair
+        let (sk_r, pk_r) = DhkemX25519::generate_keypair(&mut rng).unwrap();
+
+        // Validate key sizes
+        assert_eq!(sk_r.len(), 32);
+        assert_eq!(pk_r.len(), 32);
+
+        // Encapsulate
+        let (shared_secret_sender, enc) = DhkemX25519::encap(&pk_r, &mut rng).unwrap();
+
+        // Validate sizes
+        assert_eq!(enc.len(), 32); // Nenc for X25519
+        assert_eq!(shared_secret_sender.len(), 32); // Nsecret for X25519
+
+        // Decapsulate
+        let shared_secret_recipient = DhkemX25519::decap(&enc, &sk_r).unwrap();
+
+        // Shared secrets should match
+        assert_eq!(shared_secret_sender, shared_secret_recipient);
+    }
+
+    #[test]
+    fn test_x25519_kem_auth_encap_decap() {
+        let mut rng = thread_rng();
+
+        // Generate keypairs
+        let (sk_r, pk_r) = DhkemX25519::generate_keypair(&mut rng).unwrap();
+        let (sk_s, pk_s) = DhkemX25519::generate_keypair(&mut rng).unwrap();
+
+        // Authenticated encapsulate
+        let (shared_secret_sender, enc) = DhkemX25519::auth_encap(&pk_r, &sk_s, &mut rng).unwrap();
+
+        // Validate sizes
+        assert_eq!(enc.len(), 32);
+        assert_eq!(shared_secret_sender.len(), 32);
+
+        // Authenticated decapsulate
+        let shared_secret_recipient = DhkemX25519::auth_decap(&enc, &sk_r, &pk_s).unwrap();
+
+        // Shared secrets should match
+        assert_eq!(shared_secret_sender, shared_secret_recipient);
+    }
+
+    #[test]
+    fn test_x25519_kem_invalid_public_key() {
+        let mut rng = thread_rng();
+
+        // Generate a valid keypair
+        let (sk_r, _) = DhkemX25519::generate_keypair(&mut rng).unwrap();
+
+        // Try to encapsulate with invalid public key (wrong size)
+        let invalid_pk = vec![0u8; 16]; // Wrong size
+        let result = DhkemX25519::encap(&invalid_pk, &mut rng);
+        assert!(result.is_err());
+
+        // Try to decapsulate with invalid enc (wrong size)
+        let invalid_enc = vec![0u8; 16];
+        let result = DhkemX25519::decap(&invalid_enc, &sk_r);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_x25519_kem_deterministic_public_key() {
+        // Same secret key should always produce same public key
+        let sk = [42u8; 32];
+
+        use hpcrypt_curves::x25519::X25519;
+        let pk1 = X25519::public_key(&sk);
+        let pk2 = X25519::public_key(&sk);
+
+        assert_eq!(pk1, pk2);
     }
 }
