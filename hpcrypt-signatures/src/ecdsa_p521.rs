@@ -31,8 +31,8 @@ use hpcrypt_core::error::CurveError;
 use hpcrypt_curves::p521::{Point, Scalar};
 // Note: generator_mul disabled due to potential precomputed table bug (similar to P-384 issue)
 use hpcrypt_curves::ct_utils::ConstantTimeEq;
+use hpcrypt_hash::hmac::HmacSha512;
 use hpcrypt_hash::sha512::Sha512;
-use hpcrypt_mac::HmacSha512;
 
 /// ECDSA-P521 signature (r, s) components
 ///
@@ -56,7 +56,7 @@ impl Signature {
     /// Returns a variable-length byte array in DER format.
     /// Maximum size is 141 bytes for P-521 (66-byte integers).
     ///
-    /// Format: 0x30 \[total-len\] 0x02 \[r-len\] \[r\] 0x02 \[s-len\] \[s\]
+    /// Format: 0x30 [total-len] 0x02 [r-len] [r] 0x02 [s-len] [s]
     pub fn to_der(&self) -> ([u8; 141], usize) {
         let mut der = [0u8; 141];
         let mut pos = 0;
