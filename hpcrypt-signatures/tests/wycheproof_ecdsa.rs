@@ -8,7 +8,7 @@
 //! - FIPS 186-4
 //! - SEC 1: Elliptic Curve Cryptography
 
-use hpcrypt_signatures::ecdsa::{Signature, VerifyingKey};
+use hpcrypt_signatures::ecdsa_p256::{Signature, VerifyingKey};
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -327,7 +327,7 @@ fn wycheproof_ecdsa_secp256k1_sha256() {
 // Test for handling of edge cases
 #[test]
 fn ecdsa_edge_cases() {
-    use hpcrypt_signatures::ecdsa::{Signature, VerifyingKey};
+    use hpcrypt_signatures::ecdsa_p256::{Signature, VerifyingKey};
 
     // Test vectors from Wycheproof showcase common edge cases
 

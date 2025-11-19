@@ -12,7 +12,7 @@
 //! # Example
 //!
 //! ```ignore
-//! use hpcrypt_signatures::ecdsa::{SigningKey, VerifyingKey, Signature};
+//! use hpcrypt_signatures::ecdsa_p256::{SigningKey, VerifyingKey, Signature};
 //!
 //! // Generate key pair
 //! let signing_key = SigningKey::generate();
@@ -287,7 +287,7 @@ impl SigningKey {
     /// # Example
     ///
     /// ```ignore
-    /// use hpcrypt_signatures::ecdsa::SigningKey;
+    /// use hpcrypt_signatures::ecdsa_p256::SigningKey;
     ///
     /// let signing_key = SigningKey::generate().expect("RNG failure");
     /// let verifying_key = signing_key.verifying_key();

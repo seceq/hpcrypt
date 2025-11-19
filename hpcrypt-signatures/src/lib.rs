@@ -15,26 +15,19 @@
 //! ## ECDSA P-256 Signature
 //!
 //! ```ignore
-//! use hpcrypt_signatures::ecdsa::Ecdsa;
-//! use hpcrypt_curves::p256::{Scalar, Point};
+//! use hpcrypt_signatures::ecdsa_p256::{SigningKey, VerifyingKey};
 //!
 //! # fn main() {
-//! // Generate keypair (use hpcrypt-rng in production)
-//! let private_key = Scalar::from_bytes(&[1u8; 32]);
-//! let public_key = Point::generator().scalar_mul(&private_key);
+//! // Generate a signing key
+//! let signing_key = SigningKey::generate().expect("RNG failure");
+//! let verifying_key = signing_key.verifying_key();
 //!
-//! // Hash your message first (e.g., with SHA-256)
-//! let message_hash = [0u8; 32];
-//!
-//! // Generate deterministic nonce (RFC 6979 recommended)
-//! let k = Scalar::from_bytes(&[2u8; 32]);
-//!
-//! // Sign the message hash
-//! let signature = Ecdsa::sign(&private_key, &message_hash, &k);
+//! // Sign a message
+//! let message = b"Hello, world!";
+//! let signature = signing_key.sign(message);
 //!
 //! // Verify the signature
-//! let is_valid = Ecdsa::verify(&public_key, &message_hash, &signature);
-//! assert!(is_valid);
+//! assert!(verifying_key.verify(message, &signature));
 //! # }
 //! ```
 //!
@@ -141,7 +134,7 @@ extern crate std;
 //extern crate alloc;
 
 /// ECDSA signatures for NIST P-256
-pub mod ecdsa;
+pub mod ecdsa_p256;
 /// ECDSA signatures for NIST P-384
 pub mod ecdsa_p384;
 /// ECDSA signatures for NIST P-521
