@@ -41,6 +41,9 @@ pub enum RsaError {
     /// Random number generation failed
     RngError,
 
+    /// Invalid DER encoding
+    InvalidDerEncoding,
+
     /// Internal error
     InternalError,
 }
@@ -59,6 +62,7 @@ impl fmt::Display for RsaError {
             RsaError::InvalidSignature => write!(f, "Invalid signature format"),
             RsaError::InvalidLabel => write!(f, "Invalid label for OAEP"),
             RsaError::RngError => write!(f, "Random number generation failed"),
+            RsaError::InvalidDerEncoding => write!(f, "Invalid DER encoding"),
             RsaError::InternalError => write!(f, "Internal RSA error"),
         }
     }

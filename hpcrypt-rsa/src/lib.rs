@@ -100,7 +100,12 @@ mod private_key;
 pub mod pss;
 mod public_key;
 
+/// ASN.1 DER encoding and decoding for RSA keys (PKCS#1)
+#[cfg(feature = "alloc")]
+pub mod der;
+
 pub use error::{Result, RsaError};
+pub use keygen::generate_keypair_default;
 pub use private_key::RsaPrivateKey;
 pub use public_key::RsaPublicKey;
 

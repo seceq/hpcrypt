@@ -83,6 +83,13 @@ pub mod msm;
 /// operations like signature verification.
 pub mod batch;
 
+/// Elliptic Curve Diffie-Hellman (ECDH) for P-256.
+///
+/// This module provides P-256 ECDH key exchange as specified in NIST SP 800-56A.
+/// While X25519 is generally preferred for new applications, P-256 ECDH is useful
+/// for compatibility with existing systems and NIST compliance requirements.
+pub mod ecdh;
+
 pub use batch::batch_invert;
 pub use constants::{P256_A, P256_B, P256_GX, P256_GY, P256_MODULUS, P256_ORDER};
 pub use field::FieldElement;

@@ -192,6 +192,72 @@ impl RsaPrivateKey {
         self.public_key.size_bytes()
     }
 
+    /// Serialize the private key to PKCS#1 DER format
+    ///
+    /// Returns a DER-encoded RSAPrivateKey structure as defined in RFC 8017:
+    ///
+    /// ```text
+    /// RSAPrivateKey ::= SEQUENCE {
+    ///     version           Version (0),
+    ///     modulus           INTEGER,  -- n
+    ///     publicExponent    INTEGER,  -- e
+    ///     privateExponent   INTEGER,  -- d
+    ///     prime1            INTEGER,  -- p
+    ///     prime2            INTEGER,  -- q
+    ///     exponent1         INTEGER,  -- d mod (p-1)
+    ///     exponent2         INTEGER,  -- d mod (q-1)
+    ///     coefficient       INTEGER   -- (inverse of q) mod p
+    /// }
+    /// ```
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use hpcrypt_rsa::RsaPrivateKey;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let private_key = RsaPrivateKey::generate(2048)?;
+    ///
+    /// // Serialize to DER
+    /// let der_bytes = private_key.to_der_pkcs1();
+    ///
+    /// // Deserialize back
+    /// let recovered_key = RsaPrivateKey::from_der_pkcs1(&der_bytes)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "alloc")]
+    pub fn to_der_pkcs1(&self) -> Vec<u8> {
+        crate::der::encode_private_key_pkcs1(self)
+    }
+
+    /// Deserialize a private key from PKCS#1 DER format
+    ///
+    /// Parses a DER-encoded RSAPrivateKey structure as defined in RFC 8017.
+    ///
+    /// # Errors
+    ///
+    /// Returns `RsaError::InvalidDerEncoding` if the DER encoding is invalid.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use hpcrypt_rsa::RsaPrivateKey;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let private_key = RsaPrivateKey::generate(2048)?;
+    ///
+    /// // Round-trip test
+    /// let der_bytes = private_key.to_der_pkcs1();
+    /// let recovered_key = RsaPrivateKey::from_der_pkcs1(&der_bytes)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "alloc")]
+    pub fn from_der_pkcs1(der: &[u8]) -> Result<Self> {
+        crate::der::decode_private_key_pkcs1(der)
+    }
+
     /// Decrypt a ciphertext using RSADP primitive
     ///
     /// This is a low-level operation. For actual decryption, use RSA-OAEP.

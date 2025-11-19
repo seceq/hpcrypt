@@ -61,6 +61,69 @@ impl RsaPublicKey {
         self.n.bits() as usize
     }
 
+    /// Serialize the public key to PKCS#1 DER format
+    ///
+    /// Returns a DER-encoded RSAPublicKey structure as defined in RFC 8017:
+    ///
+    /// ```text
+    /// RSAPublicKey ::= SEQUENCE {
+    ///     modulus           INTEGER,  -- n
+    ///     publicExponent    INTEGER   -- e
+    /// }
+    /// ```
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use hpcrypt_rsa::{RsaPublicKey, keygen::generate_keypair_default};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let (n, e, _d, _p, _q, _dp, _dq, _qinv) = generate_keypair_default(2048)?;
+    /// let public_key = RsaPublicKey::new(n, e)?;
+    ///
+    /// // Serialize to DER
+    /// let der_bytes = public_key.to_der_pkcs1();
+    ///
+    /// // Deserialize back
+    /// let recovered_key = RsaPublicKey::from_der_pkcs1(&der_bytes)?;
+    /// assert_eq!(public_key, recovered_key);
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "alloc")]
+    pub fn to_der_pkcs1(&self) -> Vec<u8> {
+        crate::der::encode_public_key_pkcs1(self)
+    }
+
+    /// Deserialize a public key from PKCS#1 DER format
+    ///
+    /// Parses a DER-encoded RSAPublicKey structure as defined in RFC 8017.
+    ///
+    /// # Errors
+    ///
+    /// Returns `RsaError::InvalidDerEncoding` if the DER encoding is invalid.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use hpcrypt_rsa::{RsaPublicKey, keygen::generate_keypair_default};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let (n, e, _d, _p, _q, _dp, _dq, _qinv) = generate_keypair_default(2048)?;
+    /// let public_key = RsaPublicKey::new(n, e)?;
+    ///
+    /// // Round-trip test
+    /// let der_bytes = public_key.to_der_pkcs1();
+    /// let recovered_key = RsaPublicKey::from_der_pkcs1(&der_bytes)?;
+    /// assert_eq!(public_key, recovered_key);
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "alloc")]
+    pub fn from_der_pkcs1(der: &[u8]) -> Result<Self> {
+        crate::der::decode_public_key_pkcs1(der)
+    }
+
     /// Get the key size in bytes
     pub fn size_bytes(&self) -> usize {
         (self.size() + 7) / 8
