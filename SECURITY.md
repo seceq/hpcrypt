@@ -10,7 +10,7 @@ The HPCrypt team takes security vulnerabilities seriously. We appreciate your ef
 
 Instead, please report security vulnerabilities by email to:
 
-**security@[your-domain].com** (TODO: Replace with actual security contact email)
+**contact@seceq.com**
 
 You should receive a response within 48 hours. If for some reason you do not, please follow up to ensure we received your original message.
 
