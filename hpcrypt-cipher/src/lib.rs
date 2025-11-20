@@ -185,7 +185,7 @@ pub mod aes_modes;
 
 // Re-exports - Block ciphers
 pub use aes::{Aes, AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, BLOCK_SIZE};
-pub use chacha20::ChaCha20;
+pub use chacha20::{ChaCha20, XChaCha20};
 
 // Re-exports - Cipher modes
 pub use aes_modes::{

@@ -20,8 +20,29 @@ num-integer = { version = "0.1", default-features = false }
 
 [dev-dependencies]
 hex-literal = { workspace = true }
+criterion = { workspace = true }
 
 [features]
 default = ["std", "alloc"]
 std = ["hpcrypt-core/std", "alloc"]
 alloc = ["hpcrypt-core/alloc"]
+
+[[bench]]
+name = "chacha20_bench"
+harness = false
+
+[[bench]]
+name = "write_u32_comparison"
+harness = false
+
+[[bench]]
+name = "write_u32_all_variants"
+harness = false
+
+[[bench]]
+name = "write_u32_focused"
+harness = false
+
+[[bench]]
+name = "xor_comparison"
+harness = false
