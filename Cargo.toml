@@ -21,6 +21,7 @@ members = [
     "hpcrypt-rsa",
     "hpcrypt-threshold",
     "hpcrypt-srp",
+    "tests/wycheproof-tests",  # Wycheproof integration tests
 ]
 
 [workspace.package]

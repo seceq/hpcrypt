@@ -1,0 +1,101 @@
+[package]
+name = "wycheproof-tests"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+# Workspace dependencies for testing
+serde = { workspace = true }
+serde_json = { workspace = true }
+hex = { workspace = true }
+
+# HPCrypt crates to test (optional, enabled via features)
+hpcrypt-aead = { workspace = true, features = ["std"], optional = true }
+hpcrypt-signatures = { workspace = true, features = ["std"], optional = true }
+hpcrypt-rsa = { workspace = true, features = ["std"], optional = true }
+hpcrypt-mac = { workspace = true, features = ["std"], optional = true }
+hpcrypt-cipher = { workspace = true, features = ["std"], optional = true }
+hpcrypt-kdf = { workspace = true, features = ["std"], optional = true }
+hpcrypt-curves = { workspace = true, features = ["std"], optional = true }
+hpcrypt-fpe = { workspace = true, features = ["std"], optional = true }
+hpcrypt-mlkem = { workspace = true, features = ["std"], optional = true }
+hpcrypt-mldsa = { workspace = true, features = ["std"], optional = true }
+
+[features]
+default = []
+enable-aead-tests = ["hpcrypt-aead"]
+enable-signature-tests = ["hpcrypt-signatures", "hpcrypt-curves"]
+enable-rsa-tests = ["hpcrypt-rsa"]
+enable-mac-tests = ["hpcrypt-mac"]
+enable-cipher-tests = ["hpcrypt-cipher"]
+enable-kdf-tests = ["hpcrypt-kdf"]
+enable-fpe-tests = ["hpcrypt-fpe"]
+enable-pqc-tests = ["hpcrypt-mlkem", "hpcrypt-mldsa"]
+# Enable all actual implementation tests
+enable-all-tests = [
+    "enable-aead-tests",
+    "enable-signature-tests",
+    "enable-rsa-tests",
+    "enable-mac-tests",
+    "enable-cipher-tests",
+    "enable-kdf-tests",
+    "enable-fpe-tests",
+    "enable-pqc-tests",
+]
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "aead"
+path = "tests/aead.rs"
+
+[[test]]
+name = "ecdsa"
+path = "tests/ecdsa.rs"
+
+[[test]]
+name = "rsa"
+path = "tests/rsa.rs"
+
+[[test]]
+name = "hmac"
+path = "tests/hmac.rs"
+
+[[test]]
+name = "ecdh"
+path = "tests/ecdh.rs"
+
+[[test]]
+name = "x25519"
+path = "tests/x25519.rs"
+
+[[test]]
+name = "mac"
+path = "tests/mac.rs"
+
+[[test]]
+name = "ed25519"
+path = "tests/ed25519.rs"
+
+[[test]]
+name = "kdf"
+path = "tests/kdf.rs"
+
+[[test]]
+name = "cipher"
+path = "tests/cipher.rs"
+
+[[test]]
+name = "fpe"
+path = "tests/fpe.rs"
+
+[[test]]
+name = "mlkem"
+path = "tests/mlkem.rs"
+
+[[test]]
+name = "mldsa"
+path = "tests/mldsa.rs"
