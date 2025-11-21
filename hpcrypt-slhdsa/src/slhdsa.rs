@@ -211,6 +211,57 @@ impl<P: ParameterSet> KeyPair<P> {
             public_key,
         }
     }
+
+    /// Create a keypair from explicit seed components (for CAVP testing).
+    ///
+    /// This function is feature-gated for CAVP testing only and should NOT be used
+    /// in production code. It allows deterministic key generation from specific seed
+    /// values as required by NIST test vectors.
+    ///
+    /// # Arguments
+    ///
+    /// * `sk_seed` - Secret seed (N bytes)
+    /// * `sk_prf` - PRF key (N bytes)
+    /// * `pk_seed` - Public seed (N bytes)
+    ///
+    /// # Returns
+    ///
+    /// Complete keypair with computed public key root
+    ///
+    /// # Errors
+    ///
+    /// Returns error if any seed has incorrect length (must be N bytes)
+    #[cfg(feature = "cavp")]
+    pub fn from_seed_components(
+        sk_seed: &[u8],
+        sk_prf: &[u8],
+        pk_seed: &[u8],
+    ) -> Result<Self, &'static str> {
+        if sk_seed.len() != P::N || sk_prf.len() != P::N || pk_seed.len() != P::N {
+            return Err("Invalid seed length: all seeds must be N bytes");
+        }
+
+        // Convert to owned vectors
+        let sk_seed = sk_seed.to_vec();
+        let sk_prf = sk_prf.to_vec();
+        let pk_seed = pk_seed.to_vec();
+
+        // Compute public key root (same logic as generate())
+        let mut pk_root = vec![0u8; P::N];
+        let mut addr = Address::new();
+
+        with_hash!(P::N, P::HASH_TYPE, hash, {
+            ht_pk_gen::<P, _>(&sk_seed, &pk_seed, &mut addr, &hash, &mut pk_root);
+        });
+
+        let secret_key = SecretKey::new(sk_seed, sk_prf, pk_seed.clone());
+        let public_key = PublicKey::new(pk_seed, pk_root);
+
+        Ok(KeyPair {
+            secret_key,
+            public_key,
+        })
+    }
 }
 
 /// Sign a message using SLH-DSA.
@@ -338,6 +389,112 @@ pub fn sign<P: ParameterSet>(secret_key: &SecretKey<P>, message: &[u8]) -> Vec<u
             signature
         }
     }
+}
+
+/// Sign a message with explicit optRand (for CAVP testing).
+///
+/// This function is feature-gated for CAVP testing only and should NOT be used
+/// in production code. It allows deterministic or randomized signing with explicit
+/// control over the optRand value.
+///
+/// # Arguments
+///
+/// * `secret_key` - The secret key
+/// * `message` - Message to sign
+/// * `opt_rand` - Optional randomness (Some for randomized, None for deterministic)
+///
+/// # Returns
+///
+/// Signature bytes
+///
+/// # CAVP Modes
+///
+/// - `opt_rand = None`: Pure deterministic mode (optRand is all zeros)
+/// - `opt_rand = Some(&[u8; N])`: Randomized mode with explicit optRand
+#[cfg(feature = "cavp")]
+pub fn sign_with_opt_rand<P: ParameterSet>(
+    secret_key: &SecretKey<P>,
+    message: &[u8],
+    opt_rand: Option<&[u8]>,
+) -> Result<Vec<u8>, &'static str> {
+    let mut addr = Address::new();
+
+    // Validate opt_rand length if provided
+    if let Some(rand) = opt_rand {
+        if rand.len() != P::N {
+            return Err("Invalid opt_rand length: must be N bytes");
+        }
+    }
+
+    macro_rules! sign_with_explicit_rand {
+        ($n:expr, $digest_size:expr) => {{
+            let mut opt_rand_buf = [0u8; $n];
+            let mut digest_buf = [0u8; $digest_size];
+
+            let opt_rand_slice = &mut opt_rand_buf[..P::N];
+            let digest = &mut digest_buf[..P::FORS_MSG_BYTES + 8];
+
+            let (fors_sig, _fors_pk, ht_sig) = with_hash!(P::N, P::HASH_TYPE, hash, {
+                // Use provided optRand or zeros for deterministic mode
+                if let Some(provided_rand) = opt_rand {
+                    opt_rand_slice.copy_from_slice(provided_rand);
+                } else {
+                    // Deterministic mode: optRand is all zeros
+                    opt_rand_slice.fill(0);
+                }
+
+                // Hash message
+                hash.h_msg(
+                    opt_rand_slice,
+                    secret_key.pk_seed(),
+                    secret_key.pk_seed(),
+                    message,
+                    digest,
+                );
+
+                // Extract FORS message
+                let fors_msg = &digest[..P::FORS_MSG_BYTES];
+                let tree_index = 0u64;
+
+                // Sign with FORS
+                let (fors_sig, fors_pk) = fors_sign::<P, _>(
+                    fors_msg,
+                    secret_key.sk_seed(),
+                    secret_key.pk_seed(),
+                    &mut addr,
+                    &hash,
+                );
+
+                // Sign FORS PK with hypertree
+                let ht_sig = ht_sign::<P, _>(
+                    &fors_pk,
+                    secret_key.sk_seed(),
+                    secret_key.pk_seed(),
+                    tree_index,
+                    &mut addr,
+                    &hash,
+                );
+
+                (fors_sig, fors_pk, ht_sig)
+            });
+
+            // Concatenate signature components
+            let mut signature = Vec::with_capacity(P::SIG_BYTES);
+            signature.extend_from_slice(opt_rand_slice);
+            signature.extend_from_slice(&fors_sig);
+            signature.extend_from_slice(&ht_sig);
+
+            signature
+        }};
+    }
+
+    // Match on N to select appropriate stack buffer sizes
+    Ok(match P::N {
+        16 => sign_with_explicit_rand!(16, 64),
+        24 => sign_with_explicit_rand!(24, 64),
+        32 => sign_with_explicit_rand!(32, 256),
+        _ => return Err("Unsupported parameter set size"),
+    })
 }
 
 /// Verify a signature using SLH-DSA.

@@ -69,6 +69,11 @@ pub use params::{
 
 pub use slhdsa::{sign, verify, KeyPair, PublicKey, SecretKey};
 
+/// CAVP/ACVP test API
+/// (Only available with cavp feature for validation testing)
+#[cfg(feature = "cavp")]
+pub mod test_api;
+
 #[cfg(test)]
 mod tests {
     use super::*;

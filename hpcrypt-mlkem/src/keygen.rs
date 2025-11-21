@@ -227,6 +227,49 @@ pub struct KeyPair {
 /// [`MlKem512`]: crate::MlKem512
 /// [`MlKem768`]: crate::MlKem768
 /// [`MlKem1024`]: crate::MlKem1024
+/// Internal keygen implementation with separate d and z seeds
+///
+/// This function is used by the CAVP test API which requires separate
+/// d and z values as specified in NIST test vectors.
+///
+/// # Arguments
+/// * `d` - Key generation seed (32 bytes)
+/// * `z` - Implicit rejection randomness (32 bytes)
+///
+/// # Returns
+/// ML-KEM key pair
+#[cfg(feature = "cavp")]
+pub fn ml_kem_keygen_internal<P: Params>(d: &[u8], z: &[u8]) -> KeyPair {
+    debug_assert_eq!(d.len(), 32);
+    debug_assert_eq!(z.len(), 32);
+
+    let mut d_array = [0u8; 32];
+    d_array.copy_from_slice(d);
+
+    let mut z_array = [0u8; 32];
+    z_array.copy_from_slice(z);
+
+    // 1. Generate K-PKE key pair
+    let kpke_keys = kpke_keygen::<P>(&d_array);
+
+    // 2. ek_pke = encapsulation key from K-PKE
+    let ek = kpke_keys.ek;
+
+    // 3. dk_pke = decapsulation key from K-PKE
+    let dk_pke = kpke_keys.dk;
+
+    // 4. Compute H(ek) for decapsulation key
+    let ek_hash = h(&ek);
+
+    // 6. Construct ML-KEM decapsulation key: dk = (dk_pke || ek || H(ek) || z)
+    let mut dk = dk_pke;
+    dk.extend_from_slice(&ek);
+    dk.extend_from_slice(&ek_hash);
+    dk.extend_from_slice(&z_array);
+
+    KeyPair { ek, dk }
+}
+
 pub fn ml_kem_keygen<P: Params>(d: Option<&[u8; 32]>) -> KeyPair {
     // Generate or use provided seed
     let seed = d

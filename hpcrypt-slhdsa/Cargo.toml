@@ -30,6 +30,7 @@ rand = "0.8"
 [features]
 default = ["std", "hpcrypt-rng/os-rng"]
 std = ["hpcrypt-hash/std", "hpcrypt-rng/std", "subtle/std", "zeroize/std"]
+cavp = []  # Enable CAVP/ACVP test API
 
 [profile.release]
 opt-level = 3

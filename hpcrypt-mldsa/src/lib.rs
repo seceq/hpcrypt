@@ -168,3 +168,8 @@ mod stress_tests;
 // Re-exports
 pub use batch::{sign_batch, verify_batch};
 pub use params::{DsaParams, MlDsa44, MlDsa65, MlDsa87, N, Q};
+
+/// CAVP/ACVP test API
+/// (Only available with cavp feature for validation testing)
+#[cfg(feature = "cavp")]
+pub mod test_api;

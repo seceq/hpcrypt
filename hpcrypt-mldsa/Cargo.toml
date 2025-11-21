@@ -60,3 +60,4 @@ serde = ["dep:serde", "dep:serde_arrays"]
 pem = ["dep:pem", "dep:der", "dep:spki"]
 wasm = ["hpcrypt-rng/wasm"]
 timing-tests = []
+cavp = []  # Enable CAVP/ACVP test API

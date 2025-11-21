@@ -147,6 +147,11 @@ pub use hpcrypt_rng::generate_key as random_bytes_32;
 #[cfg(all(any(test, feature = "timing-tests"), feature = "std"))]
 pub mod timing;
 
+/// CAVP/ACVP test API
+/// (Only available with cavp feature for validation testing)
+#[cfg(feature = "cavp")]
+pub mod test_api;
+
 // Re-export parameter sets
 pub use params::{MlKem1024, MlKem512, MlKem768, Params};
 

@@ -39,6 +39,7 @@ std = ["hpcrypt-hash/std"]
 timing-tests = ["std"]
 serde = ["dep:serde"]
 zeroize = ["dep:zeroize"]
+cavp = []  # Enable CAVP/ACVP test API
 
 [[bench]]
 name = "keygen"
