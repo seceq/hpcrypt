@@ -27,6 +27,19 @@ pub enum RngError {
     /// ChaCha20-DRBG requires exactly 32 bytes of seed
     InvalidSeedLength,
 
+    /// Hardware RNG not supported
+    ///
+    /// The CPU does not support RDRAND/RDSEED instructions
+    /// - RDRAND: Requires Intel Ivy Bridge (2012+) or AMD Excavator (2015+)
+    /// - RDSEED: Requires Intel Broadwell (2014+) or AMD Zen (2017+)
+    HardwareRngNotSupported,
+
+    /// Hardware RNG failed
+    ///
+    /// The RDRAND/RDSEED instruction failed to produce randomness
+    /// This is extremely rare and may indicate hardware failure
+    HardwareRngFailed,
+
     /// RNG internal error
     ///
     /// An unexpected error occurred in the RNG implementation
@@ -47,6 +60,18 @@ impl fmt::Display for RngError {
             }
             RngError::InvalidSeedLength => {
                 write!(f, "Invalid seed length - expected 32 bytes")
+            }
+            RngError::HardwareRngNotSupported => {
+                write!(
+                    f,
+                    "Hardware RNG (RDRAND/RDSEED) not supported on this CPU"
+                )
+            }
+            RngError::HardwareRngFailed => {
+                write!(
+                    f,
+                    "Hardware RNG (RDRAND/RDSEED) instruction failed - possible hardware fault"
+                )
             }
             RngError::InternalError => {
                 write!(f, "Internal RNG error")

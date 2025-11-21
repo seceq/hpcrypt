@@ -7,6 +7,7 @@
 //! # Features
 //!
 //! - **OS RNG**: Uses the operating system's cryptographically secure RNG
+//! - **Hardware RNG**: Intel RDRAND/RDSEED instruction support (optional)
 //! - **Type-safe API**: Generate keys with compile-time size checking
 //! - **No unsafe code**: 100% safe Rust
 //! - **no_std compatible**: Works in embedded environments
@@ -75,6 +76,9 @@ pub use error::{Result, RngError};
 mod os_rng;
 #[cfg(feature = "os-rng")]
 pub use os_rng::*;
+
+// DRBG module (Deterministic Random Bit Generators)
+pub mod drbg;
 
 // TODO: Implement chacha20_rng module
 // #[cfg(feature = "chacha20-rng")]

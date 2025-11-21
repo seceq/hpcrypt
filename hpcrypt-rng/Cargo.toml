@@ -20,8 +20,13 @@ zeroize = { version = "1.7", default-features = false, features = ["alloc"] }
 # For constant-time operations
 subtle = { version = "2.5", default-features = false }
 
-# ChaCha20 for DRBG (future feature, moved to future-crates)
-# hpcrypt-aead = { path = "../hpcrypt-aead", default-features = false, optional = true }
+# Intel RDRAND/RDSEED hardware RNG support
+rdrand = { version = "0.8", optional = true }
+
+# DRBG dependencies
+hpcrypt-cipher = { path = "../hpcrypt-cipher", default-features = false, optional = true }
+hpcrypt-hash = { path = "../hpcrypt-hash", default-features = false, optional = true }
+hpcrypt-mac = { path = "../hpcrypt-mac", default-features = false, optional = true }
 
 [dev-dependencies]
 # For testing randomness quality
@@ -38,9 +43,19 @@ os-rng = ["getrandom/std"]
 # WASM support
 wasm = ["getrandom/js"]
 
-# Deterministic RNG (for testing/reproducibility)
-# TODO: Implement chacha20_rng module before enabling this feature
-# chacha20-rng = ["hpcrypt-aead", "alloc"]
+# Hardware DRBG implementations
+rdrand-drbg = ["rdrand"]
+rdseed-drbg = ["rdrand"]
+
+# NIST SP 800-90A compliant DRBGs
+ctr-drbg = ["hpcrypt-cipher", "alloc"]
+hash-drbg = ["hpcrypt-hash", "alloc"]
+hmac-drbg = ["hpcrypt-mac", "alloc"]
+chacha20-drbg = ["hpcrypt-cipher", "alloc"]
+
+# Enable all DRBGs
+drbg = ["ctr-drbg", "hash-drbg", "hmac-drbg"]
+drbg-all = ["drbg", "chacha20-drbg", "rdrand-drbg", "rdseed-drbg"]
 
 [package.metadata.docs.rs]
 all-features = true
