@@ -4,7 +4,11 @@ This document describes the comprehensive testing infrastructure for the hpcrypt
 
 ## Overview
 
-HPCrypt uses [Google's Wycheproof](https://github.com/google/wycheproof) test vectors for security testing. Wycheproof contains over 80,000 test cases designed to detect common cryptographic implementation bugs and known attack vectors.
+HPCrypt uses two comprehensive test vector suites:
+
+1. **[Google's Wycheproof](https://github.com/google/wycheproof)** - Security-focused test vectors containing over 80,000 test cases designed to detect common cryptographic implementation bugs and known attack vectors.
+
+2. **[NIST CAVP/ACVP](https://github.com/usnistgov/ACVP-Server)** - Official NIST test vectors for FIPS 140 validation, including comprehensive coverage of traditional and post-quantum cryptographic algorithms.
 
 ## Test Infrastructure
 
@@ -12,20 +16,23 @@ HPCrypt uses [Google's Wycheproof](https://github.com/google/wycheproof) test ve
 
 ```
 tests/
-├── wycheproof/             # Git submodule with JSON test vectors
+├── wycheproof/             # Git submodule with Wycheproof test vectors
 │   └── testvectors_v1/     # 327 JSON files with test cases
-└── wycheproof-tests/       # Rust test infrastructure
+├── wycheproof-tests/       # Rust test infrastructure for Wycheproof
+│   ├── src/lib.rs          # Common utilities
+│   ├── tests/              # Algorithm-specific tests
+│   └── README.md           # Detailed documentation
+├── cavp-vectors/           # Git submodule with NIST ACVP-Server
+│   └── gen-val/json-files/ # 162+ algorithm directories with test vectors
+└── cavp-tests/             # Rust test infrastructure for CAVP
     ├── src/lib.rs          # Common utilities
-    ├── tests/
-    │   ├── aead.rs         # AEAD cipher tests
-    │   ├── ecdsa.rs        # ECDSA signature tests
-    │   ├── rsa.rs          # RSA tests
-    │   ├── hmac.rs         # HMAC tests
-    │   └── ecdh.rs         # ECDH key exchange tests
+    ├── tests/              # Algorithm-specific tests (to be added)
     └── README.md           # Detailed documentation
 ```
 
 ### Running Tests
+
+#### Wycheproof Tests (Security Focus)
 
 ```bash
 # Run all Wycheproof tests
@@ -46,6 +53,23 @@ cargo test -p wycheproof-tests --test fpe
 
 # Run specific test function
 cargo test -p wycheproof-tests --test aead test_chacha20_poly1305_wycheproof
+```
+
+#### CAVP Tests (FIPS 140 Validation)
+
+```bash
+# Run all CAVP tests
+cargo test -p cavp-tests
+
+# Run specific algorithm tests (examples - to be implemented)
+cargo test -p cavp-tests --test mlkem
+cargo test -p cavp-tests --test mldsa
+cargo test -p cavp-tests --test aes
+cargo test -p cavp-tests --test sha
+
+# Run with specific features
+cargo test -p cavp-tests --features enable-pqc-tests
+cargo test -p cavp-tests --features enable-all-tests
 ```
 
 ## Test Coverage

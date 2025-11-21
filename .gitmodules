@@ -1,3 +1,6 @@
 [submodule "tests/wycheproof"]
 	path = tests/wycheproof
 	url = https://github.com/google/wycheproof.git
+[submodule "tests/cavp-vectors"]
+	path = tests/cavp-vectors
+	url = https://github.com/usnistgov/ACVP-Server.git

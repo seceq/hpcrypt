@@ -1,0 +1,190 @@
+[package]
+name = "cavp-tests"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+# Workspace dependencies for testing
+serde = { workspace = true }
+serde_json = { workspace = true }
+hex = { workspace = true }
+
+# HPCrypt crates to test (optional, enabled via features)
+hpcrypt-aead = { workspace = true, features = ["std"], optional = true }
+hpcrypt-signatures = { workspace = true, features = ["std"], optional = true }
+hpcrypt-rsa = { workspace = true, features = ["std"], optional = true }
+hpcrypt-mac = { workspace = true, features = ["std"], optional = true }
+hpcrypt-cipher = { workspace = true, features = ["std"], optional = true }
+hpcrypt-kdf = { workspace = true, features = ["std"], optional = true }
+hpcrypt-curves = { workspace = true, features = ["std"], optional = true }
+hpcrypt-hash = { workspace = true, features = ["std"], optional = true }
+hpcrypt-core = { workspace = true, optional = true }
+hpcrypt-mlkem = { workspace = true, features = ["std", "cavp"], optional = true }
+hpcrypt-mldsa = { workspace = true, features = ["std", "cavp"], optional = true }
+hpcrypt-slhdsa = { workspace = true, features = ["std", "cavp"], optional = true }
+hpcrypt-rng = { workspace = true, features = ["std", "hash-drbg", "ctr-drbg", "hmac-drbg"], optional = true }
+
+[features]
+default = []
+enable-aead-tests = ["hpcrypt-aead"]
+enable-signature-tests = ["hpcrypt-signatures", "hpcrypt-curves"]
+enable-rsa-tests = ["hpcrypt-rsa"]
+enable-mac-tests = ["hpcrypt-mac"]
+enable-cipher-tests = ["hpcrypt-cipher"]
+enable-kdf-tests = ["hpcrypt-kdf"]
+enable-hash-tests = ["hpcrypt-hash"]
+enable-pqc-tests = ["hpcrypt-mlkem", "hpcrypt-mldsa", "hpcrypt-slhdsa"]
+enable-drbg-tests = ["hpcrypt-rng", "hpcrypt-hash", "hpcrypt-core", "hpcrypt-cipher"]
+# Enable all actual implementation tests
+enable-all-tests = [
+    "enable-aead-tests",
+    "enable-signature-tests",
+    "enable-rsa-tests",
+    "enable-mac-tests",
+    "enable-cipher-tests",
+    "enable-kdf-tests",
+    "enable-hash-tests",
+    "enable-pqc-tests",
+    "enable-drbg-tests",
+]
+
+[lib]
+path = "src/lib.rs"
+
+# Post-Quantum Cryptography Tests
+[[test]]
+name = "mlkem"
+path = "tests/mlkem.rs"
+required-features = ["enable-pqc-tests"]
+
+[[test]]
+name = "mldsa"
+path = "tests/mldsa.rs"
+required-features = ["enable-pqc-tests"]
+
+[[test]]
+name = "slhdsa"
+path = "tests/slhdsa.rs"
+required-features = ["enable-pqc-tests"]
+
+# Traditional Cryptography Tests
+[[test]]
+name = "aes_gcm"
+path = "tests/aes_gcm.rs"
+required-features = ["enable-aead-tests"]
+
+[[test]]
+name = "hmac"
+path = "tests/hmac.rs"
+required-features = ["enable-mac-tests"]
+
+[[test]]
+name = "ecdsa"
+path = "tests/ecdsa.rs"
+required-features = ["enable-signature-tests"]
+
+[[test]]
+name = "eddsa"
+path = "tests/eddsa.rs"
+required-features = ["hpcrypt-curves"]
+
+[[test]]
+name = "rsa"
+path = "tests/rsa.rs"
+required-features = ["enable-rsa-tests"]
+
+# Hash Function Tests
+[[test]]
+name = "sha3"
+path = "tests/sha3.rs"
+required-features = ["enable-hash-tests"]
+
+# Key Derivation Function Tests
+[[test]]
+name = "pbkdf2"
+path = "tests/pbkdf2.rs"
+required-features = ["enable-kdf-tests"]
+
+# Cipher Tests
+[[test]]
+name = "aes_cbc"
+path = "tests/aes_cbc.rs"
+required-features = ["enable-cipher-tests"]
+
+[[test]]
+name = "aes_ctr"
+path = "tests/aes_ctr.rs"
+required-features = ["enable-cipher-tests"]
+
+[[test]]
+name = "cmac_aes"
+path = "tests/cmac_aes.rs"
+required-features = ["enable-mac-tests"]
+
+[[test]]
+name = "aes_gmac"
+path = "tests/aes_gmac.rs"
+required-features = ["enable-mac-tests"]
+
+[[test]]
+name = "aes_ccm"
+path = "tests/aes_ccm.rs"
+required-features = ["enable-aead-tests"]
+
+[[test]]
+name = "aes_gcm_siv"
+path = "tests/aes_gcm_siv.rs"
+required-features = ["enable-aead-tests"]
+
+[[test]]
+name = "aes_ofb"
+path = "tests/aes_ofb.rs"
+required-features = ["enable-cipher-tests"]
+
+[[test]]
+name = "aes_xts"
+path = "tests/aes_xts.rs"
+required-features = ["enable-cipher-tests"]
+
+[[test]]
+name = "aes_cfb128"
+path = "tests/aes_cfb128.rs"
+required-features = ["enable-cipher-tests"]
+
+[[test]]
+name = "x963_kdf"
+path = "tests/x963_kdf.rs"
+required-features = ["enable-kdf-tests"]
+
+[[test]]
+name = "tls12_kdf"
+path = "tests/tls12_kdf.rs"
+required-features = ["enable-kdf-tests"]
+
+[[test]]
+name = "cshake"
+path = "tests/cshake.rs"
+required-features = ["enable-mac-tests"]
+
+[[test]]
+name = "kmac"
+path = "tests/kmac.rs"
+required-features = ["enable-mac-tests"]
+
+# DRBG Tests
+[[test]]
+name = "drbg_hash"
+path = "tests/drbg_hash.rs"
+required-features = ["enable-drbg-tests"]
+
+[[test]]
+name = "drbg_hmac"
+path = "tests/drbg_hmac.rs"
+required-features = ["enable-drbg-tests"]
+
+[[test]]
+name = "drbg_ctr"
+path = "tests/drbg_ctr.rs"
+required-features = ["enable-drbg-tests"]
