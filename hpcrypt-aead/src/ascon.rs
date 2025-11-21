@@ -29,6 +29,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
+use zeroize::Zeroize;
 
 /// Ascon-128 AEAD cipher
 ///
@@ -228,22 +229,18 @@ fn ascon_encrypt(
     rounds_a: usize,
     rounds_b: usize,
 ) -> Vec<u8> {
-    // Initialize state
     let mut state = ascon_initialize(key, nonce, iv, rounds_a);
 
-    // Process associated data
     ascon_absorb(&mut state, associated_data, rate, rounds_b);
 
-    // Domain separation
     state[4] ^= 1;
 
-    // Encrypt plaintext
     let ciphertext = ascon_encrypt_blocks(&mut state, plaintext, rate, rounds_b);
 
-    // Finalization
     let tag = ascon_finalize(&mut state, key, rounds_a);
 
-    // Concatenate ciphertext and tag
+    state.zeroize();
+
     let mut result = Vec::with_capacity(ciphertext.len() + 16);
     result.extend_from_slice(&ciphertext);
     result.extend_from_slice(&tag);
@@ -263,40 +260,39 @@ fn ascon_decrypt(
     rounds_a: usize,
     rounds_b: usize,
 ) -> Option<Vec<u8>> {
-    // Split ciphertext and tag
     let ct_len = ciphertext.len() - 16;
     let ct = &ciphertext[..ct_len];
     let received_tag = &ciphertext[ct_len..];
 
-    // Initialize state
     let mut state = ascon_initialize(key, nonce, iv, rounds_a);
 
-    // Process associated data
     ascon_absorb(&mut state, associated_data, rate, rounds_b);
 
-    // Domain separation
     state[4] ^= 1;
 
-    // Decrypt ciphertext
     let plaintext = ascon_decrypt_blocks(&mut state, ct, rate, rounds_b);
 
-    // Finalization
-    let computed_tag = ascon_finalize(&mut state, key, rounds_a);
+    let mut computed_tag = ascon_finalize(&mut state, key, rounds_a);
 
-    // Constant-time tag comparison
-    if constant_time_eq(&computed_tag, received_tag) {
+    state.zeroize();
+
+    let result = if constant_time_eq(&computed_tag, received_tag) {
         Some(plaintext)
     } else {
         None
-    }
+    };
+
+    computed_tag.zeroize();
+
+    result
 }
 
 /// Initialize Ascon state
 fn ascon_initialize(key: &[u8; 16], nonce: &[u8; 16], iv: u64, rounds: usize) -> AsconState {
-    let k0 = u64::from_be_bytes([
+    let mut k0 = u64::from_be_bytes([
         key[0], key[1], key[2], key[3], key[4], key[5], key[6], key[7],
     ]);
-    let k1 = u64::from_be_bytes([
+    let mut k1 = u64::from_be_bytes([
         key[8], key[9], key[10], key[11], key[12], key[13], key[14], key[15],
     ]);
     let n0 = u64::from_be_bytes([
@@ -308,12 +304,13 @@ fn ascon_initialize(key: &[u8; 16], nonce: &[u8; 16], iv: u64, rounds: usize) ->
 
     let mut state = [iv, k0, k1, n0, n1];
 
-    // Apply permutation
     ascon_permutation(&mut state, rounds);
 
-    // XOR key
     state[3] ^= k0;
     state[4] ^= k1;
+
+    k0.zeroize();
+    k1.zeroize();
 
     state
 }
@@ -649,24 +646,23 @@ fn ascon_decrypt_blocks(
 
 /// Finalize and produce tag
 fn ascon_finalize(state: &mut AsconState, key: &[u8; 16], rounds: usize) -> [u8; 16] {
-    let k0 = u64::from_be_bytes([
+    let mut k0 = u64::from_be_bytes([
         key[0], key[1], key[2], key[3], key[4], key[5], key[6], key[7],
     ]);
-    let k1 = u64::from_be_bytes([
+    let mut k1 = u64::from_be_bytes([
         key[8], key[9], key[10], key[11], key[12], key[13], key[14], key[15],
     ]);
 
-    // XOR key (for rate=8, key goes to state[1] and state[2])
-    // For rate=16, key goes to state[2] and state[3]
     state[1] ^= k0;
     state[2] ^= k1;
 
-    // Apply permutation
     ascon_permutation(state, rounds);
 
-    // XOR key and extract tag
     state[3] ^= k0;
     state[4] ^= k1;
+
+    k0.zeroize();
+    k1.zeroize();
 
     let mut tag = [0u8; 16];
     tag[0..8].copy_from_slice(&state[3].to_be_bytes());
@@ -681,13 +677,10 @@ fn ascon_permutation(state: &mut AsconState, rounds: usize) {
 
     #[allow(clippy::needless_range_loop)]
     for i in start_round..12 {
-        // Add round constant
         state[2] ^= ROUND_CONSTANTS[i];
 
-        // Substitution layer (5-bit S-box applied to 64 slices)
         ascon_sbox(state);
 
-        // Linear diffusion layer
         ascon_linear(state);
     }
 }
@@ -701,14 +694,12 @@ fn ascon_sbox(state: &mut AsconState) {
     let x3 = state[3];
     let x4 = state[4];
 
-    // S-box operations (Chi transformation)
     state[0] = x0 ^ (!x1 & x2);
     state[1] = x1 ^ (!x2 & x3);
     state[2] = x2 ^ (!x3 & x4);
     state[3] = x3 ^ (!x4 & x0);
     state[4] = x4 ^ (!x0 & x1);
 
-    // Linear layer within S-box
     state[1] ^= x0;
     state[0] ^= x4;
     state[3] ^= x2;
@@ -731,18 +722,45 @@ fn ascon_linear(state: &mut AsconState) {
     state[4] = x4 ^ x4.rotate_right(7) ^ x4.rotate_right(41);
 }
 
-/// Constant-time equality comparison
+/// Constant-time equality comparison for AEAD tag verification
+///
+/// Compares two byte slices in constant time to prevent timing attacks.
+/// Optimized for 16-byte Ascon tags with fallback for other lengths.
+///
+/// # Security Properties
+///
+/// - Execution time independent of where differences occur
+/// - Execution time independent of number of differences
+/// - No early exit on mismatch
+/// - Handles length mismatches without timing leaks
+#[inline]
 fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
+    use core::hint::black_box;
 
-    let mut result = 0u8;
-    for (x, y) in a.iter().zip(b.iter()) {
-        result |= x ^ y;
-    }
+    let len_diff = a.len() ^ b.len();
 
-    result == 0
+    if a.len() == 16 && b.len() == 16 {
+        let a0 = u64::from_ne_bytes([a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7]]);
+        let a1 = u64::from_ne_bytes([a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15]]);
+        let b0 = u64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]]);
+        let b1 = u64::from_ne_bytes([b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]]);
+
+        let diff = (a0 ^ b0) | (a1 ^ b1);
+
+        let is_zero = black_box((diff | diff.wrapping_neg()) >> 63);
+
+        is_zero == 0
+    } else {
+        let len = a.len().min(b.len());
+        let mut diff = len_diff as u8;
+
+        for i in 0..len {
+            diff |= a[i] ^ b[i];
+        }
+
+        let is_zero = black_box((diff | diff.wrapping_neg()) >> 7);
+        is_zero == 0
+    }
 }
 
 #[cfg(test)]
@@ -760,7 +778,7 @@ mod tests {
         let decrypted = Ascon128::decrypt(&key, &nonce, &ciphertext, aad).unwrap();
 
         assert_eq!(plaintext, &decrypted[..]);
-        assert_eq!(ciphertext.len(), 16); // Only tag
+        assert_eq!(ciphertext.len(), 16);
     }
 
     #[test]
@@ -799,7 +817,6 @@ mod tests {
 
         let mut ciphertext = Ascon128::encrypt(&key, &nonce, plaintext, aad);
 
-        // Corrupt the tag
         let len = ciphertext.len();
         ciphertext[len - 1] ^= 1;
 
@@ -832,7 +849,7 @@ mod tests {
         let decrypted = Ascon128a::decrypt(&key, &nonce, &ciphertext, aad).unwrap();
 
         assert_eq!(plaintext, &decrypted[..]);
-        assert_eq!(ciphertext.len(), 16); // Only tag
+        assert_eq!(ciphertext.len(), 16);
     }
 
     #[test]
@@ -909,19 +926,16 @@ mod tests {
         let key = [0u8; 16];
         let nonce = [0u8; 16];
 
-        // Test exactly 16 bytes (one block for Ascon-128a)
         let pt16 = [0xAAu8; 16];
         let ct16 = Ascon128a::encrypt(&key, &nonce, &pt16, b"");
         let dec16 = Ascon128a::decrypt(&key, &nonce, &ct16, b"").unwrap();
         assert_eq!(&pt16[..], &dec16[..]);
 
-        // Test 32 bytes (two blocks)
         let pt32 = [0xBBu8; 32];
         let ct32 = Ascon128a::encrypt(&key, &nonce, &pt32, b"");
         let dec32 = Ascon128a::decrypt(&key, &nonce, &ct32, b"").unwrap();
         assert_eq!(&pt32[..], &dec32[..]);
 
-        // Test 17 bytes (one block + 1)
         let pt17 = [0xCCu8; 17];
         let ct17 = Ascon128a::encrypt(&key, &nonce, &pt17, b"");
         let dec17 = Ascon128a::decrypt(&key, &nonce, &ct17, b"").unwrap();
