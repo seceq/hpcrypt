@@ -13,7 +13,13 @@
 
 #![allow(dead_code)] // Remove this as we implement
 
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
+
+#[cfg(feature = "std")]
+use std::vec::Vec;
 
 mod bitslice;
 mod consts;

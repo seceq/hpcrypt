@@ -19,8 +19,18 @@ use super::bitslice::bitslice_4blocks;
 use super::sbox::sub_bytes_nots;
 use super::State;
 use super::{NR_128, NR_192, NR_256};
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+#[cfg(not(feature = "std"))]
 use alloc::vec;
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
+
+#[cfg(feature = "std")]
+use std::vec;
+#[cfg(feature = "std")]
+use std::vec::Vec;
 
 /// AES S-box for key expansion
 const SBOX: [u8; 256] = [
