@@ -109,9 +109,9 @@ fn main() {
 
     // Verify they computed the same shared secret
     if alice_shared == bob_shared {
-        println!("   ✓ Shared secrets match!");
+        println!("   - Shared secrets match!");
     } else {
-        println!("   ✗ Shared secrets don't match (this shouldn't happen)");
+        println!("   - Shared secrets don't match (this shouldn't happen)");
     }
     println!();
 
@@ -155,27 +155,27 @@ fn main() {
     println!(
         "   Alice-Carol = Carol-Alice: {}",
         if alice_carol_shared == carol_alice_shared {
-            "✓ Yes"
+            "Yes"
         } else {
-            "✗ No"
+            "No"
         }
     );
     println!(
         "   Alice-Carol ≠ Bob-Carol:   {}",
         if alice_carol_shared != bob_carol_shared {
-            "✓ Correct"
+            "- Correct"
         } else {
-            "✗ Wrong"
+            "- Wrong"
         }
     );
     println!();
 
     // Example 3: Security property - public keys are safe to share
     println!("3. Public Key Security:");
-    println!("   ✓ Public keys can be shared openly");
-    println!("   ✓ Private keys must be kept secret");
-    println!("   ✓ Attacker with only public keys cannot compute shared secret");
-    println!("   ✓ Each party needs their private key + other's public key");
+    println!("   - Public keys can be shared openly");
+    println!("   - Private keys must be kept secret");
+    println!("   - Attacker with only public keys cannot compute shared secret");
+    println!("   - Each party needs their private key + other's public key");
     println!();
 
     // Example 4: RFC 7748 Test Vector
@@ -224,9 +224,9 @@ fn main() {
     println!(
         "   RFC Compliant: {}",
         if rfc_shared == rfc_expected_shared {
-            "✓ Yes"
+            "Yes"
         } else {
-            "✗ No"
+            "No"
         }
     );
     println!();
@@ -243,10 +243,10 @@ fn main() {
 
     // Example 6: Use shared secret for encryption
     println!("6. Using Shared Secret:");
-    println!("   ✓ Derive encryption keys from shared secret (use KDF like HKDF)");
-    println!("   ✓ Use for AES-GCM or ChaCha20-Poly1305 AEAD");
-    println!("   ✓ Forward secrecy: generate new keypairs for each session");
-    println!("   ✓ Don't reuse shared secrets across sessions");
+    println!("   - Derive encryption keys from shared secret (use KDF like HKDF)");
+    println!("   - Use for AES-GCM or ChaCha20-Poly1305 AEAD");
+    println!("   - Forward secrecy: generate new keypairs for each session");
+    println!("   - Don't reuse shared secrets across sessions");
 
     println!("\n=== Example Complete ===");
 }

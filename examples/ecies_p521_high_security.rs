@@ -94,8 +94,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   - Forgery (GCM): 2^128 operations (~10^38 years)");
     println!();
     println!("   Quantum Attacks:");
-    println!("   - Shor's algorithm (ECDLP): 2^260 → 2^130 (still hard with current tech)");
-    println!("   - Grover's algorithm (AES): 2^256 → 2^128 (infeasible)");
+    println!("   - Shor's algorithm (ECDLP): 2^260 Note: 2^130 (still hard with current tech)");
+    println!("   - Grover's algorithm (AES): 2^256 Note: 2^128 (infeasible)");
     println!("   - Post-quantum: Recommend hybrid with Kyber1024\n");
 
     // 7. Decryption

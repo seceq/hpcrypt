@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Bob decrypts the symmetric key
     let decapsulated_key = EciesP256::decrypt(&bob_secret, &encapsulated_key, b"KEM")?;
     assert_eq!(&decapsulated_key, symmetric_key);
-    println!("   ✓ Key encapsulation successful");
+    println!("   - Key encapsulation successful");
     println!("   Now use symmetric key for bulk encryption\n");
 
     // Pattern 2: Multi-Recipient Encryption
@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(&alice_msg, message);
     assert_eq!(&bob_msg, message);
     assert_eq!(&carol_msg, message);
-    println!("   ✓ All recipients decrypted successfully\n");
+    println!("   - All recipients decrypted successfully\n");
 
     // Pattern 3: Authenticated Sender (Encrypt + Sign)
     println!("3. Authenticated Sender Pattern");
@@ -80,14 +80,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Step 2: Sign the ciphertext (prevents tampering)
     // In real implementation, use ECDSA from hpcrypt-signatures
-    println!("   ✓ Message encrypted");
-    println!("   ✓ Signature created (simulated)");
+    println!("   - Message encrypted");
+    println!("   - Signature created (simulated)");
 
     // Step 3: Recipient verifies signature, then decrypts
-    println!("   ✓ Signature verified (simulated)");
+    println!("   - Signature verified (simulated)");
     let plaintext = EciesP256::decrypt(&recipient_secret, &ciphertext, b"auth")?;
     assert_eq!(&plaintext, message);
-    println!("   ✓ Message decrypted with sender authentication\n");
+    println!("   - Message decrypted with sender authentication\n");
 
     // Pattern 4: Hybrid Encryption for Large Files
     println!("4. Hybrid Encryption for Large Files");
@@ -105,14 +105,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let encrypted_key = EciesP256::encrypt(&file_owner_public, file_key, b"file", &mut rng)?;
 
     println!("   Encrypted key size: {} bytes", encrypted_key.len());
-    println!("   ✓ File key encrypted with ECIES");
-    println!("   ✓ File encrypted with AES-GCM (simulated)");
+    println!("   - File key encrypted with ECIES");
+    println!("   - File encrypted with AES-GCM (simulated)");
 
     // Decrypt the file key
     let decrypted_key = EciesP256::decrypt(&file_owner_secret, &encrypted_key, b"file")?;
     assert_eq!(&decrypted_key, file_key);
-    println!("   ✓ File key decrypted");
-    println!("   ✓ File decrypted with AES-GCM (simulated)\n");
+    println!("   - File key decrypted");
+    println!("   - File decrypted with AES-GCM (simulated)\n");
 
     // Pattern 5: Forward Secrecy with Ephemeral Keys
     println!("5. Forward Secrecy Pattern");
@@ -138,7 +138,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     assert_eq!(&pt1, session1_msg);
     assert_eq!(&pt2, session2_msg);
-    println!("   ✓ Forward secrecy maintained across sessions\n");
+    println!("   - Forward secrecy maintained across sessions\n");
 
     println!("=== All Advanced Patterns Completed Successfully ===");
 

@@ -64,7 +64,7 @@ fn p256_example() {
 
     // Derive the corresponding verifying (public) key
     let verifying_key = signing_key.verifying_key();
-    println!("   ✓ Keypair generated");
+    println!("   - Keypair generated");
 
     // 2. Prepare message to sign
     let message = b"Hello, P-256! This message will be signed.";
@@ -74,7 +74,7 @@ fn p256_example() {
     // 3. Sign the message (uses RFC 6979 deterministic nonces)
     println!("\n3.  Signing message with RFC 6979...");
     let signature = signing_key.sign(message);
-    println!("   ✓ Signature generated (64 bytes)");
+    println!("   - Signature generated (64 bytes)");
     println!("   r: {:02x?}...", &signature.to_bytes()[..8]);
     println!("   s: {:02x?}...", &signature.to_bytes()[32..40]);
 
@@ -82,15 +82,15 @@ fn p256_example() {
     println!("\n4.  Verifying signature...");
     let is_valid = verifying_key.verify(message, &signature);
     println!(
-        "   ✓ Signature verification: {}",
-        if is_valid { "✓ VALID" } else { "✗ INVALID" }
+        "   - Signature verification: {}",
+        if is_valid { "- VALID" } else { "- INVALID" }
     );
 
     // 5. DER encoding (for interoperability)
     println!("\n5.  DER encoding signature...");
     let (der_bytes, len) = signature.to_der();
     println!(
-        "   ✓ DER encoded ({} bytes): {:02x?}...",
+        "   - DER encoded ({} bytes): {:02x?}...",
         len,
         &der_bytes[..16]
     );
@@ -121,7 +121,7 @@ fn p256_example() {
         &signature2.to_bytes()[..8]
     );
     println!(
-        "   ✓ Signatures match: {}",
+        "   - Signatures match: {}",
         signature.to_bytes() == signature2.to_bytes()
     );
 
@@ -129,7 +129,7 @@ fn p256_example() {
     println!("\n8.  Testing invalid signature detection...");
     let wrong_message = b"Different message";
     let is_invalid = verifying_key.verify(wrong_message, &signature);
-    println!("   ✓ Wrong message rejected: {}", !is_invalid);
+    println!("   - Wrong message rejected: {}", !is_invalid);
 }
 
 /// Example: ECDSA with NIST P-384 curve
@@ -143,7 +143,7 @@ fn p384_example() {
     println!("1.  Generating P-384 keypair...");
     let signing_key = P384SigningKey::generate().expect("Failed to generate P-384 signing key");
     let verifying_key = signing_key.verifying_key();
-    println!("   ✓ Keypair generated (384-bit security)");
+    println!("   - Keypair generated (384-bit security)");
 
     // 2. Sign a message
     let message = b"High-security message for P-384";
@@ -151,14 +151,14 @@ fn p384_example() {
 
     println!("\n3.  Signing with P-384...");
     let signature = signing_key.sign(message);
-    println!("   ✓ Signature generated (96 bytes)");
+    println!("   - Signature generated (96 bytes)");
 
     // 3. Verify
     println!("\n4.  Verifying signature...");
     let is_valid = verifying_key.verify(message, &signature);
     println!(
-        "   ✓ Signature verification: {}",
-        if is_valid { "✓ VALID" } else { "✗ INVALID" }
+        "   - Signature verification: {}",
+        if is_valid { "- VALID" } else { "- INVALID" }
     );
 
     // 4. Show larger key sizes
@@ -188,7 +188,7 @@ fn secp256k1_example() {
     let signing_key =
         Secp256k1SigningKey::generate().expect("Failed to generate secp256k1 signing key");
     let verifying_key = signing_key.verifying_key();
-    println!("   ✓ Keypair generated");
+    println!("   - Keypair generated");
 
     // 2. Bitcoin-style transaction signing simulation
     let transaction = b"Bitcoin TX: Send 0.1 BTC to address xyz";
@@ -197,7 +197,7 @@ fn secp256k1_example() {
 
     println!("\n3.  Signing transaction...");
     let signature = signing_key.sign(transaction);
-    println!("   ✓ Transaction signed (64 bytes)");
+    println!("   - Transaction signed (64 bytes)");
     println!("   r: {:02x?}...", &signature.to_bytes()[..8]);
     println!("   s: {:02x?}...", &signature.to_bytes()[32..40]);
 
@@ -205,14 +205,14 @@ fn secp256k1_example() {
     println!("\n4.  Verifying transaction signature...");
     let is_valid = verifying_key.verify(transaction, &signature);
     println!(
-        "   ✓ Signature verification: {}",
-        if is_valid { "✓ VALID" } else { "✗ INVALID" }
+        "   - Signature verification: {}",
+        if is_valid { "- VALID" } else { "- INVALID" }
     );
 
     // 4. DER encoding (used in Bitcoin)
     println!("\n5.  DER encoding (Bitcoin format)...");
     let (der_bytes, len) = signature.to_der();
-    println!("   ✓ DER encoded ({} bytes)", len);
+    println!("   - DER encoded ({} bytes)", len);
     println!("   DER: {:02x?}...", &der_bytes[..min(len, 20)]);
 
     // 5. Public key formats
@@ -256,7 +256,7 @@ fn batch_verification_example() {
         keys.push(verifying_key);
         signatures.push(signature);
 
-        println!("   ✓ Signature {} created", i + 1);
+        println!("   - Signature {} created", i + 1);
     }
 
     // Verify all signatures
@@ -266,19 +266,19 @@ fn batch_verification_example() {
         println!(
             "   Signature {}: {}",
             i + 1,
-            if valid { "✓ VALID" } else { "✗ INVALID" }
+            if valid { "- VALID" } else { "- INVALID" }
         );
     }
 
     println!(
-        "\n   ✓ Batch verification: All {} signatures valid",
+        "\n   - Batch verification: All {} signatures valid",
         messages.len()
     );
 
     // Test with one invalid signature
     println!("\n3.  Testing with one tampered signature...");
     let is_valid = keys[0].verify(b"Wrong message", &signatures[0]);
-    println!("   ✓ Invalid signature detected: {}", !is_valid);
+    println!("   - Invalid signature detected: {}", !is_valid);
 }
 
 // Helper function for minimum

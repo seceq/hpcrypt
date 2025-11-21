@@ -72,7 +72,7 @@ fn main() {
     let is_valid = Ed25519::verify(&public_key, message, &signature);
     println!(
         "   Verification: {}",
-        if is_valid { "✓ Valid" } else { "✗ Invalid" }
+        if is_valid { "- Valid" } else { "- Invalid" }
     );
     println!();
 
@@ -89,9 +89,9 @@ fn main() {
     println!(
         "   Signature valid:  {}",
         if Ed25519::verify(&public_key, original_message, &original_signature) {
-            "✓ Yes"
+            "Yes"
         } else {
-            "✗ No"
+            "No"
         }
     );
 
@@ -104,9 +104,9 @@ fn main() {
     println!(
         "   Signature valid:  {}",
         if Ed25519::verify(&public_key, tampered_message, &original_signature) {
-            "✓ Yes"
+            "Yes"
         } else {
-            "✗ No (correctly rejected)"
+            "No (correctly rejected)"
         }
     );
     println!();
@@ -128,17 +128,17 @@ fn main() {
     println!(
         "   Correct key verification: {}",
         if Ed25519::verify(&public_key, message3, &signature3) {
-            "✓ Valid"
+            "- Valid"
         } else {
-            "✗ Invalid"
+            "- Invalid"
         }
     );
     println!(
         "   Wrong key verification:   {}",
         if Ed25519::verify(&wrong_public_key, message3, &signature3) {
-            "✓ Valid"
+            "- Valid"
         } else {
-            "✗ Invalid (correctly rejected)"
+            "- Invalid (correctly rejected)"
         }
     );
     println!();
@@ -150,10 +150,10 @@ fn main() {
     let empty_valid = Ed25519::verify(&public_key, empty_message, &empty_signature);
 
     println!("   Message:      (empty)");
-    println!("   Can sign:     ✓ Yes");
+    println!("   Can sign:     Yes");
     println!(
         "   Can verify:   {}",
-        if empty_valid { "✓ Yes" } else { "✗ No" }
+        if empty_valid { "Yes" } else { "No" }
     );
     println!();
 
@@ -170,7 +170,7 @@ fn main() {
     );
     println!(
         "   Verified:     {}",
-        if large_valid { "✓ Yes" } else { "✗ No" }
+        if large_valid { "Yes" } else { "No" }
     );
     println!();
 
@@ -201,7 +201,7 @@ fn main() {
     );
     println!(
         "   RFC Compliant: {}",
-        if rfc_valid { "✓ Yes" } else { "✗ No" }
+        if rfc_valid { "Yes" } else { "No" }
     );
 
     println!("\n=== Example Complete ===");

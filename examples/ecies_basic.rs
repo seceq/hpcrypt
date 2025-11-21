@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let plaintext_256 = EciesP256::decrypt(&secret_256, &ciphertext_256, &[])?;
     assert_eq!(&plaintext_256, message);
-    println!("   ✓ Decryption successful\n");
+    println!("   - Decryption successful\n");
 
     // Example 2: P-384 (High Security)
     println!("2. P-384 ECIES (192-bit security)");
@@ -60,7 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let plaintext_384 = EciesP384::decrypt(&secret_384, &ciphertext_384, &[])?;
     assert_eq!(&plaintext_384, message);
-    println!("   ✓ Decryption successful\n");
+    println!("   - Decryption successful\n");
 
     // Example 3: P-521 (Maximum Security)
     println!("3. P-521 ECIES (256-bit security)");
@@ -84,7 +84,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let plaintext_521 = EciesP521::decrypt(&secret_521, &ciphertext_521, &[])?;
     assert_eq!(&plaintext_521, message);
-    println!("   ✓ Decryption successful\n");
+    println!("   - Decryption successful\n");
 
     // Example 4: Using shared info for domain separation
     println!("4. Using Shared Info (Domain Separation)");
@@ -96,14 +96,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ciphertext_with_info = EciesP256::encrypt(&public_256, message, shared_info, &mut rng)?;
     let plaintext_with_info = EciesP256::decrypt(&secret_256, &ciphertext_with_info, shared_info)?;
     assert_eq!(&plaintext_with_info, message);
-    println!("   ✓ Encryption with shared info successful\n");
+    println!("   - Encryption with shared info successful\n");
 
     // Example 5: Error handling - wrong shared info
     println!("5. Error Handling - Wrong Shared Info");
     let wrong_shared_info = b"wrong-context";
     match EciesP256::decrypt(&secret_256, &ciphertext_with_info, wrong_shared_info) {
-        Ok(_) => println!("   ✗ Should have failed!"),
-        Err(e) => println!("   ✓ Correctly rejected: {}\n", e),
+        Ok(_) => println!("   - Should have failed!"),
+        Err(e) => println!("   - Correctly rejected: {}\n", e),
     }
 
     // Example 6: Error handling - corrupted ciphertext
@@ -112,8 +112,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let idx = corrupted.len() / 2;
     corrupted[idx] ^= 0xFF;
     match EciesP256::decrypt(&secret_256, &corrupted, &[]) {
-        Ok(_) => println!("   ✗ Should have failed!"),
-        Err(e) => println!("   ✓ Correctly rejected: {}\n", e),
+        Ok(_) => println!("   - Should have failed!"),
+        Err(e) => println!("   - Correctly rejected: {}\n", e),
     }
 
     println!("=== All Examples Completed Successfully ===");
