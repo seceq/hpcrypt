@@ -59,7 +59,8 @@ pub fn public_key(private_key: &[u8; 57]) -> PublicKey {
     shake256_114(private_key, &mut hash);
 
     // Extract secret scalar from first 57 bytes
-    let secret_scalar = hash_to_scalar(&hash[..57]);
+    // RFC 8032: Only the secret key is clamped
+    let secret_scalar = hash_to_secret_scalar(&hash[..57]);
 
     // Compute public key A = [secret]B
     let public_point = Point::generator().scalar_mul(&secret_scalar);
@@ -94,29 +95,32 @@ pub fn sign(private_key: &[u8; 57], message: &[u8]) -> Signature {
     shake256_114(private_key, &mut hash);
 
     // Extract secret scalar and prefix
-    let secret_scalar = hash_to_scalar(&hash[..57]);
+    // RFC 8032: Only the secret key is clamped
+    let secret_scalar = hash_to_secret_scalar(&hash[..57]);
     let prefix = &hash[57..114];
 
     // Compute public key A = [secret]B
     let public_point = Point::generator().scalar_mul(&secret_scalar);
     let public_key_bytes = public_point.to_bytes();
 
-    // Compute nonce r = SHAKE256(prefix || message)
+    // Compute nonce r = SHAKE256(dom4 || prefix || message)
+    // RFC 8032: Interpret all 114 bytes as little-endian integer, then reduce mod L
     let nonce_scalar = {
         let mut nonce_hash = [0u8; 114];
         shake256_with_prefix(prefix, message, &mut nonce_hash);
-        hash_to_scalar(&nonce_hash[..57])
+        Scalar::from_wide_bytes(&nonce_hash)
     };
 
     // Compute R = [r]B
     let r_point = Point::generator().scalar_mul(&nonce_scalar);
     let r_bytes = r_point.to_bytes();
 
-    // Compute challenge k = SHAKE256(R || A || message)
+    // Compute challenge k = SHAKE256(dom4 || R || A || message)
+    // RFC 8032: Interpret all 114 bytes as little-endian integer, then reduce mod L
     let challenge = {
         let mut challenge_hash = [0u8; 114];
         shake256_dom4(&r_bytes, &public_key_bytes, message, &mut challenge_hash);
-        hash_to_scalar(&challenge_hash[..57])
+        Scalar::from_wide_bytes(&challenge_hash)
     };
 
     // Compute s = (r + k·secret) mod L
@@ -167,13 +171,13 @@ pub fn verify(public_key: &PublicKey, message: &[u8], signature: &Signature) -> 
         None => return false, // Invalid R encoding
     };
 
-    // Decode s scalar
-    let s_scalar = Scalar::from_bytes(&s_bytes);
-
-    // Check that s < L (reject if s >= L)
-    if !is_scalar_valid(&s_scalar) {
+    // Check that s < L BEFORE converting to scalar (since from_bytes auto-reduces)
+    if !is_scalar_bytes_valid(&s_bytes) {
         return false;
     }
+
+    // Decode s scalar (safe now since we validated s < L)
+    let s_scalar = Scalar::from_bytes(&s_bytes);
 
     // Decode public key A
     let a_point = match Point::from_bytes(public_key) {
@@ -181,11 +185,12 @@ pub fn verify(public_key: &PublicKey, message: &[u8], signature: &Signature) -> 
         None => return false, // Invalid public key encoding
     };
 
-    // Compute challenge k = SHAKE256(R || A || message)
+    // Compute challenge k = SHAKE256(dom4 || R || A || message)
+    // RFC 8032: Interpret all 114 bytes as little-endian integer, then reduce mod L
     let challenge = {
         let mut challenge_hash = [0u8; 114];
         shake256_dom4(&r_bytes, public_key, message, &mut challenge_hash);
-        hash_to_scalar(&challenge_hash[..57])
+        Scalar::from_wide_bytes(&challenge_hash)
     };
 
     // Verify [s]B = R + [k]A using double scalar multiplication
@@ -200,13 +205,15 @@ pub fn verify(public_key: &PublicKey, message: &[u8], signature: &Signature) -> 
 // Helper functions
 //
 
-/// Convert hash bytes to scalar (with clamping for private key)
+/// Convert hash bytes to secret scalar (with clamping for private key)
 ///
 /// RFC 8032 Section 5.2.5: The private key is clamped:
 /// - Clear the two least significant bits
 /// - Clear the most significant bit
 /// - Set the second most significant bit
-fn hash_to_scalar(hash: &[u8]) -> Scalar {
+///
+/// NOTE: This should ONLY be used for the secret key, not for nonce or challenge!
+fn hash_to_secret_scalar(hash: &[u8]) -> Scalar {
     let mut bytes = [0u8; 57];
     bytes.copy_from_slice(&hash[..57]);
 
@@ -216,6 +223,45 @@ fn hash_to_scalar(hash: &[u8]) -> Scalar {
     bytes[55] |= 0x80; // Set second-highest bit
 
     Scalar::from_bytes(&bytes)
+}
+
+/// Convert hash bytes to scalar (without clamping, for nonce and challenge)
+///
+/// RFC 8032: The nonce r and challenge k are computed from hash outputs
+/// and reduced modulo L, but are NOT clamped like the secret key.
+fn hash_to_scalar_unclamped(hash: &[u8]) -> Scalar {
+    let mut bytes = [0u8; 57];
+    bytes.copy_from_slice(&hash[..57]);
+
+    // Just convert to scalar and reduce mod L (no clamping)
+    Scalar::from_bytes(&bytes).reduce()
+}
+
+/// Check if scalar bytes are valid (s < L)
+/// This checks the raw bytes before conversion to prevent auto-reduction
+fn is_scalar_bytes_valid(s_bytes: &[u8; 57]) -> bool {
+    // L in little-endian byte representation
+    // L = 2^446 - 0x8335dc163bb124b65129c96fde933d8d723a70aadc873d6d54a7bb0d
+    const L_BYTES: [u8; 57] = [
+        0xf3, 0x44, 0x58, 0xab, 0x92, 0xc2, 0x78, 0x23, 0x55, 0x8f, 0xc5, 0x8d, 0x72, 0xc2,
+        0x6c, 0x21, 0x90, 0x36, 0xd6, 0xae, 0x49, 0xdb, 0x4e, 0xc4, 0xe9, 0x23, 0xca, 0x7c,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3f,
+        0x00,
+    ];
+
+    // Compare bytes from highest to lowest (big-endian comparison)
+    for i in (0..57).rev() {
+        if s_bytes[i] < L_BYTES[i] {
+            return true;
+        } else if s_bytes[i] > L_BYTES[i] {
+            return false;
+        }
+        // If equal, continue to next byte
+    }
+
+    // If all bytes are equal, s == L, which is invalid
+    false
 }
 
 /// Check if scalar is valid (s < L)
@@ -249,13 +295,27 @@ fn shake256_114(input: &[u8], output: &mut [u8; 114]) {
     shake.finalize(output);
 }
 
-/// SHAKE256 with prefix || message
+/// SHAKE256 with dom4 prefix for nonce computation
+///
+/// RFC 8032 Section 5.2.6: For Ed448, the nonce is computed as:
+/// r = SHAKE256(dom4(F, C) || prefix || M, 114)
+/// where dom4(x, y) = "SigEd448" || octet(x) || octet(y)
+///
+/// For Ed448 (not Ed448ph), F = 0 and C = empty string.
 fn shake256_with_prefix(prefix: &[u8], message: &[u8], output: &mut [u8; 114]) {
     use hpcrypt_hash::Shake256;
 
     let mut shake = Shake256::new();
+
+    // dom4(F, C) where F = 0 (no prehash), C = empty (no context)
+    shake.update(b"SigEd448");
+    shake.update(&[0x00]); // F = 0 (phflag)
+    shake.update(&[0x00]); // len(C) = 0 (context length)
+
+    // prefix || message
     shake.update(prefix);
     shake.update(message);
+
     shake.finalize(output);
 }
 

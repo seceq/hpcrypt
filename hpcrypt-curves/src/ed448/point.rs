@@ -376,6 +376,14 @@ impl Point {
     ///
     /// The encoding is: the y-coordinate with the sign of x in the MSB.
     pub fn from_bytes(bytes: &[u8; 57]) -> Option<Self> {
+        // RFC 8032: Bits 448-454 must be zero (only bit 455 can be set for sign)
+        // Byte 56 contains bits 448-455
+        // Valid: 0x00 (sign=0) or 0x80 (sign=1)
+        // Invalid: any other value means bits 448-454 are not all zero
+        if bytes[56] != 0x00 && bytes[56] != 0x80 {
+            return None;
+        }
+
         // Extract y-coordinate (clear MSB first)
         let mut y_bytes = *bytes;
         let x_sign = (y_bytes[56] >> 7) & 1;

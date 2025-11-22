@@ -3,7 +3,7 @@
 //! Implementation of the X25519 function as specified in RFC 7748.
 
 use crate::ct_utils::{Choice, ConditionallySelectable};
-use crate::field25519::FieldElement;
+use crate::ed25519::field::FieldElement;
 use hpcrypt_core::error::CurveError;
 
 /// X25519 private key (32 bytes)

@@ -197,8 +197,6 @@ pub mod safegcd;
 
 pub mod ed25519;
 pub mod ed448;
-pub mod field25519;
-pub mod field25519_lazy;
 
 // SIMD modules removed - see /home/maamoun/hpcrypt_simd_work/ for SIMD implementations
 
@@ -210,6 +208,6 @@ pub mod x25519;
 pub mod x448;
 
 pub use ed25519::Ed25519;
-pub use field25519::FieldElement;
+pub use ed25519::field::FieldElement;
 pub use x25519::X25519;
 pub use x448::X448;
