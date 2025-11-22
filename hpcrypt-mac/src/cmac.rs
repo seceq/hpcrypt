@@ -24,12 +24,7 @@ impl AesCmac128 {
     /// Create a new AES-CMAC instance with a 128-bit key
     pub fn new(key: &[u8; 16]) -> Self {
         let cipher = Aes::new_128(key);
-
-        // Generate subkeys K1 and K2
-        let l = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
-
-        let subkey1 = left_shift_one_bit(&l);
-        let subkey2 = left_shift_one_bit(&subkey1);
+        let (subkey1, subkey2) = generate_subkeys(&cipher);
 
         Self {
             cipher,
@@ -40,60 +35,185 @@ impl AesCmac128 {
 
     /// Compute CMAC tag for given message
     pub fn compute(&self, message: &[u8]) -> [u8; BLOCK_SIZE] {
-        let last_block_complete = message.len() % BLOCK_SIZE == 0 && !message.is_empty();
+        // Fast path for exactly 16 bytes
+        if message.len() == BLOCK_SIZE {
+            return self.compute_exact_16(message);
+        }
 
+        // Fast path for short messages
+        if message.len() < BLOCK_SIZE {
+            return self.compute_short(message);
+        }
+
+        let last_block_complete = message.len() % BLOCK_SIZE == 0;
+        let total_blocks = if last_block_complete {
+            message.len() / BLOCK_SIZE
+        } else {
+            (message.len() / BLOCK_SIZE) + 1
+        };
+
+        // Specialized paths for 2-4 blocks
+        match total_blocks {
+            2 => return self.compute_2_blocks(message, last_block_complete),
+            3 => return self.compute_3_blocks(message, last_block_complete),
+            4 => return self.compute_4_blocks(message, last_block_complete),
+            _ => {}
+        }
+
+        // General path for 5+ blocks
         let (n_blocks, last_block_start) = if last_block_complete {
-            // Process all but last block normally, treat last block specially
             (
                 message.len() / BLOCK_SIZE - 1,
                 (message.len() / BLOCK_SIZE - 1) * BLOCK_SIZE,
             )
         } else {
-            // Process all complete blocks normally, treat incomplete block specially
             (
                 message.len() / BLOCK_SIZE,
                 (message.len() / BLOCK_SIZE) * BLOCK_SIZE,
             )
         };
 
-        // Prepare last block
-        let mut last_block = [0u8; BLOCK_SIZE];
+        let mut c = [0u8; BLOCK_SIZE];
+
+        for block in message[..n_blocks * BLOCK_SIZE].chunks_exact(BLOCK_SIZE) {
+            xor_block_slice(&mut c, block);
+            c = self.cipher.encrypt_block(&c);
+        }
 
         if last_block_complete {
-            // Complete last block: XOR with K1
-            last_block.copy_from_slice(&message[last_block_start..]);
-            xor_block(&mut last_block, &self.subkey1);
+            xor_block_slice(&mut c, &message[last_block_start..]);
+            xor_block(&mut c, &self.subkey1);
         } else {
-            // Incomplete last block: pad and XOR with K2
+            let mut last_block = [0u8; BLOCK_SIZE];
             let remaining = message.len() - last_block_start;
             if remaining > 0 {
                 last_block[..remaining].copy_from_slice(&message[last_block_start..]);
             }
-            // Padding: append 0x80 then zeros
             last_block[remaining] = 0x80;
             xor_block(&mut last_block, &self.subkey2);
-        }
-
-        // Process complete blocks
-        let mut c = [0u8; BLOCK_SIZE];
-
-        for i in 0..n_blocks {
-            let block_start = i * BLOCK_SIZE;
-            let block = &message[block_start..block_start + BLOCK_SIZE];
-
-            for j in 0..BLOCK_SIZE {
-                c[j] ^= block[j];
-            }
-
-            c = self.cipher.encrypt_block(&c);
-        }
-
-        // Process last block
-        for j in 0..BLOCK_SIZE {
-            c[j] ^= last_block[j];
+            xor_block(&mut c, &last_block);
         }
 
         self.cipher.encrypt_block(&c)
+    }
+
+    /// Fast path for exactly 16 bytes
+    #[inline]
+    fn compute_exact_16(&self, message: &[u8]) -> [u8; BLOCK_SIZE] {
+        debug_assert_eq!(message.len(), BLOCK_SIZE);
+
+        let mut block = [0u8; BLOCK_SIZE];
+        block.copy_from_slice(message);
+        xor_block(&mut block, &self.subkey1);
+        self.cipher.encrypt_block(&block)
+    }
+
+    /// Fast path for messages < 16 bytes
+    #[inline]
+    fn compute_short(&self, message: &[u8]) -> [u8; BLOCK_SIZE] {
+        debug_assert!(message.len() < BLOCK_SIZE);
+
+        let mut block = [0u8; BLOCK_SIZE];
+        if !message.is_empty() {
+            block[..message.len()].copy_from_slice(message);
+        }
+        block[message.len()] = 0x80;
+        xor_block(&mut block, &self.subkey2);
+
+        self.cipher.encrypt_block(&block)
+    }
+
+    /// Specialized path for exactly 2 blocks (32 bytes)
+    #[inline]
+    fn compute_2_blocks(&self, message: &[u8], complete: bool) -> [u8; BLOCK_SIZE] {
+        let mut c = [0u8; BLOCK_SIZE];
+
+        if complete {
+            xor_block_slice(&mut c, &message[0..BLOCK_SIZE]);
+            c = self.cipher.encrypt_block(&c);
+
+            xor_block_slice(&mut c, &message[BLOCK_SIZE..2 * BLOCK_SIZE]);
+            xor_block(&mut c, &self.subkey1);
+            self.cipher.encrypt_block(&c)
+        } else {
+            xor_block_slice(&mut c, &message[0..BLOCK_SIZE]);
+            c = self.cipher.encrypt_block(&c);
+
+            let mut last_block = [0u8; BLOCK_SIZE];
+            let remaining = message.len() - BLOCK_SIZE;
+            if remaining > 0 {
+                last_block[..remaining].copy_from_slice(&message[BLOCK_SIZE..]);
+            }
+            last_block[remaining] = 0x80;
+            xor_block(&mut last_block, &self.subkey2);
+            xor_block(&mut c, &last_block);
+            self.cipher.encrypt_block(&c)
+        }
+    }
+
+    /// Specialized path for exactly 3 blocks (48 bytes)
+    #[inline]
+    fn compute_3_blocks(&self, message: &[u8], complete: bool) -> [u8; BLOCK_SIZE] {
+        let mut c = [0u8; BLOCK_SIZE];
+
+        macro_rules! process_block {
+            ($offset:expr) => {
+                xor_block_slice(&mut c, &message[$offset..$offset + BLOCK_SIZE]);
+                c = self.cipher.encrypt_block(&c);
+            };
+        }
+
+        process_block!(0 * BLOCK_SIZE);
+        process_block!(1 * BLOCK_SIZE);
+
+        if complete {
+            xor_block_slice(&mut c, &message[2 * BLOCK_SIZE..3 * BLOCK_SIZE]);
+            xor_block(&mut c, &self.subkey1);
+            self.cipher.encrypt_block(&c)
+        } else {
+            let mut last_block = [0u8; BLOCK_SIZE];
+            let remaining = message.len() - 2 * BLOCK_SIZE;
+            if remaining > 0 {
+                last_block[..remaining].copy_from_slice(&message[2 * BLOCK_SIZE..]);
+            }
+            last_block[remaining] = 0x80;
+            xor_block(&mut last_block, &self.subkey2);
+            xor_block(&mut c, &last_block);
+            self.cipher.encrypt_block(&c)
+        }
+    }
+
+    /// Specialized path for exactly 4 blocks (64 bytes)
+    #[inline]
+    fn compute_4_blocks(&self, message: &[u8], complete: bool) -> [u8; BLOCK_SIZE] {
+        let mut c = [0u8; BLOCK_SIZE];
+
+        macro_rules! process_blocks {
+            ($($offset:expr),*) => {
+                $(
+                    xor_block_slice(&mut c, &message[$offset * BLOCK_SIZE..($offset + 1) * BLOCK_SIZE]);
+                    c = self.cipher.encrypt_block(&c);
+                )*
+            };
+        }
+
+        process_blocks!(0, 1, 2);
+
+        if complete {
+            xor_block_slice(&mut c, &message[3 * BLOCK_SIZE..4 * BLOCK_SIZE]);
+            xor_block(&mut c, &self.subkey1);
+            self.cipher.encrypt_block(&c)
+        } else {
+            let mut last_block = [0u8; BLOCK_SIZE];
+            let remaining = message.len() - 3 * BLOCK_SIZE;
+            if remaining > 0 {
+                last_block[..remaining].copy_from_slice(&message[3 * BLOCK_SIZE..]);
+            }
+            last_block[remaining] = 0x80;
+            xor_block(&mut last_block, &self.subkey2);
+            xor_block(&mut c, &last_block);
+            self.cipher.encrypt_block(&c)
+        }
     }
 
     /// Verify a CMAC tag
@@ -114,12 +234,7 @@ impl AesCmac256 {
     /// Create a new AES-CMAC instance with a 256-bit key
     pub fn new(key: &[u8; 32]) -> Self {
         let cipher = Aes::new_256(key);
-
-        // Generate subkeys K1 and K2
-        let l = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
-
-        let subkey1 = left_shift_one_bit(&l);
-        let subkey2 = left_shift_one_bit(&subkey1);
+        let (subkey1, subkey2) = generate_subkeys(&cipher);
 
         Self {
             cipher,
@@ -130,60 +245,185 @@ impl AesCmac256 {
 
     /// Compute CMAC tag for given message
     pub fn compute(&self, message: &[u8]) -> [u8; BLOCK_SIZE] {
-        let last_block_complete = message.len() % BLOCK_SIZE == 0 && !message.is_empty();
+        // Fast path for exactly 16 bytes
+        if message.len() == BLOCK_SIZE {
+            return self.compute_exact_16(message);
+        }
 
+        // Fast path for short messages
+        if message.len() < BLOCK_SIZE {
+            return self.compute_short(message);
+        }
+
+        let last_block_complete = message.len() % BLOCK_SIZE == 0;
+        let total_blocks = if last_block_complete {
+            message.len() / BLOCK_SIZE
+        } else {
+            (message.len() / BLOCK_SIZE) + 1
+        };
+
+        // Specialized paths for 2-4 blocks
+        match total_blocks {
+            2 => return self.compute_2_blocks(message, last_block_complete),
+            3 => return self.compute_3_blocks(message, last_block_complete),
+            4 => return self.compute_4_blocks(message, last_block_complete),
+            _ => {}
+        }
+
+        // General path for 5+ blocks
         let (n_blocks, last_block_start) = if last_block_complete {
-            // Process all but last block normally, treat last block specially
             (
                 message.len() / BLOCK_SIZE - 1,
                 (message.len() / BLOCK_SIZE - 1) * BLOCK_SIZE,
             )
         } else {
-            // Process all complete blocks normally, treat incomplete block specially
             (
                 message.len() / BLOCK_SIZE,
                 (message.len() / BLOCK_SIZE) * BLOCK_SIZE,
             )
         };
 
-        // Prepare last block
-        let mut last_block = [0u8; BLOCK_SIZE];
+        let mut c = [0u8; BLOCK_SIZE];
+
+        for block in message[..n_blocks * BLOCK_SIZE].chunks_exact(BLOCK_SIZE) {
+            xor_block_slice(&mut c, block);
+            c = self.cipher.encrypt_block(&c);
+        }
 
         if last_block_complete {
-            // Complete last block: XOR with K1
-            last_block.copy_from_slice(&message[last_block_start..]);
-            xor_block(&mut last_block, &self.subkey1);
+            xor_block_slice(&mut c, &message[last_block_start..]);
+            xor_block(&mut c, &self.subkey1);
         } else {
-            // Incomplete last block: pad and XOR with K2
+            let mut last_block = [0u8; BLOCK_SIZE];
             let remaining = message.len() - last_block_start;
             if remaining > 0 {
                 last_block[..remaining].copy_from_slice(&message[last_block_start..]);
             }
-            // Padding: append 0x80 then zeros
             last_block[remaining] = 0x80;
             xor_block(&mut last_block, &self.subkey2);
-        }
-
-        // Process complete blocks
-        let mut c = [0u8; BLOCK_SIZE];
-
-        for i in 0..n_blocks {
-            let block_start = i * BLOCK_SIZE;
-            let block = &message[block_start..block_start + BLOCK_SIZE];
-
-            for j in 0..BLOCK_SIZE {
-                c[j] ^= block[j];
-            }
-
-            c = self.cipher.encrypt_block(&c);
-        }
-
-        // Process last block
-        for j in 0..BLOCK_SIZE {
-            c[j] ^= last_block[j];
+            xor_block(&mut c, &last_block);
         }
 
         self.cipher.encrypt_block(&c)
+    }
+
+    /// Fast path for exactly 16 bytes
+    #[inline]
+    fn compute_exact_16(&self, message: &[u8]) -> [u8; BLOCK_SIZE] {
+        debug_assert_eq!(message.len(), BLOCK_SIZE);
+
+        let mut block = [0u8; BLOCK_SIZE];
+        block.copy_from_slice(message);
+        xor_block(&mut block, &self.subkey1);
+        self.cipher.encrypt_block(&block)
+    }
+
+    /// Fast path for messages < 16 bytes
+    #[inline]
+    fn compute_short(&self, message: &[u8]) -> [u8; BLOCK_SIZE] {
+        debug_assert!(message.len() < BLOCK_SIZE);
+
+        let mut block = [0u8; BLOCK_SIZE];
+        if !message.is_empty() {
+            block[..message.len()].copy_from_slice(message);
+        }
+        block[message.len()] = 0x80;
+        xor_block(&mut block, &self.subkey2);
+
+        self.cipher.encrypt_block(&block)
+    }
+
+    /// Specialized path for exactly 2 blocks (32 bytes)
+    #[inline]
+    fn compute_2_blocks(&self, message: &[u8], complete: bool) -> [u8; BLOCK_SIZE] {
+        let mut c = [0u8; BLOCK_SIZE];
+
+        if complete {
+            xor_block_slice(&mut c, &message[0..BLOCK_SIZE]);
+            c = self.cipher.encrypt_block(&c);
+
+            xor_block_slice(&mut c, &message[BLOCK_SIZE..2 * BLOCK_SIZE]);
+            xor_block(&mut c, &self.subkey1);
+            self.cipher.encrypt_block(&c)
+        } else {
+            xor_block_slice(&mut c, &message[0..BLOCK_SIZE]);
+            c = self.cipher.encrypt_block(&c);
+
+            let mut last_block = [0u8; BLOCK_SIZE];
+            let remaining = message.len() - BLOCK_SIZE;
+            if remaining > 0 {
+                last_block[..remaining].copy_from_slice(&message[BLOCK_SIZE..]);
+            }
+            last_block[remaining] = 0x80;
+            xor_block(&mut last_block, &self.subkey2);
+            xor_block(&mut c, &last_block);
+            self.cipher.encrypt_block(&c)
+        }
+    }
+
+    /// Specialized path for exactly 3 blocks (48 bytes)
+    #[inline]
+    fn compute_3_blocks(&self, message: &[u8], complete: bool) -> [u8; BLOCK_SIZE] {
+        let mut c = [0u8; BLOCK_SIZE];
+
+        macro_rules! process_block {
+            ($offset:expr) => {
+                xor_block_slice(&mut c, &message[$offset..$offset + BLOCK_SIZE]);
+                c = self.cipher.encrypt_block(&c);
+            };
+        }
+
+        process_block!(0 * BLOCK_SIZE);
+        process_block!(1 * BLOCK_SIZE);
+
+        if complete {
+            xor_block_slice(&mut c, &message[2 * BLOCK_SIZE..3 * BLOCK_SIZE]);
+            xor_block(&mut c, &self.subkey1);
+            self.cipher.encrypt_block(&c)
+        } else {
+            let mut last_block = [0u8; BLOCK_SIZE];
+            let remaining = message.len() - 2 * BLOCK_SIZE;
+            if remaining > 0 {
+                last_block[..remaining].copy_from_slice(&message[2 * BLOCK_SIZE..]);
+            }
+            last_block[remaining] = 0x80;
+            xor_block(&mut last_block, &self.subkey2);
+            xor_block(&mut c, &last_block);
+            self.cipher.encrypt_block(&c)
+        }
+    }
+
+    /// Specialized path for exactly 4 blocks (64 bytes)
+    #[inline]
+    fn compute_4_blocks(&self, message: &[u8], complete: bool) -> [u8; BLOCK_SIZE] {
+        let mut c = [0u8; BLOCK_SIZE];
+
+        macro_rules! process_blocks {
+            ($($offset:expr),*) => {
+                $(
+                    xor_block_slice(&mut c, &message[$offset * BLOCK_SIZE..($offset + 1) * BLOCK_SIZE]);
+                    c = self.cipher.encrypt_block(&c);
+                )*
+            };
+        }
+
+        process_blocks!(0, 1, 2);
+
+        if complete {
+            xor_block_slice(&mut c, &message[3 * BLOCK_SIZE..4 * BLOCK_SIZE]);
+            xor_block(&mut c, &self.subkey1);
+            self.cipher.encrypt_block(&c)
+        } else {
+            let mut last_block = [0u8; BLOCK_SIZE];
+            let remaining = message.len() - 3 * BLOCK_SIZE;
+            if remaining > 0 {
+                last_block[..remaining].copy_from_slice(&message[3 * BLOCK_SIZE..]);
+            }
+            last_block[remaining] = 0x80;
+            xor_block(&mut last_block, &self.subkey2);
+            xor_block(&mut c, &last_block);
+            self.cipher.encrypt_block(&c)
+        }
     }
 
     /// Verify a CMAC tag
@@ -193,35 +433,62 @@ impl AesCmac256 {
     }
 }
 
-/// Left shift by one bit (for subkey generation)
-fn left_shift_one_bit(input: &[u8; BLOCK_SIZE]) -> [u8; BLOCK_SIZE] {
-    let mut output = [0u8; BLOCK_SIZE];
+/// Generate both K1 and K2 subkeys
+#[inline]
+fn generate_subkeys(cipher: &Aes) -> ([u8; BLOCK_SIZE], [u8; BLOCK_SIZE]) {
+    let l = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
+
+    // Generate K1 from L
+    let mut k1 = [0u8; BLOCK_SIZE];
     let mut overflow = 0u8;
-
-    // Process from right to left (LSB to MSB in big-endian)
     for i in (0..BLOCK_SIZE).rev() {
-        output[i] = (input[i] << 1) | overflow;
-        overflow = input[i] >> 7;
+        k1[i] = (l[i] << 1) | overflow;
+        overflow = l[i] >> 7;
     }
+    let mask1 = 0u8.wrapping_sub(l[0] >> 7);
+    k1[BLOCK_SIZE - 1] ^= 0x87 & mask1;
 
-    // If MSB of input was 1, XOR output with Rb
-    // Rb for AES (128-bit block) = 0x87
-    if input[0] & 0x80 != 0 {
-        output[BLOCK_SIZE - 1] ^= 0x87;
+    // Generate K2 from K1
+    let mut k2 = [0u8; BLOCK_SIZE];
+    overflow = 0u8;
+    for i in (0..BLOCK_SIZE).rev() {
+        k2[i] = (k1[i] << 1) | overflow;
+        overflow = k1[i] >> 7;
     }
+    let mask2 = 0u8.wrapping_sub(k1[0] >> 7);
+    k2[BLOCK_SIZE - 1] ^= 0x87 & mask2;
 
-    output
+    (k1, k2)
 }
 
 /// XOR two blocks
-#[inline]
+#[inline(always)]
 fn xor_block(a: &mut [u8; BLOCK_SIZE], b: &[u8; BLOCK_SIZE]) {
-    for i in 0..BLOCK_SIZE {
-        a[i] ^= b[i];
+    macro_rules! xor_unroll {
+        ($($i:expr),*) => {
+            $(a[$i] ^= b[$i];)*
+        };
     }
+
+    xor_unroll!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+}
+
+/// XOR array with slice
+#[inline(always)]
+fn xor_block_slice(a: &mut [u8; BLOCK_SIZE], b: &[u8]) {
+    debug_assert_eq!(b.len(), BLOCK_SIZE);
+
+    macro_rules! xor_unroll {
+        ($($i:expr),*) => {
+            $(a[$i] ^= b[$i];)*
+        };
+    }
+
+    xor_unroll!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 }
 
 /// Constant-time comparison
+#[inline]
 fn constant_time_compare(a: &[u8; BLOCK_SIZE], b: &[u8; BLOCK_SIZE]) -> bool {
     let mut diff = 0u8;
     for i in 0..BLOCK_SIZE {
@@ -342,5 +609,20 @@ mod tests {
         // Different message should produce different tag
         let tag3 = cmac.compute(b"Different message");
         assert_ne!(tag1, tag3);
+    }
+
+    #[test]
+    fn test_combined_subkey_generation() {
+        let key = hex_literal::hex!("2b7e151628aed2a6abf7158809cf4f3c");
+        let cipher = Aes::new_128(&key);
+
+        let (k1, k2) = generate_subkeys(&cipher);
+
+        // K1 and K2 should be different
+        assert_ne!(k1, k2);
+
+        // Should not be all zeros
+        assert_ne!(k1, [0u8; BLOCK_SIZE]);
+        assert_ne!(k2, [0u8; BLOCK_SIZE]);
     }
 }
