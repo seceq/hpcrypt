@@ -1,13 +1,13 @@
-//! Wycheproof tests for Ed25519 signatures
+//! Wycheproof tests for Ed448 signatures
 //!
-//! Ed25519 is a modern EdDSA signature scheme using Curve25519
+//! Ed448 is a modern EdDSA signature scheme using Curve448 (edwards448)
 
 use serde::Deserialize;
 use wycheproof_tests::{decode_hex, TestResult, TestStats};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct Ed25519Test {
+struct Ed448Test {
     tc_id: usize,
     comment: String,
     msg: String,
@@ -18,18 +18,18 @@ struct Ed25519Test {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct Ed25519Group {
-    public_key: Ed25519Key,
+struct Ed448Group {
+    public_key: Ed448Key,
     public_key_der: String,
     public_key_pem: String,
     #[serde(rename = "type")]
     test_type: String,
-    tests: Vec<Ed25519Test>,
+    tests: Vec<Ed448Test>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct Ed25519Key {
+struct Ed448Key {
     curve: String,
     key_size: usize,
     pk: String,
@@ -41,19 +41,19 @@ struct Ed25519Key {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct Ed25519TestFile {
+struct Ed448TestFile {
     algorithm: String,
     generator_version: Option<String>,
     number_of_tests: usize,
     header: Option<Vec<String>>,
     notes: Option<serde_json::Value>,
     schema: Option<String>,
-    test_groups: Vec<Ed25519Group>,
+    test_groups: Vec<Ed448Group>,
 }
 
 #[test]
-fn test_ed25519_wycheproof() {
-    let test_file: Ed25519TestFile = wycheproof_tests::load_test_file("ed25519_test.json");
+fn test_ed448_wycheproof() {
+    let test_file: Ed448TestFile = wycheproof_tests::load_test_file("ed448_test.json");
 
     println!("\n=== Testing {} ===", test_file.algorithm);
     println!("Total test cases: {}", test_file.number_of_tests);
@@ -72,20 +72,25 @@ fn test_ed25519_wycheproof() {
         let public_key = decode_hex(&group.public_key.pk);
 
         // Validate key sizes
-        assert_eq!(public_key.len(), 32, "Ed25519 public key must be 32 bytes");
+        assert_eq!(public_key.len(), 57, "Ed448 public key must be 57 bytes");
+        assert_eq!(group.public_key.key_size, 448, "Ed448 key size must be 448 bits");
 
         for test in &group.tests {
             let message = decode_hex(&test.msg);
             let signature = decode_hex(&test.sig);
 
             // Convert to fixed-size arrays
-            let mut pk_array = [0u8; 32];
+            let mut pk_array = [0u8; 57];
             pk_array.copy_from_slice(&public_key);
 
-            let mut sig_array = [0u8; 64];
-            let result = if signature.len() == 64 {
+            let mut sig_array = [0u8; 114];
+            if signature.len() == 114 {
                 sig_array.copy_from_slice(&signature);
-                hpcrypt_curves::Ed25519::verify(&pk_array, &message, &sig_array)
+            }
+
+            // Use actual Ed448 verification
+            let result = if signature.len() == 114 {
+                hpcrypt_curves::ed448::verify(&pk_array, &message, &sig_array)
             } else {
                 false // Invalid signature length
             };
@@ -127,22 +132,24 @@ fn test_ed25519_wycheproof() {
         }
     }
 
-    assert_eq!(stats.failed, 0, "Ed25519 tests failed");
+    assert_eq!(stats.failed, 0, "Ed448 tests failed");
 }
 
 #[cfg(test)]
-mod ed25519_notes {
-    /// Documents Ed25519 security considerations
+mod ed448_notes {
+    /// Documents Ed448 security considerations
     #[test]
-    fn test_ed25519_security_notes() {
-        println!("\nEd25519 Security Considerations:");
+    fn test_ed448_security_notes() {
+        println!("\nEd448 Security Considerations:");
         println!("  - RFC 8032 standard");
         println!("  - Deterministic signatures (no nonce needed)");
-        println!("  - 128-bit security level");
-        println!("  - Small keys: 32-byte public key, 32-byte private key");
-        println!("  - Small signatures: 64 bytes");
-        println!("  - Fast verification (batching possible)");
-        println!("  - No known vulnerabilities when properly implemented");
+        println!("  - 224-bit security level (higher than Ed25519)");
+        println!("  - Larger keys: 57-byte public key, 57-byte private key");
+        println!("  - Larger signatures: 114 bytes");
+        println!("  - Slower than Ed25519 but higher security margin");
+        println!("  - Context support (optional context string)");
         println!("  - Must validate points are on curve");
+        println!("  - Resistant to timing attacks when properly implemented");
     }
+
 }
