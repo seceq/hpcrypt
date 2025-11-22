@@ -12,6 +12,7 @@ pub const BLOCK_LEN: usize = 128;
 pub const OUTPUT_LEN: usize = 48;
 
 /// SHA-384 hasher state
+#[derive(Clone)]
 pub struct Sha384 {
     /// Internal state (8 x 64-bit words, same as SHA-512)
     state: [u64; 8],

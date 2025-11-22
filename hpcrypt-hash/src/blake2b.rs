@@ -105,6 +105,7 @@ fn bytes_to_u64(bytes: &[u8]) -> u64 {
 }
 
 /// BLAKE2b hasher state
+#[derive(Clone)]
 pub struct Blake2b {
     h: [u64; 8],
     t: u64,
