@@ -1,0 +1,130 @@
+[
+  {
+    "test_id": 1,
+    "algorithm": "SHA-1",
+    "source": "FIPS 180-4 Example",
+    "input": "616263",
+    "hash": "a9993e364706816aba3e25717850c26c9cd0d89d",
+    "note": "SHA-1('abc')"
+  },
+  {
+    "test_id": 2,
+    "algorithm": "SHA-1",
+    "source": "FIPS 180-4 Example",
+    "input": "6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071",
+    "hash": "84983e441c3bd26ebaae4aa1f95129e5e54670f1",
+    "note": "SHA-1('abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq') - 448 bits"
+  },
+  {
+    "test_id": 3,
+    "algorithm": "SHA-1",
+    "source": "NIST SHAVS",
+    "input": "",
+    "hash": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+    "note": "SHA-1('') - empty string"
+  },
+  {
+    "test_id": 4,
+    "algorithm": "SHA-224",
+    "source": "FIPS 180-4 Example",
+    "input": "616263",
+    "hash": "23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7",
+    "note": "SHA-224('abc')"
+  },
+  {
+    "test_id": 5,
+    "algorithm": "SHA-224",
+    "source": "FIPS 180-4 Example",
+    "input": "6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071",
+    "hash": "75388b16512776cc5dba5da1fd890150b0c6455cb4f58b1952522525",
+    "note": "SHA-224('abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq')"
+  },
+  {
+    "test_id": 6,
+    "algorithm": "SHA-256",
+    "source": "FIPS 180-4 Example",
+    "input": "616263",
+    "hash": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    "note": "SHA-256('abc')"
+  },
+  {
+    "test_id": 7,
+    "algorithm": "SHA-256",
+    "source": "FIPS 180-4 Example",
+    "input": "6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071",
+    "hash": "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1",
+    "note": "SHA-256('abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq') - 448 bits"
+  },
+  {
+    "test_id": 8,
+    "algorithm": "SHA-256",
+    "source": "FIPS 180-4 Example",
+    "input": "61626364656667686263646566676869636465666768696a6465666768696a6b65666768696a6b6c666768696a6b6c6d6768696a6b6c6d6e68696a6b6c6d6e6f696a6b6c6d6e6f706a6b6c6d6e6f70716b6c6d6e6f7071726c6d6e6f707172736d6e6f70717273746e6f707172737475",
+    "hash": "cf5b16a778af8380036ce59e7b0492370b249b11e8f07a51afac45037afee9d1",
+    "note": "SHA-256('abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu') - 896 bits"
+  },
+  {
+    "test_id": 9,
+    "algorithm": "SHA-256",
+    "source": "NIST SHAVS",
+    "input": "",
+    "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "note": "SHA-256('') - empty string"
+  },
+  {
+    "test_id": 10,
+    "algorithm": "SHA-384",
+    "source": "FIPS 180-4 Example",
+    "input": "616263",
+    "hash": "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7",
+    "note": "SHA-384('abc')"
+  },
+  {
+    "test_id": 11,
+    "algorithm": "SHA-384",
+    "source": "FIPS 180-4 Example",
+    "input": "61626364656667686263646566676869636465666768696a6465666768696a6b65666768696a6b6c666768696a6b6c6d6768696a6b6c6d6e68696a6b6c6d6e6f696a6b6c6d6e6f706a6b6c6d6e6f70716b6c6d6e6f7071726c6d6e6f707172736d6e6f70717273746e6f707172737475",
+    "hash": "09330c33f71147e83d192fc782cd1b4753111b173b3b05d22fa08086e3b0f712fcc7c71a557e2db966c3e9fa91746039",
+    "note": "SHA-384('abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu') - 896 bits"
+  },
+  {
+    "test_id": 12,
+    "algorithm": "SHA-512",
+    "source": "FIPS 180-4 Example",
+    "input": "616263",
+    "hash": "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f",
+    "note": "SHA-512('abc')"
+  },
+  {
+    "test_id": 13,
+    "algorithm": "SHA-512",
+    "source": "FIPS 180-4 Example",
+    "input": "61626364656667686263646566676869636465666768696a6465666768696a6b65666768696a6b6c666768696a6b6c6d6768696a6b6c6d6e68696a6b6c6d6e6f696a6b6c6d6e6f706a6b6c6d6e6f70716b6c6d6e6f7071726c6d6e6f707172736d6e6f70717273746e6f707172737475",
+    "hash": "8e959b75dae313da8cf4f72814fc143f8f7779c6eb9f7fa17299aeadb6889018501d289e4900f7e4331b99dec4b5433ac7d329eeb6dd26545e96e55b874be909",
+    "note": "SHA-512('abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu') - 896 bits"
+  },
+  {
+    "test_id": 14,
+    "algorithm": "SHA-512",
+    "source": "NIST SHAVS",
+    "input": "",
+    "hash": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e",
+    "note": "SHA-512('') - empty string"
+  },
+  {
+    "test_id": 15,
+    "algorithm": "SHA-512/224",
+    "source": "FIPS 180-4 Example",
+    "input": "616263",
+    "hash": "4634270f707b6a54daae7530460842e20e37ed265ceee9a43e8924aa",
+    "note": "SHA-512/224('abc')"
+  },
+  {
+    "test_id": 16,
+    "algorithm": "SHA-512/256",
+    "source": "FIPS 180-4 Example",
+    "input": "616263",
+    "hash": "53048e2681941ef99b2e29b76b4c7dabe4c2d0c634fc6d46e0e2f13107e7af23",
+    "note": "SHA-512/256('abc')"
+  }
+]
