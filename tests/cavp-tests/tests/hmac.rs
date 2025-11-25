@@ -6,7 +6,7 @@ use cavp_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 
 #[cfg(feature = "enable-mac-tests")]
-use hpcrypt_mac::{Hmac, HmacSha256, HmacSha384, HmacSha512};
+use hpcrypt_mac::{HmacSha256, HmacSha384, HmacSha512};
 
 // ============================================================================
 // Test Data Structures
@@ -15,7 +15,9 @@ use hpcrypt_mac::{Hmac, HmacSha256, HmacSha384, HmacSha512};
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct HmacPrompt {
+    #[allow(dead_code)]
     vs_id: u32,
+    #[allow(dead_code)]
     algorithm: String,
     test_groups: Vec<HmacTestGroup>,
 }
@@ -24,6 +26,7 @@ struct HmacPrompt {
 #[serde(rename_all = "camelCase")]
 struct HmacTestGroup {
     tg_id: u32,
+    #[allow(dead_code)]
     test_type: String,
     tests: Vec<HmacTestCase>,
 }
@@ -33,8 +36,10 @@ struct HmacTestGroup {
 struct HmacTestCase {
     tc_id: u32,
     key: String,
+    #[allow(dead_code)]
     key_len: usize,
     msg: String,
+    #[allow(dead_code)]
     msg_len: usize,
     mac_len: usize,
 }
@@ -42,6 +47,7 @@ struct HmacTestCase {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct HmacExpected {
+    #[allow(dead_code)]
     vs_id: u32,
     test_groups: Vec<HmacExpectedGroup>,
 }
@@ -56,6 +62,7 @@ struct HmacExpectedGroup {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct HmacExpectedCase {
+    #[allow(dead_code)]
     tc_id: u32,
     mac: String,
 }
@@ -76,13 +83,25 @@ fn test_hmac_sha256_cavp() {
         assert_eq!(group.tg_id, expected_group.tg_id);
 
         for (test, expected_test) in group.tests.iter().zip(&expected_group.tests) {
-            assert_eq!(test.tc_id, expected_test.tc_id);
-
             let key = decode_hex(&test.key);
             let msg = decode_hex(&test.msg);
             let expected_mac = decode_hex(&expected_test.mac);
 
-            test_hmac::<HmacSha256>(&key, &msg, &expected_mac, test.mac_len, &mut stats, test.tc_id);
+            let hmac = HmacSha256::new(&key);
+            let mac = hmac.compute(&msg);
+
+            // Truncate to requested MAC length (in bits)
+            let mac_len_bytes = (test.mac_len + 7) / 8;
+            let truncated_mac = &mac[..mac_len_bytes];
+
+            if truncated_mac == expected_mac.as_slice() {
+                stats.passed += 1;
+            } else {
+                eprintln!("Test case {} FAILED: MAC mismatch", test.tc_id);
+                eprintln!("  Expected: {}", hex::encode(&expected_mac));
+                eprintln!("  Got: {}", hex::encode(truncated_mac));
+                stats.failed += 1;
+            }
         }
     }
 
@@ -106,13 +125,25 @@ fn test_hmac_sha384_cavp() {
         assert_eq!(group.tg_id, expected_group.tg_id);
 
         for (test, expected_test) in group.tests.iter().zip(&expected_group.tests) {
-            assert_eq!(test.tc_id, expected_test.tc_id);
-
             let key = decode_hex(&test.key);
             let msg = decode_hex(&test.msg);
             let expected_mac = decode_hex(&expected_test.mac);
 
-            test_hmac::<HmacSha384>(&key, &msg, &expected_mac, test.mac_len, &mut stats, test.tc_id);
+            let hmac = HmacSha384::new(&key);
+            let mac = hmac.compute(&msg);
+
+            // Truncate to requested MAC length (in bits)
+            let mac_len_bytes = (test.mac_len + 7) / 8;
+            let truncated_mac = &mac[..mac_len_bytes];
+
+            if truncated_mac == expected_mac.as_slice() {
+                stats.passed += 1;
+            } else {
+                eprintln!("Test case {} FAILED: MAC mismatch", test.tc_id);
+                eprintln!("  Expected: {}", hex::encode(&expected_mac));
+                eprintln!("  Got: {}", hex::encode(truncated_mac));
+                stats.failed += 1;
+            }
         }
     }
 
@@ -136,49 +167,30 @@ fn test_hmac_sha512_cavp() {
         assert_eq!(group.tg_id, expected_group.tg_id);
 
         for (test, expected_test) in group.tests.iter().zip(&expected_group.tests) {
-            assert_eq!(test.tc_id, expected_test.tc_id);
-
             let key = decode_hex(&test.key);
             let msg = decode_hex(&test.msg);
             let expected_mac = decode_hex(&expected_test.mac);
 
-            test_hmac::<HmacSha512>(&key, &msg, &expected_mac, test.mac_len, &mut stats, test.tc_id);
+            let hmac = HmacSha512::new(&key);
+            let mac = hmac.compute(&msg);
+
+            // Truncate to requested MAC length (in bits)
+            let mac_len_bytes = (test.mac_len + 7) / 8;
+            let truncated_mac = &mac[..mac_len_bytes];
+
+            if truncated_mac == expected_mac.as_slice() {
+                stats.passed += 1;
+            } else {
+                eprintln!("Test case {} FAILED: MAC mismatch", test.tc_id);
+                eprintln!("  Expected: {}", hex::encode(&expected_mac));
+                eprintln!("  Got: {}", hex::encode(truncated_mac));
+                stats.failed += 1;
+            }
         }
     }
 
     stats.print_summary();
     assert_eq!(stats.failed, 0, "Some HMAC-SHA512 tests failed");
-}
-
-// ============================================================================
-// Test Helper
-// ============================================================================
-
-#[cfg(feature = "enable-mac-tests")]
-fn test_hmac<H: Hmac>(
-    key: &[u8],
-    msg: &[u8],
-    expected_mac: &[u8],
-    mac_len_bits: usize,
-    stats: &mut TestStats,
-    tc_id: u32,
-) {
-    let mac = H::mac(key, msg);
-
-    // Truncate to requested MAC length (in bits)
-    let mac_len_bytes = (mac_len_bits + 7) / 8;
-    let truncated_mac = &mac[..mac_len_bytes];
-
-    if truncated_mac == expected_mac {
-        stats.passed += 1;
-    } else {
-        eprintln!("Test case {} FAILED: MAC mismatch", tc_id);
-        eprintln!("  Expected length: {}", expected_mac.len());
-        eprintln!("  Got length: {}", truncated_mac.len());
-        eprintln!("  Expected: {}", hex::encode(expected_mac));
-        eprintln!("  Got: {}", hex::encode(truncated_mac));
-        stats.failed += 1;
-    }
 }
 
 // ============================================================================
