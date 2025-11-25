@@ -1,0 +1,139 @@
+[
+  {
+    "test_id": 1,
+    "test_type": "chacha20_block",
+    "source": "RFC 8439 Section 2.3.2",
+    "description": "ChaCha20 Block Function Test Vector",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "nonce": "000000090000004a00000000",
+    "counter": 1,
+    "expected_keystream": "10f1e7e4d13b5915500fdd1fa32071c4c7d1f4c733c068030422aa9ac3d46c4ed2826446079faa0914c2d705d98b02a2b5129cd1de164eb9cbd083e8a2503c4e",
+    "note": "First block of keystream"
+  },
+  {
+    "test_id": 2,
+    "test_type": "chacha20_encryption",
+    "source": "RFC 8439 Section 2.4.2",
+    "description": "ChaCha20 Encryption Test Vector",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "nonce": "000000000000004a00000000",
+    "counter": 1,
+    "plaintext": "4c616469657320616e642047656e746c656d656e206f662074686520636c617373206f66202739393a204966204920636f756c64206f6666657220796f75206f6e6c79206f6e652074697020666f7220746865206675747572652c2073756e73637265656e20776f756c642062652069742e",
+    "ciphertext": "6e2e359a2568f98041ba0728dd0d6981e97e7aec1d4360c20a27afccfd9fae0bf91b65c5524733ab8f593dabcd62b3571639d624e65152ab8f530c359f0861d807ca0dbf500d6a6156a38e088a22b65e52bc514d16ccf806818ce91ab77937365af90bbf74a35be6b40b8eedf2785e42874d",
+    "note": "Sunscreen message encryption"
+  },
+  {
+    "test_id": 3,
+    "test_type": "chacha20_encryption",
+    "source": "RFC 8439 Section A.2 Test Vector #1",
+    "description": "ChaCha20 Test Vector #1 - All zeros",
+    "key": "0000000000000000000000000000000000000000000000000000000000000000",
+    "nonce": "000000000000000000000000",
+    "counter": 0,
+    "plaintext": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "ciphertext": "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7da41597c5157488d7724e03fb8d84a376a43b8f41518a11cc387b669b2ee6586",
+    "note": "All zeros test - demonstrates raw keystream"
+  },
+  {
+    "test_id": 4,
+    "test_type": "chacha20_encryption",
+    "source": "RFC 8439 Section A.2 Test Vector #2",
+    "description": "ChaCha20 Test Vector #2 - Counter 1",
+    "key": "0000000000000000000000000000000000000000000000000000000000000000",
+    "nonce": "000000000000000000000000",
+    "counter": 1,
+    "plaintext": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "ciphertext": "9f07e7be5551387a98ba977c732d080dcb0f29a048e3656912c6533e32ee7aed29b721769ce64e43d57133b074d839d531ed1f28510afb45ace10a1f4b794d6f",
+    "note": "Counter = 1 produces different keystream"
+  },
+  {
+    "test_id": 5,
+    "test_type": "chacha20_encryption",
+    "source": "RFC 8439 Section A.2 Test Vector #3",
+    "description": "ChaCha20 Test Vector #3 - Different key",
+    "key": "0000000000000000000000000000000000000000000000000000000000000001",
+    "nonce": "000000000000000000000000",
+    "counter": 1,
+    "plaintext": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "ciphertext": "3aeb5224ecf849929b9d828db1ced4dd832025e8018b8160b82284f3c949aa5a8eca00bbb4a73bdad192b5c42f73f2fd4e273644c8b36125a64addeb006c13a0",
+    "note": "Different key produces different output"
+  },
+  {
+    "test_id": 6,
+    "test_type": "chacha20_encryption",
+    "source": "RFC 8439 Section A.2 Test Vector #4",
+    "description": "ChaCha20 Test Vector #4 - Non-zero nonce byte",
+    "key": "00ff000000000000000000000000000000000000000000000000000000000000",
+    "nonce": "000000000000000000000000",
+    "counter": 2,
+    "plaintext": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "ciphertext": "72d54dfbf12ec44b362692df94137f328fea8da73990265ec1bbbea1ae9af0ca13b25aa26cb4a648cb9b9d1be65b2c0924a66c54d545ec1b7374f4872e99f096",
+    "note": "Different key byte pattern"
+  },
+  {
+    "test_id": 7,
+    "test_type": "chacha20_encryption",
+    "source": "RFC 8439 Section A.2 Test Vector #5",
+    "description": "ChaCha20 Test Vector #5 - Nonce variation",
+    "key": "0000000000000000000000000000000000000000000000000000000000000000",
+    "nonce": "000000000000000000000002",
+    "counter": 0,
+    "plaintext": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "ciphertext": "c2c64d378cd536374ae204b9ef933fcd1a8b2288b3dfa49672ab765b54ee27c78a970e0e955c14f3a88e741b97c286f75f8fc299e8148362fa198a39531bed6d",
+    "note": "Different nonce produces different output"
+  },
+  {
+    "test_id": 8,
+    "test_type": "xchacha20_roundtrip",
+    "source": "draft-irtf-cfrg-xchacha",
+    "description": "XChaCha20 Roundtrip Test",
+    "key": "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
+    "nonce": "404142434445464748494a4b4c4d4e4f5051525354555657",
+    "counter": 1,
+    "plaintext": "5468652064686f6c65202870726f6e6f756e6365642022646f6c65222920697320616c736f206b6e6f776e2061732074686520417369617469632077696c6420646f672e",
+    "note": "XChaCha20 with 24-byte nonce - roundtrip verification"
+  },
+  {
+    "test_id": 9,
+    "test_type": "hchacha20",
+    "source": "draft-irtf-cfrg-xchacha Section 2.2.1",
+    "description": "HChaCha20 Test Vector",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "input": "000000090000004a0000000031415926",
+    "expected_output": "82413b4227b27bfed30e42508a877d73a0f9e4d58a74a853c12ec41326d3ecdc",
+    "note": "HChaCha20 key derivation for XChaCha20"
+  },
+  {
+    "test_id": 10,
+    "test_type": "chacha20_roundtrip",
+    "source": "Property Test",
+    "description": "Encrypt/Decrypt Roundtrip",
+    "key": "4242424242424242424242424242424242424242424242424242424242424242",
+    "nonce": "010101010101010101010101",
+    "counter": 0,
+    "plaintext": "48656c6c6f2c20576f726c6421",
+    "note": "Verify encryption followed by decryption recovers plaintext"
+  },
+  {
+    "test_id": 11,
+    "test_type": "chacha20_seek",
+    "source": "API Test",
+    "description": "Seek to specific block",
+    "key": "0000000000000000000000000000000000000000000000000000000000000000",
+    "nonce": "000000000000000000000000",
+    "seek_to_block": 5,
+    "plaintext": "0000000000000000000000000000000000000000000000000000000000000000",
+    "note": "Test seeking to arbitrary block position"
+  },
+  {
+    "test_id": 12,
+    "test_type": "chacha20_partial_blocks",
+    "source": "Edge Case Test",
+    "description": "Partial block handling",
+    "key": "4242424242424242424242424242424242424242424242424242424242424242",
+    "nonce": "010101010101010101010101",
+    "counter": 0,
+    "test_lengths": [1, 7, 15, 63, 65, 100, 127, 128, 129],
+    "note": "Test various data lengths including non-block-aligned"
+  }
+]
