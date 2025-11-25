@@ -459,6 +459,41 @@ impl VerifyingKey {
         }
     }
 
+    /// Create a verifying key from x and y affine coordinates
+    ///
+    /// # Returns
+    ///
+    /// `Ok(VerifyingKey)` if the coordinates represent a valid point on the curve,
+    /// `Err(CurveError)` otherwise.
+    pub fn from_affine_coords(x: &[u8], y: &[u8]) -> Result<Self, CurveError> {
+        use hpcrypt_curves::p384::{AffinePoint, FieldElement};
+
+        if x.len() != 48 || y.len() != 48 {
+            return Err(CurveError::NotOnCurve);
+        }
+
+        let x_bytes: [u8; 48] = x.try_into().unwrap();
+        let y_bytes: [u8; 48] = y.try_into().unwrap();
+
+        let x_field = FieldElement::from_bytes(&x_bytes).ok_or(CurveError::NotOnCurve)?;
+        let y_field = FieldElement::from_bytes(&y_bytes).ok_or(CurveError::NotOnCurve)?;
+
+        let affine = AffinePoint {
+            x: x_field,
+            y: y_field,
+        };
+        let point = Point::from_affine(&affine);
+
+        // Verify the point is on the curve
+        if !bool::from(point.is_on_curve()) {
+            return Err(CurveError::NotOnCurve);
+        }
+
+        Ok(Self {
+            public_point: point,
+        })
+    }
+
     /// Verify an ECDSA signature on a message
     ///
     /// # Algorithm
