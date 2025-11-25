@@ -6,7 +6,13 @@ use cavp_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 
 #[cfg(feature = "enable-rsa-tests")]
-use hpcrypt_rsa::{PublicKey, RsaError};
+use hpcrypt_rsa::RsaPublicKey;
+#[cfg(feature = "enable-rsa-tests")]
+use hpcrypt_rsa::pkcs1v15::{verify_pkcs1v15, create_digest_info, HashAlgorithm};
+#[cfg(feature = "enable-rsa-tests")]
+use hpcrypt_hash::sha256::sha256;
+#[cfg(feature = "enable-rsa-tests")]
+use num_bigint::BigUint;
 
 // ============================================================================
 // Test Data Structures
@@ -129,13 +135,23 @@ fn test_rsa_verify_pkcs1v15(
     stats: &mut TestStats,
     tc_id: u32,
 ) {
+    // Convert bytes to BigUint
+    let n_uint = BigUint::from_bytes_be(n);
+    let e_uint = BigUint::from_bytes_be(e);
+
     // Try to construct public key
-    let public_key_result = PublicKey::from_components(n, e);
+    let public_key_result = RsaPublicKey::new(n_uint, e_uint);
 
     match public_key_result {
         Ok(public_key) => {
-            // Verify signature using PKCS#1 v1.5 with SHA-256
-            let result = public_key.verify_pkcs1v15_sha256(message, signature);
+            // Hash the message with SHA-256
+            let hash = sha256(message);
+
+            // Create DigestInfo for SHA-256
+            let digest_info = create_digest_info(HashAlgorithm::Sha256, &hash);
+
+            // Verify signature using PKCS#1 v1.5
+            let result = verify_pkcs1v15(&public_key, &digest_info, signature);
 
             let verification_passed = result.is_ok();
 
