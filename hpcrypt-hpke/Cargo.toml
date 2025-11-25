@@ -16,6 +16,7 @@ hpcrypt-curves = { path = "../hpcrypt-curves", version = "0.1.0" }
 hpcrypt-kdf = { path = "../hpcrypt-kdf", version = "0.1.0" }
 hpcrypt-aead = { path = "../hpcrypt-aead", version = "0.1.0" }
 hpcrypt-hash = { path = "../hpcrypt-hash", version = "0.1.0" }
+hpcrypt-mac = { path = "../hpcrypt-mac", version = "0.1.0" }
 subtle = { workspace = true }
 zeroize = { workspace = true }
 rand = { version = "0.8", default-features = false }
