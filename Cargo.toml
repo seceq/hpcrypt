@@ -23,6 +23,7 @@ members = [
     "hpcrypt-srp",
     "tests/wycheproof-tests",  # Wycheproof integration tests
     "tests/cavp-tests",        # NIST CAVP/ACVP integration tests
+    "tests/rfc-tests",         # RFC/standards test vectors
 ]
 
 [workspace.package]
