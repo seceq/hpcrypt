@@ -86,194 +86,229 @@ impl FieldElement {
     /// Converts field element to bytes (big-endian encoding).
     ///
     /// This matches the standard SEC1 encoding for field elements.
-    /// Returns 66 bytes (521 bits).
+    /// Returns 66 bytes (521 bits in big-endian, with 7 leading zero bits).
     pub fn to_bytes(&self) -> [u8; 66] {
         let mut bytes = [0u8; 66];
 
-        // Simplified approach: Pack all 521 bits into 66 bytes (big-endian)
-        // Limbs are stored in little-endian (limb[0] is LSB), but bytes are big-endian (bytes[0] is MSB)
+        // Standard big-endian encoding for 521-bit value:
+        // The value is stored in 9 limbs (little-endian):
+        //   limbs[0] = bits 0-63
+        //   limbs[1] = bits 64-127
+        //   ...
+        //   limbs[7] = bits 448-511
+        //   limbs[8] = bits 512-520 (9 bits)
+        //
+        // Output 66 bytes in big-endian:
+        //   bytes[0] = bits 520-513 (but only 521-513=8 bits used, top bit is bit 520)
+        //   bytes[1] = bits 512-505 (but bits 512-520 overlap with limbs[8])
+        //   ...
+        //   bytes[65] = bits 7-0
 
-        // bytes[0]: bits 520-513 (top 8 bits of limb[8])
-        bytes[0] = (self.limbs[8] >> 1) as u8;
+        // Handle the 521-bit to 66-byte mapping
+        // 521 = 8*65 + 1, so we need to handle the bit alignment carefully
+        //
+        // In big-endian, bytes[0] contains the MSB.
+        // For a 521-bit number fitting in 66 bytes (528 bits), the top 7 bits of byte[0] are padding.
+        //
+        // Byte layout:
+        // bytes[0]: [0 0 0 0 0 0 0 bit520]  (7 padding zeros + bit 520)
+        // bytes[1]: [bits 519-512]
+        // bytes[2]: [bits 511-504]
+        // ...
+        // bytes[65]: [bits 7-0]
 
-        // bytes[1]: bit 512 (bottom bit of limb[8]) in bit 7, bits 511-505 (top 7 bits of limb[7]) in bits 6-0
-        bytes[1] = (((self.limbs[8] & 1) << 7) | ((self.limbs[7] >> 57) & 0x7F)) as u8;
+        // bytes[0]: only bit 520 (MSB of 521-bit number), in the LSB position of the byte
+        bytes[0] = ((self.limbs[8] >> 8) & 0x01) as u8;
 
-        // bytes[2-9]: bits 504-441 (bits 56-0 of limb[7] and bit 63 of limb[6])
-        bytes[2] = (self.limbs[7] >> 49) as u8;
-        bytes[3] = (self.limbs[7] >> 41) as u8;
-        bytes[4] = (self.limbs[7] >> 33) as u8;
-        bytes[5] = (self.limbs[7] >> 25) as u8;
-        bytes[6] = (self.limbs[7] >> 17) as u8;
-        bytes[7] = (self.limbs[7] >> 9) as u8;
-        bytes[8] = (self.limbs[7] >> 1) as u8;
-        bytes[9] = (((self.limbs[7] & 1) << 7) | ((self.limbs[6] >> 57) & 0x7F)) as u8;
+        // bytes[1]: bits 519-512 (bottom 8 bits of limbs[8])
+        bytes[1] = (self.limbs[8] & 0xFF) as u8;
 
-        // bytes[10-17]: limb[6]
-        bytes[10] = (self.limbs[6] >> 49) as u8;
-        bytes[11] = (self.limbs[6] >> 41) as u8;
-        bytes[12] = (self.limbs[6] >> 33) as u8;
-        bytes[13] = (self.limbs[6] >> 25) as u8;
-        bytes[14] = (self.limbs[6] >> 17) as u8;
-        bytes[15] = (self.limbs[6] >> 9) as u8;
-        bytes[16] = (self.limbs[6] >> 1) as u8;
-        bytes[17] = (((self.limbs[6] & 1) << 7) | ((self.limbs[5] >> 57) & 0x7F)) as u8;
+        // bytes[2..10]: limbs[7] (bits 511-448)
+        bytes[2] = (self.limbs[7] >> 56) as u8;
+        bytes[3] = (self.limbs[7] >> 48) as u8;
+        bytes[4] = (self.limbs[7] >> 40) as u8;
+        bytes[5] = (self.limbs[7] >> 32) as u8;
+        bytes[6] = (self.limbs[7] >> 24) as u8;
+        bytes[7] = (self.limbs[7] >> 16) as u8;
+        bytes[8] = (self.limbs[7] >> 8) as u8;
+        bytes[9] = self.limbs[7] as u8;
 
-        // bytes[18-25]: limb[5]
-        bytes[18] = (self.limbs[5] >> 49) as u8;
-        bytes[19] = (self.limbs[5] >> 41) as u8;
-        bytes[20] = (self.limbs[5] >> 33) as u8;
-        bytes[21] = (self.limbs[5] >> 25) as u8;
-        bytes[22] = (self.limbs[5] >> 17) as u8;
-        bytes[23] = (self.limbs[5] >> 9) as u8;
-        bytes[24] = (self.limbs[5] >> 1) as u8;
-        bytes[25] = (((self.limbs[5] & 1) << 7) | ((self.limbs[4] >> 57) & 0x7F)) as u8;
+        // bytes[10..18]: limbs[6] (bits 447-384)
+        bytes[10] = (self.limbs[6] >> 56) as u8;
+        bytes[11] = (self.limbs[6] >> 48) as u8;
+        bytes[12] = (self.limbs[6] >> 40) as u8;
+        bytes[13] = (self.limbs[6] >> 32) as u8;
+        bytes[14] = (self.limbs[6] >> 24) as u8;
+        bytes[15] = (self.limbs[6] >> 16) as u8;
+        bytes[16] = (self.limbs[6] >> 8) as u8;
+        bytes[17] = self.limbs[6] as u8;
 
-        // bytes[26-33]: limb[4]
-        bytes[26] = (self.limbs[4] >> 49) as u8;
-        bytes[27] = (self.limbs[4] >> 41) as u8;
-        bytes[28] = (self.limbs[4] >> 33) as u8;
-        bytes[29] = (self.limbs[4] >> 25) as u8;
-        bytes[30] = (self.limbs[4] >> 17) as u8;
-        bytes[31] = (self.limbs[4] >> 9) as u8;
-        bytes[32] = (self.limbs[4] >> 1) as u8;
-        bytes[33] = (((self.limbs[4] & 1) << 7) | ((self.limbs[3] >> 57) & 0x7F)) as u8;
+        // bytes[18..26]: limbs[5] (bits 383-320)
+        bytes[18] = (self.limbs[5] >> 56) as u8;
+        bytes[19] = (self.limbs[5] >> 48) as u8;
+        bytes[20] = (self.limbs[5] >> 40) as u8;
+        bytes[21] = (self.limbs[5] >> 32) as u8;
+        bytes[22] = (self.limbs[5] >> 24) as u8;
+        bytes[23] = (self.limbs[5] >> 16) as u8;
+        bytes[24] = (self.limbs[5] >> 8) as u8;
+        bytes[25] = self.limbs[5] as u8;
 
-        // bytes[34-41]: limb[3]
-        bytes[34] = (self.limbs[3] >> 49) as u8;
-        bytes[35] = (self.limbs[3] >> 41) as u8;
-        bytes[36] = (self.limbs[3] >> 33) as u8;
-        bytes[37] = (self.limbs[3] >> 25) as u8;
-        bytes[38] = (self.limbs[3] >> 17) as u8;
-        bytes[39] = (self.limbs[3] >> 9) as u8;
-        bytes[40] = (self.limbs[3] >> 1) as u8;
-        bytes[41] = (((self.limbs[3] & 1) << 7) | ((self.limbs[2] >> 57) & 0x7F)) as u8;
+        // bytes[26..34]: limbs[4] (bits 319-256)
+        bytes[26] = (self.limbs[4] >> 56) as u8;
+        bytes[27] = (self.limbs[4] >> 48) as u8;
+        bytes[28] = (self.limbs[4] >> 40) as u8;
+        bytes[29] = (self.limbs[4] >> 32) as u8;
+        bytes[30] = (self.limbs[4] >> 24) as u8;
+        bytes[31] = (self.limbs[4] >> 16) as u8;
+        bytes[32] = (self.limbs[4] >> 8) as u8;
+        bytes[33] = self.limbs[4] as u8;
 
-        // bytes[42-49]: limb[2]
-        bytes[42] = (self.limbs[2] >> 49) as u8;
-        bytes[43] = (self.limbs[2] >> 41) as u8;
-        bytes[44] = (self.limbs[2] >> 33) as u8;
-        bytes[45] = (self.limbs[2] >> 25) as u8;
-        bytes[46] = (self.limbs[2] >> 17) as u8;
-        bytes[47] = (self.limbs[2] >> 9) as u8;
-        bytes[48] = (self.limbs[2] >> 1) as u8;
-        bytes[49] = (((self.limbs[2] & 1) << 7) | ((self.limbs[1] >> 57) & 0x7F)) as u8;
+        // bytes[34..42]: limbs[3] (bits 255-192)
+        bytes[34] = (self.limbs[3] >> 56) as u8;
+        bytes[35] = (self.limbs[3] >> 48) as u8;
+        bytes[36] = (self.limbs[3] >> 40) as u8;
+        bytes[37] = (self.limbs[3] >> 32) as u8;
+        bytes[38] = (self.limbs[3] >> 24) as u8;
+        bytes[39] = (self.limbs[3] >> 16) as u8;
+        bytes[40] = (self.limbs[3] >> 8) as u8;
+        bytes[41] = self.limbs[3] as u8;
 
-        // bytes[50-57]: limb[1]
-        bytes[50] = (self.limbs[1] >> 49) as u8;
-        bytes[51] = (self.limbs[1] >> 41) as u8;
-        bytes[52] = (self.limbs[1] >> 33) as u8;
-        bytes[53] = (self.limbs[1] >> 25) as u8;
-        bytes[54] = (self.limbs[1] >> 17) as u8;
-        bytes[55] = (self.limbs[1] >> 9) as u8;
-        bytes[56] = (self.limbs[1] >> 1) as u8;
-        bytes[57] = (((self.limbs[1] & 1) << 7) | ((self.limbs[0] >> 57) & 0x7F)) as u8;
+        // bytes[42..50]: limbs[2] (bits 191-128)
+        bytes[42] = (self.limbs[2] >> 56) as u8;
+        bytes[43] = (self.limbs[2] >> 48) as u8;
+        bytes[44] = (self.limbs[2] >> 40) as u8;
+        bytes[45] = (self.limbs[2] >> 32) as u8;
+        bytes[46] = (self.limbs[2] >> 24) as u8;
+        bytes[47] = (self.limbs[2] >> 16) as u8;
+        bytes[48] = (self.limbs[2] >> 8) as u8;
+        bytes[49] = self.limbs[2] as u8;
 
-        // bytes[58-65]: limb[0]
-        bytes[58] = (self.limbs[0] >> 49) as u8;
-        bytes[59] = (self.limbs[0] >> 41) as u8;
-        bytes[60] = (self.limbs[0] >> 33) as u8;
-        bytes[61] = (self.limbs[0] >> 25) as u8;
-        bytes[62] = (self.limbs[0] >> 17) as u8;
-        bytes[63] = (self.limbs[0] >> 9) as u8;
-        bytes[64] = (self.limbs[0] >> 1) as u8;
-        bytes[65] = ((self.limbs[0] & 1) << 7) as u8;
+        // bytes[50..58]: limbs[1] (bits 127-64)
+        bytes[50] = (self.limbs[1] >> 56) as u8;
+        bytes[51] = (self.limbs[1] >> 48) as u8;
+        bytes[52] = (self.limbs[1] >> 40) as u8;
+        bytes[53] = (self.limbs[1] >> 32) as u8;
+        bytes[54] = (self.limbs[1] >> 24) as u8;
+        bytes[55] = (self.limbs[1] >> 16) as u8;
+        bytes[56] = (self.limbs[1] >> 8) as u8;
+        bytes[57] = self.limbs[1] as u8;
+
+        // bytes[58..66]: limbs[0] (bits 63-0)
+        bytes[58] = (self.limbs[0] >> 56) as u8;
+        bytes[59] = (self.limbs[0] >> 48) as u8;
+        bytes[60] = (self.limbs[0] >> 40) as u8;
+        bytes[61] = (self.limbs[0] >> 32) as u8;
+        bytes[62] = (self.limbs[0] >> 24) as u8;
+        bytes[63] = (self.limbs[0] >> 16) as u8;
+        bytes[64] = (self.limbs[0] >> 8) as u8;
+        bytes[65] = self.limbs[0] as u8;
 
         bytes
     }
 
     /// Creates a field element from bytes (big-endian encoding).
     ///
-    /// Expects 66 bytes (521 bits).
+    /// Expects 66 bytes (521 bits in big-endian, with 7 leading zero bits).
     /// Returns `None` if the value is >= p (not in canonical form).
     pub fn from_bytes(bytes: &[u8; 66]) -> Option<Self> {
         let mut limbs = [0u64; 9];
 
-        // Reverse the to_bytes encoding
-        // bytes[0]: bits 520-513 (top 8 bits of limb[8])
-        // bytes[1]: bit 512 (bottom bit of limb[8]) in bit 7, bits 511-505 (top 7 bits of limb[7]) in bits 6-0
+        // Standard big-endian decoding for 521-bit value:
+        // Byte layout:
+        // bytes[0]: [0 0 0 0 0 0 0 bit520]  (7 padding zeros + bit 520)
+        // bytes[1]: [bits 519-512]
+        // bytes[2]: [bits 511-504]
+        // ...
+        // bytes[65]: [bits 7-0]
 
-        limbs[8] = ((bytes[0] as u64) << 1) | ((bytes[1] as u64) >> 7);
+        // Check that the top 7 bits of bytes[0] are zero (padding)
+        if bytes[0] & 0xFE != 0 {
+            return None;
+        }
 
-        limbs[7] = ((bytes[1] as u64 & 0x7F) << 57)
-            | ((bytes[2] as u64) << 49)
-            | ((bytes[3] as u64) << 41)
-            | ((bytes[4] as u64) << 33)
-            | ((bytes[5] as u64) << 25)
-            | ((bytes[6] as u64) << 17)
-            | ((bytes[7] as u64) << 9)
-            | ((bytes[8] as u64) << 1)
-            | ((bytes[9] as u64) >> 7);
+        // limbs[8]: bits 520-512 (9 bits)
+        // bit 520 is in bytes[0] bit 0, bits 519-512 are in bytes[1]
+        limbs[8] = ((bytes[0] as u64 & 0x01) << 8) | (bytes[1] as u64);
 
-        limbs[6] = ((bytes[9] as u64 & 0x7F) << 57)
-            | ((bytes[10] as u64) << 49)
-            | ((bytes[11] as u64) << 41)
-            | ((bytes[12] as u64) << 33)
-            | ((bytes[13] as u64) << 25)
-            | ((bytes[14] as u64) << 17)
-            | ((bytes[15] as u64) << 9)
-            | ((bytes[16] as u64) << 1)
-            | ((bytes[17] as u64) >> 7);
+        // limbs[7]: bits 511-448 (bytes[2..10])
+        limbs[7] = ((bytes[2] as u64) << 56)
+            | ((bytes[3] as u64) << 48)
+            | ((bytes[4] as u64) << 40)
+            | ((bytes[5] as u64) << 32)
+            | ((bytes[6] as u64) << 24)
+            | ((bytes[7] as u64) << 16)
+            | ((bytes[8] as u64) << 8)
+            | (bytes[9] as u64);
 
-        limbs[5] = ((bytes[17] as u64 & 0x7F) << 57)
-            | ((bytes[18] as u64) << 49)
-            | ((bytes[19] as u64) << 41)
-            | ((bytes[20] as u64) << 33)
-            | ((bytes[21] as u64) << 25)
-            | ((bytes[22] as u64) << 17)
-            | ((bytes[23] as u64) << 9)
-            | ((bytes[24] as u64) << 1)
-            | ((bytes[25] as u64) >> 7);
+        // limbs[6]: bits 447-384 (bytes[10..18])
+        limbs[6] = ((bytes[10] as u64) << 56)
+            | ((bytes[11] as u64) << 48)
+            | ((bytes[12] as u64) << 40)
+            | ((bytes[13] as u64) << 32)
+            | ((bytes[14] as u64) << 24)
+            | ((bytes[15] as u64) << 16)
+            | ((bytes[16] as u64) << 8)
+            | (bytes[17] as u64);
 
-        limbs[4] = ((bytes[25] as u64 & 0x7F) << 57)
-            | ((bytes[26] as u64) << 49)
-            | ((bytes[27] as u64) << 41)
-            | ((bytes[28] as u64) << 33)
-            | ((bytes[29] as u64) << 25)
-            | ((bytes[30] as u64) << 17)
-            | ((bytes[31] as u64) << 9)
-            | ((bytes[32] as u64) << 1)
-            | ((bytes[33] as u64) >> 7);
+        // limbs[5]: bits 383-320 (bytes[18..26])
+        limbs[5] = ((bytes[18] as u64) << 56)
+            | ((bytes[19] as u64) << 48)
+            | ((bytes[20] as u64) << 40)
+            | ((bytes[21] as u64) << 32)
+            | ((bytes[22] as u64) << 24)
+            | ((bytes[23] as u64) << 16)
+            | ((bytes[24] as u64) << 8)
+            | (bytes[25] as u64);
 
-        limbs[3] = ((bytes[33] as u64 & 0x7F) << 57)
-            | ((bytes[34] as u64) << 49)
-            | ((bytes[35] as u64) << 41)
-            | ((bytes[36] as u64) << 33)
-            | ((bytes[37] as u64) << 25)
-            | ((bytes[38] as u64) << 17)
-            | ((bytes[39] as u64) << 9)
-            | ((bytes[40] as u64) << 1)
-            | ((bytes[41] as u64) >> 7);
+        // limbs[4]: bits 319-256 (bytes[26..34])
+        limbs[4] = ((bytes[26] as u64) << 56)
+            | ((bytes[27] as u64) << 48)
+            | ((bytes[28] as u64) << 40)
+            | ((bytes[29] as u64) << 32)
+            | ((bytes[30] as u64) << 24)
+            | ((bytes[31] as u64) << 16)
+            | ((bytes[32] as u64) << 8)
+            | (bytes[33] as u64);
 
-        limbs[2] = ((bytes[41] as u64 & 0x7F) << 57)
-            | ((bytes[42] as u64) << 49)
-            | ((bytes[43] as u64) << 41)
-            | ((bytes[44] as u64) << 33)
-            | ((bytes[45] as u64) << 25)
-            | ((bytes[46] as u64) << 17)
-            | ((bytes[47] as u64) << 9)
-            | ((bytes[48] as u64) << 1)
-            | ((bytes[49] as u64) >> 7);
+        // limbs[3]: bits 255-192 (bytes[34..42])
+        limbs[3] = ((bytes[34] as u64) << 56)
+            | ((bytes[35] as u64) << 48)
+            | ((bytes[36] as u64) << 40)
+            | ((bytes[37] as u64) << 32)
+            | ((bytes[38] as u64) << 24)
+            | ((bytes[39] as u64) << 16)
+            | ((bytes[40] as u64) << 8)
+            | (bytes[41] as u64);
 
-        limbs[1] = ((bytes[49] as u64 & 0x7F) << 57)
-            | ((bytes[50] as u64) << 49)
-            | ((bytes[51] as u64) << 41)
-            | ((bytes[52] as u64) << 33)
-            | ((bytes[53] as u64) << 25)
-            | ((bytes[54] as u64) << 17)
-            | ((bytes[55] as u64) << 9)
-            | ((bytes[56] as u64) << 1)
-            | ((bytes[57] as u64) >> 7);
+        // limbs[2]: bits 191-128 (bytes[42..50])
+        limbs[2] = ((bytes[42] as u64) << 56)
+            | ((bytes[43] as u64) << 48)
+            | ((bytes[44] as u64) << 40)
+            | ((bytes[45] as u64) << 32)
+            | ((bytes[46] as u64) << 24)
+            | ((bytes[47] as u64) << 16)
+            | ((bytes[48] as u64) << 8)
+            | (bytes[49] as u64);
 
-        limbs[0] = ((bytes[57] as u64 & 0x7F) << 57)
-            | ((bytes[58] as u64) << 49)
-            | ((bytes[59] as u64) << 41)
-            | ((bytes[60] as u64) << 33)
-            | ((bytes[61] as u64) << 25)
-            | ((bytes[62] as u64) << 17)
-            | ((bytes[63] as u64) << 9)
-            | ((bytes[64] as u64) << 1)
-            | ((bytes[65] as u64) >> 7);
+        // limbs[1]: bits 127-64 (bytes[50..58])
+        limbs[1] = ((bytes[50] as u64) << 56)
+            | ((bytes[51] as u64) << 48)
+            | ((bytes[52] as u64) << 40)
+            | ((bytes[53] as u64) << 32)
+            | ((bytes[54] as u64) << 24)
+            | ((bytes[55] as u64) << 16)
+            | ((bytes[56] as u64) << 8)
+            | (bytes[57] as u64);
+
+        // limbs[0]: bits 63-0 (bytes[58..66])
+        limbs[0] = ((bytes[58] as u64) << 56)
+            | ((bytes[59] as u64) << 48)
+            | ((bytes[60] as u64) << 40)
+            | ((bytes[61] as u64) << 32)
+            | ((bytes[62] as u64) << 24)
+            | ((bytes[63] as u64) << 16)
+            | ((bytes[64] as u64) << 8)
+            | (bytes[65] as u64);
 
         let fe = Self { limbs };
 
