@@ -289,8 +289,12 @@ impl SigningKey {
     /// Nonce reuse leads to private key recovery!
     fn sign_prehashed(&self, hash: &[u8; 64], k: &Scalar) -> Signature {
         // Convert hash to scalar (will automatically reduce mod n)
+        // For P-521 (521 bits) with SHA-512 (512 bits):
+        // - bytes[0] = 0 (7 padding bits + bit 520)
+        // - bytes[1] = 0 (bits 519-512, beyond the 512-bit hash)
+        // - bytes[2..66] = hash (bits 511-0)
         let mut hash_bytes = [0u8; 66];
-        hash_bytes[0..64].copy_from_slice(hash);
+        hash_bytes[2..66].copy_from_slice(hash);
         // No masking needed - Scalar::from_bytes handles reduction
 
         let z = Scalar::from_bytes(&hash_bytes);
@@ -423,6 +427,35 @@ impl VerifyingKey {
         Some(Self { point })
     }
 
+    /// Create a verifying key from x and y affine coordinates
+    ///
+    /// # Returns
+    ///
+    /// `Ok(VerifyingKey)` if the coordinates represent a valid point on the curve,
+    /// `Err(CurveError)` otherwise.
+    pub fn from_affine_coords(x: &[u8], y: &[u8]) -> Result<Self, CurveError> {
+        use hpcrypt_curves::p521::FieldElement;
+
+        if x.len() != 66 || y.len() != 66 {
+            return Err(CurveError::NotOnCurve);
+        }
+
+        let x_bytes: [u8; 66] = x.try_into().unwrap();
+        let y_bytes: [u8; 66] = y.try_into().unwrap();
+
+        let x_field = FieldElement::from_bytes(&x_bytes).ok_or(CurveError::NotOnCurve)?;
+        let y_field = FieldElement::from_bytes(&y_bytes).ok_or(CurveError::NotOnCurve)?;
+
+        let point = Point::from_affine(&x_field, &y_field).ok_or(CurveError::NotOnCurve)?;
+
+        // Verify the point is on the curve
+        if !bool::from(point.is_on_curve()) {
+            return Err(CurveError::NotOnCurve);
+        }
+
+        Ok(Self { point })
+    }
+
     /// Create a verifying key from uncompressed SEC1 encoding
     ///
     /// Format: 0x04 || x (66 bytes) || y (66 bytes)
@@ -502,8 +535,12 @@ impl VerifyingKey {
         }
 
         // Convert hash to scalar (reduction handled automatically)
+        // For P-521 (521 bits) with SHA-512 (512 bits):
+        // - bytes[0] = 0 (7 padding bits + bit 520)
+        // - bytes[1] = 0 (bits 519-512, beyond the 512-bit hash)
+        // - bytes[2..66] = hash (bits 511-0)
         let mut hash_bytes = [0u8; 66];
-        hash_bytes[0..64].copy_from_slice(hash);
+        hash_bytes[2..66].copy_from_slice(hash);
 
         let z = Scalar::from_bytes(&hash_bytes);
 
