@@ -66,7 +66,7 @@ pub use hpcrypt_cipher::{
 };
 
 // Re-export Ascon from local module
-pub use ascon::{Ascon128, Ascon128a};
+pub use ascon::{Ascon128, Ascon128Nist, Ascon128a};
 
 // Re-export from hpcrypt-mac for convenience
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
