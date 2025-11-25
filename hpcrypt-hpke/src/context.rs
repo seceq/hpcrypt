@@ -6,15 +6,52 @@ use alloc::vec::Vec;
 use hpcrypt_aead::aes_gcm::{Aes128Gcm, Aes256Gcm};
 use hpcrypt_aead::chacha20poly1305::ChaCha20Poly1305;
 use hpcrypt_hash::{sha256, sha512, Sha384};
+use hpcrypt_mac::hmac::{HmacSha256, HmacSha384, HmacSha512};
 
-/// HKDF Extract wrapper (simplified)
-fn hkdf_extract(_salt: &[u8], ikm: &[u8], hash_fn: fn(&[u8]) -> Vec<u8>) -> Vec<u8> {
-    // Simplified HKDF-Extract for HPKE
-    // In production, this should use proper HMAC-based extraction
-    hash_fn(ikm)
+/// HKDF Extract as specified in RFC 5869
+/// PRK = HMAC-Hash(salt, IKM)
+fn hkdf_extract(salt: &[u8], ikm: &[u8], hash_fn: fn(&[u8]) -> Vec<u8>) -> Vec<u8> {
+    let hash_len = hash_fn(&[]).len();
+
+    match hash_len {
+        32 => {
+            let hmac = if salt.is_empty() {
+                HmacSha256::new(&[0u8; 32])
+            } else {
+                HmacSha256::new(salt)
+            };
+            hmac.compute(ikm).to_vec()
+        }
+        48 => {
+            let hmac = if salt.is_empty() {
+                HmacSha384::new(&[0u8; 48])
+            } else {
+                HmacSha384::new(salt)
+            };
+            hmac.compute(ikm).to_vec()
+        }
+        64 => {
+            let hmac = if salt.is_empty() {
+                HmacSha512::new(&[0u8; 64])
+            } else {
+                HmacSha512::new(salt)
+            };
+            hmac.compute(ikm).to_vec()
+        }
+        _ => {
+            let hmac = if salt.is_empty() {
+                HmacSha256::new(&[0u8; 32])
+            } else {
+                HmacSha256::new(salt)
+            };
+            hmac.compute(ikm).to_vec()
+        }
+    }
 }
 
-/// HKDF Expand wrapper
+/// HKDF Expand as specified in RFC 5869
+/// T(1) = HMAC(PRK, info || 0x01)
+/// T(N) = HMAC(PRK, T(N-1) || info || N)
 fn hkdf_expand(prk: &[u8], info: &[u8], length: usize, hash_fn: fn(&[u8]) -> Vec<u8>) -> Vec<u8> {
     let hash_len = hash_fn(&[]).len();
     let n = (length + hash_len - 1) / hash_len;
@@ -26,8 +63,25 @@ fn hkdf_expand(prk: &[u8], info: &[u8], length: usize, hash_fn: fn(&[u8]) -> Vec
         input.extend_from_slice(&t);
         input.extend_from_slice(info);
         input.push(i as u8);
-        input.extend_from_slice(prk);
-        t = hash_fn(&input);
+
+        t = match hash_len {
+            32 => {
+                let hmac = HmacSha256::new(prk);
+                hmac.compute(&input).to_vec()
+            }
+            48 => {
+                let hmac = HmacSha384::new(prk);
+                hmac.compute(&input).to_vec()
+            }
+            64 => {
+                let hmac = HmacSha512::new(prk);
+                hmac.compute(&input).to_vec()
+            }
+            _ => {
+                let hmac = HmacSha256::new(prk);
+                hmac.compute(&input).to_vec()
+            }
+        };
         output.extend_from_slice(&t);
     }
 
@@ -239,8 +293,10 @@ impl HpkeContext {
         key_schedule_context.extend_from_slice(&psk_id_hash);
         key_schedule_context.extend_from_slice(&info_hash);
 
-        // Extract secret
-        let secret = labeled_extract(&suite_id, psk, b"secret", shared_secret, hash_fn);
+        // Extract secret: RFC 9180 Section 5.1
+        // secret = LabeledExtract(shared_secret, "secret", psk)
+        // where shared_secret is the salt and psk is the IKM
+        let secret = labeled_extract(&suite_id, shared_secret, b"secret", psk, hash_fn);
 
         // Expand to get key, base_nonce, and exporter_secret
         let key = labeled_expand(
