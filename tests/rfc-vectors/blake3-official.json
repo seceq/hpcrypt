@@ -1,0 +1,35 @@
+[
+  {
+    "test_id": 1,
+    "algorithm": "BLAKE3",
+    "mode": "hash",
+    "input_len": 0,
+    "input": "",
+    "key": "",
+    "context": "",
+    "hash": "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262e00f03e7b69af26b7faaf09fcd333050338ddfe085b8cc869ca98b206c08243a",
+    "note": "Empty input"
+  },
+  {
+    "test_id": 2,
+    "algorithm": "BLAKE3",
+    "mode": "hash",
+    "input_len": 1,
+    "input": "00",
+    "key": "",
+    "context": "",
+    "hash": "2d3adedff11b61f14c886e35afa036736dcd87a74d27b5c1510225d0f592e213c3a6cb8bf623e20cdb535f8d1a5ffb86342d9c0b64aca3bce1d31f60adfa137b",
+    "note": "Single byte (0x00)"
+  },
+  {
+    "test_id": 3,
+    "algorithm": "BLAKE3",
+    "mode": "hash",
+    "input_len": 3,
+    "input": "000102",
+    "key": "",
+    "context": "",
+    "hash": "e1be4d7a8ab5560aa4199eea339849ba8e293d55ca0a81006726d184519e647f5b49b82f805a538c68915c1ae8035c900fd1d4b13902920fd05e1450822f36de",
+    "note": "Three bytes"
+  }
+]
