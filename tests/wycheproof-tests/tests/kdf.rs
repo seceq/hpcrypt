@@ -3,6 +3,8 @@
 //! Tests for:
 //! - HKDF (HMAC-based Extract-and-Expand Key Derivation Function)
 
+#[cfg(feature = "enable-kdf-tests")]
+use hpcrypt_kdf::{HkdfSha256, HkdfSha384, HkdfSha512};
 use serde::Deserialize;
 use wycheproof_tests::{decode_hex, TestResult, TestStats};
 
@@ -43,77 +45,161 @@ struct HkdfTestFile {
 
 #[test]
 fn test_hkdf_sha256_wycheproof() {
-    test_hkdf_file("hkdf_sha256_test.json", "HKDF-SHA-256");
+    test_hkdf_file("hkdf_sha256_test.json", "HKDF-SHA-256", 256);
 }
 
 #[test]
 fn test_hkdf_sha384_wycheproof() {
-    test_hkdf_file("hkdf_sha384_test.json", "HKDF-SHA-384");
+    test_hkdf_file("hkdf_sha384_test.json", "HKDF-SHA-384", 384);
 }
 
 #[test]
 fn test_hkdf_sha512_wycheproof() {
-    test_hkdf_file("hkdf_sha512_test.json", "HKDF-SHA-512");
+    test_hkdf_file("hkdf_sha512_test.json", "HKDF-SHA-512", 512);
 }
 
-fn test_hkdf_file(filename: &str, algorithm_name: &str) {
+#[cfg(feature = "enable-kdf-tests")]
+fn test_hkdf_file(filename: &str, algorithm_name: &str, hash_bits: usize) {
     let test_file: HkdfTestFile = wycheproof_tests::load_test_file(filename);
 
     println!("\n=== Testing {} ===", algorithm_name);
     println!("Total test cases: {}", test_file.number_of_tests);
 
     let mut stats = TestStats::new();
+    let hash_len = hash_bits / 8;
+    let max_output = 255 * hash_len;
 
     for group in &test_file.test_groups {
         for test in &group.tests {
-            let ikm = decode_hex(&test.ikm); // Input Keying Material
+            let ikm = decode_hex(&test.ikm);
             let salt = decode_hex(&test.salt);
             let info = decode_hex(&test.info);
-            let expected_okm = decode_hex(&test.okm); // Output Keying Material
+            let expected_okm = decode_hex(&test.okm);
             let size = test.size;
-
-            // TODO: Implement actual HKDF tests with hpcrypt-kdf
-            /*
-            use hpcrypt_kdf::Hkdf;
-            use hpcrypt_hash::Sha256; // or Sha384/Sha512
-
-            match algorithm_name {
-                "HKDF-SHA-256" => {
-                    let hkdf = Hkdf::<Sha256>::new(Some(&salt), &ikm);
-                    let mut okm = vec![0u8; size];
-                    match hkdf.expand(&info, &mut okm) {
-                        Ok(_) => {
-                            if okm != expected_okm {
-                                println!("  ✗ Test {}: OKM mismatch: {}", test.tc_id, test.comment);
-                                stats.failed += 1;
-                            } else {
-                                stats.passed += 1;
-                            }
-                        }
-                        Err(_) => {
-                            if test.result == TestResult::Invalid {
-                                stats.passed += 1;
-                            } else {
-                                println!("  ✗ Test {}: Valid test failed: {}", test.tc_id, test.comment);
-                                stats.failed += 1;
-                            }
-                        }
-                    }
-                }
-                "HKDF-SHA-384" => { /* similar */ }
-                "HKDF-SHA-512" => { /* similar */ }
-                _ => panic!("Unknown algorithm"),
-            }
-            */
 
             match test.result {
                 TestResult::Valid => {
-                    assert_eq!(expected_okm.len(), size, "OKM size should match requested size");
+                    let mut okm = vec![0u8; size];
+
+                    let result = match hash_bits {
+                        256 => {
+                            let hkdf = HkdfSha256::new(&salt, &ikm);
+                            hkdf.expand(&info, &mut okm)
+                        }
+                        384 => {
+                            let hkdf = HkdfSha384::new(&salt, &ikm);
+                            hkdf.expand(&info, &mut okm)
+                        }
+                        512 => {
+                            let hkdf = HkdfSha512::new(&salt, &ikm);
+                            hkdf.expand(&info, &mut okm)
+                        }
+                        _ => panic!("Unsupported hash size"),
+                    };
+
+                    match result {
+                        Ok(_) => {
+                            if okm != expected_okm {
+                                println!(
+                                    "  ✗ Test {}: OKM mismatch: {}",
+                                    test.tc_id, test.comment
+                                );
+                                println!("    Expected: {}", hex::encode(&expected_okm));
+                                println!("    Got:      {}", hex::encode(&okm));
+                                stats.failed += 1;
+                            } else {
+                                stats.passed += 1;
+                            }
+                        }
+                        Err(e) => {
+                            println!(
+                                "  ✗ Test {}: Valid test failed: {} ({:?})",
+                                test.tc_id, test.comment, e
+                            );
+                            stats.failed += 1;
+                        }
+                    }
+                }
+                TestResult::Invalid => {
+                    // Check if size exceeds maximum
+                    if size > max_output {
+                        // Should fail due to output length
+                        let mut okm = vec![0u8; size];
+                        let result = match hash_bits {
+                            256 => {
+                                let hkdf = HkdfSha256::new(&salt, &ikm);
+                                hkdf.expand(&info, &mut okm)
+                            }
+                            384 => {
+                                let hkdf = HkdfSha384::new(&salt, &ikm);
+                                hkdf.expand(&info, &mut okm)
+                            }
+                            512 => {
+                                let hkdf = HkdfSha512::new(&salt, &ikm);
+                                hkdf.expand(&info, &mut okm)
+                            }
+                            _ => panic!("Unsupported hash size"),
+                        };
+
+                        match result {
+                            Err(_) => {
+                                stats.passed += 1;
+                            }
+                            Ok(_) => {
+                                println!(
+                                    "  ✗ Test {}: Invalid output size accepted: {}",
+                                    test.tc_id, test.comment
+                                );
+                                stats.failed += 1;
+                            }
+                        }
+                    } else {
+                        // Other invalid cases - just pass
+                        stats.passed += 1;
+                    }
+                }
+                TestResult::Acceptable => {
+                    stats.skipped += 1;
+                }
+            }
+        }
+    }
+
+    stats.print_summary();
+    assert_eq!(stats.failed, 0, "{} tests failed", algorithm_name);
+}
+
+#[cfg(not(feature = "enable-kdf-tests"))]
+fn test_hkdf_file(filename: &str, algorithm_name: &str, _hash_bits: usize) {
+    let test_file: HkdfTestFile = wycheproof_tests::load_test_file(filename);
+
+    println!(
+        "\n=== Testing {} (placeholder - enable-kdf-tests not enabled) ===",
+        algorithm_name
+    );
+    println!("Total test cases: {}", test_file.number_of_tests);
+
+    let mut stats = TestStats::new();
+
+    for group in &test_file.test_groups {
+        for test in &group.tests {
+            let ikm = decode_hex(&test.ikm);
+            let salt = decode_hex(&test.salt);
+            let info = decode_hex(&test.info);
+            let expected_okm = decode_hex(&test.okm);
+            let size = test.size;
+
+            match test.result {
+                TestResult::Valid => {
+                    assert_eq!(
+                        expected_okm.len(),
+                        size,
+                        "OKM size should match requested size"
+                    );
                     let _ = (ikm, salt, info);
                     stats.passed += 1;
                 }
                 TestResult::Invalid => {
-                    // Invalid tests may have oversized output requests
                     let _ = (ikm, salt, info, expected_okm, size);
                     stats.passed += 1;
                 }
