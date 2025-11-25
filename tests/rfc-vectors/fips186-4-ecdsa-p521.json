@@ -1,0 +1,151 @@
+[
+  {
+    "test_id": 1,
+    "test_type": "sign_verify_roundtrip",
+    "source": "FIPS 186-4",
+    "description": "Basic sign/verify roundtrip",
+    "message": "48656c6c6f2c20776f726c6421",
+    "note": "Sign a message and verify the signature"
+  },
+  {
+    "test_id": 2,
+    "test_type": "deterministic_signing",
+    "source": "RFC 6979",
+    "description": "Deterministic signing produces same signature",
+    "message": "5465737420666f7220646574657261696e6973746963207369676e696e67",
+    "note": "RFC 6979 ensures same message produces same signature"
+  },
+  {
+    "test_id": 3,
+    "test_type": "key_generation",
+    "source": "FIPS 186-4",
+    "description": "Key generation produces valid keypair",
+    "note": "Generated public key must be on curve and not infinity"
+  },
+  {
+    "test_id": 4,
+    "test_type": "signature_der_encoding",
+    "source": "SEC 1",
+    "description": "DER encoding roundtrip",
+    "note": "Signature should roundtrip through DER encoding"
+  },
+  {
+    "test_id": 5,
+    "test_type": "signature_bytes_encoding",
+    "source": "SEC 1",
+    "description": "Raw bytes encoding roundtrip",
+    "note": "Signature should roundtrip through raw bytes (r || s)"
+  },
+  {
+    "test_id": 6,
+    "test_type": "public_key_sec1_encoding",
+    "source": "SEC 1",
+    "description": "SEC1 uncompressed encoding roundtrip",
+    "note": "Public key should roundtrip through SEC1 format"
+  },
+  {
+    "test_id": 7,
+    "test_type": "invalid_signature_detection",
+    "source": "FIPS 186-4",
+    "description": "Corrupted signature is rejected",
+    "message": "4f726967696e616c206d657373616765",
+    "note": "Modifying r or s should fail verification"
+  },
+  {
+    "test_id": 8,
+    "test_type": "wrong_message_detection",
+    "source": "FIPS 186-4",
+    "description": "Wrong message fails verification",
+    "message1": "4d65737361676520413131",
+    "message2": "4d65737361676520423232",
+    "note": "Signature for message1 should not verify for message2"
+  },
+  {
+    "test_id": 9,
+    "test_type": "wrong_key_detection",
+    "source": "FIPS 186-4",
+    "description": "Wrong public key fails verification",
+    "message": "5465737420666f722077726f6e67206b6579",
+    "note": "Signature should not verify with different public key"
+  },
+  {
+    "test_id": 10,
+    "test_type": "zero_scalar_rejection",
+    "source": "FIPS 186-4",
+    "description": "Zero private key is rejected",
+    "private_key": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "note": "Private key d=0 must be rejected"
+  },
+  {
+    "test_id": 11,
+    "test_type": "zero_r_rejection",
+    "source": "FIPS 186-4",
+    "description": "Signature with r=0 is rejected",
+    "r": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "s": "0001fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa51868783bf2f966b7fcc0148f709a5d03bb5c9b8899c47aebb6fb71e913864",
+    "message": "5465737420666f72207a65726f2072",
+    "note": "r=0 signature must be rejected (CVE-2022-21449)"
+  },
+  {
+    "test_id": 12,
+    "test_type": "zero_s_rejection",
+    "source": "FIPS 186-4",
+    "description": "Signature with s=0 is rejected",
+    "r": "0001fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa51868783bf2f966b7fcc0148f709a5d03bb5c9b8899c47aebb6fb71e913864",
+    "s": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "message": "5465737420666f72207a65726f2073",
+    "note": "s=0 signature must be rejected (CVE-2022-21449)"
+  },
+  {
+    "test_id": 13,
+    "test_type": "known_key_test",
+    "source": "FIPS 186-4 Property Test",
+    "description": "Sign/verify with known private key d=2",
+    "private_key_d": 2,
+    "message": "74657374",
+    "note": "Test with simple known key for verification"
+  },
+  {
+    "test_id": 14,
+    "test_type": "empty_message",
+    "source": "Edge Case",
+    "description": "Empty message handling",
+    "message": "",
+    "note": "Empty message should be signable and verifiable"
+  },
+  {
+    "test_id": 15,
+    "test_type": "large_message",
+    "source": "Edge Case",
+    "description": "Large message handling",
+    "message_size": 10000,
+    "note": "Large messages should be handled correctly"
+  },
+  {
+    "test_id": 16,
+    "test_type": "private_key_bytes_roundtrip",
+    "source": "API Test",
+    "description": "Private key bytes roundtrip",
+    "note": "SigningKey should roundtrip through to_bytes/from_bytes"
+  },
+  {
+    "test_id": 17,
+    "test_type": "multiple_signatures",
+    "source": "Property Test",
+    "description": "Multiple different messages produce different signatures",
+    "messages": [
+      "4d65737361676520313131",
+      "4d65737361676520323232",
+      "4d65737361676520333333"
+    ],
+    "note": "Different messages should produce different signatures"
+  },
+  {
+    "test_id": 18,
+    "test_type": "signature_malleability",
+    "source": "Security Test",
+    "description": "Signature malleability check",
+    "message": "4d616c6c656162696c69747920746573742031",
+    "note": "Implementation should use low-S form or reject high-S"
+  }
+]
