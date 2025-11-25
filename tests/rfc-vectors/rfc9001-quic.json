@@ -1,0 +1,141 @@
+[
+  {
+    "test_id": 1,
+    "test_type": "initial_keys",
+    "source": "RFC 9001 Appendix A.1",
+    "description": "Client Initial Keys",
+    "dcid": "8394c8f03e515708",
+    "client_initial_secret": "c00cf151ca5be075ed0ebfb5c80323c42d6b7db67881289af4008f1f6c357aea",
+    "client_key": "1f369613dd76d5467730efcbe3b1a22d",
+    "client_iv": "fa044b2f42a3fd3b46fb255c",
+    "client_hp": "9f50449e04a0e810283a1e9933adedd2",
+    "note": "Keys derived from DCID for client Initial packet"
+  },
+  {
+    "test_id": 2,
+    "test_type": "initial_keys",
+    "source": "RFC 9001 Appendix A.1",
+    "description": "Server Initial Keys",
+    "dcid": "8394c8f03e515708",
+    "server_initial_secret": "3c199828fd139efd216c155ad844cc81fb82fa8d7446fa7d78be803acdda951b",
+    "server_key": "cf3a5331653c364c88f0f379b6067e37",
+    "server_iv": "0ac1493ca1905853b0bba03e",
+    "server_hp": "c206b8d9b9f0f37644430b490eeaa314",
+    "note": "Keys derived from DCID for server Initial packet"
+  },
+  {
+    "test_id": 3,
+    "test_type": "header_protection_aes128",
+    "source": "RFC 9001 Appendix A.2",
+    "description": "Client Initial Header Protection",
+    "hp_key": "9f50449e04a0e810283a1e9933adedd2",
+    "sample": "d1b1c98dd7689fb8ec11d242b123dc9b",
+    "expected_mask": "437b9aec36",
+    "note": "Header protection mask for client Initial packet"
+  },
+  {
+    "test_id": 4,
+    "test_type": "header_protection_aes128",
+    "source": "RFC 9001 Section 5.4.3",
+    "description": "AES-128-ECB Header Protection - Test 1",
+    "hp_key": "00000000000000000000000000000000",
+    "sample": "00000000000000000000000000000000",
+    "expected_mask": "66e94bd4ef",
+    "note": "All zeros test - AES-ECB(zero key, zero block)[0:5]"
+  },
+  {
+    "test_id": 5,
+    "test_type": "header_protection_aes128",
+    "source": "RFC 9001 Section 5.4.3",
+    "description": "AES-128-ECB Header Protection - Test 2",
+    "hp_key": "0123456789abcdef0123456789abcdef",
+    "sample": "fedcba9876543210fedcba9876543210",
+    "expected_mask": "10ec6f1544",
+    "note": "Pattern test - AES-ECB encryption of sample"
+  },
+  {
+    "test_id": 6,
+    "test_type": "quic_kdf_sha256",
+    "source": "RFC 9001 Section 5.1",
+    "description": "QUIC key derivation - key",
+    "secret": "4242424242424242424242424242424242424242424242424242424242424242",
+    "label": "quic key",
+    "context": "",
+    "length": 16,
+    "note": "Derive 16-byte key from secret"
+  },
+  {
+    "test_id": 7,
+    "test_type": "quic_kdf_sha256",
+    "source": "RFC 9001 Section 5.1",
+    "description": "QUIC key derivation - iv",
+    "secret": "4242424242424242424242424242424242424242424242424242424242424242",
+    "label": "quic iv",
+    "context": "",
+    "length": 12,
+    "note": "Derive 12-byte IV from secret"
+  },
+  {
+    "test_id": 8,
+    "test_type": "quic_kdf_sha256",
+    "source": "RFC 9001 Section 5.1",
+    "description": "QUIC key derivation - hp",
+    "secret": "4242424242424242424242424242424242424242424242424242424242424242",
+    "label": "quic hp",
+    "context": "",
+    "length": 16,
+    "note": "Derive 16-byte header protection key from secret"
+  },
+  {
+    "test_id": 9,
+    "test_type": "quic_kdf_determinism",
+    "source": "RFC 9001 Section 5.1",
+    "description": "QUIC KDF determinism test",
+    "secret": "0102030405060708091011121314151617181920212223242526272829303132",
+    "label": "quic key",
+    "context": "",
+    "length": 16,
+    "note": "Same inputs must produce same outputs"
+  },
+  {
+    "test_id": 10,
+    "test_type": "quic_kdf_context",
+    "source": "RFC 9001 Section 5.1",
+    "description": "Context affects output",
+    "secret": "4242424242424242424242424242424242424242424242424242424242424242",
+    "label": "quic key",
+    "length": 16,
+    "context1": "00000000000000000000000000000000",
+    "context2": "11111111111111111111111111111111",
+    "note": "Different contexts must produce different outputs"
+  },
+  {
+    "test_id": 11,
+    "test_type": "quic_vs_tls13",
+    "source": "RFC 9001 Section 5.1",
+    "description": "QUIC vs TLS 1.3 prefix difference",
+    "secret": "4242424242424242424242424242424242424242424242424242424242424242",
+    "label": "key",
+    "context": "",
+    "length": 16,
+    "note": "QUIC uses 'quic ' prefix, TLS 1.3 uses 'tls13 ' - must produce different outputs"
+  },
+  {
+    "test_id": 12,
+    "test_type": "header_protection_chacha20",
+    "source": "RFC 9001 Section 5.4.4",
+    "description": "ChaCha20 Header Protection",
+    "hp_key": "4242424242424242424242424242424242424242424242424242424242424242",
+    "sample": "01020304050607080910111213141516",
+    "note": "ChaCha20 header protection test"
+  },
+  {
+    "test_id": 13,
+    "test_type": "header_protection_aes256",
+    "source": "RFC 9001 Section 5.4.3",
+    "description": "AES-256-ECB Header Protection",
+    "hp_key": "4242424242424242424242424242424242424242424242424242424242424242",
+    "sample": "01020304050607080910111213141516",
+    "note": "AES-256 header protection for AES-256-GCM cipher suites"
+  }
+]
