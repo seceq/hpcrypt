@@ -39,4 +39,4 @@ pub use hmac::{
 pub use kmac::{kmac128, kmac256};
 pub use kmac::{CShake128, CShake256, Kmac128, Kmac256};
 pub use poly1305::{poly1305, Poly1305};
-pub use polyval::Polyval;
+pub use polyval::{polyval, Polyval};
