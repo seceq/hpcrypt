@@ -11,7 +11,6 @@
 extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
-use core::cmp::min;
 
 use hpcrypt_core::error::KdfError;
 use hpcrypt_hash::blake2b::{Blake2b, OUT_LEN as BLAKE2B_OUT_LEN};
@@ -148,15 +147,19 @@ impl Argon2 {
             });
         }
 
-        // Calculate memory blocks
-        let memory_blocks = (self.params.mem_cost as usize) / self.params.lanes as usize;
-        if memory_blocks < 4 * SYNC_POINTS {
-            let min_mem = (4 * SYNC_POINTS * self.params.lanes as usize) as u32;
+        // Calculate memory blocks (total)
+        // mem_cost is in KiB, each block is 1 KiB
+        let total_blocks = self.params.mem_cost as usize;
+        // Blocks per lane (must be multiple of 4 for sync points)
+        let blocks_per_lane = (total_blocks / self.params.lanes as usize) / SYNC_POINTS * SYNC_POINTS;
+        if blocks_per_lane < SYNC_POINTS {
+            let min_mem = (SYNC_POINTS * self.params.lanes as usize) as u32;
             return Err(KdfError::MemoryCostTooLow {
                 minimum: min_mem,
                 actual: self.params.mem_cost,
             });
         }
+        let memory_blocks = blocks_per_lane;
 
         // Step 1: Initial hash H0
         let h0 = self.initial_hash(password, salt, ad, secret);
@@ -273,10 +276,13 @@ impl Argon2 {
         segment_length: usize,
         lane_length: usize,
     ) {
+        // IMPORTANT: The correct order is pass -> slice -> lane
+        // This ensures all lanes at the same slice are filled before moving to the next slice
+        // (required for synchronization points)
         for pass in 0..self.params.time_cost {
-            for lane in 0..self.params.lanes as usize {
-                for slice in 0..SYNC_POINTS {
-                    self.fill_segment(memory, pass, lane, slice, segment_length, lane_length);
+            for slice in 0..SYNC_POINTS {
+                for lane in 0..self.params.lanes as usize {
+                    self.fill_segment(memory, pass as u32, lane, slice, segment_length, lane_length);
                 }
             }
         }
@@ -293,6 +299,37 @@ impl Argon2 {
         lane_length: usize,
     ) {
         let start_idx = if pass == 0 && slice == 0 { 2 } else { 0 };
+        let total_memory_blocks = memory.len();
+        let iterations = self.params.time_cost as usize;
+        let lanes = self.params.lanes as usize;
+
+        // Determine if we need data-independent addressing
+        // Argon2i: always data-independent
+        // Argon2id: data-independent for first pass, first 2 slices
+        let data_independent_addressing = self.variant == Variant::Argon2i
+            || (self.variant == Variant::Argon2id && pass == 0 && slice < SYNC_POINTS / 2);
+
+        // Address blocks for data-independent addressing
+        let mut address_block = vec![0u64; QWORDS_IN_BLOCK];
+        let mut input_block = vec![0u64; QWORDS_IN_BLOCK];
+        let zero_block = vec![0u64; QWORDS_IN_BLOCK];
+
+        if data_independent_addressing {
+            // Initialize input block with parameters
+            input_block[0] = pass as u64;
+            input_block[1] = lane as u64;
+            input_block[2] = slice as u64;
+            input_block[3] = total_memory_blocks as u64;
+            input_block[4] = iterations as u64;
+            input_block[5] = self.variant as u64;
+        }
+
+        // Generate first set of addresses for pass 0, slice 0
+        // (since the loop starts at idx=2, we need to pre-generate)
+        // For other cases, addresses are generated at idx=0 inside the loop
+        if data_independent_addressing && pass == 0 && slice == 0 {
+            update_address_block(&mut address_block, &mut input_block, &zero_block);
+        }
 
         for idx in start_idx..segment_length {
             let current_idx = lane * lane_length + slice * segment_length + idx;
@@ -302,15 +339,31 @@ impl Argon2 {
                 current_idx - 1
             };
 
+            // Get pseudo-random value for indexing
+            let pseudo_rand = if data_independent_addressing {
+                let address_index = idx % ADDRESSES_IN_BLOCK;
+                // Generate new addresses when address_index == 0
+                // For pass 0, slice 0: this happens at idx=128, 256, etc (already pre-generated for idx=2)
+                // For other cases: this happens at idx=0 (first iteration), 128, 256, etc
+                if address_index == 0 {
+                    update_address_block(&mut address_block, &mut input_block, &zero_block);
+                }
+                address_block[address_index]
+            } else {
+                // Data-dependent: use first word of previous block
+                memory[prev_idx][0]
+            };
+
             // Compute reference block index
-            let ref_idx = self.index_alpha(
+            let ref_idx = self.index_alpha_with_rand(
                 pass,
                 lane,
                 slice,
                 idx,
                 segment_length,
                 lane_length,
-                &memory[prev_idx],
+                lanes,
+                pseudo_rand,
             );
 
             // G function: compress previous and reference blocks
@@ -320,9 +373,11 @@ impl Argon2 {
         }
     }
 
-    /// Compute reference block index
+    /// Compute reference block index with pre-computed pseudo-random value (RFC 9106 Section 3.4)
+    ///
+    /// This version takes the pseudo_rand value directly (for data-independent addressing)
     #[allow(clippy::too_many_arguments)]
-    fn index_alpha(
+    fn index_alpha_with_rand(
         &self,
         pass: u32,
         lane: usize,
@@ -330,55 +385,116 @@ impl Argon2 {
         idx: usize,
         segment_length: usize,
         lane_length: usize,
-        prev_block: &[u64],
+        lanes: usize,
+        pseudo_rand: u64,
     ) -> usize {
-        // Simplified version - full implementation would use data-dependent/independent addressing
-        let pseudo_rand = prev_block[0];
-        let ref_area_size = if pass == 0 {
-            if slice == 0 {
-                idx - 1
-            } else {
-                slice * segment_length + idx - 1
-            }
+        let j1 = pseudo_rand & 0xFFFF_FFFF;
+        let j2 = (pseudo_rand >> 32) as u32;
+
+        // Determine reference lane
+        let ref_lane = if pass == 0 && slice == 0 {
+            // First slice of first pass: can only reference current lane
+            lane
         } else {
-            lane_length - segment_length + idx - 1
+            // Other cases: J2 mod lanes
+            (j2 as usize) % lanes
         };
 
-        if ref_area_size > 0 {
-            let relative_pos = (pseudo_rand as usize) % ref_area_size;
-            lane * lane_length + relative_pos
+        // Determine reference area size (matching reference implementation exactly)
+        let reference_area_size = if pass == 0 {
+            // First pass
+            if slice == 0 {
+                // First slice: all but the previous
+                idx - 1
+            } else if ref_lane == lane {
+                // Same lane: add current segment
+                slice * segment_length + idx - 1
+            } else {
+                // Different lane
+                slice * segment_length - if idx == 0 { 1 } else { 0 }
+            }
         } else {
-            lane * lane_length
+            // Second pass
+            if ref_lane == lane {
+                lane_length - segment_length + idx - 1
+            } else {
+                lane_length - segment_length - if idx == 0 { 1 } else { 0 }
+            }
+        };
+
+        if reference_area_size == 0 {
+            return ref_lane * lane_length;
         }
+
+        // Mapping function: compute relative position using J1
+        // map = (J1 * J1) >> 32
+        // relative_position = reference_area_size - 1 - (reference_area_size * map) >> 32
+        let map = (j1 * j1) >> 32;
+        let relative_position = reference_area_size - 1
+            - (((reference_area_size as u64) * map) >> 32) as usize;
+
+        // Compute starting position for reference area
+        let start_position = if pass != 0 && slice != SYNC_POINTS - 1 {
+            (slice + 1) * segment_length
+        } else {
+            0
+        };
+
+        let ref_index = (start_position + relative_position) % lane_length;
+        ref_lane * lane_length + ref_index
     }
 }
 
 const SYNC_POINTS: usize = 4;
 
-/// Variable-length hash using BLAKE2b
+/// Number of addresses in a block (128 u64 words)
+const ADDRESSES_IN_BLOCK: usize = 128;
+
+/// Variable-length hash H' using BLAKE2b (RFC 9106 Section 3.2)
+///
+/// For τ ≤ 64: H'(X) = BLAKE2b(τ || X, τ)
+/// For τ > 64: H'(X) = V1[0..32] || V2[0..32] || ... || Vr
+///   where V1 = BLAKE2b(τ || X), Vi = BLAKE2b(V_{i-1}), Vr is truncated
 fn hash_variable(input: &[u8], outlen: usize) -> Vec<u8> {
     if outlen <= BLAKE2B_OUT_LEN {
+        // H'(X) = BLAKE2b(τ || X, τ) with τ-byte output
         let mut hasher = Blake2b::new_with_output_len(outlen);
+        hasher.update(&(outlen as u32).to_le_bytes());
         hasher.update(input);
         hasher.finalize()
     } else {
-        // For outputs > 64 bytes, use BLAKE2b in tree mode
+        // For outputs > 64 bytes, use chained BLAKE2b
+        // Reference implementation logic (matches argon2 crate blake2b_long):
+        // 1. Compute V1 = BLAKE2b-64(len || input), write V1[0..32]
+        // 2. While remaining > 64: V(i+1) = BLAKE2b-64(V_i), write V(i+1)[0..32]
+        // 3. Final: VarBlake2b(V_last, remaining)
         let mut result = Vec::with_capacity(outlen);
+
+        // V1 = BLAKE2b-64(τ || X)
         let mut hasher = Blake2b::new();
         hasher.update(&(outlen as u32).to_le_bytes());
         hasher.update(input);
-        let first = hasher.finalize();
+        let mut prev = hasher.finalize_fixed();
 
-        result.extend_from_slice(&first[..min(BLAKE2B_OUT_LEN, outlen)]);
+        // Take first 32 bytes from V1
+        result.extend_from_slice(&prev[..32]);
 
-        let mut pos = BLAKE2B_OUT_LEN;
-        while pos < outlen {
-            let mut hasher = Blake2b::new();
-            hasher.update(&result[pos - BLAKE2B_OUT_LEN..pos]);
-            let next = hasher.finalize();
-            let to_copy = min(BLAKE2B_OUT_LEN, outlen - pos);
-            result.extend_from_slice(&next[..to_copy]);
-            pos += to_copy;
+        // Generate remaining blocks
+        // Continue while remaining > 64, use final block when remaining <= 64
+        while result.len() < outlen {
+            let remaining = outlen - result.len();
+            if remaining <= BLAKE2B_OUT_LEN {
+                // Final block: use variable-length output (1-64 bytes)
+                let mut hasher = Blake2b::new_with_output_len(remaining);
+                hasher.update(&prev);
+                result.extend_from_slice(&hasher.finalize());
+            } else {
+                // Intermediate block: Vi = BLAKE2b(V_{i-1}), take first 32 bytes
+                let mut hasher = Blake2b::new();
+                hasher.update(&prev);
+                prev = hasher.finalize_fixed();
+                result.extend_from_slice(&prev[..32]);
+            }
         }
 
         result
@@ -399,62 +515,132 @@ fn block_to_bytes(block: &[u64], bytes: &mut [u8]) {
     }
 }
 
-/// G compression function
+/// Update address block for data-independent addressing
+///
+/// Generates 128 pseudo-random addresses using:
+/// input_block[6] += 1
+/// address_block = G(zero_block, G(zero_block, input_block))
+fn update_address_block(address_block: &mut [u64], input_block: &mut [u64], zero_block: &[u64]) {
+    input_block[6] += 1;
+
+    // First compression: tmp = G(zero_block, input_block)
+    let mut tmp = vec![0u64; QWORDS_IN_BLOCK];
+    g_function(zero_block, input_block, &mut tmp, true);
+
+    // Second compression: address_block = G(zero_block, tmp)
+    g_function(zero_block, &tmp, address_block, true);
+}
+
+/// G compression function (RFC 9106 Section 3.7)
+///
+/// G(X, Y) = P(X ⊕ Y) ⊕ X ⊕ Y
+///
+/// First pass: B[i][j] = G(prev, ref)
+/// Later passes: B[i][j] = B[i][j] ⊕ G(prev, ref)
 fn g_function(x: &[u64], y: &[u64], result: &mut [u64], first_pass: bool) {
-    // R = X XOR Y
+    // R = X ⊕ Y
     let mut r = [0u64; QWORDS_IN_BLOCK];
     for i in 0..QWORDS_IN_BLOCK {
         r[i] = x[i] ^ y[i];
     }
 
-    // Q = Z = P(R)
+    // Q = P(R)
     let mut q = r;
     permute_block(&mut q);
 
-    // result = R XOR Q (or just Q on first pass)
+    // G(X, Y) = Q ⊕ R = P(X ⊕ Y) ⊕ X ⊕ Y
+    // First pass: result = G(X, Y)
+    // Later passes: result = result ⊕ G(X, Y)
     for i in 0..QWORDS_IN_BLOCK {
-        result[i] = if first_pass {
-            q[i]
-        } else {
-            result[i] ^ r[i] ^ q[i]
-        };
+        let g_result = q[i] ^ r[i];
+        result[i] = if first_pass { g_result } else { result[i] ^ g_result };
     }
 }
 
-/// Permutation P
+/// Permutation P (RFC 9106 Section 3.6)
+///
+/// The 1024-byte block is processed as 8 groups of 128 bytes (16 u64 words).
+/// Each group is treated as a 4×4 matrix and the round function is applied.
+///
+/// Then the same 128 u64 words are regrouped column-wise and P is applied again.
 fn permute_block(block: &mut [u64]) {
-    // Apply Blake2b-like permutation
-    // Row-wise
-    for i in 0..8 {
-        let row_start = i * 16;
-        gb(&mut block[row_start..row_start + 16]);
+    // First pass: process 8 rows (each row is 16 consecutive u64 words)
+    for row in 0..8 {
+        let base = row * 16;
+        let mut v = [0u64; 16];
+        v.copy_from_slice(&block[base..base + 16]);
+        p_round(&mut v);
+        block[base..base + 16].copy_from_slice(&v);
     }
 
-    // Column-wise
-    for i in 0..8 {
-        let mut col = [0u64; 16];
-        for j in 0..16 {
-            col[j] = block[j * 8 + i];
+    // Second pass: process 8 columns
+    // Column c contains u64s at positions: 2*c, 2*c+1, 2*c+16, 2*c+17, ..., 2*c+112, 2*c+113
+    for col in 0..8 {
+        let mut v = [0u64; 16];
+        for row in 0..8 {
+            let base = row * 16 + col * 2;
+            v[row * 2] = block[base];
+            v[row * 2 + 1] = block[base + 1];
         }
-        gb(&mut col);
-        for j in 0..16 {
-            block[j * 8 + i] = col[j];
+        p_round(&mut v);
+        for row in 0..8 {
+            let base = row * 16 + col * 2;
+            block[base] = v[row * 2];
+            block[base + 1] = v[row * 2 + 1];
         }
     }
 }
 
-/// GB function (Blake2b round function simplified)
+/// P round function (RFC 9106 Section 3.6)
+///
+/// P(v0, v1, ..., v15) applies BLAKE2b-style mixing:
+///   First round (columns):
+///     GB(v0, v4, v8, v12), GB(v1, v5, v9, v13), GB(v2, v6, v10, v14), GB(v3, v7, v11, v15)
+///   Second round (diagonals):
+///     GB(v0, v5, v10, v15), GB(v1, v6, v11, v12), GB(v2, v7, v8, v13), GB(v3, v4, v9, v14)
+fn p_round(v: &mut [u64; 16]) {
+    // First round: columns
+    gb(v, 0, 4, 8, 12);
+    gb(v, 1, 5, 9, 13);
+    gb(v, 2, 6, 10, 14);
+    gb(v, 3, 7, 11, 15);
+
+    // Second round: diagonals
+    gb(v, 0, 5, 10, 15);
+    gb(v, 1, 6, 11, 12);
+    gb(v, 2, 7, 8, 13);
+    gb(v, 3, 4, 9, 14);
+}
+
+/// GB function (RFC 9106 Section 3.5)
+///
+/// GB(a, b, c, d) using fBlaMka:
+///   a = a + b + 2*trunc(a)*trunc(b)
+///   d = (d ⊕ a) >>> 32
+///   c = c + d + 2*trunc(c)*trunc(d)
+///   b = (b ⊕ c) >>> 24
+///   a = a + b + 2*trunc(a)*trunc(b)
+///   d = (d ⊕ a) >>> 16
+///   c = c + d + 2*trunc(c)*trunc(d)
+///   b = (b ⊕ c) >>> 63
 #[inline]
-fn gb(v: &mut [u64]) {
-    // Simplified permutation mixing
-    for i in (0..v.len()).step_by(2) {
-        if i + 1 < v.len() {
-            let t0 = v[i].wrapping_add(v[i + 1]);
-            let t1 = v[i + 1].rotate_right(24);
-            v[i] = t0;
-            v[i + 1] = t1 ^ t0;
-        }
+fn gb(v: &mut [u64; 16], a: usize, b: usize, c: usize, d: usize) {
+    // fBlaMka: x + y + 2 * trunc(x) * trunc(y)
+    #[inline(always)]
+    fn fblmk(x: u64, y: u64) -> u64 {
+        let xl = x & 0xFFFF_FFFF;
+        let yl = y & 0xFFFF_FFFF;
+        x.wrapping_add(y).wrapping_add(2u64.wrapping_mul(xl).wrapping_mul(yl))
     }
+
+    v[a] = fblmk(v[a], v[b]);
+    v[d] = (v[d] ^ v[a]).rotate_right(32);
+    v[c] = fblmk(v[c], v[d]);
+    v[b] = (v[b] ^ v[c]).rotate_right(24);
+    v[a] = fblmk(v[a], v[b]);
+    v[d] = (v[d] ^ v[a]).rotate_right(16);
+    v[c] = fblmk(v[c], v[d]);
+    v[b] = (v[b] ^ v[c]).rotate_right(63);
 }
 
 /// Argon2d hasher (data-dependent)
@@ -567,5 +753,82 @@ mod tests {
 
         // Different salts should produce different hashes
         assert_ne!(hash1, hash2);
+    }
+
+    #[cfg(feature = "std")]
+    #[test]
+    fn test_compare_with_reference() {
+        extern crate std;
+        use std::println;
+        use argon2::{Argon2 as RefArgon2, Algorithm, Version, Params as RefParams};
+        use hpcrypt_hash::blake2b::Blake2b;
+        use blake2::{Blake2b as Blake2bRef, Digest};
+        use blake2::digest::VariableOutput;
+        use blake2::Blake2bVar;
+
+        // Compare BLAKE2b implementations
+        // Our implementation
+        let mut our_blake = Blake2b::new();
+        our_blake.update(b"abc");
+        let our_hash = our_blake.finalize_fixed();
+
+        // Reference blake2 crate
+        let mut ref_blake = Blake2bRef::<blake2::digest::consts::U64>::new();
+        ref_blake.update(b"abc");
+        let ref_hash: [u8; 64] = ref_blake.finalize().into();
+
+        println!("Our BLAKE2b:       {}", hex::encode(&our_hash));
+        println!("Ref BLAKE2b:       {}", hex::encode(&ref_hash));
+
+        // Compare H' for 32 bytes
+        let test_input = b"test";
+
+        // Our H'
+        let our_hv_32 = hash_variable(test_input, 32);
+
+        // Reference: BLAKE2b(32 || X) with 32-byte output
+        let mut ref_hv = Blake2bVar::new(32).unwrap();
+        blake2::digest::Update::update(&mut ref_hv, &32u32.to_le_bytes());
+        blake2::digest::Update::update(&mut ref_hv, test_input);
+        let mut ref_result_32 = [0u8; 32];
+        ref_hv.finalize_variable(&mut ref_result_32).unwrap();
+
+        println!("\nOur H'(test, 32):  {}", hex::encode(&our_hv_32));
+        println!("Ref H'(test, 32):  {}", hex::encode(&ref_result_32));
+
+        // Compare H' for 1024 bytes
+        let our_hv_1024 = hash_variable(test_input, 1024);
+
+        // For reference, compute using the argon2 crate's method
+        // V1 = BLAKE2b-64(1024 || X)
+        let mut v1_hasher = Blake2bRef::<blake2::digest::consts::U64>::new();
+        v1_hasher.update(&1024u32.to_le_bytes());
+        v1_hasher.update(test_input);
+        let v1: [u8; 64] = v1_hasher.finalize().into();
+
+        println!("\nOur H'(1024)[0:32]:  {}", hex::encode(&our_hv_1024[..32]));
+        println!("Ref V1[0:32]:        {}", hex::encode(&v1[..32]));
+
+        // Simple test
+        let password = b"\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01";
+        let salt = b"\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02";
+
+        // Reference argon2 crate
+        let ref_params = RefParams::new(32, 1, 1, Some(32)).unwrap();
+        let ref_argon2 = RefArgon2::new(Algorithm::Argon2d, Version::V0x13, ref_params);
+        let mut ref_output = [0u8; 32];
+        ref_argon2.hash_password_into(password, salt, &mut ref_output).unwrap();
+
+        // Our implementation
+        let params = Params {
+            outlen: 32,
+            mem_cost: 32,
+            time_cost: 1,
+            lanes: 1,
+        };
+        let our_output = Argon2d::hash(password, salt, &params).unwrap();
+
+        println!("\nReference:         {}", hex::encode(ref_output));
+        println!("Our:               {}", hex::encode(&our_output));
     }
 }
