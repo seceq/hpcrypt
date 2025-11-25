@@ -324,14 +324,16 @@ fn test_p521_verify(
             if result == should_pass {
                 stats.passed += 1;
             } else {
-                eprintln!("Test case {} FAILED: Verification mismatch", tc_id);
+                eprintln!("P521 Test case {} FAILED: Verification mismatch (expected {}, got {})", tc_id, should_pass, result);
+                eprintln!("  r len: {}, s len: {}", r.len(), s.len());
                 stats.failed += 1;
             }
         }
-        Err(_) => {
+        Err(e) => {
             if !should_pass {
                 stats.passed += 1;
             } else {
+                eprintln!("P521 Test case {} FAILED: Key construction failed: {:?}", tc_id, e);
                 stats.failed += 1;
             }
         }
