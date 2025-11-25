@@ -14,7 +14,7 @@ hex = { workspace = true }
 # HPCrypt crates to test (optional, enabled via features)
 hpcrypt-aead = { workspace = true, features = ["std"], optional = true }
 hpcrypt-signatures = { workspace = true, features = ["std"], optional = true }
-hpcrypt-rsa = { workspace = true, features = ["std"], optional = true }
+hpcrypt-rsa = { workspace = true, features = ["std", "sha2"], optional = true }
 hpcrypt-mac = { workspace = true, features = ["std"], optional = true }
 hpcrypt-cipher = { workspace = true, features = ["std"], optional = true }
 hpcrypt-kdf = { workspace = true, features = ["std"], optional = true }
@@ -23,12 +23,13 @@ hpcrypt-fpe = { workspace = true, features = ["std"], optional = true }
 hpcrypt-mlkem = { workspace = true, features = ["std"], optional = true }
 hpcrypt-mldsa = { workspace = true, features = ["std"], optional = true }
 hpcrypt-hash = { workspace = true, optional = true }
+num-bigint = { version = "0.4", optional = true }
 
 [features]
 default = []
 enable-aead-tests = ["hpcrypt-aead"]
 enable-signature-tests = ["hpcrypt-signatures", "hpcrypt-curves", "hpcrypt-hash"]
-enable-rsa-tests = ["hpcrypt-rsa"]
+enable-rsa-tests = ["hpcrypt-rsa", "hpcrypt-hash", "num-bigint"]
 enable-mac-tests = ["hpcrypt-mac"]
 enable-cipher-tests = ["hpcrypt-cipher"]
 enable-kdf-tests = ["hpcrypt-kdf"]
@@ -92,6 +93,7 @@ path = "tests/cipher.rs"
 [[test]]
 name = "fpe"
 path = "tests/fpe.rs"
+required-features = ["enable-fpe-tests"]
 
 [[test]]
 name = "mlkem"
@@ -107,60 +109,6 @@ path = "tests/ed448.rs"
 required-features = ["hpcrypt-curves"]
 
 [[test]]
-name = "ed448_debug"
-path = "tests/ed448_debug.rs"
+name = "x448"
+path = "tests/x448.rs"
 required-features = ["hpcrypt-curves"]
-
-[[test]]
-name = "ed448_no_dom4"
-path = "tests/ed448_no_dom4.rs"
-required-features = ["hpcrypt-curves"]
-
-[[test]]
-name = "ed448_scalar_check"
-path = "tests/ed448_scalar_check.rs"
-required-features = ["hpcrypt-curves"]
-
-[[test]]
-name = "ed448_rfc8032"
-path = "tests/ed448_rfc8032.rs"
-required-features = ["hpcrypt-curves"]
-
-[[test]]
-name = "ed448_sign_debug"
-path = "tests/ed448_sign_debug.rs"
-required-features = ["hpcrypt-curves"]
-
-[[test]]
-name = "ed448_test_reduction"
-path = "tests/ed448_test_reduction.rs"
-required-features = ["hpcrypt-curves"]
-
-[[test]]
-name = "ed448_debug_reduction"
-path = "tests/ed448_debug_reduction.rs"
-required-features = ["hpcrypt-curves", "hpcrypt-hash"]
-
-[[test]]
-name = "ed448_trace_reduction"
-path = "tests/ed448_trace_reduction.rs"
-required-features = ["hpcrypt-curves"]
-
-[[test]]
-name = "ed448_test_reduce"
-path = "tests/ed448_test_reduce.rs"
-required-features = ["hpcrypt-curves"]
-
-[[test]]
-name = "ed448_test_limbs"
-path = "tests/ed448_test_limbs.rs"
-
-[[test]]
-name = "ed448_own_cycle_debug"
-path = "tests/ed448_own_cycle_debug.rs"
-required-features = ["hpcrypt-curves"]
-
-[[test]]
-name = "ed448_investigate_key1"
-path = "tests/ed448_investigate_key1.rs"
-required-features = ["hpcrypt-curves", "hpcrypt-hash"]
