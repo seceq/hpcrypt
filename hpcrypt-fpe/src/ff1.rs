@@ -317,8 +317,9 @@ impl FF1 {
 
         // Step 2: Q = T || [0]^((-t-b-1) mod 16) || [i]^1 || [NUM_radix(B)]^b
         // Calculate b = ceil(ceil(v × log₂(radix)) / 8)
-        let v = b.len();
-        let b_bytes_len = ((((v as f64) * (radix as f64).log2()).ceil()) / 8.0).ceil() as usize;
+        // Per NIST SP 800-38G, v is always n - u (the larger half), not the current input length
+        let v_fixed = n - u; // This is the fixed v value from the spec
+        let b_bytes_len = ((((v_fixed as f64) * (radix as f64).log2()).ceil()) / 8.0).ceil() as usize;
 
         // Convert B to bytes and pad to b_bytes_len
         let b_num = self.num_radix(b, radix)?;
@@ -925,4 +926,5 @@ mod tests {
         let decrypted = ff1.decrypt(&ciphertext, tweak, 10).unwrap();
         assert_eq!(decrypted, plaintext);
     }
+
 }
