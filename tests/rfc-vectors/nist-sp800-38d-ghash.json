@@ -1,0 +1,152 @@
+[
+  {
+    "test_id": 1,
+    "test_type": "ghash_empty",
+    "source": "NIST SP 800-38D",
+    "description": "GHASH with empty input",
+    "h": "66e94bd4ef8a2c3b884cfa59ca342b2e",
+    "data": "",
+    "expected_tag": "00000000000000000000000000000000",
+    "note": "Empty data produces zero tag"
+  },
+  {
+    "test_id": 2,
+    "test_type": "ghash_single_block",
+    "source": "NIST SP 800-38D Test Case 2",
+    "description": "GHASH single block - all zeros",
+    "h": "66e94bd4ef8a2c3b884cfa59ca342b2e",
+    "data": "00000000000000000000000000000000",
+    "expected_tag": "00000000000000000000000000000000",
+    "note": "Zero block produces zero tag with any H"
+  },
+  {
+    "test_id": 3,
+    "test_type": "ghash_single_block",
+    "source": "Derived from AES-GCM test",
+    "description": "GHASH with single non-zero block",
+    "h": "66e94bd4ef8a2c3b884cfa59ca342b2e",
+    "data": "42424242424242424242424242424242",
+    "expected_tag": "a7b2cc9ecfa4028207d1abe5cf5ee8b1",
+    "note": "Single block 0x42 repeated"
+  },
+  {
+    "test_id": 4,
+    "test_type": "ghash_multi_block",
+    "source": "NIST SP 800-38D Example",
+    "description": "GHASH with multiple blocks (ciphertext only, no length block)",
+    "h": "b83b533708bf535d0aa6e52980d53b78",
+    "blocks": [
+      "42831ec2217774244b7221b784d0d49c",
+      "e3aa212f2c02a4e035c17e2329aca12e",
+      "21d514b25466931c7d8f6a5aac84aa05",
+      "1ba30b396a0aac973d58e091473f5985"
+    ],
+    "expected_tag": "4796cf49464704b5dd91f159bb1b7f95",
+    "note": "4 blocks from GCM test vector (without length block)"
+  },
+  {
+    "test_id": 5,
+    "test_type": "ghash_incremental",
+    "source": "Property Test",
+    "description": "Incremental vs batch processing",
+    "h": "66e94bd4ef8a2c3b884cfa59ca342b2e",
+    "blocks": [
+      "00010203040506070809101112131415",
+      "16171819202122232425262728293031",
+      "32333435363738394041424344454647",
+      "48495051525354555657585960616263"
+    ],
+    "note": "Verify incremental matches batch"
+  },
+  {
+    "test_id": 6,
+    "test_type": "ghash_h_sensitivity",
+    "source": "Property Test",
+    "description": "Different H values produce different tags",
+    "h1": "66e94bd4ef8a2c3b884cfa59ca342b2e",
+    "h2": "77e94bd4ef8a2c3b884cfa59ca342b2e",
+    "data": "42424242424242424242424242424242",
+    "note": "Verify H affects output"
+  },
+  {
+    "test_id": 7,
+    "test_type": "ghash_data_sensitivity",
+    "source": "Property Test",
+    "description": "Different data produces different tags",
+    "h": "66e94bd4ef8a2c3b884cfa59ca342b2e",
+    "data1": "00000000000000000000000000000001",
+    "data2": "00000000000000000000000000000002",
+    "note": "Verify data affects output"
+  },
+  {
+    "test_id": 8,
+    "test_type": "ghash_aes_gcm_derived",
+    "source": "NIST AES-GCM Test Case 3",
+    "description": "H derived from AES-GCM Test Case 3",
+    "h": "b83b533708bf535d0aa6e52980d53b78",
+    "aad": "",
+    "ciphertext_blocks": [
+      "42831ec2217774244b7221b784d0d49c",
+      "e3aa212f2c02a4e035c17e2329aca12e",
+      "21d514b25466931c7d8f6a5aac84aa05",
+      "1ba30b396a0aac973d58e091473f5985"
+    ],
+    "length_block": "00000000000000000000000000000200",
+    "expected_tag": "7f1b32b81b820d02614f8895ac1d4eac",
+    "note": "From NIST GCM Test Case 3"
+  },
+  {
+    "test_id": 9,
+    "test_type": "ghash_remainder_1",
+    "source": "Edge Case Test",
+    "description": "1 block remainder (1 mod 4)",
+    "h": "66e94bd4ef8a2c3b884cfa59ca342b2e",
+    "num_blocks": 1,
+    "note": "Test remainder path for 1 block"
+  },
+  {
+    "test_id": 10,
+    "test_type": "ghash_remainder_2",
+    "source": "Edge Case Test",
+    "description": "2 blocks remainder (2 mod 4)",
+    "h": "66e94bd4ef8a2c3b884cfa59ca342b2e",
+    "num_blocks": 2,
+    "note": "Test remainder path for 2 blocks"
+  },
+  {
+    "test_id": 11,
+    "test_type": "ghash_remainder_3",
+    "source": "Edge Case Test",
+    "description": "3 blocks remainder (3 mod 4)",
+    "h": "66e94bd4ef8a2c3b884cfa59ca342b2e",
+    "num_blocks": 3,
+    "note": "Test remainder path for 3 blocks"
+  },
+  {
+    "test_id": 12,
+    "test_type": "ghash_chunk_4",
+    "source": "Optimization Test",
+    "description": "Exactly 4 blocks (optimized path)",
+    "h": "66e94bd4ef8a2c3b884cfa59ca342b2e",
+    "num_blocks": 4,
+    "note": "Test degree-4 chunk processing"
+  },
+  {
+    "test_id": 13,
+    "test_type": "ghash_large",
+    "source": "Performance Test",
+    "description": "Large input (16 blocks = 256 bytes)",
+    "h": "66e94bd4ef8a2c3b884cfa59ca342b2e",
+    "num_blocks": 16,
+    "note": "Test multiple chunk iterations"
+  },
+  {
+    "test_id": 14,
+    "test_type": "ghash_reset",
+    "source": "API Test",
+    "description": "Reset and reuse",
+    "h": "66e94bd4ef8a2c3b884cfa59ca342b2e",
+    "data": "42424242424242424242424242424242",
+    "note": "Verify reset clears state"
+  }
+]
