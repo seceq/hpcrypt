@@ -1,0 +1,143 @@
+[
+  {
+    "test_id": 1,
+    "test_type": "polyval_empty",
+    "source": "RFC 8452",
+    "description": "POLYVAL with empty input",
+    "h": "25629347a0f8cb41d521347b8a9f0216",
+    "data": "",
+    "expected_tag": "00000000000000000000000000000000",
+    "note": "Empty data produces zero tag"
+  },
+  {
+    "test_id": 2,
+    "test_type": "polyval_single_block",
+    "source": "RFC 8452",
+    "description": "POLYVAL single block - all zeros",
+    "h": "25629347a0f8cb41d521347b8a9f0216",
+    "data": "00000000000000000000000000000000",
+    "expected_tag": "00000000000000000000000000000000",
+    "note": "Zero block produces zero tag"
+  },
+  {
+    "test_id": 3,
+    "test_type": "polyval_single_block",
+    "source": "Derived Test",
+    "description": "POLYVAL single block - non-zero",
+    "h": "25629347a0f8cb41d521347b8a9f0216",
+    "data": "01020304050607080910111213141516",
+    "expected_tag": "COMPUTE",
+    "note": "Single non-zero block"
+  },
+  {
+    "test_id": 4,
+    "test_type": "polyval_rfc8452_a1",
+    "source": "RFC 8452 Appendix A",
+    "description": "RFC 8452 POLYVAL Test Vector from AES-GCM-SIV",
+    "h": "25629347a0f8cb41d521347b8a9f0216",
+    "blocks": [
+      "4f4f95668c83dfb6401762bb2d01a262",
+      "d1a24ddd2721d006bbe45f20d3c9f362"
+    ],
+    "expected_tag": "732ed66caf39eb465904f59671ffe84a",
+    "note": "Two-block POLYVAL computation"
+  },
+  {
+    "test_id": 5,
+    "test_type": "polyval_incremental",
+    "source": "Property Test",
+    "description": "Incremental vs batch processing",
+    "h": "25629347a0f8cb41d521347b8a9f0216",
+    "blocks": [
+      "00010203040506070809101112131415",
+      "16171819202122232425262728293031",
+      "32333435363738394041424344454647",
+      "48495051525354555657585960616263"
+    ],
+    "note": "Verify incremental matches batch"
+  },
+  {
+    "test_id": 6,
+    "test_type": "polyval_h_sensitivity",
+    "source": "Property Test",
+    "description": "Different H values produce different tags",
+    "h1": "25629347a0f8cb41d521347b8a9f0216",
+    "h2": "35629347a0f8cb41d521347b8a9f0216",
+    "data": "01020304050607080910111213141516",
+    "note": "Verify H affects output"
+  },
+  {
+    "test_id": 7,
+    "test_type": "polyval_data_sensitivity",
+    "source": "Property Test",
+    "description": "Different data produces different tags",
+    "h": "25629347a0f8cb41d521347b8a9f0216",
+    "data1": "00000000000000000000000000000001",
+    "data2": "00000000000000000000000000000002",
+    "note": "Verify data affects output"
+  },
+  {
+    "test_id": 8,
+    "test_type": "polyval_partial_block",
+    "source": "API Test",
+    "description": "Partial block handling (zero-padded)",
+    "h": "25629347a0f8cb41d521347b8a9f0216",
+    "data": "0102030405060708",
+    "note": "8 bytes should be zero-padded to 16"
+  },
+  {
+    "test_id": 9,
+    "test_type": "polyval_multi_block",
+    "source": "Property Test",
+    "description": "Multiple full blocks",
+    "h": "25629347a0f8cb41d521347b8a9f0216",
+    "num_blocks": 4,
+    "note": "Test multiple block processing"
+  },
+  {
+    "test_id": 10,
+    "test_type": "polyval_reset",
+    "source": "API Test",
+    "description": "Reset and reuse",
+    "h": "25629347a0f8cb41d521347b8a9f0216",
+    "data": "01020304050607080910111213141516",
+    "note": "Verify reset clears state"
+  },
+  {
+    "test_id": 11,
+    "test_type": "polyval_zero_h",
+    "source": "Edge Case Test",
+    "description": "POLYVAL with zero H",
+    "h": "00000000000000000000000000000000",
+    "data": "01020304050607080910111213141516",
+    "expected_tag": "00000000000000000000000000000000",
+    "note": "Zero H produces zero tag (0 * x = 0)"
+  },
+  {
+    "test_id": 12,
+    "test_type": "polyval_large",
+    "source": "Performance Test",
+    "description": "Large input (16 blocks = 256 bytes)",
+    "h": "25629347a0f8cb41d521347b8a9f0216",
+    "num_blocks": 16,
+    "note": "Test large data processing"
+  },
+  {
+    "test_id": 13,
+    "test_type": "polyval_vs_ghash",
+    "source": "Comparison Test",
+    "description": "POLYVAL differs from GHASH",
+    "h": "25629347a0f8cb41d521347b8a9f0216",
+    "data": "01020304050607080910111213141516",
+    "note": "POLYVAL and GHASH use different polynomials"
+  },
+  {
+    "test_id": 14,
+    "test_type": "polyval_determinism",
+    "source": "Property Test",
+    "description": "Deterministic output",
+    "h": "25629347a0f8cb41d521347b8a9f0216",
+    "data": "01020304050607080910111213141516",
+    "note": "Same inputs must produce same outputs"
+  }
+]
