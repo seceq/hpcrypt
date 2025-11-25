@@ -1,0 +1,192 @@
+[
+  {
+    "test_id": 1,
+    "algorithm": "TurboSHAKE128",
+    "input_length": 0,
+    "input": "",
+    "domain_sep": "1F",
+    "output_length": 32,
+    "hash": "1e415f1c5983aff2169217277d17bb538cd945a397ddec541f1ce41af2c1b74c",
+    "note": "RFC 9861 - Empty input, 32-byte output"
+  },
+  {
+    "test_id": 2,
+    "algorithm": "TurboSHAKE128",
+    "input_length": 0,
+    "input": "",
+    "domain_sep": "1F",
+    "output_length": 64,
+    "hash": "1e415f1c5983aff2169217277d17bb538cd945a397ddec541f1ce41af2c1b74c3e8ccae2a4dae56c84a04c2385c03c15e8193bdf58737363321691c05462c8df",
+    "note": "RFC 9861 - Empty input, 64-byte output"
+  },
+  {
+    "test_id": 3,
+    "algorithm": "TurboSHAKE128",
+    "input_length": 1,
+    "input": "00",
+    "domain_sep": "1F",
+    "output_length": 32,
+    "hash": "55cedd6f60af7bb29a4042ae832ef3f58db7299f893ebb9247247d856958daa9",
+    "note": "RFC 9861 - ptn(1), 32-byte output"
+  },
+  {
+    "test_id": 4,
+    "algorithm": "TurboSHAKE128",
+    "input_length": 17,
+    "input": "000102030405060708090a0b0c0d0e0f10",
+    "domain_sep": "1F",
+    "output_length": 32,
+    "hash": "9c97d036a3bac819db70ede0ca554ec6e4c2a1a4ffbfd9ec269ca6a111161233",
+    "note": "RFC 9861 - ptn(17), 32-byte output"
+  },
+  {
+    "test_id": 5,
+    "algorithm": "TurboSHAKE128",
+    "input_length": 3,
+    "input": "ffffff",
+    "domain_sep": "01",
+    "output_length": 32,
+    "hash": "bf323f940494e88ee1c540fe660be8a0c93f43d15ec006998462fa994eed5dab",
+    "note": "RFC 9861 - Domain separation 0x01"
+  },
+  {
+    "test_id": 6,
+    "algorithm": "TurboSHAKE128",
+    "input_length": 1,
+    "input": "ff",
+    "domain_sep": "06",
+    "output_length": 32,
+    "hash": "8ec9c66465ed0d4a6c35d13506718d687a25cb05c74cca1e42501abd83874a67",
+    "note": "RFC 9861 - Domain separation 0x06"
+  },
+  {
+    "test_id": 7,
+    "algorithm": "TurboSHAKE128",
+    "input_length": 3,
+    "input": "ffffff",
+    "domain_sep": "07",
+    "output_length": 32,
+    "hash": "b658576001cad9b1e5f399a9f77723bba05458042d68206f7252682dba3663ed",
+    "note": "RFC 9861 - Domain separation 0x07"
+  },
+  {
+    "test_id": 8,
+    "algorithm": "TurboSHAKE128",
+    "input_length": 7,
+    "input": "ffffffffffffff",
+    "domain_sep": "0B",
+    "output_length": 32,
+    "hash": "8deeaa1aec47ccee569f659c21dfa8e112db3cee37b18178b2acd805b799cc37",
+    "note": "RFC 9861 - Domain separation 0x0B"
+  },
+  {
+    "test_id": 9,
+    "algorithm": "TurboSHAKE128",
+    "input_length": 1,
+    "input": "ff",
+    "domain_sep": "30",
+    "output_length": 32,
+    "hash": "553122e2135e363c3292bed2c6421fa232bab03daa07c7d6636603286506325b",
+    "note": "RFC 9861 - Domain separation 0x30"
+  },
+  {
+    "test_id": 10,
+    "algorithm": "TurboSHAKE128",
+    "input_length": 3,
+    "input": "ffffff",
+    "domain_sep": "7F",
+    "output_length": 32,
+    "hash": "16274cc656d44cefd422395d0f9053bda6d28e122aba15c765e5ad0e6eaf26f9",
+    "note": "RFC 9861 - Domain separation 0x7F"
+  },
+  {
+    "test_id": 11,
+    "algorithm": "TurboSHAKE256",
+    "input_length": 0,
+    "input": "",
+    "domain_sep": "1F",
+    "output_length": 64,
+    "hash": "367a329dafea871c7802ec67f905ae13c57695dc2c6663c61035f59a18f8e7db11edc0e12e91ea60eb6b32df06dd7f002fbafabb6e13ec1cc20d995547600db0",
+    "note": "RFC 9861 - Empty input, 64-byte output"
+  },
+  {
+    "test_id": 12,
+    "algorithm": "TurboSHAKE256",
+    "input_length": 1,
+    "input": "00",
+    "domain_sep": "1F",
+    "output_length": 64,
+    "hash": "3e1712f928f8eaf1054632b2aa0a246ed8b0c378728f60bc970410155c28820e90cc90d8a3006aa2372c5c5ea176b0682bf22bae7467ac94f74d43d39b0482e2",
+    "note": "RFC 9861 - ptn(1), 64-byte output"
+  },
+  {
+    "test_id": 13,
+    "algorithm": "TurboSHAKE256",
+    "input_length": 17,
+    "input": "000102030405060708090a0b0c0d0e0f10",
+    "domain_sep": "1F",
+    "output_length": 64,
+    "hash": "b3bab0300e6a191fbe6137939835923578794ea54843f5011090fa2f3780a9e5cb22c59d78b40a0fbff9e672c0fbe0970bd2c845091c6044d687054da5d8e9c7",
+    "note": "RFC 9861 - ptn(17), 64-byte output"
+  },
+  {
+    "test_id": 14,
+    "algorithm": "TurboSHAKE256",
+    "input_length": 3,
+    "input": "ffffff",
+    "domain_sep": "01",
+    "output_length": 64,
+    "hash": "d21c6fbbf587fa2282f29aea620175fb0257413af78a0b1b2a87419ce031d933ae7a4d383327a8a17641a34f8a1d1003ad7da6b72dba84bb62fef28f62f12424",
+    "note": "RFC 9861 - Domain separation 0x01"
+  },
+  {
+    "test_id": 15,
+    "algorithm": "TurboSHAKE256",
+    "input_length": 1,
+    "input": "ff",
+    "domain_sep": "06",
+    "output_length": 64,
+    "hash": "738d7b4e37d18b7f22ad1b5313e357e3dd7d07056a26a303c433fa3533455280f4f5a7d4f700efb437fe6d281405e07be32a0a972e22e63adc1b090daefe004b",
+    "note": "RFC 9861 - Domain separation 0x06"
+  },
+  {
+    "test_id": 16,
+    "algorithm": "TurboSHAKE256",
+    "input_length": 3,
+    "input": "ffffff",
+    "domain_sep": "07",
+    "output_length": 64,
+    "hash": "18b3b5b7061c2e67c1753a00e6ad7ed7ba1c906cf93efb7092eaf27fbeebb755ae6e292493c110e48d260028492b8e09b5500612b8f2578985ded5357d00ec67",
+    "note": "RFC 9861 - Domain separation 0x07"
+  },
+  {
+    "test_id": 17,
+    "algorithm": "TurboSHAKE256",
+    "input_length": 7,
+    "input": "ffffffffffffff",
+    "domain_sep": "0B",
+    "output_length": 64,
+    "hash": "bb36764951ec97e9d85f7ee9a67a7718fc005cf42556be79ce12c0bde50e5736d6632b0d0dfb202d1bbb8ffe3dd74cb00834fa756cb03471bab13a1e2c16b3c0",
+    "note": "RFC 9861 - Domain separation 0x0B"
+  },
+  {
+    "test_id": 18,
+    "algorithm": "TurboSHAKE256",
+    "input_length": 1,
+    "input": "ff",
+    "domain_sep": "30",
+    "output_length": 64,
+    "hash": "f3fe12873d34bcbb2e608779d6b70e7f86bec7e90bf113cbd4fdd0c4e2f4625e148dd7ee1a52776cf77f240514d9ccfc3b5ddab8ee255e39ee389072962c111a",
+    "note": "RFC 9861 - Domain separation 0x30"
+  },
+  {
+    "test_id": 19,
+    "algorithm": "TurboSHAKE256",
+    "input_length": 3,
+    "input": "ffffff",
+    "domain_sep": "7F",
+    "output_length": 64,
+    "hash": "abe569c1f77ec340f02705e7d37c9ab7e155516e4a6a150021d70b6fac0bb40c069f9a9828a0d575cd99f9bae435ab1acf7ed9110ba97ce0388d074bac768776",
+    "note": "RFC 9861 - Domain separation 0x7F"
+  }
+]
