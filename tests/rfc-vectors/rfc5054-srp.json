@@ -1,0 +1,16 @@
+[
+  {
+    "test_id": 1,
+    "group": "1024-bit",
+    "hash": "SHA1",
+    "username": "alice",
+    "password": "password123",
+    "salt": "BEB25379D1A8581EB5A727673A2441EE",
+    "note": "RFC 5054 Appendix B test vector - Full values available in RFC",
+    "multiplier_k": "7556AA045AEF2CDD07ABAF0F665C3E818913186F",
+    "password_hash_x": "94B7555AABE9127CC58CCF4993DB6CF84D16C124",
+    "client_private_a": "60975527035CF2AD1989806F0407210BC81EDC04E2762A56AFD529DDDA2D4393",
+    "server_private_b": "E487CB59D31AC550471E81F00F6928E01DDA08E974A004F49E61F5D105284D20",
+    "scrambling_u": "CE38B9593487DA98554ED47D70A7AE5F462EF019"
+  }
+]
