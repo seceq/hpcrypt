@@ -10,6 +10,7 @@ publish = false
 serde = { workspace = true }
 serde_json = { workspace = true }
 hex = { workspace = true }
+num-bigint = { version = "0.4", default-features = false, optional = true }
 
 # HPCrypt crates to test (optional, enabled via features)
 hpcrypt-aead = { workspace = true, features = ["std"], optional = true }
@@ -30,7 +31,7 @@ hpcrypt-rng = { workspace = true, features = ["std", "hash-drbg", "ctr-drbg", "h
 default = []
 enable-aead-tests = ["hpcrypt-aead"]
 enable-signature-tests = ["hpcrypt-signatures", "hpcrypt-curves"]
-enable-rsa-tests = ["hpcrypt-rsa"]
+enable-rsa-tests = ["hpcrypt-rsa", "hpcrypt-hash", "num-bigint"]
 enable-mac-tests = ["hpcrypt-mac"]
 enable-cipher-tests = ["hpcrypt-cipher"]
 enable-kdf-tests = ["hpcrypt-kdf"]
