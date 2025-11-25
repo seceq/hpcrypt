@@ -1,0 +1,150 @@
+[package]
+name = "rfc-tests"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+# Workspace dependencies for testing
+serde = { workspace = true }
+serde_json = { workspace = true }
+hex = { workspace = true }
+rand = "0.8"
+
+# HPCrypt crates to test (optional, enabled via features)
+hpcrypt-hpke = { workspace = true, features = ["std"], optional = true }
+hpcrypt-pake = { workspace = true, features = ["std", "alloc"], optional = true }
+hpcrypt-kdf = { workspace = true, features = ["std", "quic-header-protection"], optional = true }
+hpcrypt-srp = { workspace = true, features = ["std"], optional = true }
+hpcrypt-hash = { workspace = true, features = ["std"], optional = true }
+hpcrypt-ecies = { workspace = true, features = ["std"], optional = true }
+hpcrypt-threshold = { workspace = true, features = ["std"], optional = true }
+hpcrypt-aead = { workspace = true, features = ["std"], optional = true }
+hpcrypt-cipher = { workspace = true, features = ["std"], optional = true }
+hpcrypt-mac = { workspace = true, features = ["std", "alloc"], optional = true }
+hpcrypt-signatures = { workspace = true, features = ["std"], optional = true }
+hpcrypt-curves = { workspace = true, features = ["std"], optional = true }
+
+[features]
+default = []
+enable-hpke-tests = ["hpcrypt-hpke"]
+enable-aead-tests = ["hpcrypt-aead"]
+enable-cipher-tests = ["hpcrypt-cipher"]
+enable-mac-tests = ["hpcrypt-mac"]
+enable-signature-tests = ["hpcrypt-signatures", "hpcrypt-curves"]
+enable-opaque-tests = ["hpcrypt-pake"]
+enable-kdf-tests = ["hpcrypt-kdf"]
+enable-srp-tests = ["hpcrypt-srp"]
+enable-hash-tests = ["hpcrypt-hash"]
+enable-ecies-tests = ["hpcrypt-ecies"]
+enable-shamir-tests = ["hpcrypt-threshold"]
+
+# Enable all RFC implementation tests
+enable-all-tests = [
+    "enable-hpke-tests",
+    "enable-opaque-tests",
+    "enable-kdf-tests",
+    "enable-srp-tests",
+    "enable-hash-tests",
+    "enable-ecies-tests",
+    "enable-shamir-tests",
+    "enable-aead-tests",
+    "enable-cipher-tests",
+    "enable-mac-tests",
+    "enable-signature-tests",
+]
+
+[lib]
+path = "src/lib.rs"
+
+# Individual test binaries
+[[test]]
+name = "hpke"
+path = "tests/hpke.rs"
+required-features = ["enable-hpke-tests"]
+
+[[test]]
+name = "opaque"
+path = "tests/opaque.rs"
+required-features = ["enable-opaque-tests"]
+
+[[test]]
+name = "argon2"
+path = "tests/argon2.rs"
+required-features = ["enable-kdf-tests"]
+
+[[test]]
+name = "scrypt"
+path = "tests/scrypt.rs"
+required-features = ["enable-kdf-tests"]
+
+[[test]]
+name = "srp"
+path = "tests/srp.rs"
+required-features = ["enable-srp-tests"]
+
+[[test]]
+name = "blake2"
+path = "tests/blake2.rs"
+required-features = ["enable-hash-tests"]
+
+[[test]]
+name = "blake3"
+path = "tests/blake3.rs"
+required-features = ["enable-hash-tests"]
+
+[[test]]
+name = "turboshake"
+path = "tests/turboshake.rs"
+required-features = ["enable-hash-tests"]
+
+[[test]]
+name = "ecies"
+path = "tests/ecies.rs"
+required-features = ["enable-ecies-tests"]
+
+[[test]]
+name = "shamir"
+path = "tests/shamir.rs"
+required-features = ["enable-shamir-tests"]
+
+[[test]]
+name = "ocb"
+path = "tests/ocb.rs"
+required-features = ["enable-aead-tests"]
+
+[[test]]
+name = "sha"
+path = "tests/sha.rs"
+required-features = ["enable-hash-tests"]
+
+[[test]]
+name = "quic"
+path = "tests/quic.rs"
+required-features = ["enable-kdf-tests"]
+
+[[test]]
+name = "chacha20"
+path = "tests/chacha20.rs"
+required-features = ["enable-cipher-tests"]
+
+[[test]]
+name = "ghash"
+path = "tests/ghash.rs"
+required-features = ["enable-mac-tests"]
+
+[[test]]
+name = "polyval"
+path = "tests/polyval.rs"
+required-features = ["enable-mac-tests"]
+
+[[test]]
+name = "ecdsa_p521"
+path = "tests/ecdsa_p521.rs"
+required-features = ["enable-signature-tests"]
+
+[[test]]
+name = "hkdf_blake2b"
+path = "tests/hkdf_blake2b.rs"
+required-features = ["enable-kdf-tests"]
