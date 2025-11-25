@@ -20,7 +20,7 @@ pub mod sign;
 
 // Re-export main types
 pub use field::FieldElement;
-pub use point::{scalar_mul_base_comb, EdwardsPoint, NielsPoint};
+pub use point::{base_point, scalar_mul_base_comb, EdwardsPoint, NielsPoint};
 pub use scalar::Scalar;
 pub use sign::{Ed25519, PrivateKey, PublicKey, Signature};
 
