@@ -87,9 +87,15 @@ pub struct Ascon128;
 #[derive(Debug)]
 pub struct Ascon128a;
 
-// Ascon permutation constants
+// Ascon permutation constants (original Ascon v1.2 - big-endian)
 const ASCON_128_IV: u64 = 0x80400c0600000000;
 const ASCON_128A_IV: u64 = 0x80800c0800000000;
+
+// NIST SP 800-232 constants (little-endian)
+// IV = (VARIANT) | (PA_ROUNDS << 16) | (PB_ROUNDS << 20) | (TAG_SIZE*8 << 24) | (RATE << 40)
+// AEAD128: VARIANT=1, PA=12, PB=8, TAG=16*8=128, RATE=16 -> 0x00001000808c0001
+// Note: NIST AEAD128 is the former Ascon-128a (rate=128 bits), not Ascon-128 (rate=64 bits)
+const ASCON_NIST_AEAD128_IV: u64 = 0x00001000808c0001;
 
 // Round constants for Ascon permutation
 const ROUND_CONSTANTS: [u64; 12] = [
@@ -237,7 +243,7 @@ fn ascon_encrypt(
 
     let ciphertext = ascon_encrypt_blocks(&mut state, plaintext, rate, rounds_b);
 
-    let tag = ascon_finalize(&mut state, key, rounds_a);
+    let tag = ascon_finalize(&mut state, key, rate, rounds_a);
 
     state.zeroize();
 
@@ -272,7 +278,7 @@ fn ascon_decrypt(
 
     let plaintext = ascon_decrypt_blocks(&mut state, ct, rate, rounds_b);
 
-    let mut computed_tag = ascon_finalize(&mut state, key, rounds_a);
+    let mut computed_tag = ascon_finalize(&mut state, key, rate, rounds_a);
 
     state.zeroize();
 
@@ -477,7 +483,8 @@ fn ascon_encrypt_blocks(
             state[0] ^= padding_block ^ block;
         } else {
             // rate == 16
-            if remaining <= 8 {
+            if remaining < 8 {
+                // Partial block in first word only (0-7 bytes)
                 let mut padded = [0u8; 8];
                 padded[..remaining].copy_from_slice(&plaintext[pos..]);
                 let block = u64::from_be_bytes(padded);
@@ -491,28 +498,37 @@ fn ascon_encrypt_blocks(
                 let padding_block = u64::from_be_bytes(padded);
                 state[0] ^= padding_block ^ block;
             } else {
+                // Partial block spans both words (8-15 bytes)
+                // First 8 bytes go to state[0]
                 let mut padded0 = [0u8; 8];
                 padded0.copy_from_slice(&plaintext[pos..pos + 8]);
                 let block0 = u64::from_be_bytes(padded0);
                 state[0] ^= block0;
                 ciphertext.extend_from_slice(&state[0].to_be_bytes());
 
+                // Remaining bytes (0-7) go to state[1]
                 let rem2 = remaining - 8;
                 let mut padded1 = [0u8; 8];
-                padded1[..rem2].copy_from_slice(&plaintext[pos + 8..]);
+                if rem2 > 0 {
+                    padded1[..rem2].copy_from_slice(&plaintext[pos + 8..]);
+                }
                 let block1 = u64::from_be_bytes(padded1);
                 state[1] ^= block1;
                 let ct_bytes = state[1].to_be_bytes();
                 ciphertext.extend_from_slice(&ct_bytes[..rem2]);
 
+                // Apply padding
                 padded1.fill(0);
-                padded1[..rem2].copy_from_slice(&plaintext[pos + 8..]);
+                if rem2 > 0 {
+                    padded1[..rem2].copy_from_slice(&plaintext[pos + 8..]);
+                }
                 padded1[rem2] = 0x80;
                 let padding_block = u64::from_be_bytes(padded1);
                 state[1] ^= padding_block ^ block1;
             }
         }
-    } else if !plaintext.is_empty() {
+    } else {
+        // Always apply padding, even for empty plaintext
         state[0] ^= 0x8000000000000000u64;
     }
 
@@ -596,7 +612,8 @@ fn ascon_decrypt_blocks(
             state[0] = u64::from_be_bytes(state_bytes);
         } else {
             // rate == 16
-            if remaining <= 8 {
+            if remaining < 8 {
+                // Partial block in first word only (0-7 bytes)
                 let mut padded = [0u8; 8];
                 padded[..remaining].copy_from_slice(&ciphertext[pos..]);
                 let c = u64::from_be_bytes(padded);
@@ -609,6 +626,8 @@ fn ascon_decrypt_blocks(
                 state_bytes[remaining] ^= 0x80;
                 state[0] = u64::from_be_bytes(state_bytes);
             } else {
+                // Partial block spans both words (8-15 bytes)
+                // First 8 bytes from state[0]
                 let c0 = u64::from_be_bytes([
                     ciphertext[pos],
                     ciphertext[pos + 1],
@@ -623,21 +642,27 @@ fn ascon_decrypt_blocks(
                 plaintext.extend_from_slice(&p0.to_be_bytes());
                 state[0] = c0;
 
+                // Remaining bytes (0-7) from state[1]
                 let rem2 = remaining - 8;
                 let mut padded = [0u8; 8];
-                padded[..rem2].copy_from_slice(&ciphertext[pos + 8..]);
+                if rem2 > 0 {
+                    padded[..rem2].copy_from_slice(&ciphertext[pos + 8..]);
+                }
                 let c1 = u64::from_be_bytes(padded);
                 let p1 = state[1] ^ c1;
                 let p1_bytes = p1.to_be_bytes();
                 plaintext.extend_from_slice(&p1_bytes[..rem2]);
 
                 let mut state_bytes = state[1].to_be_bytes();
-                state_bytes[..rem2].copy_from_slice(&ciphertext[pos + 8..]);
+                if rem2 > 0 {
+                    state_bytes[..rem2].copy_from_slice(&ciphertext[pos + 8..]);
+                }
                 state_bytes[rem2] ^= 0x80;
                 state[1] = u64::from_be_bytes(state_bytes);
             }
         }
-    } else if !ciphertext.is_empty() {
+    } else {
+        // Always apply padding, even for empty ciphertext
         state[0] ^= 0x8000000000000000u64;
     }
 
@@ -645,7 +670,11 @@ fn ascon_decrypt_blocks(
 }
 
 /// Finalize and produce tag
-fn ascon_finalize(state: &mut AsconState, key: &[u8; 16], rounds: usize) -> [u8; 16] {
+///
+/// For Ascon-128 (rate=8), key is XORed to state[1,2] before permutation.
+/// For Ascon-128a (rate=16), key is XORed to state[2,3] before permutation.
+/// Tag is always extracted from state[3,4] XORed with key.
+fn ascon_finalize(state: &mut AsconState, key: &[u8; 16], rate: usize, rounds: usize) -> [u8; 16] {
     let mut k0 = u64::from_be_bytes([
         key[0], key[1], key[2], key[3], key[4], key[5], key[6], key[7],
     ]);
@@ -653,11 +682,14 @@ fn ascon_finalize(state: &mut AsconState, key: &[u8; 16], rounds: usize) -> [u8;
         key[8], key[9], key[10], key[11], key[12], key[13], key[14], key[15],
     ]);
 
-    state[1] ^= k0;
-    state[2] ^= k1;
+    // XOR key at position rate/64 (1 for Ascon-128, 2 for Ascon-128a)
+    let key_idx = rate / 8;
+    state[key_idx] ^= k0;
+    state[key_idx + 1] ^= k1;
 
     ascon_permutation(state, rounds);
 
+    // Tag is always state[3,4] XORed with key
     state[3] ^= k0;
     state[4] ^= k1;
 
@@ -686,23 +718,36 @@ fn ascon_permutation(state: &mut AsconState, rounds: usize) {
 }
 
 /// Ascon S-box (substitution layer)
+///
+/// Implements the Ascon S-box as specified in the Ascon v1.2 specification:
+/// 1. Pre-mixing (affine layer before chi)
+/// 2. Chi layer (non-linear transformation)
+/// 3. Post-mixing (affine layer after chi)
 #[inline(always)]
 fn ascon_sbox(state: &mut AsconState) {
+    // Pre-mixing (affine layer before chi)
+    state[0] ^= state[4];
+    state[4] ^= state[3];
+    state[2] ^= state[1];
+
+    // Save values for chi layer
     let x0 = state[0];
     let x1 = state[1];
     let x2 = state[2];
     let x3 = state[3];
     let x4 = state[4];
 
+    // Chi layer (Keccak-style non-linear transformation)
     state[0] = x0 ^ (!x1 & x2);
     state[1] = x1 ^ (!x2 & x3);
     state[2] = x2 ^ (!x3 & x4);
     state[3] = x3 ^ (!x4 & x0);
     state[4] = x4 ^ (!x0 & x1);
 
-    state[1] ^= x0;
-    state[0] ^= x4;
-    state[3] ^= x2;
+    // Post-mixing (affine layer after chi)
+    state[1] ^= state[0];
+    state[0] ^= state[4];
+    state[3] ^= state[2];
     state[2] = !state[2];
 }
 
@@ -761,6 +806,464 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
         let is_zero = black_box((diff | diff.wrapping_neg()) >> 7);
         is_zero == 0
     }
+}
+
+// ============================================================================
+// NIST SP 800-232 Variants (Little-Endian)
+// ============================================================================
+
+/// Ascon-128 AEAD cipher (NIST SP 800-232)
+///
+/// NIST standardized variant using little-endian byte order as specified
+/// in NIST SP 800-232.
+///
+/// - Key size: 16 bytes (128 bits)
+/// - Nonce size: 16 bytes (128 bits)
+/// - Tag size: 16 bytes (128 bits)
+/// - Rate: 64 bits (8 bytes)
+/// - Rounds: 12 (initialization), 6 (absorbing), 12 (finalization)
+///
+/// # Difference from Ascon128
+///
+/// This implementation uses little-endian byte order as specified in NIST SP 800-232,
+/// while `Ascon128` uses big-endian as in the original Ascon v1.2 specification.
+#[derive(Debug)]
+pub struct Ascon128Nist;
+
+impl Ascon128Nist {
+    /// Number of initialization/finalization rounds
+    const ROUNDS_A: usize = 12;
+
+    /// Number of intermediate rounds (NIST AEAD128 uses 8, same as former Ascon-128a)
+    const ROUNDS_B: usize = 8;
+
+    /// Rate in bytes (128 bits = 16 bytes, same as former Ascon-128a)
+    const RATE: usize = 16;
+
+    /// Encrypt plaintext with Ascon-128 (NIST SP 800-232)
+    ///
+    /// Returns ciphertext || tag (16-byte tag appended)
+    pub fn encrypt(
+        key: &[u8; 16],
+        nonce: &[u8; 16],
+        plaintext: &[u8],
+        associated_data: &[u8],
+    ) -> Vec<u8> {
+        ascon_encrypt_nist(
+            key,
+            nonce,
+            plaintext,
+            associated_data,
+            ASCON_NIST_AEAD128_IV,
+            Self::RATE,
+            Self::ROUNDS_A,
+            Self::ROUNDS_B,
+        )
+    }
+
+    /// Decrypt ciphertext with Ascon-128 (NIST SP 800-232)
+    ///
+    /// Expects ciphertext || tag (16-byte tag appended)
+    ///
+    /// Returns Some(plaintext) if authentication succeeds, None otherwise
+    pub fn decrypt(
+        key: &[u8; 16],
+        nonce: &[u8; 16],
+        ciphertext_with_tag: &[u8],
+        associated_data: &[u8],
+    ) -> Option<Vec<u8>> {
+        if ciphertext_with_tag.len() < 16 {
+            return None;
+        }
+
+        ascon_decrypt_nist(
+            key,
+            nonce,
+            ciphertext_with_tag,
+            associated_data,
+            ASCON_NIST_AEAD128_IV,
+            Self::RATE,
+            Self::ROUNDS_A,
+            Self::ROUNDS_B,
+        )
+    }
+}
+
+/// NIST SP 800-232 encryption (little-endian)
+#[allow(clippy::too_many_arguments)]
+fn ascon_encrypt_nist(
+    key: &[u8; 16],
+    nonce: &[u8; 16],
+    plaintext: &[u8],
+    associated_data: &[u8],
+    iv: u64,
+    rate: usize,
+    rounds_a: usize,
+    rounds_b: usize,
+) -> Vec<u8> {
+    let mut state = ascon_initialize_nist(key, nonce, iv, rounds_a);
+
+    ascon_absorb_nist(&mut state, associated_data, rate, rounds_b);
+
+    // Domain separator: XOR 1<<63 into state[4] (NIST SP 800-232)
+    state[4] ^= 1u64 << 63;
+
+    let ciphertext = ascon_encrypt_blocks_nist(&mut state, plaintext, rate, rounds_b);
+
+    let tag = ascon_finalize_nist(&mut state, key, rate, rounds_a);
+
+    state.zeroize();
+
+    let mut result = Vec::with_capacity(ciphertext.len() + 16);
+    result.extend_from_slice(&ciphertext);
+    result.extend_from_slice(&tag);
+
+    result
+}
+
+/// NIST SP 800-232 decryption (little-endian)
+#[allow(clippy::too_many_arguments)]
+fn ascon_decrypt_nist(
+    key: &[u8; 16],
+    nonce: &[u8; 16],
+    ciphertext: &[u8],
+    associated_data: &[u8],
+    iv: u64,
+    rate: usize,
+    rounds_a: usize,
+    rounds_b: usize,
+) -> Option<Vec<u8>> {
+    let ct_len = ciphertext.len() - 16;
+    let ct = &ciphertext[..ct_len];
+    let received_tag = &ciphertext[ct_len..];
+
+    let mut state = ascon_initialize_nist(key, nonce, iv, rounds_a);
+
+    ascon_absorb_nist(&mut state, associated_data, rate, rounds_b);
+
+    // Domain separator: XOR 1<<63 into state[4] (NIST SP 800-232)
+    state[4] ^= 1u64 << 63;
+
+    let plaintext = ascon_decrypt_blocks_nist(&mut state, ct, rate, rounds_b);
+
+    let mut computed_tag = ascon_finalize_nist(&mut state, key, rate, rounds_a);
+
+    state.zeroize();
+
+    let result = if constant_time_eq(&computed_tag, received_tag) {
+        Some(plaintext)
+    } else {
+        None
+    };
+
+    computed_tag.zeroize();
+
+    result
+}
+
+/// Initialize Ascon state (NIST SP 800-232 little-endian)
+fn ascon_initialize_nist(key: &[u8; 16], nonce: &[u8; 16], iv: u64, rounds: usize) -> AsconState {
+    let mut k0 = u64::from_le_bytes([
+        key[0], key[1], key[2], key[3], key[4], key[5], key[6], key[7],
+    ]);
+    let mut k1 = u64::from_le_bytes([
+        key[8], key[9], key[10], key[11], key[12], key[13], key[14], key[15],
+    ]);
+    let n0 = u64::from_le_bytes([
+        nonce[0], nonce[1], nonce[2], nonce[3], nonce[4], nonce[5], nonce[6], nonce[7],
+    ]);
+    let n1 = u64::from_le_bytes([
+        nonce[8], nonce[9], nonce[10], nonce[11], nonce[12], nonce[13], nonce[14], nonce[15],
+    ]);
+
+    let mut state: AsconState = [iv, k0, k1, n0, n1];
+
+    ascon_permutation(&mut state, rounds);
+
+    state[3] ^= k0;
+    state[4] ^= k1;
+
+    k0.zeroize();
+    k1.zeroize();
+
+    state
+}
+
+/// Absorb associated data (NIST SP 800-232 little-endian)
+fn ascon_absorb_nist(state: &mut AsconState, data: &[u8], rate: usize, rounds: usize) {
+    if data.is_empty() {
+        return;
+    }
+
+    let chunks = data.chunks(rate);
+    let num_chunks = chunks.len();
+
+    for (i, chunk) in chunks.enumerate() {
+        if chunk.len() == rate {
+            if rate == 8 {
+                let block = u64::from_le_bytes([
+                    chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+                ]);
+                state[0] ^= block;
+            } else {
+                let block0 = u64::from_le_bytes([
+                    chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+                ]);
+                let block1 = u64::from_le_bytes([
+                    chunk[8], chunk[9], chunk[10], chunk[11], chunk[12], chunk[13], chunk[14],
+                    chunk[15],
+                ]);
+                state[0] ^= block0;
+                state[1] ^= block1;
+            }
+        } else {
+            // Partial block with padding (NIST SP 800-232 uses 0x01)
+            let mut padded = [0u8; 16];
+            padded[..chunk.len()].copy_from_slice(chunk);
+            padded[chunk.len()] = 0x01;
+
+            if rate == 8 {
+                let block = u64::from_le_bytes([
+                    padded[0], padded[1], padded[2], padded[3], padded[4], padded[5], padded[6],
+                    padded[7],
+                ]);
+                state[0] ^= block;
+            } else {
+                let block0 = u64::from_le_bytes([
+                    padded[0], padded[1], padded[2], padded[3], padded[4], padded[5], padded[6],
+                    padded[7],
+                ]);
+                let block1 = u64::from_le_bytes([
+                    padded[8], padded[9], padded[10], padded[11], padded[12], padded[13],
+                    padded[14], padded[15],
+                ]);
+                state[0] ^= block0;
+                state[1] ^= block1;
+            }
+        }
+
+        if i < num_chunks - 1 {
+            ascon_permutation(state, rounds);
+        }
+    }
+
+    // Pad if data was aligned (NIST SP 800-232 uses 0x01)
+    if data.len() % rate == 0 {
+        ascon_permutation(state, rounds);
+        // XOR padding: 0x01 || 0...
+        if rate == 8 {
+            state[0] ^= 0x01;
+        } else {
+            state[0] ^= 0x01;
+        }
+    }
+
+    ascon_permutation(state, rounds);
+}
+
+/// Encrypt blocks (NIST SP 800-232 little-endian)
+fn ascon_encrypt_blocks_nist(
+    state: &mut AsconState,
+    plaintext: &[u8],
+    rate: usize,
+    rounds: usize,
+) -> Vec<u8> {
+    let mut ciphertext = Vec::with_capacity(plaintext.len());
+
+    let chunks = plaintext.chunks(rate);
+    let num_chunks = chunks.len();
+
+    for (i, chunk) in chunks.enumerate() {
+        if chunk.len() == rate {
+            if rate == 8 {
+                let block = u64::from_le_bytes([
+                    chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+                ]);
+                state[0] ^= block;
+                ciphertext.extend_from_slice(&state[0].to_le_bytes());
+            } else {
+                let block0 = u64::from_le_bytes([
+                    chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+                ]);
+                let block1 = u64::from_le_bytes([
+                    chunk[8], chunk[9], chunk[10], chunk[11], chunk[12], chunk[13], chunk[14],
+                    chunk[15],
+                ]);
+                state[0] ^= block0;
+                state[1] ^= block1;
+                ciphertext.extend_from_slice(&state[0].to_le_bytes());
+                ciphertext.extend_from_slice(&state[1].to_le_bytes());
+            }
+
+            if i < num_chunks - 1 {
+                ascon_permutation(state, rounds);
+            }
+        } else {
+            // Partial block (NIST SP 800-232 uses 0x01 padding)
+            let remaining = chunk.len();
+            let mut padded = [0u8; 16];
+            padded[..remaining].copy_from_slice(chunk);
+            padded[remaining] = 0x01;
+
+            if rate == 8 {
+                let block = u64::from_le_bytes(padded[..8].try_into().unwrap());
+                state[0] ^= block;
+                let ct_bytes = state[0].to_le_bytes();
+                ciphertext.extend_from_slice(&ct_bytes[..remaining]);
+            } else if remaining < 8 {
+                let block = u64::from_le_bytes(padded[..8].try_into().unwrap());
+                state[0] ^= block;
+                let ct_bytes = state[0].to_le_bytes();
+                ciphertext.extend_from_slice(&ct_bytes[..remaining]);
+            } else {
+                let block0 = u64::from_le_bytes(padded[..8].try_into().unwrap());
+                state[0] ^= block0;
+                ciphertext.extend_from_slice(&state[0].to_le_bytes());
+
+                let block1 = u64::from_le_bytes(padded[8..16].try_into().unwrap());
+                state[1] ^= block1;
+                let ct_bytes = state[1].to_le_bytes();
+                ciphertext.extend_from_slice(&ct_bytes[..remaining - 8]);
+            }
+        }
+    }
+
+    // Handle empty plaintext (NIST SP 800-232 uses 0x01 padding)
+    if plaintext.is_empty() {
+        state[0] ^= 0x01;
+    }
+
+    ciphertext
+}
+
+/// Decrypt blocks (NIST SP 800-232 little-endian)
+fn ascon_decrypt_blocks_nist(
+    state: &mut AsconState,
+    ciphertext: &[u8],
+    rate: usize,
+    rounds: usize,
+) -> Vec<u8> {
+    let mut plaintext = Vec::with_capacity(ciphertext.len());
+
+    let chunks = ciphertext.chunks(rate);
+    let num_chunks = chunks.len();
+
+    for (i, chunk) in chunks.enumerate() {
+        if chunk.len() == rate {
+            if rate == 8 {
+                let c = u64::from_le_bytes([
+                    chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+                ]);
+                let p = state[0] ^ c;
+                state[0] = c;
+                plaintext.extend_from_slice(&p.to_le_bytes());
+            } else {
+                let c0 = u64::from_le_bytes([
+                    chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+                ]);
+                let c1 = u64::from_le_bytes([
+                    chunk[8], chunk[9], chunk[10], chunk[11], chunk[12], chunk[13], chunk[14],
+                    chunk[15],
+                ]);
+                let p0 = state[0] ^ c0;
+                let p1 = state[1] ^ c1;
+                state[0] = c0;
+                state[1] = c1;
+                plaintext.extend_from_slice(&p0.to_le_bytes());
+                plaintext.extend_from_slice(&p1.to_le_bytes());
+            }
+
+            if i < num_chunks - 1 {
+                ascon_permutation(state, rounds);
+            }
+        } else {
+            // Partial block (NIST SP 800-232 uses 0x01 padding)
+            let remaining = chunk.len();
+            let mut padded = [0u8; 16];
+            padded[..remaining].copy_from_slice(chunk);
+
+            if rate == 8 {
+                let c = u64::from_le_bytes(padded[..8].try_into().unwrap());
+                let p = state[0] ^ c;
+                let p_bytes = p.to_le_bytes();
+                plaintext.extend_from_slice(&p_bytes[..remaining]);
+                // Update state with ciphertext
+                let mut state_bytes = state[0].to_le_bytes();
+                state_bytes[..remaining].copy_from_slice(&chunk[..remaining]);
+                state_bytes[remaining] ^= 0x01;
+                state[0] = u64::from_le_bytes(state_bytes);
+            } else if remaining < 8 {
+                let c = u64::from_le_bytes(padded[..8].try_into().unwrap());
+                let p = state[0] ^ c;
+                let p_bytes = p.to_le_bytes();
+                plaintext.extend_from_slice(&p_bytes[..remaining]);
+                let mut state_bytes = state[0].to_le_bytes();
+                state_bytes[..remaining].copy_from_slice(&chunk[..remaining]);
+                state_bytes[remaining] ^= 0x01;
+                state[0] = u64::from_le_bytes(state_bytes);
+            } else {
+                let c0 = u64::from_le_bytes([
+                    chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+                ]);
+                let p0 = state[0] ^ c0;
+                state[0] = c0;
+                plaintext.extend_from_slice(&p0.to_le_bytes());
+
+                let c1 = u64::from_le_bytes(padded[8..16].try_into().unwrap());
+                let p1 = state[1] ^ c1;
+                let p1_bytes = p1.to_le_bytes();
+                plaintext.extend_from_slice(&p1_bytes[..remaining - 8]);
+                // Update state[1] with ciphertext and padding
+                let mut state_bytes = state[1].to_le_bytes();
+                for (j, &b) in chunk[8..].iter().enumerate() {
+                    state_bytes[j] = b;
+                }
+                state_bytes[remaining - 8] ^= 0x01;
+                state[1] = u64::from_le_bytes(state_bytes);
+            }
+        }
+    }
+
+    // Handle empty ciphertext (NIST SP 800-232 uses 0x01 padding)
+    if ciphertext.is_empty() {
+        state[0] ^= 0x01;
+    }
+
+    plaintext
+}
+
+/// Finalize and produce tag (NIST SP 800-232 little-endian)
+fn ascon_finalize_nist(
+    state: &mut AsconState,
+    key: &[u8; 16],
+    rate: usize,
+    rounds: usize,
+) -> [u8; 16] {
+    let mut k0 = u64::from_le_bytes([
+        key[0], key[1], key[2], key[3], key[4], key[5], key[6], key[7],
+    ]);
+    let mut k1 = u64::from_le_bytes([
+        key[8], key[9], key[10], key[11], key[12], key[13], key[14], key[15],
+    ]);
+
+    // XOR key at position rate/64 (1 for Ascon-128, 2 for Ascon-128a)
+    let key_idx = rate / 8;
+    state[key_idx] ^= k0;
+    state[key_idx + 1] ^= k1;
+
+    ascon_permutation(state, rounds);
+
+    state[3] ^= k0;
+    state[4] ^= k1;
+
+    k0.zeroize();
+    k1.zeroize();
+
+    let mut tag = [0u8; 16];
+    tag[0..8].copy_from_slice(&state[3].to_le_bytes());
+    tag[8..16].copy_from_slice(&state[4].to_le_bytes());
+
+    tag
 }
 
 #[cfg(test)]
