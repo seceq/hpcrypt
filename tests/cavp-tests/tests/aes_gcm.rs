@@ -159,49 +159,48 @@ trait AesGcmCipher {
 
 impl AesGcmCipher for Aes128Gcm {
     fn encrypt(key: &[u8], nonce: &[u8], aad: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, String> {
-        let key_array: [u8; 16] = key.try_into().map_err(|_| "Invalid key length")?;
-        let nonce_array: [u8; 12] = nonce.try_into().map_err(|_| "Invalid nonce length")?;
-        Aes128Gcm::encrypt(&key_array, &nonce_array, aad, plaintext)
-            .map_err(|e| format!("{:?}", e))
+        let key_array: [u8; 16] = key.try_into().map_err(|_| "Invalid key length".to_string())?;
+        let nonce_array: [u8; 12] = nonce.try_into().map_err(|_| "Invalid nonce length".to_string())?;
+        // API: encrypt(key, nonce, plaintext, aad) returns Vec<u8>
+        Ok(Aes128Gcm::encrypt(&key_array, &nonce_array, plaintext, aad))
     }
 
     fn decrypt(key: &[u8], nonce: &[u8], aad: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, String> {
-        let key_array: [u8; 16] = key.try_into().map_err(|_| "Invalid key length")?;
-        let nonce_array: [u8; 12] = nonce.try_into().map_err(|_| "Invalid nonce length")?;
-        Aes128Gcm::decrypt(&key_array, &nonce_array, aad, ciphertext)
-            .map_err(|e| format!("{:?}", e))
+        let key_array: [u8; 16] = key.try_into().map_err(|_| "Invalid key length".to_string())?;
+        let nonce_array: [u8; 12] = nonce.try_into().map_err(|_| "Invalid nonce length".to_string())?;
+        // API: decrypt(key, nonce, ciphertext, aad) returns Result<Vec<u8>, AeadError>
+        Aes128Gcm::decrypt(&key_array, &nonce_array, ciphertext, aad)
+            .map_err(|e| format!("Decryption failed: {:?}", e))
     }
 }
 
 impl AesGcmCipher for Aes192Gcm {
     fn encrypt(key: &[u8], nonce: &[u8], aad: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, String> {
-        let key_array: [u8; 24] = key.try_into().map_err(|_| "Invalid key length")?;
-        let nonce_array: [u8; 12] = nonce.try_into().map_err(|_| "Invalid nonce length")?;
-        Aes192Gcm::encrypt(&key_array, &nonce_array, aad, plaintext)
-            .map_err(|e| format!("{:?}", e))
+        let key_array: [u8; 24] = key.try_into().map_err(|_| "Invalid key length".to_string())?;
+        let nonce_array: [u8; 12] = nonce.try_into().map_err(|_| "Invalid nonce length".to_string())?;
+        Ok(Aes192Gcm::encrypt(&key_array, &nonce_array, plaintext, aad))
     }
 
     fn decrypt(key: &[u8], nonce: &[u8], aad: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, String> {
-        let key_array: [u8; 24] = key.try_into().map_err(|_| "Invalid key length")?;
-        let nonce_array: [u8; 12] = nonce.try_into().map_err(|_| "Invalid nonce length")?;
-        Aes192Gcm::decrypt(&key_array, &nonce_array, aad, ciphertext)
-            .map_err(|e| format!("{:?}", e))
+        let key_array: [u8; 24] = key.try_into().map_err(|_| "Invalid key length".to_string())?;
+        let nonce_array: [u8; 12] = nonce.try_into().map_err(|_| "Invalid nonce length".to_string())?;
+        Aes192Gcm::decrypt(&key_array, &nonce_array, ciphertext, aad)
+            .map_err(|e| format!("Decryption failed: {:?}", e))
     }
 }
 
 impl AesGcmCipher for Aes256Gcm {
     fn encrypt(key: &[u8], nonce: &[u8], aad: &[u8], plaintext: &[u8]) -> Result<Vec<u8>, String> {
-        let key_array: [u8; 32] = key.try_into().map_err(|_| "Invalid key length")?;
-        let nonce_array: [u8; 12] = nonce.try_into().map_err(|_| "Invalid nonce length")?;
-        Aes256Gcm::encrypt(&key_array, &nonce_array, aad, plaintext)
-            .map_err(|e| format!("{:?}", e))
+        let key_array: [u8; 32] = key.try_into().map_err(|_| "Invalid key length".to_string())?;
+        let nonce_array: [u8; 12] = nonce.try_into().map_err(|_| "Invalid nonce length".to_string())?;
+        Ok(Aes256Gcm::encrypt(&key_array, &nonce_array, plaintext, aad))
     }
 
     fn decrypt(key: &[u8], nonce: &[u8], aad: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, String> {
-        let key_array: [u8; 32] = key.try_into().map_err(|_| "Invalid key length")?;
-        let nonce_array: [u8; 12] = nonce.try_into().map_err(|_| "Invalid nonce length")?;
-        Aes256Gcm::decrypt(&key_array, &nonce_array, aad, ciphertext)
-            .map_err(|e| format!("{:?}", e))
+        let key_array: [u8; 32] = key.try_into().map_err(|_| "Invalid key length".to_string())?;
+        let nonce_array: [u8; 12] = nonce.try_into().map_err(|_| "Invalid nonce length".to_string())?;
+        Aes256Gcm::decrypt(&key_array, &nonce_array, ciphertext, aad)
+            .map_err(|e| format!("Decryption failed: {:?}", e))
     }
 }
 
