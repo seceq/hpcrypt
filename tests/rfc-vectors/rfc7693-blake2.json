@@ -1,0 +1,134 @@
+[
+  {
+    "test_id": 1,
+    "algorithm": "BLAKE2b",
+    "variant": "BLAKE2b-512",
+    "hash_length": 64,
+    "input_length": 0,
+    "input": "",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+    "hash": "10ebb67700b1868efb4417987acf4690ae9d972fb7a590c2f02871799aaa4786b5e996e8f0f4eb981fc214b005f42d2ff4233499391653df7aefcbc13fc51568",
+    "note": "RFC 7693 KAT - Empty input with key"
+  },
+  {
+    "test_id": 2,
+    "algorithm": "BLAKE2b",
+    "variant": "BLAKE2b-512",
+    "hash_length": 64,
+    "input_length": 1,
+    "input": "00",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+    "hash": "961f6dd1e4dd30f63901690c512e78e4b45e4742ed197c3c5e45c549fd25f2e4187b0bc9fe30492b16b0d0bc4ef9b0f34c7003fac09a5ef1532e69430234cebd",
+    "note": "RFC 7693 KAT - Single byte input"
+  },
+  {
+    "test_id": 3,
+    "algorithm": "BLAKE2b",
+    "variant": "BLAKE2b-512",
+    "hash_length": 64,
+    "input_length": 64,
+    "input": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+    "hash": "65676d800617972fbd87e4b9514e1c67402b7a331096d3bfac22f1abb95374abc942f16e9ab0ead33b87c91968a6e509e119ff07787b3ef483e1dcdccf6e3022",
+    "note": "RFC 7693 KAT - Full block (64 bytes)"
+  },
+  {
+    "test_id": 4,
+    "algorithm": "BLAKE2b",
+    "variant": "BLAKE2b-512",
+    "hash_length": 64,
+    "input_length": 128,
+    "input": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+    "hash": "72065ee4dd91c2d8509fa1fc28a37c7fc9fa7d5b3f8ad3d0d7a25626b57b1b44788d4caf806290425f9890a3a2a35a905ab4b37acfd0da6e4517b2525c9651e4",
+    "note": "RFC 7693 KAT - Two blocks (128 bytes)"
+  },
+  {
+    "test_id": 5,
+    "algorithm": "BLAKE2b",
+    "variant": "BLAKE2b-512-no-key",
+    "hash_length": 64,
+    "input_length": 0,
+    "input": "",
+    "key": "",
+    "hash": "786a02f742015903c6c6fd852552d272912f4740e15847618a86e217f71f5419d25e1031afee585313896444934eb04b903a685b1448b755d56f701afe9be2ce",
+    "note": "RFC 7693 Appendix A - Empty input without key"
+  },
+  {
+    "test_id": 6,
+    "algorithm": "BLAKE2b",
+    "variant": "BLAKE2b-512-no-key",
+    "hash_length": 64,
+    "input_length": 3,
+    "input": "616263",
+    "key": "",
+    "hash": "ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923",
+    "note": "RFC 7693 Appendix A - 'abc'"
+  },
+  {
+    "test_id": 7,
+    "algorithm": "BLAKE2s",
+    "variant": "BLAKE2s-256",
+    "hash_length": 32,
+    "input_length": 0,
+    "input": "",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "hash": "48a8997da407876b3d79c0d92325ad3b89cbb754d86ab71aee047ad345fd2c49",
+    "note": "BLAKE2s KAT - Empty input with key"
+  },
+  {
+    "test_id": 8,
+    "algorithm": "BLAKE2s",
+    "variant": "BLAKE2s-256",
+    "hash_length": 32,
+    "input_length": 1,
+    "input": "00",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "hash": "40d15fee7c328830166ac3f918650f807e7e01e177258cdc0a39b11f598066f1",
+    "note": "BLAKE2s KAT - Single byte input"
+  },
+  {
+    "test_id": 9,
+    "algorithm": "BLAKE2s",
+    "variant": "BLAKE2s-256",
+    "hash_length": 32,
+    "input_length": 64,
+    "input": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "hash": "8975b0577fd35566d750b362b0897a26c399136df07bababbde6203ff2954ed4",
+    "note": "BLAKE2s KAT - Full block (64 bytes)"
+  },
+  {
+    "test_id": 10,
+    "algorithm": "BLAKE2s",
+    "variant": "BLAKE2s-256",
+    "hash_length": 32,
+    "input_length": 128,
+    "input": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "hash": "0c311f38c35a4fb90d651c289d486856cd1413df9b0677f53ece2cd9e477c60a",
+    "note": "BLAKE2s KAT - Two blocks (128 bytes)"
+  },
+  {
+    "test_id": 11,
+    "algorithm": "BLAKE2s",
+    "variant": "BLAKE2s-256-no-key",
+    "hash_length": 32,
+    "input_length": 0,
+    "input": "",
+    "key": "",
+    "hash": "69217a3079908094e11121d042354a7c1f55b6482ca1a51e1b250dfd1ed0eef9",
+    "note": "BLAKE2s - Empty input without key"
+  },
+  {
+    "test_id": 12,
+    "algorithm": "BLAKE2s",
+    "variant": "BLAKE2s-256-no-key",
+    "hash_length": 32,
+    "input_length": 3,
+    "input": "616263",
+    "key": "",
+    "hash": "508c5e8c327c14e2e1a72ba34eeb452f37458b209ed63a294d999b4c86675982",
+    "note": "BLAKE2s - 'abc' without key"
+  }
+]
