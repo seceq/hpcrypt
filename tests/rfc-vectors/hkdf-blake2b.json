@@ -1,0 +1,203 @@
+[
+  {
+    "test_id": 1,
+    "test_type": "basic_extract_expand",
+    "source": "Property Test",
+    "description": "Basic HKDF-BLAKE2b extract and expand",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "output_length": 42,
+    "note": "Adapted from RFC 5869 Test Case 1 - validates basic operation"
+  },
+  {
+    "test_id": 2,
+    "test_type": "empty_salt",
+    "source": "RFC 5869 Spec",
+    "description": "HKDF-BLAKE2b with empty salt",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "output_length": 42,
+    "note": "Empty salt should be replaced with 64 zero bytes (BLAKE2b hash length)"
+  },
+  {
+    "test_id": 3,
+    "test_type": "empty_info",
+    "source": "RFC 5869 Spec",
+    "description": "HKDF-BLAKE2b with empty info",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "",
+    "output_length": 42,
+    "note": "Empty info is valid per RFC 5869"
+  },
+  {
+    "test_id": 4,
+    "test_type": "long_output",
+    "source": "Property Test",
+    "description": "HKDF-BLAKE2b with output longer than hash length",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "output_length": 128,
+    "note": "Output = 128 bytes = 2x BLAKE2b hash length (64 bytes)"
+  },
+  {
+    "test_id": 5,
+    "test_type": "exact_hash_length_output",
+    "source": "Property Test",
+    "description": "HKDF-BLAKE2b with output exactly hash length",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "output_length": 64,
+    "note": "Output = 64 bytes = BLAKE2b hash length"
+  },
+  {
+    "test_id": 6,
+    "test_type": "short_output",
+    "source": "Property Test",
+    "description": "HKDF-BLAKE2b with short output",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "output_length": 16,
+    "note": "Output = 16 bytes (truncated from first T block)"
+  },
+  {
+    "test_id": 7,
+    "test_type": "prk_length",
+    "source": "API Test",
+    "description": "PRK should be 64 bytes (BLAKE2b output)",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "expected_prk_length": 64,
+    "note": "BLAKE2b produces 64-byte hash, so PRK must be 64 bytes"
+  },
+  {
+    "test_id": 8,
+    "test_type": "determinism",
+    "source": "Property Test",
+    "description": "HKDF-BLAKE2b is deterministic",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "output_length": 42,
+    "note": "Same inputs must produce same outputs"
+  },
+  {
+    "test_id": 9,
+    "test_type": "ikm_sensitivity",
+    "source": "Property Test",
+    "description": "Different IKM produces different output",
+    "ikm1": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "ikm2": "1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "output_length": 42,
+    "note": "Different IKM should produce different OKM"
+  },
+  {
+    "test_id": 10,
+    "test_type": "salt_sensitivity",
+    "source": "Property Test",
+    "description": "Different salt produces different output",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt1": "000102030405060708090a0b0c",
+    "salt2": "100102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "output_length": 42,
+    "note": "Different salt should produce different OKM"
+  },
+  {
+    "test_id": 11,
+    "test_type": "info_sensitivity",
+    "source": "Property Test",
+    "description": "Different info produces different output",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info1": "f0f1f2f3f4f5f6f7f8f9",
+    "info2": "e0e1e2e3e4e5e6e7e8e9",
+    "output_length": 42,
+    "note": "Different info should produce different OKM"
+  },
+  {
+    "test_id": 12,
+    "test_type": "struct_vs_function",
+    "source": "API Test",
+    "description": "HkdfBlake2b struct matches hkdf_blake2b function",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "output_length": 42,
+    "note": "Both APIs should produce identical output"
+  },
+  {
+    "test_id": 13,
+    "test_type": "from_prk",
+    "source": "API Test",
+    "description": "from_prk produces same output as new",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "output_length": 42,
+    "note": "from_prk(extract(salt, ikm)) should equal new(salt, ikm)"
+  },
+  {
+    "test_id": 14,
+    "test_type": "prk_reuse",
+    "source": "API Test",
+    "description": "PRK can be reused with different info",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info1": "636f6e7465787420313131",
+    "info2": "636f6e7465787420323232",
+    "output_length": 32,
+    "note": "Same PRK with different info should produce different outputs"
+  },
+  {
+    "test_id": 15,
+    "test_type": "differs_from_sha512",
+    "source": "Comparison Test",
+    "description": "HKDF-BLAKE2b differs from HKDF-SHA512",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "output_length": 42,
+    "note": "BLAKE2b and SHA-512 are different hash functions"
+  },
+  {
+    "test_id": 16,
+    "test_type": "long_inputs",
+    "source": "Property Test",
+    "description": "HKDF-BLAKE2b with long IKM, salt, and info",
+    "ikm": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f",
+    "salt": "606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
+    "info": "b0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+    "output_length": 82,
+    "note": "Adapted from RFC 5869 Test Case 2 - long inputs"
+  },
+  {
+    "test_id": 17,
+    "test_type": "multi_block_expand",
+    "source": "Property Test",
+    "description": "HKDF-BLAKE2b expand requiring multiple T blocks",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "output_length": 192,
+    "note": "Output = 192 bytes = 3x BLAKE2b hash length"
+  },
+  {
+    "test_id": 18,
+    "test_type": "single_byte_output",
+    "source": "Edge Case",
+    "description": "HKDF-BLAKE2b with single byte output",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "output_length": 1,
+    "note": "Minimum valid output length"
+  }
+]
