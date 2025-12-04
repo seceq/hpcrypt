@@ -374,11 +374,6 @@ pub fn intt_inplace_portable(poly: &mut Poly) {
 /// Gentleman-Sande inverse NTT with lazy reduction:
 /// - **Layers 1-3 (len=2,4,8):** Skip Barrett reduction, use i32 intermediate
 /// - **Layers 4-7 (len=16,32,64,128):** Resume normal Barrett reduction
-///
-/// # References
-///
-/// - Benchmarked results: `/OPTION2_3LAYER_LAZY_RESULTS.md`
-/// - Safety analysis: Empirical bounds measured (max coeff = 7,644 at layer 3)
 #[inline(always)]
 pub fn intt_after_basemul_inplace(poly: &mut Poly) {
     let mut k = 127;
@@ -594,10 +589,6 @@ impl PolyMulcache {
 /// - **32-bit accumulation:** Defers reduction until absolutely necessary
 ///
 /// **Expected speedup:** 30-70% for matrix-vector operations (K=2,3,4)
-///
-/// **Note on loop unrolling:** Benchmarking showed that manual loop unrolling
-/// provides no benefit on modern CPUs due to excellent branch prediction and
-/// instruction cache pressure. See docs/LOOP_UNROLLING_MEASURED_IMPACT.md for details.
 ///
 /// # Safety
 /// The accumulation bounds are verified:
@@ -1097,29 +1088,9 @@ mod tests {
         let result = fqmul(a, b);
 
         // fqmul computes a * b * R^(-1) mod q, NOT (a * b) mod q
-        // It's used for Montgomery multiplication of values already in Montgomery form
-        // For testing, let's verify: fqmul(a*R, b*R) ≈ (a*b*R) mod q
-        //
-        // Actually, the test should be: fqmul returns a * b * R^(-1),
-        // so 100 * 200 * R^(-1) ≈ 20000 / 65536 * q = 20000 / 19.68 ≈ 1016 mod 3329
-
-        // For regular values (not in Montgomery form), fqmul(a,b) = a*b*R^(-1) mod q
-        // R = 2^16 = 65536, R mod q = 65536 % 3329 = 285
-        // R^(-1) mod q needs to be computed: R * R^(-1) ≡ 1 (mod q)
-        // For q = 3329: R^(-1) = 169 (since 65536 * 169 mod 3329 = 1)
-        //
-        // So fqmul(100, 200) = 100 * 200 * 169 mod 3329 = 3380000 mod 3329 =
-        println!("fqmul(100, 200) = {}", result);
-        let expected_regular = ((100i32 * 200) % Q as i32) as i16;
-        println!("(100 * 200) mod q = {}", expected_regular);
-
-        // The correct test: fqmul should give us a*b*R^(-1) mod q
-        // 100 * 200 = 20000
-        // 20000 * 169 = 3380000
-        // 3380000 mod 3329 = 1015
-        let r_inv = 169i32; // R^(-1) mod q = 169
+        // R = 2^16 = 65536, R^(-1) mod q = 169
+        let r_inv = 169i32;
         let expected = ((100i32 * 200 * r_inv) % Q as i32) as i16;
-        println!("Expected (with R^(-1) = 169): {}", expected);
 
         assert_eq!(result, expected);
     }
