@@ -89,6 +89,20 @@ mod utils;
 /// prevent timing side-channel attacks.
 pub mod ct_verify;
 
+/// SIMD intrinsics implementations (AVX2)
+///
+/// Provides highly-optimized SIMD implementations of ML-KEM primitives.
+/// Use `intrinsics::avx2::is_available()` to check for AVX2 support at runtime.
+///
+/// # Safety
+///
+/// The intrinsics module uses `unsafe` code for direct CPU intrinsic access.
+/// All unsafe operations are contained within this module and are only executed
+/// after runtime CPU feature detection confirms support.
+#[doc(hidden)]
+#[allow(unsafe_code)]
+pub mod intrinsics;
+
 /// Fill a buffer with cryptographically secure random bytes
 ///
 /// This function uses the operating system's CSPRNG to fill the provided
