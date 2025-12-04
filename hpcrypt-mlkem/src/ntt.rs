@@ -399,8 +399,39 @@ pub fn intt_inplace_portable(poly: &mut Poly) {
 /// Gentleman-Sande inverse NTT with lazy reduction:
 /// - **Layers 1-3 (len=2,4,8):** Skip Barrett reduction, use i32 intermediate
 /// - **Layers 4-7 (len=16,32,64,128):** Resume normal Barrett reduction
+///
+/// Dispatch priority: AVX2 (compile-time) > AVX2 (runtime) > Portable
 #[inline(always)]
 pub fn intt_after_basemul_inplace(poly: &mut Poly) {
+    #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+    {
+        // Compile-time AVX2: use optimized intrinsics
+        unsafe {
+            crate::intrinsics::avx2::intt_after_basemul_inplace(&mut poly.coeffs);
+        }
+    }
+
+    #[cfg(all(target_arch = "x86_64", not(target_feature = "avx2")))]
+    {
+        // Runtime dispatch
+        if crate::cpufeatures::has_avx2() {
+            unsafe {
+                crate::intrinsics::avx2::intt_after_basemul_inplace(&mut poly.coeffs);
+            }
+        } else {
+            intt_after_basemul_inplace_portable(poly);
+        }
+    }
+
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        intt_after_basemul_inplace_portable(poly);
+    }
+}
+
+/// Portable implementation of lazy INTT for basemul outputs
+#[inline(always)]
+fn intt_after_basemul_inplace_portable(poly: &mut Poly) {
     let mut k = 127;
 
     // === LAZY LAYERS 1-3: Skip Barrett reduction ===

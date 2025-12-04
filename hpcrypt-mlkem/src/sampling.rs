@@ -105,13 +105,39 @@ pub fn sample_poly_cbd(eta: usize, bytes: &[u8]) -> Poly {
 /// For η=2, each coefficient is computed as (a₀ + a₁) - (b₀ + b₁)
 /// where aᵢ, bᵢ are individual bits from the input.
 ///
-/// This implementation uses SWAR (SIMD Within A Register) to accumulate
-/// bit pairs first, then extract coefficients - matching the reference
-/// algorithm exactly.
+/// Dispatch priority: AVX2 (compile-time) > AVX2 (runtime) > Portable
 #[inline]
 fn sample_poly_cbd2(bytes: &[u8]) -> Poly {
     debug_assert_eq!(bytes.len(), 128); // 64 * η = 64 * 2
 
+    #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+    {
+        let mut coeffs = [0i16; N];
+        let bytes_arr: &[u8; 128] = bytes.try_into().unwrap();
+        unsafe {
+            crate::intrinsics::avx2::cbd2(bytes_arr, &mut coeffs);
+        }
+        return Poly { coeffs };
+    }
+
+    #[cfg(all(target_arch = "x86_64", not(target_feature = "avx2")))]
+    {
+        if crate::cpufeatures::has_avx2() {
+            let mut coeffs = [0i16; N];
+            let bytes_arr: &[u8; 128] = bytes.try_into().unwrap();
+            unsafe {
+                crate::intrinsics::avx2::cbd2(bytes_arr, &mut coeffs);
+            }
+            return Poly { coeffs };
+        }
+    }
+
+    sample_poly_cbd2_portable(bytes)
+}
+
+/// Portable implementation of CBD η=2
+#[inline]
+fn sample_poly_cbd2_portable(bytes: &[u8]) -> Poly {
     let mut coeffs = [0i16; N];
     let mut idx = 0;
 
@@ -146,13 +172,39 @@ fn sample_poly_cbd2(bytes: &[u8]) -> Poly {
 /// For η=3, each coefficient is computed as (a₀ + a₁ + a₂) - (b₀ + b₁ + b₂)
 /// where aᵢ, bᵢ are individual bits from the input.
 ///
-/// This implementation uses SWAR (SIMD Within A Register) to accumulate
-/// bit triples first, then extract coefficients - matching the reference
-/// algorithm exactly and providing optimal performance.
+/// Dispatch priority: AVX2 (compile-time) > AVX2 (runtime) > Portable
 #[inline]
 fn sample_poly_cbd3(bytes: &[u8]) -> Poly {
     debug_assert_eq!(bytes.len(), 192); // 64 * 3 bytes for 256 coefficients
 
+    #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+    {
+        let mut coeffs = [0i16; N];
+        let bytes_arr: &[u8; 192] = bytes.try_into().unwrap();
+        unsafe {
+            crate::intrinsics::avx2::cbd3(bytes_arr, &mut coeffs);
+        }
+        return Poly { coeffs };
+    }
+
+    #[cfg(all(target_arch = "x86_64", not(target_feature = "avx2")))]
+    {
+        if crate::cpufeatures::has_avx2() {
+            let mut coeffs = [0i16; N];
+            let bytes_arr: &[u8; 192] = bytes.try_into().unwrap();
+            unsafe {
+                crate::intrinsics::avx2::cbd3(bytes_arr, &mut coeffs);
+            }
+            return Poly { coeffs };
+        }
+    }
+
+    sample_poly_cbd3_portable(bytes)
+}
+
+/// Portable implementation of CBD η=3
+#[inline]
+fn sample_poly_cbd3_portable(bytes: &[u8]) -> Poly {
     let mut coeffs = [0i16; N];
     let mut idx = 0;
 
