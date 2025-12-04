@@ -86,6 +86,24 @@ pub fn compress_d1(x: i16) -> u16 {
     (r0 & 1) as u16
 }
 
+/// Extract 32-byte message from polynomial using compress_d1 (portable)
+///
+/// Compresses each coefficient to 1 bit and packs into 32 bytes.
+#[inline]
+pub fn extract_message(coeffs: &[i16; 256]) -> [u8; 32] {
+    let mut m = [0u8; 32];
+    for byte_idx in 0..32 {
+        let base_idx = byte_idx * 8;
+        let mut byte_val = 0u8;
+        for bit_idx in 0..8 {
+            let compressed_bit = compress_d1(coeffs[base_idx + bit_idx]);
+            byte_val |= (compressed_bit as u8) << bit_idx;
+        }
+        m[byte_idx] = byte_val;
+    }
+    m
+}
+
 /// Compress a coefficient
 ///
 /// Algorithm: Compress_d(x) = ⌈(2^d / q) · x⌋ mod 2^d
