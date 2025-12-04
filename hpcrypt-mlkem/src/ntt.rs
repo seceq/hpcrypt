@@ -263,10 +263,35 @@ pub fn ntt(poly: &Poly) -> Poly {
     r
 }
 
-/// Forward NTT (in-place) - portable implementation
+/// Forward NTT (in-place)
+///
+/// Dispatch priority: AVX2 (compile-time) > AVX2 (runtime) > Portable
 #[inline]
 pub fn ntt_inplace(poly: &mut Poly) {
-    ntt_inplace_portable(poly);
+    #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+    {
+        // Compile-time AVX2: use optimized intrinsics
+        unsafe {
+            crate::intrinsics::avx2::ntt_inplace(&mut poly.coeffs);
+        }
+    }
+
+    #[cfg(all(target_arch = "x86_64", not(target_feature = "avx2")))]
+    {
+        // Runtime dispatch
+        if crate::cpufeatures::has_avx2() {
+            unsafe {
+                crate::intrinsics::avx2::ntt_inplace(&mut poly.coeffs);
+            }
+        } else {
+            ntt_inplace_portable(poly);
+        }
+    }
+
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        ntt_inplace_portable(poly);
+    }
 }
 
 /// Inverse NTT transform (in-place, portable implementation)
@@ -504,10 +529,35 @@ pub fn intt(poly: &Poly) -> Poly {
     r
 }
 
-/// Inverse NTT (in-place) - portable implementation
+/// Inverse NTT (in-place)
+///
+/// Dispatch priority: AVX2 (compile-time) > AVX2 (runtime) > Portable
 #[inline]
 pub fn intt_inplace(poly: &mut Poly) {
-    intt_inplace_portable(poly);
+    #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+    {
+        // Compile-time AVX2: use optimized intrinsics
+        unsafe {
+            crate::intrinsics::avx2::intt_inplace(&mut poly.coeffs);
+        }
+    }
+
+    #[cfg(all(target_arch = "x86_64", not(target_feature = "avx2")))]
+    {
+        // Runtime dispatch
+        if crate::cpufeatures::has_avx2() {
+            unsafe {
+                crate::intrinsics::avx2::intt_inplace(&mut poly.coeffs);
+            }
+        } else {
+            intt_inplace_portable(poly);
+        }
+    }
+
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        intt_inplace_portable(poly);
+    }
 }
 
 /// Multiplication in Z_q followed by Montgomery reduction

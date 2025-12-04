@@ -56,7 +56,8 @@
 
 #![cfg_attr(not(any(test, feature = "std")), no_std)]
 #![deny(missing_docs)]
-#![deny(unsafe_code)]
+// Allow unsafe code for SIMD intrinsics (AVX2)
+#![cfg_attr(not(target_arch = "x86_64"), deny(unsafe_code))]
 #![warn(clippy::all)]
 
 extern crate alloc;
@@ -64,6 +65,7 @@ use alloc::vec::Vec;
 
 #[doc(hidden)]
 pub mod compress; // Public for benchmarks
+mod cpufeatures;
 mod decaps;
 #[doc(hidden)]
 pub mod encaps; // Public for benchmarks
