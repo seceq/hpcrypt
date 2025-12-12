@@ -24,10 +24,10 @@
 //!
 //! # Example
 //!
-//! ```ignore
-//! use mldsa::params::MlDsa65;
-//! use mldsa::keygen::keygen;
-//! use mldsa::batch::sign_batch;
+//! ```no_run
+//! use hpcrypt_mldsa::params::MlDsa65;
+//! use hpcrypt_mldsa::keygen::keygen;
+//! use hpcrypt_mldsa::batch::sign_batch;
 //!
 //! let (pk, sk) = keygen::<MlDsa65>();
 //! let messages = vec![
@@ -55,9 +55,9 @@ use alloc::vec;
 use std::vec::Vec;
 
 use crate::keygen::SecretKey;
-use crate::params::{DsaParams, Q};
+use crate::params::DsaParams;
+use crate::sign::{Signature, sign};
 use crate::poly::Poly;
-use crate::sign::{sign, Signature};
 
 /// Sign multiple messages sequentially
 ///
@@ -82,10 +82,10 @@ use crate::sign::{sign, Signature};
 ///
 /// # Examples
 ///
-/// ```ignore
-/// use mldsa::params::MlDsa65;
-/// use mldsa::keygen::keygen;
-/// use mldsa::batch::sign_batch;
+/// ```no_run
+/// use hpcrypt_mldsa::params::MlDsa65;
+/// use hpcrypt_mldsa::keygen::keygen;
+/// use hpcrypt_mldsa::batch::sign_batch;
 ///
 /// let (pk, sk) = keygen::<MlDsa65>();
 ///
@@ -112,7 +112,9 @@ pub fn sign_batch<P: DsaParams>(
     // Sequential processing - simple and predictable
     // Applications wanting parallelism should use their own threading
     // (Rayon, Tokio, thread pools, etc.)
-    messages.iter().map(|msg| sign(sk, msg)).collect()
+    messages.iter()
+        .map(|msg| sign(sk, msg))
+        .collect()
 }
 
 /// Verify multiple signatures in a batch
@@ -138,11 +140,8 @@ pub fn verify_batch<P: DsaParams>(
     messages: &[&[u8]],
     signatures: &[&Signature<P>],
 ) -> Vec<bool> {
-    assert_eq!(
-        messages.len(),
-        signatures.len(),
-        "Number of messages must equal number of signatures"
-    );
+    assert_eq!(messages.len(), signatures.len(),
+        "Number of messages must equal number of signatures");
 
     // Use optimized batch verification for 4+ signatures
     // For smaller batches, simple loop is fine
@@ -150,8 +149,7 @@ pub fn verify_batch<P: DsaParams>(
         verify_batch_optimized(pk, messages, signatures)
     } else {
         // Simple loop for small batches
-        messages
-            .iter()
+        messages.iter()
             .zip(signatures.iter())
             .map(|(msg, sig)| crate::verify::verify(pk, msg, sig))
             .collect()
@@ -175,10 +173,11 @@ fn verify_batch_optimized<P: DsaParams>(
 ) -> Vec<bool> {
     use crate::sampling::{expand_matrix_a, sample_in_ball};
     use crate::symmetric::{h, h_var};
-
-    use crate::constant_time::ct_compare;
-    use crate::hints::{poly_hint_count, use_hint_poly};
+    
+    use crate::hints::{use_hint_poly, poly_hint_count};
     use crate::ntt::poly_mul_ntt;
+    use crate::poly::Poly;
+    use crate::constant_time::ct_compare;
     use crate::params::N;
 
     let batch_size = signatures.len();
@@ -261,6 +260,9 @@ fn verify_batch_optimized<P: DsaParams>(
     }
 
     // Step 6: Complete verification for each signature
+    // OPTIMIZATION: Pre-allocate t1_scaled outside the loops to avoid repeated zero-initialization
+    let mut t1_scaled = Poly::new();
+
     for (idx, sig) in signatures.iter().enumerate() {
         if !results[idx] {
             continue; // Already failed pre-checks
@@ -271,8 +273,7 @@ fn verify_batch_optimized<P: DsaParams>(
 
         // Subtract c·(t1·2^d)
         for i in 0..P::K {
-            // t1·2^d (shift left by D bits)
-            let mut t1_scaled = Poly::new();
+            // t1·2^d (shift left by D bits) - reuse pre-allocated polynomial
             for j in 0..N {
                 t1_scaled.coeffs[j] = pk.t1[i].coeffs[j] << P::D;
             }
@@ -308,30 +309,45 @@ fn verify_batch_optimized<P: DsaParams>(
     results
 }
 
-/// Encode w1 vector to bytes (helper function for batch verification)
+/// Encode w1 vector to bytes using FIPS 204 SimpleBitPack
+#[inline]
 fn encode_w1<P: DsaParams>(w1: &[Poly]) -> Vec<u8> {
-    let mut bytes = Vec::new();
+    let mut bytes = Vec::with_capacity(P::W1_ENCODED_SIZE);
 
-    for poly in w1 {
-        for &coeff in &poly.coeffs {
-            let c = coeff.rem_euclid(Q);
-            bytes.push((c & 0xFF) as u8);
-            bytes.push(((c >> 8) & 0xFF) as u8);
-            bytes.push(((c >> 16) & 0xFF) as u8);
+    if P::W1_BITS == 4 {
+        for poly in w1 {
+            for chunk in poly.coeffs.chunks_exact(2) {
+                let c0 = chunk[0] as u8 & 0x0F;
+                let c1 = chunk[1] as u8 & 0x0F;
+                bytes.push(c0 | (c1 << 4));
+            }
         }
+    } else if P::W1_BITS == 6 {
+        for poly in w1 {
+            for chunk in poly.coeffs.chunks_exact(4) {
+                let c0 = chunk[0] as u8 & 0x3F;
+                let c1 = chunk[1] as u8 & 0x3F;
+                let c2 = chunk[2] as u8 & 0x3F;
+                let c3 = chunk[3] as u8 & 0x3F;
+                bytes.push(c0 | (c1 << 6));
+                bytes.push((c1 >> 2) | (c2 << 4));
+                bytes.push((c2 >> 4) | (c3 << 2));
+            }
+        }
+    } else {
+        unreachable!("Unsupported W1_BITS value");
     }
 
     bytes
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::keygen::keygen;
     use crate::params::MlDsa65;
+    use crate::keygen::keygen;
     use crate::verify::verify;
-    extern crate alloc;
-    use alloc::vec;
 
     #[test]
     fn test_sign_batch_basic() {
@@ -367,11 +383,15 @@ mod tests {
     fn test_verify_batch() {
         let (pk, sk) = keygen::<MlDsa65>();
 
-        let messages = vec![b"Test 1".as_slice(), b"Test 2".as_slice()];
+        let messages = vec![
+            b"Test 1".as_slice(),
+            b"Test 2".as_slice(),
+        ];
 
         let signatures = sign_batch(&sk, &messages);
-        let sig_refs: Vec<&Signature<MlDsa65>> =
-            signatures.iter().map(|s| s.as_ref().unwrap()).collect();
+        let sig_refs: Vec<&Signature<MlDsa65>> = signatures.iter()
+            .map(|s| s.as_ref().unwrap())
+            .collect();
 
         let results = verify_batch(&pk, &messages, &sig_refs);
 
@@ -390,4 +410,5 @@ mod tests {
 
         verify_batch(&pk, &messages, &[&sig, &sig]); // Should panic
     }
+
 }
