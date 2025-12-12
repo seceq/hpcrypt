@@ -69,18 +69,18 @@ fn test_compare_secret_keys() {
     }
     println!("  ✓ t0 matches");
 
-    // Compare cached_a
-    println!("Comparing cached_a ({}x{})...", sk_orig.cached_a.len(), sk_orig.cached_a[0].len());
-    assert_eq!(sk_orig.cached_a.len(), sk_deser.cached_a.len(), "cached_a rows mismatch");
-    assert_eq!(sk_orig.cached_a[0].len(), sk_deser.cached_a[0].len(), "cached_a cols mismatch");
+    // Compare cached_a_ntt
+    println!("Comparing cached_a_ntt ({}x{})...", sk_orig.cached_a_ntt.len(), sk_orig.cached_a_ntt[0].len());
+    assert_eq!(sk_orig.cached_a_ntt.len(), sk_deser.cached_a_ntt.len(), "cached_a_ntt rows mismatch");
+    assert_eq!(sk_orig.cached_a_ntt[0].len(), sk_deser.cached_a_ntt[0].len(), "cached_a_ntt cols mismatch");
 
     let mut mismatch_count = 0;
-    for (i, (orig_row, deser_row)) in sk_orig.cached_a.iter().zip(sk_deser.cached_a.iter()).enumerate() {
+    for (i, (orig_row, deser_row)) in sk_orig.cached_a_ntt.iter().zip(sk_deser.cached_a_ntt.iter()).enumerate() {
         for (j, (orig_poly, deser_poly)) in orig_row.iter().zip(deser_row.iter()).enumerate() {
             for (k, (&o, &d)) in orig_poly.coeffs.iter().zip(deser_poly.coeffs.iter()).enumerate() {
                 if o != d {
                     if mismatch_count < 5 {
-                        println!("  ✗ cached_a[{}][{}][{}]: orig={}, deser={}", i, j, k, o, d);
+                        println!("  ✗ cached_a_ntt[{}][{}][{}]: orig={}, deser={}", i, j, k, o, d);
                     }
                     mismatch_count += 1;
                 }
@@ -89,13 +89,13 @@ fn test_compare_secret_keys() {
     }
 
     if mismatch_count > 0 {
-        println!("  ✗ cached_a has {} coefficient mismatches!", mismatch_count);
+        println!("  ✗ cached_a_ntt has {} coefficient mismatches!", mismatch_count);
         println!("\n=== THIS IS THE BUG! ===");
         println!("The cached matrix A is NOT matching after deserialization.");
         println!("This explains why signatures fail - the matrix used during signing is wrong!");
-        panic!("cached_a mismatch");
+        panic!("cached_a_ntt mismatch");
     } else {
-        println!("  ✓ cached_a matches");
+        println!("  ✓ cached_a_ntt matches");
     }
 
     println!("\n✓ All fields match - secret key deserialization is correct");
