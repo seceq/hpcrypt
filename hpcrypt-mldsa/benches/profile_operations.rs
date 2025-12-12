@@ -1,10 +1,10 @@
 // Profile benchmark for ML-DSA operations
 // This runs enough iterations to get good profiling data
 
-use mldsa::keygen::keygen_from_seed;
-use mldsa::params::MlDsa65;
-use mldsa::sign::sign_deterministic;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::keygen::keygen_from_seed;
+use hpcrypt_mldsa::params::MlDsa65;
+use hpcrypt_mldsa::sign::sign_deterministic;
+use hpcrypt_mldsa::verify::verify;
 
 fn main() {
     println!("Starting ML-DSA profiling workload...");

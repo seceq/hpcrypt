@@ -151,15 +151,15 @@ fn main() {
     // Print AVX2 status
     #[allow(unexpected_cfgs)]
     {
-        #[cfg(all(feature = "simd", target_arch = "x86_64"))]
+        #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
-            if hpcrypt_mldsa::simd::dispatch::has_avx2() {
+            if std::is_x86_feature_detected!("avx2") {
                 println!("\nOK AVX2 SIMD is ENABLED and being used for NTT operations");
             } else {
                 println!("\nFAIL AVX2 SIMD is NOT available (using scalar fallback)");
             }
         }
-        #[cfg(not(all(feature = "simd", target_arch = "x86_64")))]
+        #[cfg(not(all(feature = "avx2", feature = "std", target_arch = "x86_64")))]
         {
             println!("\nFAIL SIMD features not enabled");
         }

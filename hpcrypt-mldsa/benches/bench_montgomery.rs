@@ -3,7 +3,7 @@
 //\! This validates the performance gain of Montgomery reduction vs standard modular reduction
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mldsa::params::Q;
+use hpcrypt_mldsa::params::Q;
 
 /// Standard modular reduction using % operator
 #[inline]

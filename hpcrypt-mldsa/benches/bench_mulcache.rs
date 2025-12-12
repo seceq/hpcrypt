@@ -5,8 +5,8 @@
 //! multiplications, which is beneficial for matrix-vector operations.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use mldsa::ntt::{ntt, ntt_multiply, ntt_multiply_cached};
-use mldsa::poly::{Poly, PolyMulcache};
+use hpcrypt_mldsa::ntt::{ntt, ntt_multiply, ntt_multiply_cached};
+use hpcrypt_mldsa::poly::{Poly, PolyMulcache};
 
 /// Helper: Create a test polynomial with pseudo-random coefficients
 fn create_test_poly(seed: i32) -> Poly {

@@ -2,9 +2,9 @@
 // This validates that the rolling macros and other optimizations are working
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use mldsa::ntt::{inv_ntt, inv_ntt_merged, ntt_merged, ntt_scalar};
-use mldsa::params::N;
-use mldsa::poly::Poly;
+use hpcrypt_mldsa::ntt::{inv_ntt, inv_ntt_merged, ntt_merged, ntt_scalar};
+use hpcrypt_mldsa::params::N;
+use hpcrypt_mldsa::poly::Poly;
 
 fn create_test_poly(seed: i32) -> Poly {
     let mut poly = Poly::new();

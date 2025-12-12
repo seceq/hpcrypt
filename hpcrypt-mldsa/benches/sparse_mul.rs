@@ -3,11 +3,11 @@
 //! Compares sparse multiplication vs NTT-based multiplication for challenge polynomials
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use mldsa::ntt::poly_mul_ntt;
-use mldsa::params::{N, Q};
-use mldsa::poly::Poly;
-use mldsa::sampling::sample_in_ball;
-use mldsa::sparse_mul::{sparse_poly_multiply, SparsePoly};
+use hpcrypt_mldsa::ntt::poly_mul_ntt;
+use hpcrypt_mldsa::params::{N, Q};
+use hpcrypt_mldsa::poly::Poly;
+use hpcrypt_mldsa::sampling::sample_in_ball;
+use hpcrypt_mldsa::sparse_mul::{sparse_poly_multiply, SparsePoly};
 
 fn bench_sparse_vs_ntt(c: &mut Criterion) {
     let mut group = c.benchmark_group("sparse_multiply");

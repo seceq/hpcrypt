@@ -10,12 +10,12 @@
 
 use dudect_bencher::rand::Rng;
 use dudect_bencher::{ctbench_main, BenchRng, Class, CtRunner};
-use mldsa::constant_time::{ct_compare, ct_select_i32};
-use mldsa::keygen::keygen_from_seed;
-use mldsa::params::{MlDsa65, Q};
-use mldsa::poly::Poly;
-use mldsa::sign::sign;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::constant_time::{ct_compare, ct_select_i32};
+use hpcrypt_mldsa::keygen::keygen_from_seed;
+use hpcrypt_mldsa::params::{MlDsa65, Q};
+use hpcrypt_mldsa::poly::Poly;
+use hpcrypt_mldsa::sign::sign;
+use hpcrypt_mldsa::verify::verify;
 
 /// Test constant-time comparison of byte arrays
 fn ct_compare_timing(runner: &mut CtRunner, _rng: &mut BenchRng) {
@@ -115,7 +115,7 @@ fn verify_timing(runner: &mut CtRunner, rng: &mut BenchRng) {
 
 /// Test NTT (Number Theoretic Transform) for constant-time behavior
 fn ntt_timing(runner: &mut CtRunner, rng: &mut BenchRng) {
-    use mldsa::ntt::{inv_ntt, ntt};
+    use hpcrypt_mldsa::ntt::{inv_ntt, ntt};
 
     // Create two different polynomials
     let mut coeffs1 = [0i32; 256];
@@ -176,7 +176,7 @@ fn coefficient_check_timing(runner: &mut CtRunner, rng: &mut BenchRng) {
 /// Test deserialization for constant-time behavior
 /// Should not leak information about the structure of serialized data
 fn deserialization_timing(runner: &mut CtRunner, rng: &mut BenchRng) {
-    use mldsa::serialize::{deserialize_public_key, serialize_public_key};
+    use hpcrypt_mldsa::serialize::{deserialize_public_key, serialize_public_key};
 
     let mut seed1 = [0u8; 32];
     let mut seed2 = [0u8; 32];

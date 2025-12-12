@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mldsa::ntt::{inv_ntt, inv_ntt_merged, ntt_merged, ntt_scalar};
-use mldsa::poly::Poly;
+use hpcrypt_mldsa::ntt::{inv_ntt, inv_ntt_merged, ntt_merged, ntt_scalar};
+use hpcrypt_mldsa::poly::Poly;
 
 const N: usize = 256;
 

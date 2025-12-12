@@ -4,8 +4,8 @@
 //! for polynomial arithmetic chains, especially in matrix-vector multiplication.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use mldsa::ntt::{inv_ntt, ntt};
-use mldsa::poly::Poly;
+use hpcrypt_mldsa::ntt::{inv_ntt, ntt};
+use hpcrypt_mldsa::poly::Poly;
 
 /// Helper: Polynomial multiplication via NTT
 /// a and b should already be in NTT form
@@ -287,7 +287,7 @@ fn bench_barrett_reduce(c: &mut Criterion) {
             let mut sum = 0i32;
             // Benchmark 256 barrett reductions (one polynomial's worth)
             for i in 0..256 {
-                sum += mldsa::poly::barrett_reduce(black_box(i * 100000));
+                sum += hpcrypt_mldsa::poly::barrett_reduce(black_box(i * 100000));
             }
             black_box(sum);
         });

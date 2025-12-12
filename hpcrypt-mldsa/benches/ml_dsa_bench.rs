@@ -2,13 +2,13 @@
 //!
 //! Run with: cargo bench
 
-use mldsa::keygen::keygen;
-use mldsa::params::{MlDsa44, MlDsa65, MlDsa87};
-use mldsa::sign::sign;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::params::{DsaParams, MlDsa44, MlDsa65, MlDsa87};
+use hpcrypt_mldsa::sign::sign;
+use hpcrypt_mldsa::verify::verify;
 use std::time::Instant;
 
-fn benchmark_keygen<P: mldsa::params::DsaParams>(name: &str) {
+fn benchmark_keygen<P: DsaParams>(name: &str) {
     println!("\n=== {} KeyGen Benchmark ===", name);
 
     let start = Instant::now();
@@ -18,7 +18,7 @@ fn benchmark_keygen<P: mldsa::params::DsaParams>(name: &str) {
     println!("Time: {:.2?}", duration);
 }
 
-fn benchmark_sign<P: mldsa::params::DsaParams>(name: &str) {
+fn benchmark_sign<P: DsaParams>(name: &str) {
     println!("\n=== {} Sign Benchmark ===", name);
 
     let (_pk, sk) = keygen::<P>();
@@ -31,7 +31,7 @@ fn benchmark_sign<P: mldsa::params::DsaParams>(name: &str) {
     println!("Time: {:.2?}", duration);
 }
 
-fn benchmark_verify<P: mldsa::params::DsaParams>(name: &str) {
+fn benchmark_verify<P: DsaParams>(name: &str) {
     println!("\n=== {} Verify Benchmark ===", name);
 
     let (pk, sk) = keygen::<P>();

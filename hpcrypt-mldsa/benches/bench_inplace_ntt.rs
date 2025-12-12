@@ -4,8 +4,8 @@
 //! The in-place version eliminates the allocation overhead of cloning the polynomial.
 
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
-use mldsa::ntt::{inv_ntt, inv_ntt_inplace, ntt, ntt_inplace};
-use mldsa::poly::Poly;
+use hpcrypt_mldsa::ntt::{inv_ntt, inv_ntt_inplace, ntt, ntt_inplace};
+use hpcrypt_mldsa::poly::Poly;
 
 /// Helper: Create a test polynomial with pseudo-random coefficients
 fn create_test_poly(seed: i32) -> Poly {

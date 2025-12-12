@@ -5,9 +5,9 @@
 //! 2. Optimized: Multiple accumulators for ILP
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mldsa::ntt::{matrix_vector_mul_ntt, matrix_vector_mul_ntt_optimized, ntt};
-use mldsa::params::{N, Q};
-use mldsa::poly::Poly;
+use hpcrypt_mldsa::ntt::{matrix_vector_mul_ntt, matrix_vector_mul_ntt_optimized, ntt};
+use hpcrypt_mldsa::params::{N, Q};
+use hpcrypt_mldsa::poly::Poly;
 
 /// Generate a deterministic pseudo-random polynomial for testing
 fn generate_test_poly(seed: i32) -> Poly {

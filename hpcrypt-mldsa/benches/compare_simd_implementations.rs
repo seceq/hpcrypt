@@ -6,10 +6,10 @@
 // - cargo bench --bench compare_simd_implementations --features avx2,simd-both
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mldsa::keygen::keygen;
-use mldsa::params::MlDsa65;
-use mldsa::sign::sign;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::params::MlDsa65;
+use hpcrypt_mldsa::sign::sign;
+use hpcrypt_mldsa::verify::verify;
 
 fn benchmark_signing(c: &mut Criterion) {
     let (_pk, sk) = keygen::<MlDsa65>();

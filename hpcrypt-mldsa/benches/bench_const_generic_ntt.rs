@@ -4,8 +4,8 @@
 //! vs. const generic specialized NTT (compile-time layer unrolling).
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use mldsa::ntt::{inv_ntt, inv_ntt_specialized, ntt, ntt_specialized};
-use mldsa::poly::Poly;
+use hpcrypt_mldsa::ntt::{inv_ntt, inv_ntt_specialized, ntt, ntt_specialized};
+use hpcrypt_mldsa::poly::Poly;
 
 /// Helper: Create a test polynomial with coefficients in [-Q/2, Q/2)
 fn create_test_poly(seed: i32) -> Poly {

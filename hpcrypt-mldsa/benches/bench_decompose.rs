@@ -6,8 +6,8 @@
 //! Expected: LLVM should already optimize constant divisions, but we validate empirically.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use mldsa::params::Q;
-use mldsa::rounding::{decompose, high_bits, low_bits};
+use hpcrypt_mldsa::params::Q;
+use hpcrypt_mldsa::rounding::{decompose, high_bits, low_bits};
 
 /// Test data: representative coefficient values
 fn create_test_values() -> Vec<i32> {

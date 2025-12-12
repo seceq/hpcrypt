@@ -7,8 +7,8 @@
 //! Expected improvement: 5-25% based on ML-KEM analysis
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mldsa::ntt::{inv_ntt, inv_ntt_merged, ntt, ntt_merged};
-use mldsa::poly::Poly;
+use hpcrypt_mldsa::ntt::{inv_ntt, inv_ntt_merged, ntt, ntt_merged};
+use hpcrypt_mldsa::poly::Poly;
 
 /// Helper: Create a test polynomial with small coefficients for testing
 fn create_test_poly(seed: i32) -> Poly {
@@ -257,7 +257,7 @@ fn bench_batch_transform(c: &mut Criterion) {
 /// This is not a performance benchmark - it verifies that merged NTT
 /// produces identical results to standard NTT.
 fn verify_correctness() {
-    use mldsa::ntt::from_montgomery;
+    use hpcrypt_mldsa::ntt::from_montgomery;
 
     for seed in 0..10 {
         let poly = create_test_poly(seed);

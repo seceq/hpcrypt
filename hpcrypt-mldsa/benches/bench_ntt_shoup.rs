@@ -5,9 +5,9 @@
 //! lead to 5-10% NTT speedup on modern CPUs.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use mldsa::ntt::{inv_ntt, ntt};
-use mldsa::params::Q;
-use mldsa::poly::Poly;
+use hpcrypt_mldsa::ntt::{inv_ntt, ntt};
+use hpcrypt_mldsa::params::Q;
+use hpcrypt_mldsa::poly::Poly;
 
 /// Create test polynomial with realistic values
 fn create_test_poly(seed: usize) -> Poly {
@@ -138,7 +138,7 @@ fn verify_correctness() {
         // Check roundtrip (allowing for Montgomery form)
         for i in 0..256 {
             let orig = poly.coeffs[i].rem_euclid(Q);
-            let recov = mldsa::ntt::from_montgomery(recovered.coeffs[i]).rem_euclid(Q);
+            let recov = hpcrypt_mldsa::ntt::from_montgomery(recovered.coeffs[i]).rem_euclid(Q);
 
             if orig != recov {
                 panic!(

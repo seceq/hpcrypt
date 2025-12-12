@@ -8,12 +8,12 @@
 //!
 //! Run with: cargo bench --bench bench_batch_verify
 
-use mldsa::batch::verify_batch;
-use mldsa::keygen::keygen;
-use mldsa::params::MlDsa65;
-use mldsa::sign::sign;
-use mldsa::sign::Signature;
-use mldsa::verify::verify;
+use hpcrypt_mldsa::batch::verify_batch;
+use hpcrypt_mldsa::keygen::keygen;
+use hpcrypt_mldsa::params::MlDsa65;
+use hpcrypt_mldsa::sign::sign;
+use hpcrypt_mldsa::sign::Signature;
+use hpcrypt_mldsa::verify::verify;
 use std::time::Instant;
 
 fn benchmark_individual_verify(num_signatures: usize) -> std::time::Duration {
