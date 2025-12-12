@@ -81,16 +81,12 @@ pub mod ntt;
 pub mod poly;
 pub mod sampling;
 pub mod compress;
-pub mod serialize;
-pub mod unpacked;
 
-// Re-export main types and functions
-pub use ntt::{ntt_inplace, intt_inplace, intt_after_basemul_inplace, ntt_x2_inplace, intt_x2_inplace, ntt_x4_inplace, intt_x4_inplace};
-pub use poly::{poly_add, poly_sub, basemul, basemul_acc, basemul_vectorized, basemul_acc_vectorized, polyvec_basemul_acc_montgomery, polyvec_basemul_acc_cached, basemul_cached, basemul_acc_cached, compute_basemul_cache, basemul_avx2_true, basemul_avx2_simd, polyvec_basemul_acc_cached_poly, basemul_poly, polyvec_basemul_acc_cached_k2, polyvec_basemul_acc_cached_k3, polyvec_basemul_acc_cached_k4, polyvec_basemul_acc_cached_k3_arrays};
-pub use sampling::{cbd2, cbd3, rej_uniform};
-pub use compress::{compress_d10, compress_d11, decompress_d10, decompress_d11};
-pub use serialize::{poly_tobytes, poly_frombytes};
-pub use unpacked::{decompress_message_avx2, decompress_message_avx2_fast, extract_message_avx2, ct_compare_avx2, ct_compare_avx2_fast, ct_select_32_avx2};
+// Re-export essential functions only (experimental functions removed)
+pub use ntt::{ntt_inplace, intt_inplace, intt_after_basemul_inplace};
+pub use poly::{basemul_cached, polyvec_basemul_acc_cached_poly};
+pub use sampling::{cbd2, cbd3};
+pub use compress::{compress_d10, compress_d11};
 
 /// Check if AVX2 is available at runtime
 ///
