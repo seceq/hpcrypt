@@ -21,11 +21,11 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-use crate::params::DsaParams;
 use crate::keygen;
+use crate::params::DsaParams;
+use crate::serialize;
 use crate::sign;
 use crate::verify;
-use crate::serialize;
 
 /// Error type for CAVP test operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

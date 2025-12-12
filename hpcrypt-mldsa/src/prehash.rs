@@ -17,10 +17,10 @@
 //!
 //! # Example
 //!
-//! ```ignore
-//! use mldsa::params::MlDsa65;
-//! use mldsa::keygen::keygen;
-//! use mldsa::prehash::{sign_prehashed_sha512, verify_prehashed_sha512};
+//! ```no_run
+//! use hpcrypt_mldsa::params::MlDsa65;
+//! use hpcrypt_mldsa::keygen::keygen;
+//! use hpcrypt_mldsa::prehash::{sign_prehashed_sha512, verify_prehashed_sha512};
 //!
 //! let (pk, sk) = keygen::<MlDsa65>();
 //!
@@ -40,7 +40,7 @@ use hpcrypt_hash::{Sha3_256, Sha3_384, Sha3_512};
 
 use crate::keygen::{PublicKey, SecretKey};
 use crate::params::DsaParams;
-use crate::sign::{sign, sign_deterministic, Signature};
+use crate::sign::{Signature, sign, sign_deterministic};
 use crate::verify::verify;
 
 /// Context string for HashML-DSA as per FIPS 204
@@ -261,8 +261,9 @@ pub fn sign_prehashed_sha512_deterministic<P: DsaParams>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::keygen::keygen;
     use crate::params::MlDsa65;
+    use crate::keygen::keygen;
+
     extern crate alloc;
     use alloc::vec;
 
@@ -286,10 +287,7 @@ mod tests {
         let sig = sign_prehashed_sha512(&sk, &large_message).expect("Signing failed");
 
         let valid = verify_prehashed_sha512(&pk, &large_message, &sig);
-        assert!(
-            valid,
-            "Valid HashML-DSA signature on large message should verify"
-        );
+        assert!(valid, "Valid HashML-DSA signature on large message should verify");
     }
 
     #[test]
@@ -338,10 +336,7 @@ mod tests {
         let sig2 = sign_prehashed_sha512_deterministic(&sk, message, &rnd).expect("Signing failed");
 
         // Deterministic signing should produce identical signatures
-        assert_eq!(
-            sig1.c_tilde, sig2.c_tilde,
-            "Deterministic signatures should be identical"
-        );
+        assert_eq!(sig1.c_tilde, sig2.c_tilde, "Deterministic signatures should be identical");
 
         let valid = verify_prehashed_sha512(&pk, message, &sig1);
         assert!(valid, "Deterministic HashML-DSA signature should verify");

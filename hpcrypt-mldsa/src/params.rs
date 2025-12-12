@@ -58,6 +58,15 @@ pub trait DsaParams: Send + Sync + 'static {
 
     /// Name of the parameter set
     const NAME: &'static str;
+
+    /// Number of bits needed to encode w1 coefficients
+    /// w1 ∈ [0, (q-1)/(2γ₂) - 1], so bits = ceil(log2((q-1)/(2γ₂)))
+    /// ML-DSA-44: 6 bits (w1 ∈ [0, 43])
+    /// ML-DSA-65/87: 4 bits (w1 ∈ [0, 15])
+    const W1_BITS: usize;
+
+    /// Size of encoded w1 vector in bytes = K * N * W1_BITS / 8
+    const W1_ENCODED_SIZE: usize;
 }
 
 /// ML-DSA-44 parameter set (NIST Security Level 2)
@@ -93,6 +102,8 @@ impl DsaParams for MlDsa44 {
     const SK_SIZE: usize = 2560;
     const SIG_SIZE: usize = 2420;
     const NAME: &'static str = "ML-DSA-44";
+    const W1_BITS: usize = 6; // w1 ∈ [0, 43] for gamma2 = (q-1)/88
+    const W1_ENCODED_SIZE: usize = Self::K * N * Self::W1_BITS / 8; // 4 * 256 * 6 / 8 = 768
 }
 
 /// ML-DSA-65 parameter set (NIST Security Level 3) - RECOMMENDED
@@ -128,6 +139,8 @@ impl DsaParams for MlDsa65 {
     const SK_SIZE: usize = 4032;
     const SIG_SIZE: usize = 3309;
     const NAME: &'static str = "ML-DSA-65";
+    const W1_BITS: usize = 4; // w1 ∈ [0, 15] for gamma2 = (q-1)/32
+    const W1_ENCODED_SIZE: usize = Self::K * N * Self::W1_BITS / 8; // 6 * 256 * 4 / 8 = 768
 }
 
 /// ML-DSA-87 parameter set (NIST Security Level 5)
@@ -163,9 +176,11 @@ impl DsaParams for MlDsa87 {
     const SK_SIZE: usize = 4896;
     const SIG_SIZE: usize = 4627;
     const NAME: &'static str = "ML-DSA-87";
+    const W1_BITS: usize = 4; // w1 ∈ [0, 15] for gamma2 = (q-1)/32
+    const W1_ENCODED_SIZE: usize = Self::K * N * Self::W1_BITS / 8; // 8 * 256 * 4 / 8 = 1024
 }
 
-#[allow(unused_imports)]
+#[cfg(test)]
 mod tests {
     use super::*;
 

@@ -60,7 +60,7 @@ pub fn ct_select(condition: bool, a: &[u8], b: &[u8]) -> Vec<u8> {
     result
 }
 
-#[allow(unused_imports)]
+#[cfg(test)]
 mod tests {
     use super::*;
 

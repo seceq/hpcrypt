@@ -24,11 +24,11 @@
 //!
 //! ## Usage Example
 //!
-//! ```ignore
-//! use mldsa::params::MlDsa65;
-//! use mldsa::keygen::keygen;
-//! use mldsa::sign::sign;
-//! use mldsa::verify::verify;
+//! ```no_run
+//! use hpcrypt_mldsa::params::MlDsa65;
+//! use hpcrypt_mldsa::keygen::keygen;
+//! use hpcrypt_mldsa::sign::sign;
+//! use hpcrypt_mldsa::verify::verify;
 //!
 //! // Key generation
 //! let (pk, sk) = keygen::<MlDsa65>();
@@ -44,10 +44,10 @@
 //!
 //! ## Batch Signing Example
 //!
-//! ```ignore
-//! use mldsa::params::MlDsa65;
-//! use mldsa::keygen::keygen;
-//! use mldsa::{sign_batch, verify_batch};
+//! ```no_run
+//! use hpcrypt_mldsa::params::MlDsa65;
+//! use hpcrypt_mldsa::keygen::keygen;
+//! use hpcrypt_mldsa::{sign_batch, verify_batch};
 //!
 //! let (pk, sk) = keygen::<MlDsa65>();
 //!
@@ -110,21 +110,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs)]
 #![warn(rust_2018_idioms)]
-// Allow some clippy lints for this module
-#![allow(unexpected_cfgs)]
-#![allow(unused_variables)]
-#![allow(clippy::needless_range_loop)]
-#![allow(clippy::needless_if)]
-#![allow(clippy::collapsible_else_if)]
-#![allow(clippy::extra_unused_type_parameters)]
-#![allow(clippy::let_and_return)]
-#![allow(clippy::suspicious_doc_comments)]
-#![allow(clippy::clone_on_copy)]
-#![allow(clippy::assign_op_pattern)]
-#![allow(clippy::identity_op)]
-#![allow(clippy::manual_range_contains)]
-#![allow(unknown_lints)]
-#![allow(clippy::slow_zero_filled_vec)]
 
 // Global allocator: Use jemalloc for better performance (optional feature)
 #[cfg(all(feature = "jemalloc", not(target_env = "msvc")))]
@@ -135,41 +120,42 @@ use jemallocator::Jemalloc;
 static GLOBAL: Jemalloc = Jemalloc;
 
 // Public modules
-pub mod errors;
 pub mod params;
+pub mod errors;
+
+// SIMD intrinsics (conditional on features)
+#[cfg(any(
+    all(feature = "avx2", target_arch = "x86_64"),
+    all(feature = "neon", target_arch = "aarch64")
+))]
+pub mod intrinsics;
+
+// Internal modules
+pub mod symmetric;
+pub mod utils;
+pub mod poly;
+pub mod rounding;
+pub mod hints;
+pub mod sampling;
+pub mod ntt;
+pub mod keygen;
+pub mod sign;
+pub mod verify;
+pub mod serialize;
+pub mod constant_time;
+pub mod batch;
+pub mod prehash;
+pub mod context;
+#[cfg(feature = "pem")]
+pub mod pem_encoding;
+
+// Test API for CAVP validation (only with cavp feature)
+#[cfg(feature = "cavp")]
+pub mod test_api;
 
 // Re-export RNG functionality from hpcrypt-rng
 pub use hpcrypt_rng as rng;
 
-// Internal modules
-pub mod batch;
-pub mod constant_time;
-pub mod context;
-pub mod hints;
-pub mod kat;
-pub mod keygen;
-pub mod ntt;
-#[cfg(feature = "pem")]
-pub mod pem_encoding;
-pub mod poly;
-pub mod prehash;
-pub mod rounding;
-pub mod sampling;
-pub mod serialize;
-pub mod sign;
-pub mod sparse_mul;
-pub mod symmetric;
-pub mod utils;
-pub mod verify;
-
-// Stress tests for robustness validation
-mod stress_tests;
-
 // Re-exports
-pub use batch::{sign_batch, verify_batch};
 pub use params::{DsaParams, MlDsa44, MlDsa65, MlDsa87, N, Q};
-
-/// CAVP/ACVP test API
-/// (Only available with cavp feature for validation testing)
-#[cfg(feature = "cavp")]
-pub mod test_api;
+pub use batch::{sign_batch, verify_batch};

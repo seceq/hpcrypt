@@ -18,10 +18,10 @@
 //!
 //! # Example
 //!
-//! ```ignore
-//! use mldsa::keygen::keygen;
-//! use mldsa::params::MlDsa65;
-//! use mldsa::pem_encoding::{public_key_to_pem, public_key_from_pem};
+//! ```no_run
+//! use hpcrypt_mldsa::keygen::keygen;
+//! use hpcrypt_mldsa::params::MlDsa65;
+//! use hpcrypt_mldsa::pem_encoding::{public_key_to_pem, public_key_from_pem};
 //!
 //! let (pk, sk) = keygen::<MlDsa65>();
 //!
@@ -33,7 +33,7 @@
 //! ```
 
 extern crate alloc;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
 #[cfg(feature = "pem")]
@@ -41,9 +41,7 @@ use pem;
 
 use crate::keygen::{PublicKey, SecretKey};
 use crate::params::DsaParams;
-use crate::serialize::{
-    deserialize_public_key, deserialize_secret_key, serialize_public_key, serialize_secret_key,
-};
+use crate::serialize::{serialize_public_key, deserialize_public_key, serialize_secret_key, deserialize_secret_key};
 
 /// Error type for PEM/DER encoding operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -91,10 +89,10 @@ const PEM_TAG_SECRET_KEY: &str = "ML-DSA PRIVATE KEY";
 ///
 /// # Example
 ///
-/// ```ignore
-/// use mldsa::keygen::keygen;
-/// use mldsa::params::MlDsa65;
-/// use mldsa::pem_encoding::public_key_to_pem;
+/// ```no_run
+/// use hpcrypt_mldsa::keygen::keygen;
+/// use hpcrypt_mldsa::params::MlDsa65;
+/// use hpcrypt_mldsa::pem_encoding::public_key_to_pem;
 ///
 /// let (pk, _sk) = keygen::<MlDsa65>();
 /// let pem_str = public_key_to_pem(&pk).unwrap();
@@ -103,10 +101,7 @@ const PEM_TAG_SECRET_KEY: &str = "ML-DSA PRIVATE KEY";
 #[cfg(feature = "pem")]
 pub fn public_key_to_pem<P: DsaParams>(pk: &PublicKey<P>) -> Result<String, PemError> {
     let der_bytes = serialize_public_key(pk);
-    Ok(pem::encode_config(
-        &pem::Pem::new(PEM_TAG_PUBLIC_KEY, der_bytes),
-        pem::EncodeConfig::default(),
-    ))
+    Ok(pem::encode_config(&pem::Pem::new(PEM_TAG_PUBLIC_KEY, der_bytes), pem::EncodeConfig::default()))
 }
 
 /// Encode a secret key to PEM format
@@ -127,10 +122,10 @@ pub fn public_key_to_pem<P: DsaParams>(pk: &PublicKey<P>) -> Result<String, PemE
 ///
 /// # Example
 ///
-/// ```ignore
-/// use mldsa::keygen::keygen;
-/// use mldsa::params::MlDsa65;
-/// use mldsa::pem_encoding::secret_key_to_pem;
+/// ```no_run
+/// use hpcrypt_mldsa::keygen::keygen;
+/// use hpcrypt_mldsa::params::MlDsa65;
+/// use hpcrypt_mldsa::pem_encoding::secret_key_to_pem;
 ///
 /// let (_pk, sk) = keygen::<MlDsa65>();
 /// let pem_str = secret_key_to_pem(&sk).unwrap();
@@ -139,10 +134,7 @@ pub fn public_key_to_pem<P: DsaParams>(pk: &PublicKey<P>) -> Result<String, PemE
 #[cfg(feature = "pem")]
 pub fn secret_key_to_pem<P: DsaParams>(sk: &SecretKey<P>) -> Result<String, PemError> {
     let der_bytes = serialize_secret_key(sk);
-    Ok(pem::encode_config(
-        &pem::Pem::new(PEM_TAG_SECRET_KEY, der_bytes),
-        pem::EncodeConfig::default(),
-    ))
+    Ok(pem::encode_config(&pem::Pem::new(PEM_TAG_SECRET_KEY, der_bytes), pem::EncodeConfig::default()))
 }
 
 /// Decode a public key from PEM format
@@ -158,9 +150,9 @@ pub fn secret_key_to_pem<P: DsaParams>(sk: &SecretKey<P>) -> Result<String, PemE
 ///
 /// # Example
 ///
-/// ```ignore
-/// use mldsa::params::MlDsa65;
-/// use mldsa::pem_encoding::public_key_from_pem;
+/// ```no_run
+/// use hpcrypt_mldsa::params::MlDsa65;
+/// use hpcrypt_mldsa::pem_encoding::public_key_from_pem;
 ///
 /// let pem_str = "-----BEGIN ML-DSA PUBLIC KEY-----\n...\n-----END ML-DSA PUBLIC KEY-----";
 /// let pk = public_key_from_pem::<MlDsa65>(pem_str).unwrap();
@@ -173,7 +165,8 @@ pub fn public_key_from_pem<P: DsaParams>(pem_str: &str) -> Result<PublicKey<P>, 
         return Err(PemError::InvalidPemFormat);
     }
 
-    deserialize_public_key(pem_contents.contents()).map_err(|_| PemError::DecodeFailed)
+    deserialize_public_key(pem_contents.contents())
+        .map_err(|_| PemError::DecodeFailed)
 }
 
 /// Decode a secret key from PEM format
@@ -189,9 +182,9 @@ pub fn public_key_from_pem<P: DsaParams>(pem_str: &str) -> Result<PublicKey<P>, 
 ///
 /// # Example
 ///
-/// ```ignore
-/// use mldsa::params::MlDsa65;
-/// use mldsa::pem_encoding::secret_key_from_pem;
+/// ```no_run
+/// use hpcrypt_mldsa::params::MlDsa65;
+/// use hpcrypt_mldsa::pem_encoding::secret_key_from_pem;
 ///
 /// let pem_str = "-----BEGIN ML-DSA PRIVATE KEY-----\n...\n-----END ML-DSA PRIVATE KEY-----";
 /// let sk = secret_key_from_pem::<MlDsa65>(pem_str).unwrap();
@@ -204,7 +197,8 @@ pub fn secret_key_from_pem<P: DsaParams>(pem_str: &str) -> Result<SecretKey<P>, 
         return Err(PemError::InvalidPemFormat);
     }
 
-    deserialize_secret_key(pem_contents.contents()).map_err(|_| PemError::DecodeFailed)
+    deserialize_secret_key(pem_contents.contents())
+        .map_err(|_| PemError::DecodeFailed)
 }
 
 /// Encode a public key to DER format
@@ -272,8 +266,10 @@ pub fn secret_key_from_der<P: DsaParams>(der_bytes: &[u8]) -> Result<SecretKey<P
 #[cfg(all(test, feature = "pem"))]
 mod tests {
     use super::*;
+    extern crate alloc;
+    use alloc::vec;
     use crate::keygen::keygen_from_seed;
-    use crate::MlDsa65;
+    use crate::params::MlDsa65;
 
     #[test]
     fn test_public_key_pem_roundtrip() {
@@ -288,8 +284,7 @@ mod tests {
         assert!(pem_str.contains("-----END ML-DSA PUBLIC KEY-----"));
 
         // Decode from PEM
-        let pk_recovered =
-            public_key_from_pem::<MlDsa65>(&pem_str).expect("Failed to decode from PEM");
+        let pk_recovered = public_key_from_pem::<MlDsa65>(&pem_str).expect("Failed to decode from PEM");
 
         // Verify all fields match
         assert_eq!(pk.rho, pk_recovered.rho);
@@ -313,8 +308,7 @@ mod tests {
         assert!(pem_str.contains("-----END ML-DSA PRIVATE KEY-----"));
 
         // Decode from PEM
-        let sk_recovered =
-            secret_key_from_pem::<MlDsa65>(&pem_str).expect("Failed to decode from PEM");
+        let sk_recovered = secret_key_from_pem::<MlDsa65>(&pem_str).expect("Failed to decode from PEM");
 
         // Verify all critical fields match
         assert_eq!(sk.rho, sk_recovered.rho);
@@ -340,8 +334,7 @@ mod tests {
         let der_bytes = public_key_to_der(&pk);
 
         // Decode from DER
-        let pk_recovered =
-            public_key_from_der::<MlDsa65>(&der_bytes).expect("Failed to decode from DER");
+        let pk_recovered = public_key_from_der::<MlDsa65>(&der_bytes).expect("Failed to decode from DER");
 
         // Verify all fields match
         assert_eq!(pk.rho, pk_recovered.rho);
@@ -361,8 +354,7 @@ mod tests {
         let der_bytes = secret_key_to_der(&sk);
 
         // Decode from DER
-        let sk_recovered =
-            secret_key_from_der::<MlDsa65>(&der_bytes).expect("Failed to decode from DER");
+        let sk_recovered = secret_key_from_der::<MlDsa65>(&der_bytes).expect("Failed to decode from DER");
 
         // Verify all fields match
         assert_eq!(sk.rho, sk_recovered.rho);
