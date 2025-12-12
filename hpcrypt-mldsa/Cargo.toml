@@ -7,22 +7,19 @@ authors = ["HPCrypt Contributors"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/yourusername/hpcrypt"
 homepage = "https://github.com/yourusername/hpcrypt"
-documentation = "https://docs.rs/hpcrypt-mldsa"
+documentation = "https://docs.rs/hpcrypt-mlkem"
 readme = "README.md"
-description = "ML-DSA (Module-Lattice-Based Digital Signature Algorithm) implementation per NIST FIPS 204 - Pure Rust portable implementation"
-keywords = ["cryptography", "post-quantum", "ml-dsa", "dilithium", "signatures"]
+description = "ML-KEM (Module-Lattice-Based Key Encapsulation Mechanism) implementation per NIST FIPS 203 - Pure Rust portable implementation"
+keywords = ["cryptography", "post-quantum", "ml-kem", "kyber", "kem"]
 categories = ["cryptography", "no-std"]
 
 [dependencies]
-hpcrypt-rng = { path = "../hpcrypt-rng", default-features = false }
-hpcrypt-hash = { path = "../hpcrypt-hash", default-features = false }
-subtle = { version = "2.6", default-features = false }
-zeroize = { version = "1.8", default-features = false, features = ["derive"], optional = true }
+# Use hpcrypt crates for hash and RNG
+hpcrypt-hash = { path = "../hpcrypt-hash", default-features = false, features = ["std"] }
+hpcrypt-rng = { path = "../hpcrypt-rng", default-features = false, features = ["os-rng"] }
+getrandom = { version = "0.2", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
-serde_arrays = { version = "0.1", optional = true }
-pem = { version = "3.0", optional = true }
-der = { version = "0.7", optional = true }
-spki = { version = "0.7", optional = true }
+zeroize = { version = "1.8", default-features = false, features = ["alloc"], optional = true }
 
 [dev-dependencies]
 hex = "0.4"
@@ -30,34 +27,26 @@ rand = "0.8"
 proptest = "1.6"
 criterion = { version = "0.5", features = ["html_reports"] }
 serde_json = "1.0"
-dudect-bencher = "0.6"
-
-[[bench]]
-name = "bench_operations"
-harness = false
-
-[[bench]]
-name = "bench_ntt_simple"
-harness = false
-
-[[bench]]
-name = "bench_batch_verify"
-harness = false
-
-[[bench]]
-name = "dudect_constant_time"
-harness = false
 
 [lib]
 name = "hpcrypt_mldsa"
 path = "src/lib.rs"
 
 [features]
-default = ["hpcrypt-rng/os-rng"]
-std = ["hpcrypt-hash/std", "hpcrypt-rng/std"]
+default = []
+std = ["hpcrypt-hash/std", "getrandom/std"]
+serde = ["dep:serde"]
 zeroize = ["dep:zeroize"]
-serde = ["dep:serde", "dep:serde_arrays"]
-pem = ["dep:pem", "dep:der", "dep:spki"]
-wasm = ["hpcrypt-rng/wasm"]
 timing-tests = []
-cavp = []  # Enable CAVP/ACVP test API
+cavp = []
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "abort"
+overflow-checks = false
+
+[profile.bench]
+inherits = "release"
