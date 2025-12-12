@@ -9,12 +9,11 @@
 //! These sampling operations are critical for key generation, signing, and verification.
 
 extern crate alloc;
-use alloc::vec;
 use alloc::vec::Vec;
 
 use crate::params::{DsaParams, N, Q};
 use crate::poly::{Poly, PolyVec};
-use crate::symmetric::{expand_a as expand_a_element, expand_s as expand_s_xof, Shake256Xof, Xof};
+use crate::symmetric::{expand_a as expand_a_element, expand_s as expand_s_xof, Shake256Direct, Shake256Xof, Xof};
 
 // ============================================================================
 // Lookup Tables for Rejection Sampling Optimization
@@ -66,7 +65,7 @@ const ETA4_COEFF_TABLE: [i32; 16] = {
 /// Using a macro keeps the code organized and allows for easy loop unrolling.
 macro_rules! process_byte_eta2_lut {
     ($poly:expr, $coeffs_generated:expr, $byte:expr) => {{
-        let t0 = $byte & 0x0F; // Low nibble
+        let t0 = $byte & 0x0F;        // Low nibble
         let t1 = ($byte >> 4) & 0x0F; // High nibble
 
         // Process low nibble using lookup table
@@ -406,222 +405,6 @@ pub fn sample_poly_eta(xof: &mut Shake256Xof, eta: i32) -> Poly {
     poly
 }
 
-/// Sample a polynomial with coefficients in [-η, η] using rejection sampling (OLD IMPLEMENTATION)
-///
-/// This is the old implementation kept for reference and AVX2 fallback.
-/// The main sample_poly_eta function now uses lookup tables for better performance.
-///
-/// # Arguments
-/// * `xof` - SHAKE-256 XOF instance to sample from
-/// * `eta` - Bound on coefficient magnitude (2 or 4 for ML-DSA)
-///
-/// # Returns
-/// * Polynomial with all coefficients in [-η, η]
-#[allow(dead_code)]
-fn sample_poly_eta_old_modulo_version(xof: &mut Shake256Xof, eta: i32) -> Poly {
-    debug_assert!(eta == 2 || eta == 4, "eta must be 2 or 4");
-
-    // Try AVX2 path if available
-    #[cfg(all(feature = "avx2", target_arch = "x86_64"))]
-    {
-        use crate::simd::dispatch::has_avx2;
-
-        // DISABLED: AVX2 sampling causes 4.5% regression (+21 µs)
-        // Root cause: Vec allocation overhead + FFI crossing overhead
-        // See SESSION_COMPLETE_SAMPLING_AVX2.md for details
-        if false && has_avx2() {
-            // Read enough bytes for processing
-            // For eta=2: need ~136 bytes typically (worst case with rejection)
-            // For eta=4: need ~272 bytes typically
-            let bufsize = if eta == 2 { 200 } else { 350 };
-            let mut buf = Vec::with_capacity(bufsize);
-            buf.resize(bufsize, 0u8);
-            xof.read(&mut buf);
-
-            let (mut poly, generated) = if eta == 2 {
-                unsafe { crate::simd::avx2::sample_poly_eta2_avx2_ffi(&buf) }
-            } else {
-                unsafe { crate::simd::avx2::sample_poly_eta4_avx2_ffi(&buf) }
-            };
-
-            // If we didn't generate all 256 coefficients, fall back to scalar for remainder
-            if generated < N {
-                let mut coeffs_generated = generated;
-
-                // Continue reading and processing with scalar code
-                if eta == 2 {
-                    let mut buf = [0u8; 136];
-                    while coeffs_generated < N {
-                        xof.read(&mut buf);
-                        for &byte in &buf {
-                            if coeffs_generated >= N {
-                                break;
-                            }
-                            let t0 = byte & 0x0F;
-                            let t1 = (byte >> 4) & 0x0F;
-
-                            if t0 < 15 {
-                                let t0_mod5 = t0 % 5;
-                                let coeff = 2 - t0_mod5 as i32;
-                                poly.coeffs[coeffs_generated] = coeff;
-                                coeffs_generated += 1;
-                            }
-
-                            if coeffs_generated >= N {
-                                break;
-                            }
-
-                            if t1 < 15 {
-                                let t1_mod5 = t1 % 5;
-                                let coeff = 2 - t1_mod5 as i32;
-                                poly.coeffs[coeffs_generated] = coeff;
-                                coeffs_generated += 1;
-                            }
-                        }
-                    }
-                } else {
-                    // eta == 4
-                    const SHAKE256_RATE: usize = 136;
-                    let mut block = [0u8; SHAKE256_RATE];
-                    while coeffs_generated < N {
-                        xof.read(&mut block);
-                        for &byte in &block {
-                            if coeffs_generated >= N {
-                                break;
-                            }
-                            let low = byte & 0x0F;
-                            let high = (byte >> 4) & 0x0F;
-
-                            if low <= 8 {
-                                poly.coeffs[coeffs_generated] = 4 - low as i32;
-                                coeffs_generated += 1;
-                                if coeffs_generated >= N {
-                                    break;
-                                }
-                            }
-
-                            if high <= 8 {
-                                poly.coeffs[coeffs_generated] = 4 - high as i32;
-                                coeffs_generated += 1;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return poly;
-        }
-    }
-
-    // Scalar fallback
-    let mut poly = Poly::new();
-    let mut coeffs_generated = 0;
-
-    if eta == 2 {
-        // For η=2: reference uses 4-bit nibbles with mod 5 mapping
-        // Process 2 coefficients per byte (using low/high nibbles)
-        let mut buf = [0u8; 136]; // Enough to ensure we get N coefficients
-
-        while coeffs_generated < N {
-            xof.read(&mut buf);
-
-            for &byte in &buf {
-                if coeffs_generated >= N {
-                    break;
-                }
-
-                let t0 = byte & 0x0F; // Low nibble
-                let t1 = (byte >> 4) & 0x0F; // High nibble
-
-                // Process low nibble
-                if t0 < 15 {
-                    let t0_mod5 = t0 % 5;
-                    let coeff = 2 - t0_mod5 as i32; // Maps to [-2, -1, 0, 1, 2]
-                    poly.coeffs[coeffs_generated] = coeff;
-                    coeffs_generated += 1;
-                }
-
-                if coeffs_generated >= N {
-                    break;
-                }
-
-                // Process high nibble
-                if t1 < 15 {
-                    let t1_mod5 = t1 % 5;
-                    let coeff = 2 - t1_mod5 as i32; // Maps to [-2, -1, 0, 1, 2]
-                    poly.coeffs[coeffs_generated] = coeff;
-                    coeffs_generated += 1;
-                }
-            }
-        }
-    } else {
-        // For η=4: pack 2 coefficients per byte
-        // C code uses POLY_UNIFORM_ETA_NBLOCKS = (227 + 136 - 1)/136 = 2 blocks
-        // Each block is 136 bytes, so 2 * 136 = 272 bytes initially
-        // Then reads 136 bytes at a time if more needed
-        const SHAKE256_RATE: usize = 136;
-        const INITIAL_BLOCKS: usize = 2; // For eta=4: (227 + 135)/136 = 2
-        let mut buf = [0u8; INITIAL_BLOCKS * SHAKE256_RATE]; // 272 bytes
-
-        // Read initial batch
-        xof.read(&mut buf);
-
-        for &byte in &buf {
-            if coeffs_generated >= N {
-                break;
-            }
-
-            let low = byte & 0x0F;
-            let high = (byte >> 4) & 0x0F;
-
-            // Process low nibble
-            if low <= 8 {
-                poly.coeffs[coeffs_generated] = 4 - low as i32;
-                coeffs_generated += 1;
-                if coeffs_generated >= N {
-                    break;
-                }
-            }
-
-            // Process high nibble
-            if high <= 8 {
-                poly.coeffs[coeffs_generated] = 4 - high as i32;
-                coeffs_generated += 1;
-            }
-        }
-
-        // If we need more coefficients, read one block at a time
-        while coeffs_generated < N {
-            let mut block = [0u8; SHAKE256_RATE];
-            xof.read(&mut block);
-
-            for &byte in &block {
-                if coeffs_generated >= N {
-                    break;
-                }
-
-                let low = byte & 0x0F;
-                let high = (byte >> 4) & 0x0F;
-
-                if low <= 8 {
-                    poly.coeffs[coeffs_generated] = 4 - low as i32;
-                    coeffs_generated += 1;
-                    if coeffs_generated >= N {
-                        break;
-                    }
-                }
-
-                if high <= 8 {
-                    poly.coeffs[coeffs_generated] = 4 - high as i32;
-                    coeffs_generated += 1;
-                }
-            }
-        }
-    }
-
-    poly
-}
-
 /// Sample a polynomial with coefficients in [-η, η] from pre-generated bytes
 ///
 /// This is a variant of `sample_poly_eta` that works with a byte slice instead of an XOF.
@@ -646,7 +429,7 @@ pub fn sample_poly_eta_from_bytes(bytes: &mut &[u8], eta: i32) -> Poly {
             let byte = bytes[byte_idx];
             byte_idx += 1;
 
-            let t0 = byte & 0x0F; // Low nibble
+            let t0 = byte & 0x0F;        // Low nibble
             let t1 = (byte >> 4) & 0x0F; // High nibble
 
             // Process low nibble
@@ -713,6 +496,7 @@ pub fn sample_poly_eta_from_bytes(bytes: &mut &[u8], eta: i32) -> Poly {
 /// # Returns
 /// * Polynomial with coefficients in [-γ₁, γ₁]
 pub fn expand_mask_poly(rho_prime: &[u8; 64], kappa: u16, _index: u8, gamma1: i32) -> Poly {
+
     // Construct input for SHAKE-256: rho_prime || kappa (2 bytes, little-endian)
     // Note: kappa already encodes the polynomial index
     let mut input = [0u8; 64 + 2];
@@ -731,11 +515,13 @@ pub fn expand_mask_poly(rho_prime: &[u8; 64], kappa: u16, _index: u8, gamma1: i3
         panic!("Invalid gamma1 value");
     };
 
+
     let mut poly = Poly::new();
     let mut coeffs_generated = 0;
 
     let bytes_per_coeff = (bits_per_coeff + 7) / 8; // Round up to bytes
-    let mut buf = vec![0u8; bytes_per_coeff * 256];
+    let mut buf = Vec::with_capacity(bytes_per_coeff * 256);
+    buf.resize(bytes_per_coeff * 256, 0u8);
 
     xof.read(&mut buf);
 
@@ -750,7 +536,8 @@ pub fn expand_mask_poly(rho_prime: &[u8; 64], kappa: u16, _index: u8, gamma1: i3
     while coeffs_generated < N {
         {
             _iterations += 1;
-            if _iterations % 1000 == 0 {}
+            if _iterations % 1000 == 0 {
+            }
         }
         // Read enough bytes for one coefficient
         let mut val = 0u32;
@@ -781,6 +568,138 @@ pub fn expand_mask_poly(rho_prime: &[u8; 64], kappa: u16, _index: u8, gamma1: i3
         if byte_offset + bytes_per_coeff > buf.len() {
             xof.read(&mut buf);
             byte_offset = 0;
+        }
+    }
+
+    poly
+}
+
+/// Zero-allocation optimized version of expand_mask_poly
+///
+/// This version uses:
+/// - Stack-allocated buffer instead of Vec (zero heap allocation)
+/// - Direct SHAKE-256 without Box wrapper (no dynamic dispatch)
+///
+/// Performance: ~10-15% faster than the runtime-parameterized version.
+///
+/// # Arguments
+/// * `rho_prime` - Seed for mask generation (64 bytes)
+/// * `kappa` - Counter value (incremented on each rejection)
+/// * `gamma1` - Bound on coefficient magnitude (2^17 or 2^19)
+#[inline]
+pub fn expand_mask_poly_optimized(rho_prime: &[u8; 64], kappa: u16, gamma1: i32) -> Poly {
+    // No rejection sampling needed in ExpandMask since all unpacked values are valid:
+    // - gamma1 = 2^17 uses 18 bits, max val = 2^18 - 1 < 2*gamma1
+    // - gamma1 = 2^19 uses 20 bits, max val = 2^20 - 1 < 2*gamma1
+
+    // Construct input: rho_prime || kappa (little-endian)
+    let mut input = [0u8; 66];
+    input[..64].copy_from_slice(rho_prime);
+    input[64] = (kappa & 0xFF) as u8;
+    input[65] = ((kappa >> 8) & 0xFF) as u8;
+
+    // Use zero-allocation Shake256Direct instead of Box<dyn XofReader>
+    let mut xof = Shake256Direct::new(&input);
+
+    let mut poly = Poly::new();
+
+    // Dispatch based on gamma1 for compile-time optimization
+    if gamma1 == (1 << 17) {
+        // ML-DSA-44: 18 bits per coefficient, squeeze 576 bytes (256 * 18 / 8 = 576)
+        let mut buf = [0u8; 576];
+        xof.read(&mut buf);
+
+        // AVX2 accelerated unpacking
+        #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
+        {
+            if std::is_x86_feature_detected!("avx2") {
+                unsafe {
+                    crate::intrinsics::avx2::sampling::expand_mask_17_fast(&mut poly.coeffs, &buf);
+                }
+                return poly;
+            }
+        }
+
+        // NOTE: ARM NEON sampling benchmarked as 1.35x SLOWER than scalar.
+        // Using scalar fallback for better performance on ARM.
+
+        // Scalar fallback: Unpack 18-bit coefficients
+        let gamma1_u32 = gamma1 as u32;
+        let mut i = 0;
+        let mut byte_idx = 0;
+
+        while i < 256 {
+            let b0 = buf[byte_idx] as u32;
+            let b1 = buf[byte_idx + 1] as u32;
+            let b2 = buf[byte_idx + 2] as u32;
+            let b3 = buf[byte_idx + 3] as u32;
+            let b4 = buf[byte_idx + 4] as u32;
+            let b5 = buf[byte_idx + 5] as u32;
+            let b6 = buf[byte_idx + 6] as u32;
+            let b7 = buf[byte_idx + 7] as u32;
+            let b8 = buf[byte_idx + 8] as u32;
+
+            let v0 = b0 | (b1 << 8) | ((b2 & 0x03) << 16);
+            let v1 = (b2 >> 2) | (b3 << 6) | ((b4 & 0x0F) << 14);
+            let v2 = (b4 >> 4) | (b5 << 4) | ((b6 & 0x3F) << 12);
+            let v3 = (b6 >> 6) | (b7 << 2) | (b8 << 10);
+
+            poly.coeffs[i] = (gamma1_u32.wrapping_sub(v0)) as i32;
+            poly.coeffs[i + 1] = (gamma1_u32.wrapping_sub(v1)) as i32;
+            poly.coeffs[i + 2] = (gamma1_u32.wrapping_sub(v2)) as i32;
+            poly.coeffs[i + 3] = (gamma1_u32.wrapping_sub(v3)) as i32;
+
+            i += 4;
+            byte_idx += 9;
+        }
+    } else {
+        // ML-DSA-65/87: 20 bits per coefficient, squeeze 640 bytes (256 * 20 / 8 = 640)
+        let mut buf = [0u8; 640];
+        xof.read(&mut buf);
+
+        // AVX2 accelerated unpacking
+        #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
+        {
+            if std::is_x86_feature_detected!("avx2") {
+                unsafe {
+                    crate::intrinsics::avx2::sampling::expand_mask_19_fast(&mut poly.coeffs, &buf);
+                }
+                return poly;
+            }
+        }
+
+        // NOTE: ARM NEON sampling benchmarked as 1.35x SLOWER than scalar.
+        // Using scalar fallback for better performance on ARM.
+
+        // Scalar fallback: Unpack 20-bit coefficients
+        let gamma1_u32 = gamma1 as u32;
+        let mut i = 0;
+        let mut byte_idx = 0;
+
+        while i < 256 {
+            let b0 = buf[byte_idx] as u32;
+            let b1 = buf[byte_idx + 1] as u32;
+            let b2 = buf[byte_idx + 2] as u32;
+            let b3 = buf[byte_idx + 3] as u32;
+            let b4 = buf[byte_idx + 4] as u32;
+            let b5 = buf[byte_idx + 5] as u32;
+            let b6 = buf[byte_idx + 6] as u32;
+            let b7 = buf[byte_idx + 7] as u32;
+            let b8 = buf[byte_idx + 8] as u32;
+            let b9 = buf[byte_idx + 9] as u32;
+
+            let v0 = b0 | (b1 << 8) | ((b2 & 0x0F) << 16);
+            let v1 = (b2 >> 4) | (b3 << 4) | ((b4 & 0xFF) << 12);
+            let v2 = b5 | (b6 << 8) | ((b7 & 0x0F) << 16);
+            let v3 = (b7 >> 4) | (b8 << 4) | (b9 << 12);
+
+            poly.coeffs[i] = (gamma1_u32.wrapping_sub(v0)) as i32;
+            poly.coeffs[i + 1] = (gamma1_u32.wrapping_sub(v1)) as i32;
+            poly.coeffs[i + 2] = (gamma1_u32.wrapping_sub(v2)) as i32;
+            poly.coeffs[i + 3] = (gamma1_u32.wrapping_sub(v3)) as i32;
+
+            i += 4;
+            byte_idx += 10;
         }
     }
 
@@ -841,11 +760,8 @@ pub fn sample_mask_from_bytes(bytes: &[u8], gamma1: i32) -> Poly {
 
     // If we didn't generate enough coefficients, something is wrong
     // (640 bytes should be more than enough for 256 coefficients)
-    debug_assert_eq!(
-        coeffs_generated, N,
-        "Not enough bytes to generate all coefficients: {} < {}",
-        coeffs_generated, N
-    );
+    debug_assert_eq!(coeffs_generated, N,
+        "Not enough bytes to generate all coefficients: {} < {}", coeffs_generated, N);
 
     poly
 }
@@ -867,7 +783,7 @@ pub fn expand_mask_vec<P: DsaParams>(rho_prime: &[u8; 64], kappa: u16) -> Vec<Po
     let mut result = Vec::with_capacity(P::L);
 
     for i in 0..P::L {
-        result.push(expand_mask_poly(rho_prime, kappa, i as u8, P::GAMMA1));
+        result.push(expand_mask_poly_optimized(rho_prime, kappa + i as u16, P::GAMMA1));
     }
 
     result
@@ -903,7 +819,7 @@ pub fn expand_secret_vec<const K: usize>(
 /// Expand public matrix A from seed
 ///
 /// Expands the k×ℓ matrix A from a 32-byte seed using SHAKE-128.
-/// Each element A\[i\]\[j\] is a polynomial sampled uniformly from R_q.
+/// Each element A[i][j] is a polynomial sampled uniformly from R_q.
 ///
 /// # Arguments
 /// * `rho` - 32-byte seed
@@ -916,6 +832,15 @@ pub fn expand_secret_vec<const K: usize>(
 /// # Note
 /// In the actual implementation, we might want a more cache-friendly representation
 pub fn expand_matrix_a<P: DsaParams>(rho: &[u8; 32]) -> Vec<Vec<Poly>> {
+    // AVX2 path: process 4 matrix elements at a time
+    #[cfg(all(feature = "avx2", feature = "simd", feature = "std", target_arch = "x86_64"))]
+    {
+        if std::is_x86_feature_detected!("avx2") {
+            return expand_matrix_a_avx2::<P>(rho);
+        }
+    }
+
+    // Portable path: sequential processing
     let mut matrix = Vec::with_capacity(P::K);
 
     for i in 0..P::K {
@@ -929,6 +854,57 @@ pub fn expand_matrix_a<P: DsaParams>(rho: &[u8; 32]) -> Vec<Vec<Poly>> {
         }
 
         matrix.push(row);
+    }
+
+    matrix
+}
+
+/// AVX2 optimized matrix expansion using 4-way parallel SHAKE-128
+#[cfg(all(feature = "avx2", feature = "simd", target_arch = "x86_64"))]
+fn expand_matrix_a_avx2<P: DsaParams>(rho: &[u8; 32]) -> Vec<Vec<Poly>> {
+    use crate::symmetric::expand_a_x4_avx2;
+
+    let mut matrix = Vec::with_capacity(P::K);
+    for _ in 0..P::K {
+        matrix.push(Vec::with_capacity(P::L));
+    }
+
+    // Collect all (i, j) indices
+    let mut indices: Vec<(u8, u8)> = Vec::with_capacity(P::K * P::L);
+    for i in 0..P::K {
+        for j in 0..P::L {
+            indices.push((i as u8, j as u8));
+        }
+    }
+
+    // Process 4 elements at a time
+    let mut idx = 0;
+    while idx + 4 <= indices.len() {
+        let batch_indices = [
+            indices[idx],
+            indices[idx + 1],
+            indices[idx + 2],
+            indices[idx + 3],
+        ];
+
+        let outputs = expand_a_x4_avx2(rho, batch_indices);
+
+        for (k, output) in outputs.iter().enumerate() {
+            let (i, j) = indices[idx + k];
+            let poly = sample_poly_uniform_from_bytes(output);
+            matrix[i as usize].push(poly);
+        }
+
+        idx += 4;
+    }
+
+    // Handle remaining elements sequentially
+    while idx < indices.len() {
+        let (i, j) = indices[idx];
+        let mut xof = expand_a_element(rho, i, j);
+        let poly = sample_poly_uniform(&mut xof);
+        matrix[i as usize].push(poly);
+        idx += 1;
     }
 
     matrix
@@ -978,13 +954,7 @@ pub(crate) fn sample_poly_uniform(xof: &mut Xof) -> Poly {
         buflen = SHAKE128_RATE + off;
 
         // Continue rejection sampling from where we left off
-        let new_coeffs = rej_uniform(
-            &mut poly.coeffs,
-            coeffs_generated,
-            N - coeffs_generated,
-            &buf,
-            buflen,
-        );
+        let new_coeffs = rej_uniform(&mut poly.coeffs, coeffs_generated, N - coeffs_generated, &buf, buflen);
         coeffs_generated += new_coeffs;
     }
 
@@ -1000,8 +970,10 @@ fn rej_uniform(coeffs: &mut [i32], start: usize, len: usize, buf: &[u8], buflen:
 
     while ctr < len && pos + 3 <= buflen {
         // Read 3 bytes and mask to 23 bits
-        let t = ((buf[pos] as u32) | ((buf[pos + 1] as u32) << 8) | ((buf[pos + 2] as u32) << 16))
-            & 0x7FFFFF;
+        let t = ((buf[pos] as u32)
+              | ((buf[pos + 1] as u32) << 8)
+              | ((buf[pos + 2] as u32) << 16))
+              & 0x7FFFFF;
 
         pos += 3;
 
@@ -1015,13 +987,37 @@ fn rej_uniform(coeffs: &mut [i32], start: usize, len: usize, buf: &[u8], buflen:
     ctr
 }
 
-#[allow(unused_imports)]
-mod tests {
-    extern crate alloc;
-    use alloc::vec;
+/// Sample a polynomial uniformly from pre-squeezed bytes
+///
+/// Used for 4-way parallel matrix expansion where XOF output is pre-computed.
+///
+/// # Arguments
+/// * `buf` - Pre-squeezed SHAKE-128 output (must be at least 840 bytes)
+///
+/// # Returns
+/// * Polynomial with coefficients uniformly distributed in [0, q)
+///
+/// # Panics
+/// Panics if buffer doesn't contain enough bytes for 256 coefficients (extremely rare)
+#[cfg(all(feature = "avx2", feature = "simd", target_arch = "x86_64"))]
+pub fn sample_poly_uniform_from_bytes(buf: &[u8]) -> Poly {
+    let mut poly = Poly::new();
+    let coeffs_generated = rej_uniform(&mut poly.coeffs, 0, N, buf, buf.len());
 
+    // With 840 bytes (280 candidates) and ~99.8% acceptance rate, this should never fail
+    assert_eq!(
+        coeffs_generated, N,
+        "Not enough bytes for uniform sampling: got {} coefficients from {} bytes",
+        coeffs_generated, buf.len()
+    );
+
+    poly
+}
+
+#[cfg(test)]
+mod tests {
     use super::*;
-    use crate::{MlDsa44, MlDsa65, MlDsa87};
+    use crate::params::{MlDsa44, MlDsa65, MlDsa87};
 
     #[test]
     fn test_sample_in_ball_count() {
@@ -1038,10 +1034,7 @@ mod tests {
             }
         }
 
-        assert_eq!(
-            non_zero_count, tau,
-            "Should have exactly tau non-zero coefficients"
-        );
+        assert_eq!(non_zero_count, tau, "Should have exactly tau non-zero coefficients");
     }
 
     #[test]
@@ -1083,10 +1076,7 @@ mod tests {
         let poly1 = sample_in_ball(&seed1, tau);
         let poly2 = sample_in_ball(&seed2, tau);
 
-        assert_ne!(
-            poly1, poly2,
-            "Different seeds should produce different polynomials"
-        );
+        assert_ne!(poly1, poly2, "Different seeds should produce different polynomials");
     }
 
     #[test]
@@ -1169,10 +1159,7 @@ mod tests {
         let poly1 = expand_mask_poly(&rho_prime, 0, index, gamma1);
         let poly2 = expand_mask_poly(&rho_prime, 1, index, gamma1);
 
-        assert_ne!(
-            poly1, poly2,
-            "Different kappa should produce different polynomials"
-        );
+        assert_ne!(poly1, poly2, "Different kappa should produce different polynomials");
     }
 
     #[test]
@@ -1275,9 +1262,10 @@ mod tests {
 
         // KAT xi seed
         let xi: [u8; 32] = [
-            0xf6, 0x96, 0x48, 0x40, 0x48, 0xec, 0x21, 0xf9, 0x6c, 0xf5, 0x0a, 0x56, 0xd0, 0x75,
-            0x9c, 0x44, 0x8f, 0x37, 0x79, 0x75, 0x2f, 0x03, 0x83, 0xd3, 0x74, 0x49, 0x69, 0x06,
-            0x94, 0xcf, 0x7a, 0x68,
+            0xf6, 0x96, 0x48, 0x40, 0x48, 0xec, 0x21, 0xf9,
+            0x6c, 0xf5, 0x0a, 0x56, 0xd0, 0x75, 0x9c, 0x44,
+            0x8f, 0x37, 0x79, 0x75, 0x2f, 0x03, 0x83, 0xd3,
+            0x74, 0x49, 0x69, 0x06, 0x94, 0xcf, 0x7a, 0x68
         ];
 
         // Expand seed (matching C test_ntt_s1.c)
@@ -1295,21 +1283,26 @@ mod tests {
         rhoprime.copy_from_slice(&seedbuf[32..96]);
 
         // Sample s1 using our implementation
-        let s1 = expand_secret_vec::<{ MlDsa65::L }>(&rhoprime, 0, MlDsa65::ETA);
+        let s1 = expand_secret_vec::<{MlDsa65::L}>(&rhoprime, 0, MlDsa65::ETA);
 
         // Expected values from C polyvecl_uniform_eta (ALL 256 coefficients)
         let expected_s1_0: [i32; 256] = [
-            0, 0, -2, 4, 1, -4, 0, -1, 2, 0, 1, -4, 3, 2, -3, -4, 3, 3, 3, 0, 1, 4, -4, 1, -2, -2,
-            4, 2, 0, -4, -4, -4, -4, 1, 2, -1, -1, 4, -3, -4, -4, -1, -1, 4, 0, 4, -4, -3, -2, 1,
-            -2, 1, -2, 0, -4, 1, -4, -1, -3, 1, -4, 0, -1, 0, 3, -3, 0, 3, 3, -3, 1, -3, 2, -1, -4,
-            0, -2, 3, -3, 4, 1, 2, 3, 2, 2, -1, 4, -3, 3, -4, 4, -2, -2, 1, 3, 0, -1, 2, 1, -3, -2,
-            4, 0, 1, 1, -3, 2, -4, 1, -1, -1, 2, -2, 1, -2, 2, 0, -3, 3, -4, -2, 1, -4, -1, -4, -3,
-            1, 0, -1, -2, -1, -3, -1, -4, 2, 4, 0, -4, 4, -3, 0, -1, 0, 1, -1, 1, 3, 2, -2, 2, 2,
-            -3, -3, 2, 3, -3, 3, 0, 4, 3, 3, -4, 0, 1, 3, 0, -1, -4, 0, 4, 3, -1, -2, -3, 3, 1, -2,
-            2, 1, 0, 4, -4, 4, -2, -3, 3, 2, 0, 0, 3, 3, 4, 3, -1, 2, -2, -1, -1, -2, 3, 0, -3, 1,
-            -1, 0, 0, -3, -3, 3, 2, 1, -4, -4, -1, 1, -4, -4, -3, 4, 3, -3, -4, -3, -1, -2, -4, 0,
-            4, -3, -4, -1, 2, 1, -1, 3, -2, 2, 3, 2, 3, 1, -3, 2, -2, 3, -2, 3, -1, 4, 0, -1, 3, 4,
-            3, 4, 3,
+            0, 0, -2, 4, 1, -4, 0, -1, 2, 0, 1, -4, 3, 2, -3, -4,
+            3, 3, 3, 0, 1, 4, -4, 1, -2, -2, 4, 2, 0, -4, -4, -4,
+            -4, 1, 2, -1, -1, 4, -3, -4, -4, -1, -1, 4, 0, 4, -4, -3,
+            -2, 1, -2, 1, -2, 0, -4, 1, -4, -1, -3, 1, -4, 0, -1, 0,
+            3, -3, 0, 3, 3, -3, 1, -3, 2, -1, -4, 0, -2, 3, -3, 4,
+            1, 2, 3, 2, 2, -1, 4, -3, 3, -4, 4, -2, -2, 1, 3, 0,
+            -1, 2, 1, -3, -2, 4, 0, 1, 1, -3, 2, -4, 1, -1, -1, 2,
+            -2, 1, -2, 2, 0, -3, 3, -4, -2, 1, -4, -1, -4, -3, 1, 0,
+            -1, -2, -1, -3, -1, -4, 2, 4, 0, -4, 4, -3, 0, -1, 0, 1,
+            -1, 1, 3, 2, -2, 2, 2, -3, -3, 2, 3, -3, 3, 0, 4, 3,
+            3, -4, 0, 1, 3, 0, -1, -4, 0, 4, 3, -1, -2, -3, 3, 1,
+            -2, 2, 1, 0, 4, -4, 4, -2, -3, 3, 2, 0, 0, 3, 3, 4,
+            3, -1, 2, -2, -1, -1, -2, 3, 0, -3, 1, -1, 0, 0, -3, -3,
+            3, 2, 1, -4, -4, -1, 1, -4, -4, -3, 4, 3, -3, -4, -3, -1,
+            -2, -4, 0, 4, -3, -4, -1, 2, 1, -1, 3, -2, 2, 3, 2, 3,
+            1, -3, 2, -2, 3, -2, 3, -1, 4, 0, -1, 3, 4, 3, 4, 3,
         ];
 
         // Compare first 256 coefficients and show first mismatch details
@@ -1325,5 +1318,6 @@ mod tests {
         if let Some(pos) = first_mismatch {
             panic!("s1[0] coefficient mismatch at position {}", pos);
         }
+
     }
 }

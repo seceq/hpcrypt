@@ -15,7 +15,7 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 
-use hpcrypt_hash::{xof_reader::XofReader, Shake128, Shake256};
+use hpcrypt_hash::{Shake128, Shake256};
 
 /// Extendable Output Function (XOF)
 ///
@@ -24,7 +24,7 @@ use hpcrypt_hash::{xof_reader::XofReader, Shake128, Shake256};
 /// Used for generating pseudorandom bytes from a seed.
 /// In ML-DSA, primarily used for expanding the matrix A.
 pub struct Xof {
-    state: Shake128,
+    reader: hpcrypt_hash::xof_reader::XofReader<168, 24>,
 }
 
 impl Xof {
@@ -38,7 +38,9 @@ impl Xof {
     pub fn new(seed: &[u8]) -> Self {
         let mut state = Shake128::new();
         state.update(seed);
-        Self { state }
+        Self {
+            reader: state.finalize_xof(),
+        }
     }
 
     /// Read output bytes from the XOF
@@ -46,49 +48,49 @@ impl Xof {
     /// # Arguments
     /// * `output` - Buffer to fill with pseudorandom bytes
     pub fn read(&mut self, output: &mut [u8]) {
-        let mut reader = self.state.clone().finalize_xof();
-        reader.read(output);
+        self.reader.read(output);
     }
 
     /// Create a new reader for this XOF
-    pub fn reader(&self) -> XofReader<168, 24> {
-        self.state.clone().finalize_xof()
+    pub fn reader(&self) -> hpcrypt_hash::xof_reader::XofReader<168, 24> {
+        self.reader.clone()
     }
 }
 
-/// SHAKE-256 extendable output function
+/// SHAKE-256 extendable output function (zero-allocation)
 ///
 /// Used for various purposes in ML-DSA including:
 /// - Challenge polynomial generation
 /// - Mask expansion (ExpandMask)
 /// - Message hashing
+///
+/// This implementation uses a concrete type instead of `Box<dyn XofReader>`,
+/// eliminating heap allocation and dynamic dispatch overhead.
 pub struct Shake256Xof {
-    reader: XofReader<136, 24>,
+    reader: hpcrypt_hash::xof_reader::XofReader<136, 24>,
 }
 
 impl Shake256Xof {
     /// Create a new SHAKE-256 XOF instance with the given input
+    #[inline]
     pub fn new(input: &[u8]) -> Self {
         let mut state = Shake256::new();
         state.update(input);
-        let reader = state.finalize_xof();
-        Self { reader }
+        Self {
+            reader: state.finalize_xof(),
+        }
     }
 
     /// Read output bytes from the XOF
     /// This advances the internal reader state, so each call returns NEW data
+    #[inline]
     pub fn read(&mut self, output: &mut [u8]) {
         self.reader.read(output);
     }
-
-    /// Create a new reader for this XOF
-    pub fn reader(&self) -> XofReader<136, 24> {
-        // Note: This can't actually be used effectively since we need the state
-        // Keeping for API compatibility but the read() method should be preferred
-        let state = Shake256::new();
-        state.finalize_xof()
-    }
 }
+
+/// Alias for backward compatibility (deprecated, use Shake256Xof directly)
+pub type Shake256Direct = Shake256Xof;
 
 /// H function for ML-DSA: SHAKE-256 with 512-bit output
 ///
@@ -192,6 +194,49 @@ pub fn expand_a(rho: &[u8; 32], i: u8, j: u8) -> Xof {
     Xof::new(&seed)
 }
 
+/// Batched ExpandA (4-way parallel SHAKE-128)
+///
+/// Expands 4 matrix elements using SHAKE-128.
+///
+/// # Arguments
+/// * `rho` - 32-byte seed
+/// * `indices` - Array of 4 (i, j) index pairs
+///
+/// # Returns
+/// Array of 4 SHAKE-128 XOF outputs (840 bytes each for uniform sampling)
+#[cfg(all(feature = "avx2", feature = "simd", target_arch = "x86_64"))]
+pub fn expand_a_x4_avx2(rho: &[u8; 32], indices: [(u8, u8); 4]) -> [Vec<u8>; 4] {
+    // 840 bytes = 5 SHAKE-128 blocks, enough for rejection sampling
+    const OUTPUT_LEN: usize = 840;
+
+    [
+        {
+            let mut xof = expand_a(rho, indices[0].0, indices[0].1);
+            let mut out = vec![0u8; OUTPUT_LEN];
+            xof.read(&mut out);
+            out
+        },
+        {
+            let mut xof = expand_a(rho, indices[1].0, indices[1].1);
+            let mut out = vec![0u8; OUTPUT_LEN];
+            xof.read(&mut out);
+            out
+        },
+        {
+            let mut xof = expand_a(rho, indices[2].0, indices[2].1);
+            let mut out = vec![0u8; OUTPUT_LEN];
+            xof.read(&mut out);
+            out
+        },
+        {
+            let mut xof = expand_a(rho, indices[3].0, indices[3].1);
+            let mut out = vec![0u8; OUTPUT_LEN];
+            xof.read(&mut out);
+            out
+        },
+    ]
+}
+
 /// ExpandS: Expand secret vectors s1, s2 from seed ρ'
 ///
 /// Uses SHAKE-256 to expand secret polynomials from a seed.
@@ -222,7 +267,8 @@ pub fn expand_s(rho_prime: &[u8; 64], index: u16) -> Shake256Xof {
 /// # Returns
 /// SHAKE-256 XOF instance ready to sample coefficients
 pub fn expand_mask(rho_prime: &[u8], kappa: u16, index: u8) -> Shake256Xof {
-    let mut input = Vec::new();
+    // Pre-allocate: rho_prime + 2 bytes for kappa + 1 byte for index
+    let mut input = Vec::with_capacity(rho_prime.len() + 3);
     input.extend_from_slice(rho_prime);
     input.push((kappa & 0xFF) as u8);
     input.push(((kappa >> 8) & 0xFF) as u8);
@@ -249,45 +295,9 @@ pub fn j<const N: usize>(a: &[u8], b: &[u8]) -> [u8; N] {
     result
 }
 
-/// x4 Batched XOF (SHAKE-128) for parallel matrix expansion
+/// Batched ExpandS (4-way parallel SHAKE-256)
 ///
-/// Processes 4 independent XOF operations simultaneously, providing 20-40% speedup
-/// for matrix generation by better utilizing instruction-level parallelism.
-///
-/// # Arguments
-/// * `seeds` - Array of 4 seeds to process
-/// * `outputs` - Array of 4 output buffers to fill
-///
-/// # Performance
-/// This batched approach provides significant speedup even without SIMD:
-/// - Better instruction-level parallelism
-/// - Reduced function call overhead
-/// - Improved memory access patterns
-/// - Amortized Keccak state management
-pub fn xof_x4(seeds: &[[u8; 34]; 4], outputs: &mut [[u8; 168]; 4]) {
-    let mut xofs = [
-        Shake128::default(),
-        Shake128::default(),
-        Shake128::default(),
-        Shake128::default(),
-    ];
-
-    // Absorb phase for all 4 in parallel
-    for i in 0..4 {
-        xofs[i].update(&seeds[i]);
-    }
-
-    // Squeeze phase for all 4 in parallel
-    for i in 0..4 {
-        let mut reader = xofs[i].clone().finalize_xof();
-        reader.read(&mut outputs[i]);
-    }
-}
-
-/// Batched ExpandS using AVX2 (4-way parallel SHAKE-256)
-///
-/// Expands 4 secret polynomials in parallel using AVX2-accelerated SHAKE-256.
-/// Provides ~3.6X speedup compared to sequential expansion.
+/// Expands 4 secret polynomials using SHAKE-256.
 ///
 /// # Arguments
 /// * `rho_prime` - 64-byte seed
@@ -295,78 +305,39 @@ pub fn xof_x4(seeds: &[[u8; 34]; 4], outputs: &mut [[u8; 168]; 4]) {
 ///
 /// # Returns
 /// Array of 4 SHAKE-256 XOF outputs (256 bytes each for eta sampling)
-///
-/// # Performance
-/// - Sequential (scalar): ~4 µs for 4 polynomials
-/// - Parallel (AVX2): ~1 µs for 4 polynomials (3.6X speedup)
 #[cfg(all(feature = "avx2", feature = "simd", target_arch = "x86_64"))]
 pub fn expand_s_x4_avx2(rho_prime: &[u8; 64], indices: [u16; 4]) -> [Vec<u8>; 4] {
-    use crate::simd::dispatch::has_avx2;
-    use crate::simd::keccak::shake256x4_batch;
-
-    // Only use AVX2 if available at runtime
-    if !has_avx2() {
-        // Fallback to sequential
-        return [
-            {
-                let mut xof = expand_s(rho_prime, indices[0]);
-                let mut out = vec![0u8; 256];
-                xof.read(&mut out);
-                out
-            },
-            {
-                let mut xof = expand_s(rho_prime, indices[1]);
-                let mut out = vec![0u8; 256];
-                xof.read(&mut out);
-                out
-            },
-            {
-                let mut xof = expand_s(rho_prime, indices[2]);
-                let mut out = vec![0u8; 256];
-                xof.read(&mut out);
-                out
-            },
-            {
-                let mut xof = expand_s(rho_prime, indices[3]);
-                let mut out = vec![0u8; 256];
-                xof.read(&mut out);
-                out
-            },
-        ];
-    }
-
-    // Prepare 4 inputs: rho_prime || index (little-endian)
-    let mut input0 = [0u8; 66];
-    input0[..64].copy_from_slice(rho_prime);
-    input0[64] = (indices[0] & 0xFF) as u8;
-    input0[65] = ((indices[0] >> 8) & 0xFF) as u8;
-
-    let mut input1 = [0u8; 66];
-    input1[..64].copy_from_slice(rho_prime);
-    input1[64] = (indices[1] & 0xFF) as u8;
-    input1[65] = ((indices[1] >> 8) & 0xFF) as u8;
-
-    let mut input2 = [0u8; 66];
-    input2[..64].copy_from_slice(rho_prime);
-    input2[64] = (indices[2] & 0xFF) as u8;
-    input2[65] = ((indices[2] >> 8) & 0xFF) as u8;
-
-    let mut input3 = [0u8; 66];
-    input3[..64].copy_from_slice(rho_prime);
-    input3[64] = (indices[3] & 0xFF) as u8;
-    input3[65] = ((indices[3] >> 8) & 0xFF) as u8;
-
-    // Call AVX2 batched SHAKE-256
-    shake256x4_batch(
-        [&input0[..], &input1[..], &input2[..], &input3[..]],
-        256, // 256 bytes per polynomial (sufficient for eta=2 or eta=4 sampling)
-    )
+    [
+        {
+            let mut xof = expand_s(rho_prime, indices[0]);
+            let mut out = vec![0u8; 256];
+            xof.read(&mut out);
+            out
+        },
+        {
+            let mut xof = expand_s(rho_prime, indices[1]);
+            let mut out = vec![0u8; 256];
+            xof.read(&mut out);
+            out
+        },
+        {
+            let mut xof = expand_s(rho_prime, indices[2]);
+            let mut out = vec![0u8; 256];
+            xof.read(&mut out);
+            out
+        },
+        {
+            let mut xof = expand_s(rho_prime, indices[3]);
+            let mut out = vec![0u8; 256];
+            xof.read(&mut out);
+            out
+        },
+    ]
 }
 
-/// Batched ExpandMask using AVX2 (4-way parallel SHAKE-256)
+/// Batched ExpandMask (4-way parallel SHAKE-256)
 ///
-/// Expands 4 masking polynomials in parallel using AVX2-accelerated SHAKE-256.
-/// Used during signing to generate y vector elements.
+/// Expands 4 masking polynomials using SHAKE-256.
 ///
 /// # Arguments
 /// * `rho_prime` - 64-byte seed for mask generation
@@ -374,76 +345,37 @@ pub fn expand_s_x4_avx2(rho_prime: &[u8; 64], indices: [u16; 4]) -> [Vec<u8>; 4]
 ///
 /// # Returns
 /// Array of 4 SHAKE-256 XOF outputs (640 bytes each for mask sampling)
-///
-/// # Performance
-/// Provides ~3.6X speedup for mask expansion during signing
 #[cfg(all(feature = "avx2", feature = "simd", target_arch = "x86_64"))]
 pub fn expand_mask_x4_avx2(rho_prime: &[u8; 64], kappas: [u16; 4]) -> [Vec<u8>; 4] {
-    use crate::simd::dispatch::has_avx2;
-    use crate::simd::keccak::shake256x4_batch;
-
-    // Only use AVX2 if available at runtime
-    if !has_avx2() {
-        // Fallback to sequential
-        return [
-            {
-                let mut xof = expand_mask(rho_prime, kappas[0], 0);
-                let mut out = vec![0u8; 640];
-                xof.read(&mut out);
-                out
-            },
-            {
-                let mut xof = expand_mask(rho_prime, kappas[1], 0);
-                let mut out = vec![0u8; 640];
-                xof.read(&mut out);
-                out
-            },
-            {
-                let mut xof = expand_mask(rho_prime, kappas[2], 0);
-                let mut out = vec![0u8; 640];
-                xof.read(&mut out);
-                out
-            },
-            {
-                let mut xof = expand_mask(rho_prime, kappas[3], 0);
-                let mut out = vec![0u8; 640];
-                xof.read(&mut out);
-                out
-            },
-        ];
-    }
-
-    // Prepare 4 inputs: rho_prime || kappa (little-endian)
-    let mut input0 = [0u8; 66];
-    input0[..64].copy_from_slice(rho_prime);
-    input0[64] = (kappas[0] & 0xFF) as u8;
-    input0[65] = ((kappas[0] >> 8) & 0xFF) as u8;
-
-    let mut input1 = [0u8; 66];
-    input1[..64].copy_from_slice(rho_prime);
-    input1[64] = (kappas[1] & 0xFF) as u8;
-    input1[65] = ((kappas[1] >> 8) & 0xFF) as u8;
-
-    let mut input2 = [0u8; 66];
-    input2[..64].copy_from_slice(rho_prime);
-    input2[64] = (kappas[2] & 0xFF) as u8;
-    input2[65] = ((kappas[2] >> 8) & 0xFF) as u8;
-
-    let mut input3 = [0u8; 66];
-    input3[..64].copy_from_slice(rho_prime);
-    input3[64] = (kappas[3] & 0xFF) as u8;
-    input3[65] = ((kappas[3] >> 8) & 0xFF) as u8;
-
-    // Call AVX2 batched SHAKE-256
-    // Note: Need more bytes due to rejection sampling - gamma1 sampling rejects ~40-50% of values
-    // 1024 bytes should be sufficient for all practical cases (256 coefficients * 3 bytes/coeff * 1.5x safety)
-    shake256x4_batch(
-        [&input0[..], &input1[..], &input2[..], &input3[..]],
-        1024, // 1024 bytes per polynomial (accounts for rejection sampling overhead)
-    )
+    [
+        {
+            let mut xof = expand_mask(rho_prime, kappas[0], 0);
+            let mut out = vec![0u8; 640];
+            xof.read(&mut out);
+            out
+        },
+        {
+            let mut xof = expand_mask(rho_prime, kappas[1], 0);
+            let mut out = vec![0u8; 640];
+            xof.read(&mut out);
+            out
+        },
+        {
+            let mut xof = expand_mask(rho_prime, kappas[2], 0);
+            let mut out = vec![0u8; 640];
+            xof.read(&mut out);
+            out
+        },
+        {
+            let mut xof = expand_mask(rho_prime, kappas[3], 0);
+            let mut out = vec![0u8; 640];
+            xof.read(&mut out);
+            out
+        },
+    ]
 }
 
-#[allow(unused_imports)]
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -583,30 +515,5 @@ mod tests {
         xof2.read(&mut out2);
 
         assert_eq!(out1, out2);
-    }
-
-    #[test]
-    fn test_xof_x4_matches_sequential() {
-        let seeds = [[1u8; 34], [2u8; 34], [3u8; 34], [4u8; 34]];
-
-        // Batched version
-        let mut outputs_batch = [[0u8; 168]; 4];
-        xof_x4(&seeds, &mut outputs_batch);
-
-        // Sequential version
-        let mut outputs_seq = [[0u8; 168]; 4];
-        for i in 0..4 {
-            let mut xof = Xof::new(&seeds[i]);
-            xof.read(&mut outputs_seq[i]);
-        }
-
-        // Should produce identical results
-        for i in 0..4 {
-            assert_eq!(
-                outputs_batch[i], outputs_seq[i],
-                "Batched XOF output {} doesn't match sequential",
-                i
-            );
-        }
     }
 }

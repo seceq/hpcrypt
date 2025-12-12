@@ -2,7 +2,7 @@
 //!
 //! Implements the NTT-based polynomial multiplication for ML-DSA (FIPS 204).
 //!
-//! The NTT transforms polynomials in R_q = Z_q\[X\]/(X^256 + 1) into the frequency domain
+//! The NTT transforms polynomials in R_q = Z_q[X]/(X^256 + 1) into the frequency domain
 //! where multiplication becomes O(n) pointwise multiplication instead of O(n²) convolution.
 //!
 //! # Algorithm
@@ -36,136 +36,57 @@ use crate::poly::Poly;
 /// For q = 8380417, we use ζ = 1753 (primitive 512-th root of unity).
 /// The values are precomputed offline from the reference implementation.
 pub const ZETAS: [i32; 256] = [
-    0, 25847, -2608894, -518909, 237124, -777960, -876248, 466468, 1826347, 2353451, -359251,
-    -2091905, 3119733, -2884855, 3111497, 2680103, 2725464, 1024112, -1079900, 3585928, -549488,
-    -1119584, 2619752, -2108549, -2118186, -3859737, -1399561, -3277672, 1757237, -19422, 4010497,
-    280005, 2706023, 95776, 3077325, 3530437, -1661693, -3592148, -2537516, 3915439, -3861115,
-    -3043716, 3574422, -2867647, 3539968, -300467, 2348700, -539299, -1699267, -1643818, 3505694,
-    -3821735, 3507263, -2140649, -1600420, 3699596, 811944, 531354, 954230, 3881043, 3900724,
-    -2556880, 2071892, -2797779, -3930395, -1528703, -3677745, -3041255, -1452451, 3475950,
-    2176455, -1585221, -1257611, 1939314, -4083598, -1000202, -3190144, -3157330, -3632928, 126922,
-    3412210, -983419, 2147896, 2715295, -2967645, -3693493, -411027, -2477047, -671102, -1228525,
-    -22981, -1308169, -381987, 1349076, 1852771, -1430430, -3343383, 264944, 508951, 3097992,
-    44288, -1100098, 904516, 3958618, -3724342, -8578, 1653064, -3249728, 2389356, -210977, 759969,
-    -1316856, 189548, -3553272, 3159746, -1851402, -2409325, -177440, 1315589, 1341330, 1285669,
-    -1584928, -812732, -1439742, -3019102, -3881060, -3628969, 3839961, 2091667, 3407706, 2316500,
-    3817976, -3342478, 2244091, -2446433, -3562462, 266997, 2434439, -1235728, 3513181, -3520352,
-    -3759364, -1197226, -3193378, 900702, 1859098, 909542, 819034, 495491, -1613174, -43260,
-    -522500, -655327, -3122442, 2031748, 3207046, -3556995, -525098, -768622, -3595838, 342297,
-    286988, -2437823, 4108315, 3437287, -3342277, 1735879, 203044, 2842341, 2691481, -2590150,
-    1265009, 4055324, 1247620, 2486353, 1595974, -3767016, 1250494, 2635921, -3548272, -2994039,
-    1869119, 1903435, -1050970, -1333058, 1237275, -3318210, -1430225, -451100, 1312455, 3306115,
-    -1962642, -1279661, 1917081, -2546312, -1374803, 1500165, 777191, 2235880, 3406031, -542412,
-    -2831860, -1671176, -1846953, -2584293, -3724270, 594136, -3776993, -2013608, 2432395, 2454455,
-    -164721, 1957272, 3369112, 185531, -1207385, -3183426, 162844, 1616392, 3014001, 810149,
-    1652634, -3694233, -1799107, -3038916, 3523897, 3866901, 269760, 2213111, -975884, 1717735,
-    472078, -426683, 1723600, -1803090, 1910376, -1667432, -1104333, -260646, -3833893, -2939036,
-    -2235985, -420899, -2286327, 183443, -976891, 1612842, -3545687, -554416, 3919660, -48306,
-    -1362209, 3937738, 1400424, -846154, 1976782,
+    0, 25847, -2608894, -518909, 237124, -777960, -876248, 466468,
+    1826347, 2353451, -359251, -2091905, 3119733, -2884855, 3111497, 2680103,
+    2725464, 1024112, -1079900, 3585928, -549488, -1119584, 2619752, -2108549,
+    -2118186, -3859737, -1399561, -3277672, 1757237, -19422, 4010497, 280005,
+    2706023, 95776, 3077325, 3530437, -1661693, -3592148, -2537516, 3915439,
+    -3861115, -3043716, 3574422, -2867647, 3539968, -300467, 2348700, -539299,
+    -1699267, -1643818, 3505694, -3821735, 3507263, -2140649, -1600420, 3699596,
+    811944, 531354, 954230, 3881043, 3900724, -2556880, 2071892, -2797779,
+    -3930395, -1528703, -3677745, -3041255, -1452451, 3475950, 2176455, -1585221,
+    -1257611, 1939314, -4083598, -1000202, -3190144, -3157330, -3632928, 126922,
+    3412210, -983419, 2147896, 2715295, -2967645, -3693493, -411027, -2477047,
+    -671102, -1228525, -22981, -1308169, -381987, 1349076, 1852771, -1430430,
+    -3343383, 264944, 508951, 3097992, 44288, -1100098, 904516, 3958618,
+    -3724342, -8578, 1653064, -3249728, 2389356, -210977, 759969, -1316856,
+    189548, -3553272, 3159746, -1851402, -2409325, -177440, 1315589, 1341330,
+    1285669, -1584928, -812732, -1439742, -3019102, -3881060, -3628969, 3839961,
+    2091667, 3407706, 2316500, 3817976, -3342478, 2244091, -2446433, -3562462,
+    266997, 2434439, -1235728, 3513181, -3520352, -3759364, -1197226, -3193378,
+    900702, 1859098, 909542, 819034, 495491, -1613174, -43260, -522500,
+    -655327, -3122442, 2031748, 3207046, -3556995, -525098, -768622, -3595838,
+    342297, 286988, -2437823, 4108315, 3437287, -3342277, 1735879, 203044,
+    2842341, 2691481, -2590150, 1265009, 4055324, 1247620, 2486353, 1595974,
+    -3767016, 1250494, 2635921, -3548272, -2994039, 1869119, 1903435, -1050970,
+    -1333058, 1237275, -3318210, -1430225, -451100, 1312455, 3306115, -1962642,
+    -1279661, 1917081, -2546312, -1374803, 1500165, 777191, 2235880, 3406031,
+    -542412, -2831860, -1671176, -1846953, -2584293, -3724270, 594136, -3776993,
+    -2013608, 2432395, 2454455, -164721, 1957272, 3369112, 185531, -1207385,
+    -3183426, 162844, 1616392, 3014001, 810149, 1652634, -3694233, -1799107,
+    -3038916, 3523897, 3866901, 269760, 2213111, -975884, 1717735, 472078,
+    -426683, 1723600, -1803090, 1910376, -1667432, -1104333, -260646, -3833893,
+    -2939036, -2235985, -420899, -2286327, 183443, -976891, 1612842, -3545687,
+    -554416, 3919660, -48306, -1362209, 3937738, 1400424, -846154, 1976782
 ];
 
 /// Precomputed Shoup constants for fast modular multiplication
 ///
-/// For each ZETAS[i], ZETAS_SHOUP[i] = floor((ZETAS[i] mod Q) * 2^32 / Q)
-/// This enables Shoup's multiplication algorithm which has better instruction-level
-/// parallelism than Montgomery reduction, leading to ~5-10% NTT speedup.
-///
-/// Computed offline using: zetas_shoup[i] = ((zetas[i] % Q) * 2^32) / Q
-/// Note: u32 type because values can exceed 2^31
-#[allow(dead_code)]
-const ZETAS_SHOUP: [u32; 256] = [
-    0, 13246598, 2957908005, 4029026211, 121526151, 3896262463, 3845889821, 239065049, 936003618,
-    1206144643, 4110851004, 3222865088, 1598864496, 2816477874, 1594643542, 1373553933, 1396801465,
-    524857837, 3741518084, 1837789633, 4013354461, 3721180017, 1342624020, 3214335031, 3209396065,
-    2316850433, 3577691685, 2615158994, 900584713, 4285013512, 2055381427, 143502682, 1386837944,
-    49085240, 1577130378, 1809350472, 3443348922, 2453989909, 2994489260, 2006664161, 2316144207,
-    2735061544, 1831892803, 2825296982, 1814235113, 4140977830, 1203709754, 4018576327, 3424092231,
-    3452509868, 1796669674, 2336326474, 1797473787, 3197883768, 3474751361, 1896044531, 416121647,
-    272319152, 489043283, 1989036197, 1999122717, 2984565202, 1061845535, 2861104362, 2280638177,
-    3511506354, 2410121410, 2736322808, 3550585537, 1781425861, 1115434118, 3482540855, 3650441120,
-    993899254, 2202121574, 3782363343, 2660017131, 2676834320, 2433090142, 65047579, 1748759084,
-    3790964637, 1100797618, 1391589848, 2774047964, 2402050554, 4084315782, 3025479649, 3951027234,
-    3665347708, 4283189523, 3624530124, 4099198795, 691402026, 949545929, 3561871309, 2581482078,
-    135783913, 260837605, 1587722224, 22697618, 3731166600, 463564836, 2028793417, 2386240428,
-    4290571067, 847196006, 2629480306, 1224545971, 4186841493, 389484437, 3620078032, 97143431,
-    2473913876, 1619371176, 3346122979, 3060187203, 4204029220, 674239925, 687432198, 658905912,
-    3482691018, 3878441798, 3557098905, 2747676230, 2305922386, 2435119131, 1967981654, 1071980231,
-    1746450782, 1187207240, 1956714332, 2581945891, 1150097597, 3041169337, 2469203997, 136836076,
-    1247651028, 3661656167, 1800506764, 2490785390, 2368291638, 3681388459, 2658359705, 461610160,
-    952788519, 466140663, 419755275, 253939349, 3468214931, 4272796527, 4027185822, 3959111928,
-    2694714435, 1041271718, 1643612446, 2472005837, 4025854346, 3901048192, 2452098783, 175427358,
-    147081472, 3045581966, 2105513194, 1761611057, 2582048904, 889638729, 104060136, 1456700977,
-    1379385163, 2967514313, 648317653, 2078355284, 639405783, 1274256975, 817937357, 2364369985,
-    640878709, 1350910639, 2476476378, 2760521028, 957924286, 975511251, 3756344721, 3611774500,
-    634103966, 2594383252, 3561976371, 4063778353, 672633748, 1694385351, 3289112431, 3639140486,
-    982504832, 2989981307, 3590380170, 768835203, 398310719, 1145889456, 1745592343, 4016980914,
-    2843637835, 3438488881, 3348403093, 2970516028, 2386277328, 304494954, 2359256768, 3262992334,
-    1246603477, 1257909237, 4210547713, 1003102736, 1726671340, 95084716, 3676181967, 2663460109,
-    83457619, 828401591, 1544676801, 415201708, 846975631, 2401671303, 3372924189, 2737521546,
-    1805998719, 1981788416, 138252115, 1134220333, 3794826328, 880339922, 241940176, 4076292076,
-    883345737, 3370882899, 979068516, 3440407682, 3728996161, 4161386109, 2330095494, 2788710089,
-    3149024027, 4079256378, 3123223730, 94014615, 3794310240, 826582214, 2477801192, 4010828858,
-    2008827426, 4270210450, 3596834601, 2018092408, 717717898, 3861313009, 1013101620,
-];
-
-/// Precomputed Shoup constants for negated twiddle factors
-///
-/// For each -ZETAS[i], ZETAS_SHOUP_NEG[i] = floor(((-ZETAS[i]) mod Q) * 2^32 / Q)
-/// Used in inverse NTT where twiddle factors are negated.
-///
-/// This enables Shoup's multiplication algorithm for inverse NTT, providing
-/// better instruction-level parallelism than Montgomery reduction.
-///
-/// Generated by: /tmp/compute_shoup_negated.py
-#[allow(dead_code)]
-const ZETAS_SHOUP_NEG: [u32; 256] = [
-    0, 4281720697, 1337059290, 265941084, 4173441144, 398704832, 449077474, 4055902246, 3358963677,
-    3088822652, 184116291, 1072102207, 2696102799, 1478489421, 2700323753, 2921413362, 2898165830,
-    3770109458, 553449211, 2457177662, 281612834, 573787278, 2952343275, 1080632264, 1085571230,
-    1978116862, 717275610, 1679808301, 3394382582, 9953783, 2239585868, 4151464613, 2908129351,
-    4245882055, 2717836917, 2485616823, 851618373, 1840977386, 1300478035, 2288303134, 1978823088,
-    1559905751, 2463074492, 1469670313, 2480732182, 153989465, 3091257541, 276390968, 870875064,
-    842457427, 2498297621, 1958640821, 2497493508, 1097083527, 820215934, 2398922764, 3878845648,
-    4022648143, 3805924012, 2305931098, 2295844578, 1310402093, 3233121760, 1433862933, 2014329118,
-    783460941, 1884845885, 1558644487, 744381758, 2513541434, 3179533177, 812426440, 644526175,
-    3301068041, 2092845721, 512603952, 1634950164, 1618132975, 1861877153, 4229919716, 2546208211,
-    504002658, 3194169677, 2903377447, 1520919331, 1892916741, 210651513, 1269487646, 343940061,
-    629619587, 11777772, 670437171, 195768500, 3603565269, 3345421366, 733095986, 1713485217,
-    4159183382, 4034129690, 2707245071, 4272269677, 563800695, 3831402459, 2266173878, 1908726867,
-    4396228, 3447771289, 1665486989, 3070421324, 108125802, 3905482858, 674889263, 4197823864,
-    1821053419, 2675596119, 948844316, 1234780092, 90938075, 3620727370, 3607535097, 3636061383,
-    812276277, 416525497, 737868390, 1547291065, 1989044909, 1859848164, 2326985641, 3222987064,
-    2548516513, 3107760055, 2338252963, 1713021404, 3144869698, 1253797958, 1825763298, 4158131219,
-    3047316267, 633311128, 2494460531, 1804181905, 1926675657, 613578836, 1636607590, 3833357135,
-    3342178776, 3828826632, 3875212020, 4041027946, 826752364, 22170768, 267781473, 335855367,
-    1600252860, 3253695577, 2651354849, 1822961458, 269112949, 393919103, 1842868512, 4119539937,
-    4147885823, 1249385329, 2189454101, 2533356238, 1712918391, 3405328566, 4190907159, 2838266318,
-    2915582132, 1327452982, 3646649642, 2216612011, 3655561512, 3020710320, 3477029938, 1930597310,
-    3654088586, 2944056656, 1818490917, 1534446267, 3337043009, 3319456044, 538622574, 683192795,
-    3660863329, 1700584043, 732990924, 231188942, 3622333547, 2600581944, 1005854864, 655826809,
-    3312462463, 1304985988, 704587125, 3526132092, 3896656576, 3149077839, 2549374952, 277986381,
-    1451329460, 856478414, 946564202, 1324451267, 1908689967, 3990472341, 1935710527, 1031974961,
-    3048363818, 3037058058, 84419582, 3291864559, 2568295955, 4199882579, 618785328, 1631507186,
-    4211509676, 3466565704, 2750290494, 3879765587, 3447991664, 1893295992, 922043106, 1557445749,
-    2488968576, 2313178879, 4156715180, 3160746962, 500140967, 3414627373, 4053027119, 218675219,
-    3411621558, 924084396, 3315898779, 854559613, 565971134, 133581186, 1964871801, 1506257206,
-    1145943268, 215710917, 1171743565, 4200952680, 500657055, 3468385081, 1817166103, 284138437,
-    2286139869, 24756845, 698132694, 2276874887, 3577249397, 433654286, 3281865675,
-];
-
 /// q^(-1) mod 2^32 for Montgomery reduction
 const QINV: u32 = 58728449;
 
 /// mont^2/256 for inverse NTT scaling
-const F: i32 = 41978;
+pub const F: i32 = 41978;
 
-/// (2^32)^(-1) mod Q for converting from Montgomery form to standard form
-#[allow(dead_code)]
-const MONT_INV: i32 = -114592; // = 8265825 mod Q
-
-/// Primitive 512-th root of unity modulo q
-#[allow(dead_code)]
-const ZETA: i32 = 1753;
+/// Reduce coefficient to standard form
+///
+/// For finite field element a with a <= 2^31 - 2^22 - 1,
+/// compute r ≡ a (mod Q) such that -6283008 <= r <= 6283008.
+#[inline]
+pub fn reduce32(a: i32) -> i32 {
+    let t = (a + (1 << 22)) >> 23;
+    a - t * Q
+}
 
 /// Montgomery reduction
 ///
@@ -180,109 +101,6 @@ pub fn montgomery_reduce(a: i64) -> i32 {
     t
 }
 
-/// Shoup's modular multiplication
-///
-/// Computes (x * zeta) mod Q using Shoup's algorithm, which has better
-/// instruction-level parallelism than Montgomery reduction.
-///
-/// Given:
-/// - x: coefficient value
-/// - zeta: twiddle factor
-/// - zeta_shoup: precomputed floor((zeta mod Q) * 2^32 / Q) as u32
-///
-/// Returns: (x * zeta) mod Q in range approximately [-Q, Q)
-///
-/// This method performs two independent multiplications that can execute in parallel:
-///
-/// 1. x * zeta (the actual product)
-/// 2. x * zeta_shoup >> 32 (quotient approximation)
-///
-/// Then combines them: x * zeta - quotient * Q
-///
-/// Benefits over Montgomery reduction:
-/// - Better ILP (two independent multiplies vs sequential dependency chain)
-/// - Better CPU pipeline utilization
-/// - ~5-10% faster NTT operations on modern CPUs
-#[inline(always)]
-#[allow(dead_code)]
-fn shoup_multiply(x: i32, zeta: i32, zeta_shoup: u32) -> i32 {
-    // Shoup's algorithm combined with Montgomery form conversion
-    //
-    // This function computes (x * zeta) mod Q and returns it in Montgomery form
-    // to maintain compatibility with the NTT's Montgomery representation.
-    //
-    // Steps:
-    // 1. Shoup: compute r = (x * zeta) mod Q in normal form
-    // 2. Convert to Montgomery: r * R mod Q
-    //
-    // The combination gives the same output as montgomery_reduce((zeta as i64) * (x as i64))
-    // but with better ILP since Shoup uses two independent multiplications.
-
-    // Convert zeta to positive form if needed
-    let zeta_pos = if zeta < 0 { zeta + Q } else { zeta };
-
-    // Shoup quotient approximation: q ≈ (x * zeta) / Q
-    let q = (((x as i64) * (zeta_shoup as i64)) >> 32) as i32;
-
-    // Shoup reduction: r = (x * zeta) mod Q
-    // Use i64 to avoid overflow
-    let r = ((x as i64) * (zeta_pos as i64) - (q as i64) * (Q as i64)) as i32;
-
-    // Apply Montgomery reduction to match the output form
-    // montgomery_reduce(r) = (r * R^{-1}) mod Q = (x * zeta * R^{-1}) mod Q
-    // This matches montgomery_reduce((x * zeta) as i64)
-    montgomery_reduce(r as i64)
-}
-
-/// Reduce coefficient to standard form
-///
-/// For finite field element a with a <= 2^31 - 2^22 - 1,
-/// compute r ≡ a (mod Q) such that -6283008 <= r <= 6283008.
-#[inline]
-#[allow(dead_code)]
-fn reduce32(a: i32) -> i32 {
-    let t = (a + (1 << 22)) >> 23;
-    a - t * Q
-}
-
-/// Add Q if input coefficient is negative
-#[inline]
-#[allow(dead_code)]
-fn caddq(a: i32) -> i32 {
-    a + ((a >> 31) & Q)
-}
-
-/// Freeze coefficient to standard representative
-///
-/// For finite field element a, compute standard representative r = a mod+ Q.
-#[inline]
-#[allow(dead_code)]
-fn freeze(a: i32) -> i32 {
-    let a = reduce32(a);
-    caddq(a)
-}
-
-/// Convert from Montgomery form to standard form
-///
-/// Input is in Montgomery form (x * 2^32 mod Q).
-/// Output is in standard form (x mod Q).
-///
-/// Uses Montgomery reduction: montgomery_reduce(a * 1) = a * 2^(-32) mod Q
-#[inline]
-#[allow(dead_code)]
-pub fn from_montgomery(a: i32) -> i32 {
-    // Montgomery reduce with multiplier 1 converts from Montgomery form
-    // a_mont * 1 * 2^(-32) = (a * 2^32) * 1 * 2^(-32) = a
-    let result = montgomery_reduce(a as i64);
-
-    // Ensure result is in [0, Q)
-    if result < 0 {
-        result + Q
-    } else {
-        result
-    }
-}
-
 /// Forward NTT transformation (Cooley-Tukey)
 ///
 /// Transforms polynomial from coefficient representation to NTT domain.
@@ -295,19 +113,33 @@ pub fn from_montgomery(a: i32) -> i32 {
 /// * `poly` - Polynomial in coefficient form
 ///
 /// # Returns
-///
-/// Polynomial in NTT domain
-///
-/// Public NTT function with SIMD dispatch
+/// * Polynomial in NTT domain
+/// Public NTT function with AVX2/NEON dispatch
 pub fn ntt(poly: &Poly) -> Poly {
-    #[cfg(feature = "simd")]
+    // AVX2 dispatch using intrinsics module
+    #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        crate::simd::dispatch::ntt_simd(poly)
+        if std::is_x86_feature_detected!("avx2") {
+            let mut result = poly.clone();
+            unsafe {
+                crate::intrinsics::avx2::ntt::ntt(&mut result.coeffs);
+            }
+            return result;
+        }
     }
-    #[cfg(not(feature = "simd"))]
+
+    // NEON dispatch for aarch64
+    #[cfg(all(feature = "neon", target_arch = "aarch64"))]
     {
-        ntt_scalar(poly)
+        let mut result = poly.clone();
+        unsafe {
+            crate::intrinsics::neon::ntt::ntt(&mut result.coeffs);
+        }
+        return result;
     }
+
+    // Scalar fallback
+    ntt_scalar(poly)
 }
 
 /// Scalar implementation of NTT (fallback when SIMD not available)
@@ -316,33 +148,122 @@ pub fn ntt(poly: &Poly) -> Poly {
 pub fn ntt_scalar(poly: &Poly) -> Poly {
     let mut a = poly.clone();
 
-    // Direct port of reference C code with explicit loop variables
-    let mut k: usize = 0;
-    let mut len: usize = 128;
+    // True Radix-4 NTT: 4 radix-4 layers (each merges 2 radix-2 stages)
+    // Layer 1: stages 1+2 (len=128, 64)
+    {
+        let z1 = ZETAS[1];
+        let z2 = ZETAS[2];
+        let z3 = ZETAS[3];
 
-    while len >= 1 {
-        let mut start: usize = 0;
-        let mut j: usize;
+        for j in 0..64 {
+            let a0 = a.coeffs[j];
+            let a1 = a.coeffs[j + 64];
+            let a2 = a.coeffs[j + 128];
+            let a3 = a.coeffs[j + 192];
 
-        while start < N {
-            k += 1;
-            let zeta = ZETAS[k];
+            let t0 = montgomery_reduce((z1 as i64) * (a2 as i64));
+            let t1 = montgomery_reduce((z1 as i64) * (a3 as i64));
+            let b0 = a0 + t0;
+            let b2 = a0 - t0;
+            let b1 = a1 + t1;
+            let b3 = a1 - t1;
 
-            if k <= 3 && a.coeffs[2] == -2 {}
+            let t2 = montgomery_reduce((z2 as i64) * (b1 as i64));
+            let t3 = montgomery_reduce((z3 as i64) * (b3 as i64));
 
-            j = start;
-            while j < start + len {
-                // Temporarily use Montgomery for debugging
-                let t = montgomery_reduce((zeta as i64) * (a.coeffs[j + len] as i64));
-                a.coeffs[j + len] = a.coeffs[j] - t;
-                a.coeffs[j] = a.coeffs[j] + t;
-                j += 1;
-            }
-
-            start = j + len;
+            a.coeffs[j] = b0 + t2;
+            a.coeffs[j + 64] = b0 - t2;
+            a.coeffs[j + 128] = b2 + t3;
+            a.coeffs[j + 192] = b2 - t3;
         }
+    }
 
-        len >>= 1;
+    // Layer 2: stages 3+4 (len=32, 16)
+    for block in 0..4 {
+        let base = block * 64;
+        let z1 = ZETAS[4 + block];
+        let z2 = ZETAS[8 + block * 2];
+        let z3 = ZETAS[8 + block * 2 + 1];
+
+        for j in 0..16 {
+            let a0 = a.coeffs[base + j];
+            let a1 = a.coeffs[base + j + 16];
+            let a2 = a.coeffs[base + j + 32];
+            let a3 = a.coeffs[base + j + 48];
+
+            let t0 = montgomery_reduce((z1 as i64) * (a2 as i64));
+            let t1 = montgomery_reduce((z1 as i64) * (a3 as i64));
+            let b0 = a0 + t0;
+            let b2 = a0 - t0;
+            let b1 = a1 + t1;
+            let b3 = a1 - t1;
+
+            let t2 = montgomery_reduce((z2 as i64) * (b1 as i64));
+            let t3 = montgomery_reduce((z3 as i64) * (b3 as i64));
+
+            a.coeffs[base + j] = b0 + t2;
+            a.coeffs[base + j + 16] = b0 - t2;
+            a.coeffs[base + j + 32] = b2 + t3;
+            a.coeffs[base + j + 48] = b2 - t3;
+        }
+    }
+
+    // Layer 3: stages 5+6 (len=8, 4)
+    for block in 0..16 {
+        let base = block * 16;
+        let z1 = ZETAS[16 + block];
+        let z2 = ZETAS[32 + block * 2];
+        let z3 = ZETAS[32 + block * 2 + 1];
+
+        for j in 0..4 {
+            let a0 = a.coeffs[base + j];
+            let a1 = a.coeffs[base + j + 4];
+            let a2 = a.coeffs[base + j + 8];
+            let a3 = a.coeffs[base + j + 12];
+
+            let t0 = montgomery_reduce((z1 as i64) * (a2 as i64));
+            let t1 = montgomery_reduce((z1 as i64) * (a3 as i64));
+            let b0 = a0 + t0;
+            let b2 = a0 - t0;
+            let b1 = a1 + t1;
+            let b3 = a1 - t1;
+
+            let t2 = montgomery_reduce((z2 as i64) * (b1 as i64));
+            let t3 = montgomery_reduce((z3 as i64) * (b3 as i64));
+
+            a.coeffs[base + j] = b0 + t2;
+            a.coeffs[base + j + 4] = b0 - t2;
+            a.coeffs[base + j + 8] = b2 + t3;
+            a.coeffs[base + j + 12] = b2 - t3;
+        }
+    }
+
+    // Layer 4: stages 7+8 (len=2, 1)
+    for block in 0..64 {
+        let base = block * 4;
+        let z1 = ZETAS[64 + block];
+        let z2 = ZETAS[128 + block * 2];
+        let z3 = ZETAS[128 + block * 2 + 1];
+
+        let a0 = a.coeffs[base];
+        let a1 = a.coeffs[base + 1];
+        let a2 = a.coeffs[base + 2];
+        let a3 = a.coeffs[base + 3];
+
+        let t0 = montgomery_reduce((z1 as i64) * (a2 as i64));
+        let t1 = montgomery_reduce((z1 as i64) * (a3 as i64));
+        let b0 = a0 + t0;
+        let b2 = a0 - t0;
+        let b1 = a1 + t1;
+        let b3 = a1 - t1;
+
+        let t2 = montgomery_reduce((z2 as i64) * (b1 as i64));
+        let t3 = montgomery_reduce((z3 as i64) * (b3 as i64));
+
+        a.coeffs[base] = b0 + t2;
+        a.coeffs[base + 1] = b0 - t2;
+        a.coeffs[base + 2] = b2 + t3;
+        a.coeffs[base + 3] = b2 - t3;
     }
 
     a
@@ -363,43 +284,58 @@ pub fn ntt_scalar(poly: &Poly) -> Poly {
 /// # Returns
 /// * Polynomial in coefficient form
 pub fn inv_ntt(poly: &Poly) -> Poly {
+    // AVX2 dispatch using intrinsics module
+    #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
+    {
+        if std::is_x86_feature_detected!("avx2") {
+            let mut result = poly.clone();
+            unsafe {
+                crate::intrinsics::avx2::ntt::invntt(&mut result.coeffs);
+            }
+            return result;
+        }
+    }
+
+    // NEON dispatch for aarch64
+    #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+    {
+        let mut result = poly.clone();
+        unsafe {
+            crate::intrinsics::neon::ntt::invntt(&mut result.coeffs);
+        }
+        return result;
+    }
+
+    // Scalar fallback
+    inv_ntt_scalar(poly)
+}
+
+/// Scalar implementation of inverse NTT
+#[doc(hidden)]
+pub fn inv_ntt_scalar(poly: &Poly) -> Poly {
     let mut a = poly.clone();
-    let mut k = 256;
+    let mut k = 256usize;
     let mut len = 1usize;
 
-    // Gentleman-Sande inverse NTT - exact Dilithium reference implementation
     while len < N {
         let mut start = 0;
         while start < N {
             k -= 1;
             let zeta = -ZETAS[k];
-
-            let mut j = start;
-            while j < start + len {
+            for j in start..start + len {
                 let t = a.coeffs[j];
                 a.coeffs[j] = t + a.coeffs[j + len];
                 a.coeffs[j + len] = t - a.coeffs[j + len];
-                // Temporarily use Montgomery for debugging
                 a.coeffs[j + len] = montgomery_reduce((zeta as i64) * (a.coeffs[j + len] as i64));
-
-                j += 1;
             }
-
-            start = start + 2 * len;
+            start += 2 * len;
         }
-
         len <<= 1;
     }
 
-    // Multiply by mont^2/256
     for j in 0..N {
         a.coeffs[j] = montgomery_reduce((F as i64) * (a.coeffs[j] as i64));
     }
-
-    // Note: Result is in Montgomery form (multiplied by 2^32 mod Q)
-    // For compatibility with non-Montgomery code, we keep it as-is
-    // and handle conversion in poly_mul_ntt
-
     a
 }
 
@@ -417,9 +353,9 @@ pub fn inv_ntt(poly: &Poly) -> Poly {
 /// - Best used when original polynomial is no longer needed
 ///
 /// # Example
-/// ```ignoreignore
-/// use mldsa::poly::Poly;
-/// use mldsa::ntt::ntt_inplace;
+/// ```
+/// use hpcrypt_mldsa::poly::Poly;
+/// use hpcrypt_mldsa::ntt::ntt_inplace;
 ///
 /// let mut poly = Poly::new();
 /// // ... initialize poly ...
@@ -428,28 +364,434 @@ pub fn inv_ntt(poly: &Poly) -> Poly {
 /// ```
 #[inline]
 pub fn ntt_inplace(poly: &mut Poly) {
-    let mut k: usize = 0;
-    let mut len: usize = 128;
+    // True Radix-4 NTT: 4 radix-4 layers (each merges 2 radix-2 stages)
+    // Layer 1: stages 1+2 (len=128, 64)
+    {
+        let z1 = ZETAS[1];
+        let z2 = ZETAS[2];
+        let z3 = ZETAS[3];
 
-    while len >= 1 {
-        let mut start: usize = 0;
+        for j in 0..64 {
+            let a0 = poly.coeffs[j];
+            let a1 = poly.coeffs[j + 64];
+            let a2 = poly.coeffs[j + 128];
+            let a3 = poly.coeffs[j + 192];
 
-        while start < N {
-            k += 1;
-            let zeta = ZETAS[k];
+            let t0 = montgomery_reduce((z1 as i64) * (a2 as i64));
+            let t1 = montgomery_reduce((z1 as i64) * (a3 as i64));
+            let b0 = a0 + t0;
+            let b2 = a0 - t0;
+            let b1 = a1 + t1;
+            let b3 = a1 - t1;
 
-            let mut j = start;
-            while j < start + len {
-                let t = montgomery_reduce((zeta as i64) * (poly.coeffs[j + len] as i64));
-                poly.coeffs[j + len] = poly.coeffs[j] - t;
-                poly.coeffs[j] = poly.coeffs[j] + t;
-                j += 1;
-            }
+            let t2 = montgomery_reduce((z2 as i64) * (b1 as i64));
+            let t3 = montgomery_reduce((z3 as i64) * (b3 as i64));
 
-            start = j + len;
+            poly.coeffs[j] = b0 + t2;
+            poly.coeffs[j + 64] = b0 - t2;
+            poly.coeffs[j + 128] = b2 + t3;
+            poly.coeffs[j + 192] = b2 - t3;
+        }
+    }
+
+    // Layer 2: stages 3+4 (len=32, 16)
+    for block in 0..4 {
+        let base = block * 64;
+        let z1 = ZETAS[4 + block];
+        let z2 = ZETAS[8 + block * 2];
+        let z3 = ZETAS[8 + block * 2 + 1];
+
+        for j in 0..16 {
+            let a0 = poly.coeffs[base + j];
+            let a1 = poly.coeffs[base + j + 16];
+            let a2 = poly.coeffs[base + j + 32];
+            let a3 = poly.coeffs[base + j + 48];
+
+            let t0 = montgomery_reduce((z1 as i64) * (a2 as i64));
+            let t1 = montgomery_reduce((z1 as i64) * (a3 as i64));
+            let b0 = a0 + t0;
+            let b2 = a0 - t0;
+            let b1 = a1 + t1;
+            let b3 = a1 - t1;
+
+            let t2 = montgomery_reduce((z2 as i64) * (b1 as i64));
+            let t3 = montgomery_reduce((z3 as i64) * (b3 as i64));
+
+            poly.coeffs[base + j] = b0 + t2;
+            poly.coeffs[base + j + 16] = b0 - t2;
+            poly.coeffs[base + j + 32] = b2 + t3;
+            poly.coeffs[base + j + 48] = b2 - t3;
+        }
+    }
+
+    // Layer 3: stages 5+6 (len=8, 4)
+    for block in 0..16 {
+        let base = block * 16;
+        let z1 = ZETAS[16 + block];
+        let z2 = ZETAS[32 + block * 2];
+        let z3 = ZETAS[32 + block * 2 + 1];
+
+        for j in 0..4 {
+            let a0 = poly.coeffs[base + j];
+            let a1 = poly.coeffs[base + j + 4];
+            let a2 = poly.coeffs[base + j + 8];
+            let a3 = poly.coeffs[base + j + 12];
+
+            let t0 = montgomery_reduce((z1 as i64) * (a2 as i64));
+            let t1 = montgomery_reduce((z1 as i64) * (a3 as i64));
+            let b0 = a0 + t0;
+            let b2 = a0 - t0;
+            let b1 = a1 + t1;
+            let b3 = a1 - t1;
+
+            let t2 = montgomery_reduce((z2 as i64) * (b1 as i64));
+            let t3 = montgomery_reduce((z3 as i64) * (b3 as i64));
+
+            poly.coeffs[base + j] = b0 + t2;
+            poly.coeffs[base + j + 4] = b0 - t2;
+            poly.coeffs[base + j + 8] = b2 + t3;
+            poly.coeffs[base + j + 12] = b2 - t3;
+        }
+    }
+
+    // Layer 4: stages 7+8 (len=2, 1)
+    for block in 0..64 {
+        let base = block * 4;
+        let z1 = ZETAS[64 + block];
+        let z2 = ZETAS[128 + block * 2];
+        let z3 = ZETAS[128 + block * 2 + 1];
+
+        let a0 = poly.coeffs[base];
+        let a1 = poly.coeffs[base + 1];
+        let a2 = poly.coeffs[base + 2];
+        let a3 = poly.coeffs[base + 3];
+
+        let t0 = montgomery_reduce((z1 as i64) * (a2 as i64));
+        let t1 = montgomery_reduce((z1 as i64) * (a3 as i64));
+        let b0 = a0 + t0;
+        let b2 = a0 - t0;
+        let b1 = a1 + t1;
+        let b3 = a1 - t1;
+
+        let t2 = montgomery_reduce((z2 as i64) * (b1 as i64));
+        let t3 = montgomery_reduce((z3 as i64) * (b3 as i64));
+
+        poly.coeffs[base] = b0 + t2;
+        poly.coeffs[base + 1] = b0 - t2;
+        poly.coeffs[base + 2] = b2 + t3;
+        poly.coeffs[base + 3] = b2 - t3;
+    }
+}
+
+// =============================================================================
+// VECTORIZED RADIX-4 STEP FUNCTIONS
+// =============================================================================
+//
+// These step functions process multiple radix-4 butterflies in parallel,
+// enabling better compiler optimization through explicit parallelism hints.
+// Similar approach to ML-KEM vectorized steps, adapted for ML-DSA's i32 domain.
+
+/// Radix-4 butterfly step for Layer 1 (stages 1+2, stride=64)
+///
+/// Processes 4 radix-4 butterflies in parallel (16 elements total).
+/// This step function is designed for the first radix-4 layer where stride=64.
+#[inline(always)]
+pub(crate) fn ntt_radix4_layer1_step_x4(
+    coeffs: &mut [i32],
+    offset: usize,
+    z1: i32,
+    z2: i32,
+    z3: i32,
+) {
+    // Process 4 butterflies at positions: offset, offset+1, offset+2, offset+3
+    // Each butterfly operates on elements at: j, j+64, j+128, j+192
+    for i in 0..4 {
+        let j = offset + i;
+        let a0 = coeffs[j];
+        let a1 = coeffs[j + 64];
+        let a2 = coeffs[j + 128];
+        let a3 = coeffs[j + 192];
+
+        // First stage: z1 * (a2, a3)
+        let t0 = montgomery_reduce((z1 as i64) * (a2 as i64));
+        let t1 = montgomery_reduce((z1 as i64) * (a3 as i64));
+        let b0 = a0 + t0;
+        let b2 = a0 - t0;
+        let b1 = a1 + t1;
+        let b3 = a1 - t1;
+
+        // Second stage: z2 * b1, z3 * b3
+        let t2 = montgomery_reduce((z2 as i64) * (b1 as i64));
+        let t3 = montgomery_reduce((z3 as i64) * (b3 as i64));
+
+        coeffs[j] = b0 + t2;
+        coeffs[j + 64] = b0 - t2;
+        coeffs[j + 128] = b2 + t3;
+        coeffs[j + 192] = b2 - t3;
+    }
+}
+
+/// Radix-4 butterfly step for Layer 2 (stages 3+4, stride=16)
+///
+/// Processes 4 radix-4 butterflies in parallel for a single block.
+#[inline(always)]
+pub(crate) fn ntt_radix4_layer2_step_x4(
+    coeffs: &mut [i32],
+    base: usize,
+    z1: i32,
+    z2: i32,
+    z3: i32,
+) {
+    // Process 4 butterflies at positions: base, base+1, base+2, base+3
+    // Each butterfly operates on elements at: j, j+16, j+32, j+48
+    for i in 0..4 {
+        let j = base + i;
+        let a0 = coeffs[j];
+        let a1 = coeffs[j + 16];
+        let a2 = coeffs[j + 32];
+        let a3 = coeffs[j + 48];
+
+        let t0 = montgomery_reduce((z1 as i64) * (a2 as i64));
+        let t1 = montgomery_reduce((z1 as i64) * (a3 as i64));
+        let b0 = a0 + t0;
+        let b2 = a0 - t0;
+        let b1 = a1 + t1;
+        let b3 = a1 - t1;
+
+        let t2 = montgomery_reduce((z2 as i64) * (b1 as i64));
+        let t3 = montgomery_reduce((z3 as i64) * (b3 as i64));
+
+        coeffs[j] = b0 + t2;
+        coeffs[j + 16] = b0 - t2;
+        coeffs[j + 32] = b2 + t3;
+        coeffs[j + 48] = b2 - t3;
+    }
+}
+
+/// Radix-4 butterfly step for Layer 3 (stages 5+6, stride=4)
+///
+/// Processes a single radix-4 butterfly for the third layer.
+#[inline(always)]
+pub(crate) fn ntt_radix4_layer3_step(
+    coeffs: &mut [i32],
+    base: usize,
+    z1: i32,
+    z2: i32,
+    z3: i32,
+) {
+    // Process 4 butterflies at positions: base, base+1, base+2, base+3
+    for i in 0..4 {
+        let j = base + i;
+        let a0 = coeffs[j];
+        let a1 = coeffs[j + 4];
+        let a2 = coeffs[j + 8];
+        let a3 = coeffs[j + 12];
+
+        let t0 = montgomery_reduce((z1 as i64) * (a2 as i64));
+        let t1 = montgomery_reduce((z1 as i64) * (a3 as i64));
+        let b0 = a0 + t0;
+        let b2 = a0 - t0;
+        let b1 = a1 + t1;
+        let b3 = a1 - t1;
+
+        let t2 = montgomery_reduce((z2 as i64) * (b1 as i64));
+        let t3 = montgomery_reduce((z3 as i64) * (b3 as i64));
+
+        coeffs[j] = b0 + t2;
+        coeffs[j + 4] = b0 - t2;
+        coeffs[j + 8] = b2 + t3;
+        coeffs[j + 12] = b2 - t3;
+    }
+}
+
+/// Radix-4 butterfly step for Layer 4 (stages 7+8, stride=1)
+///
+/// Processes a single radix-4 butterfly for the final layer.
+/// This is a single 4-element butterfly where elements are adjacent.
+#[inline(always)]
+pub(crate) fn ntt_radix4_layer4_step(
+    coeffs: &mut [i32],
+    base: usize,
+    z1: i32,
+    z2: i32,
+    z3: i32,
+) {
+    let a0 = coeffs[base];
+    let a1 = coeffs[base + 1];
+    let a2 = coeffs[base + 2];
+    let a3 = coeffs[base + 3];
+
+    let t0 = montgomery_reduce((z1 as i64) * (a2 as i64));
+    let t1 = montgomery_reduce((z1 as i64) * (a3 as i64));
+    let b0 = a0 + t0;
+    let b2 = a0 - t0;
+    let b1 = a1 + t1;
+    let b3 = a1 - t1;
+
+    let t2 = montgomery_reduce((z2 as i64) * (b1 as i64));
+    let t3 = montgomery_reduce((z3 as i64) * (b3 as i64));
+
+    coeffs[base] = b0 + t2;
+    coeffs[base + 1] = b0 - t2;
+    coeffs[base + 2] = b2 + t3;
+    coeffs[base + 3] = b2 - t3;
+}
+
+/// Vectorized radix-4 NTT using step functions
+///
+/// This implementation uses vectorized step functions to process multiple
+/// radix-4 butterflies in parallel, potentially enabling better SIMD
+/// autovectorization by the compiler.
+///
+/// # Performance
+/// Compared to `ntt_inplace`:
+/// - Uses explicit parallel processing hints
+/// - Better suited for SIMD autovectorization
+/// - Same mathematical operations, different loop structure
+#[inline]
+pub fn ntt_inplace_radix4_vectorized(poly: &mut Poly) {
+    // Layer 1: stages 1+2 (len=128, 64) - 64 butterflies
+    // Process in groups of 4 butterflies
+    {
+        let z1 = ZETAS[1];
+        let z2 = ZETAS[2];
+        let z3 = ZETAS[3];
+
+        for offset in (0..64).step_by(4) {
+            ntt_radix4_layer1_step_x4(&mut poly.coeffs, offset, z1, z2, z3);
+        }
+    }
+
+    // Layer 2: stages 3+4 (len=32, 16) - 4 blocks of 16 butterflies each
+    for block in 0..4 {
+        let base = block * 64;
+        let z1 = ZETAS[4 + block];
+        let z2 = ZETAS[8 + block * 2];
+        let z3 = ZETAS[8 + block * 2 + 1];
+
+        for offset in (0..16).step_by(4) {
+            ntt_radix4_layer2_step_x4(&mut poly.coeffs, base + offset, z1, z2, z3);
+        }
+    }
+
+    // Layer 3: stages 5+6 (len=8, 4) - 16 blocks of 4 butterflies each
+    for block in 0..16 {
+        let base = block * 16;
+        let z1 = ZETAS[16 + block];
+        let z2 = ZETAS[32 + block * 2];
+        let z3 = ZETAS[32 + block * 2 + 1];
+
+        ntt_radix4_layer3_step(&mut poly.coeffs, base, z1, z2, z3);
+    }
+
+    // Layer 4: stages 7+8 (len=2, 1) - 64 single butterflies
+    for block in 0..64 {
+        let base = block * 4;
+        let z1 = ZETAS[64 + block];
+        let z2 = ZETAS[128 + block * 2];
+        let z3 = ZETAS[128 + block * 2 + 1];
+
+        ntt_radix4_layer4_step(&mut poly.coeffs, base, z1, z2, z3);
+    }
+}
+
+/// Fused radix-4 NTT with layers 3+4 combined
+///
+/// This variant fuses layers 3 and 4 to keep intermediate values in registers
+/// longer, reducing memory traffic. The fused layer processes 4 elements at
+/// a time through both layer 3 and layer 4 transformations.
+///
+/// # Performance
+/// - Reduces memory loads/stores by keeping intermediates in registers
+/// - May help on systems with slow memory or cache pressure
+/// - Can be slower due to register pressure on some architectures
+#[inline]
+pub fn ntt_inplace_radix4_fused(poly: &mut Poly) {
+    // Layer 1: stages 1+2 (len=128, 64)
+    {
+        let z1 = ZETAS[1];
+        let z2 = ZETAS[2];
+        let z3 = ZETAS[3];
+
+        for offset in (0..64).step_by(4) {
+            ntt_radix4_layer1_step_x4(&mut poly.coeffs, offset, z1, z2, z3);
+        }
+    }
+
+    // Layer 2: stages 3+4 (len=32, 16)
+    for block in 0..4 {
+        let base = block * 64;
+        let z1 = ZETAS[4 + block];
+        let z2 = ZETAS[8 + block * 2];
+        let z3 = ZETAS[8 + block * 2 + 1];
+
+        for offset in (0..16).step_by(4) {
+            ntt_radix4_layer2_step_x4(&mut poly.coeffs, base + offset, z1, z2, z3);
+        }
+    }
+
+    // Fused Layers 3+4: Process each 16-element block completely
+    // This combines stages 5+6 and 7+8 to keep values in registers
+    for block in 0..16 {
+        let base = block * 16;
+
+        // Layer 3 twiddle factors (stages 5+6)
+        let z1_l3 = ZETAS[16 + block];
+        let z2_l3 = ZETAS[32 + block * 2];
+        let z3_l3 = ZETAS[32 + block * 2 + 1];
+
+        // Process layer 3 for this 16-element block
+        for i in 0..4 {
+            let j = base + i;
+            let a0 = poly.coeffs[j];
+            let a1 = poly.coeffs[j + 4];
+            let a2 = poly.coeffs[j + 8];
+            let a3 = poly.coeffs[j + 12];
+
+            let t0 = montgomery_reduce((z1_l3 as i64) * (a2 as i64));
+            let t1 = montgomery_reduce((z1_l3 as i64) * (a3 as i64));
+            let b0 = a0 + t0;
+            let b2 = a0 - t0;
+            let b1 = a1 + t1;
+            let b3 = a1 - t1;
+
+            let t2 = montgomery_reduce((z2_l3 as i64) * (b1 as i64));
+            let t3 = montgomery_reduce((z3_l3 as i64) * (b3 as i64));
+
+            poly.coeffs[j] = b0 + t2;
+            poly.coeffs[j + 4] = b0 - t2;
+            poly.coeffs[j + 8] = b2 + t3;
+            poly.coeffs[j + 12] = b2 - t3;
         }
 
-        len >>= 1;
+        // Now process layer 4 (stages 7+8) for the four 4-element sub-blocks
+        for sub_block in 0..4 {
+            let sub_base = base + sub_block * 4;
+            let block_idx = block * 4 + sub_block;
+            let z1_l4 = ZETAS[64 + block_idx];
+            let z2_l4 = ZETAS[128 + block_idx * 2];
+            let z3_l4 = ZETAS[128 + block_idx * 2 + 1];
+
+            let a0 = poly.coeffs[sub_base];
+            let a1 = poly.coeffs[sub_base + 1];
+            let a2 = poly.coeffs[sub_base + 2];
+            let a3 = poly.coeffs[sub_base + 3];
+
+            let t0 = montgomery_reduce((z1_l4 as i64) * (a2 as i64));
+            let t1 = montgomery_reduce((z1_l4 as i64) * (a3 as i64));
+            let b0 = a0 + t0;
+            let b2 = a0 - t0;
+            let b1 = a1 + t1;
+            let b3 = a1 - t1;
+
+            let t2 = montgomery_reduce((z2_l4 as i64) * (b1 as i64));
+            let t3 = montgomery_reduce((z3_l4 as i64) * (b3 as i64));
+
+            poly.coeffs[sub_base] = b0 + t2;
+            poly.coeffs[sub_base + 1] = b0 - t2;
+            poly.coeffs[sub_base + 2] = b2 + t3;
+            poly.coeffs[sub_base + 3] = b2 - t3;
+        }
     }
 }
 
@@ -467,9 +809,9 @@ pub fn ntt_inplace(poly: &mut Poly) {
 /// - Best used when NTT polynomial is no longer needed
 ///
 /// # Example
-/// ```ignoreignore
-/// use mldsa::poly::Poly;
-/// use mldsa::ntt::{ntt_inplace, inv_ntt_inplace};
+/// ```
+/// use hpcrypt_mldsa::poly::Poly;
+/// use hpcrypt_mldsa::ntt::{ntt_inplace, inv_ntt_inplace};
 ///
 /// let mut poly = Poly::new();
 /// // ... initialize poly ...
@@ -480,34 +822,25 @@ pub fn ntt_inplace(poly: &mut Poly) {
 /// ```
 #[inline]
 pub fn inv_ntt_inplace(poly: &mut Poly) {
-    let mut k = 256;
+    let mut k = 256usize;
     let mut len = 1usize;
 
-    // Gentleman-Sande inverse NTT
     while len < N {
         let mut start = 0;
         while start < N {
             k -= 1;
             let zeta = -ZETAS[k];
-
-            let mut j = start;
-            while j < start + len {
+            for j in start..start + len {
                 let t = poly.coeffs[j];
                 poly.coeffs[j] = t + poly.coeffs[j + len];
                 poly.coeffs[j + len] = t - poly.coeffs[j + len];
-                poly.coeffs[j + len] =
-                    montgomery_reduce((zeta as i64) * (poly.coeffs[j + len] as i64));
-
-                j += 1;
+                poly.coeffs[j + len] = montgomery_reduce((zeta as i64) * (poly.coeffs[j + len] as i64));
             }
-
-            start = start + 2 * len;
+            start += 2 * len;
         }
-
         len <<= 1;
     }
 
-    // Multiply by mont^2/256 (Montgomery factor)
     for j in 0..N {
         poly.coeffs[j] = montgomery_reduce((F as i64) * (poly.coeffs[j] as i64));
     }
@@ -527,6 +860,29 @@ pub fn inv_ntt_inplace(poly: &mut Poly) {
 /// # Returns
 /// * Product in NTT domain
 pub fn ntt_multiply(a: &Poly, b: &Poly) -> Poly {
+    // AVX2 dispatch for x86_64 (requires std for runtime detection)
+    #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
+    {
+        if std::is_x86_feature_detected!("avx2") {
+            let mut result = Poly::new();
+            unsafe {
+                crate::intrinsics::avx2::ntt::ntt_multiply(&a.coeffs, &b.coeffs, &mut result.coeffs);
+            }
+            return result;
+        }
+    }
+
+    // NEON dispatch for aarch64
+    #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+    {
+        let mut result = Poly::new();
+        unsafe {
+            crate::intrinsics::neon::ntt::ntt_multiply(&a.coeffs, &b.coeffs, &mut result.coeffs);
+        }
+        return result;
+    }
+
+    // Scalar fallback
     let mut result = Poly::new();
 
     for i in 0..N {
@@ -556,9 +912,9 @@ pub fn ntt_multiply(a: &Poly, b: &Poly) -> Poly {
 /// * Product a·b in NTT domain (pointwise multiplication with Montgomery reduction)
 ///
 /// # Example
-/// ```ignoreignore
-/// use mldsa::poly::{Poly, PolyMulcache};
-/// use mldsa::ntt::{ntt, ntt_multiply_cached};
+/// ```
+/// use hpcrypt_mldsa::poly::{Poly, PolyMulcache};
+/// use hpcrypt_mldsa::ntt::{ntt, ntt_multiply_cached};
 ///
 /// let a = Poly::new();
 /// let a_ntt = ntt(&a);
@@ -571,11 +927,11 @@ pub fn ntt_multiply(a: &Poly, b: &Poly) -> Poly {
 ///     let result = ntt_multiply_cached(&a_ntt, &cache, &b_ntt);
 /// }
 /// ```
-pub fn ntt_multiply_cached(a: &Poly, a_cache: &crate::poly::PolyMulcache, b: &Poly) -> Poly {
-    #[cfg(all(feature = "avx2", target_arch = "x86_64"))]
+pub fn ntt_multiply_cached(_a: &Poly, a_cache: &crate::poly::PolyMulcache, b: &Poly) -> Poly {
+    #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        use crate::simd::dispatch::has_avx2;
-        if has_avx2() {
+        // AVX2 runtime detection
+        if std::is_x86_feature_detected!("avx2") {
             return unsafe { ntt_multiply_cached_avx2(a, a_cache, b) };
         }
     }
@@ -597,7 +953,7 @@ pub fn ntt_multiply_cached(a: &Poly, a_cache: &crate::poly::PolyMulcache, b: &Po
 #[target_feature(enable = "avx2")]
 #[inline]
 unsafe fn ntt_multiply_cached_avx2(
-    a: &Poly,
+    _a: &Poly,
     a_cache: &crate::poly::PolyMulcache,
     b: &Poly,
 ) -> Poly {
@@ -615,8 +971,9 @@ unsafe fn ntt_multiply_cached_avx2(
         // This is complex - we need to handle 64-bit intermediate results
         // For now, do scalar loop (AVX2 Montgomery is non-trivial)
         for j in 0..8 {
-            result.coeffs[i + j] =
-                montgomery_reduce((a_cache.cached[i + j] as i64) * (b.coeffs[i + j] as i64));
+            result.coeffs[i + j] = montgomery_reduce(
+                (a_cache.cached[i + j] as i64) * (b.coeffs[i + j] as i64)
+            );
         }
     }
 
@@ -930,7 +1287,6 @@ pub fn inv_ntt_merged(poly: &Poly) -> Poly {
 /// - ntt(a), ntt(b): Transform to NTT domain
 /// - pointwise_montgomery: Multiply and apply Montgomery reduction (÷ 2^32)
 /// - invntt_tomont: Inverse NTT and multiply by 2^32
-///
 /// The two Montgomery operations cancel out, giving standard form result.
 ///
 /// # Arguments
@@ -961,7 +1317,7 @@ pub fn poly_mul_ntt(a: &Poly, b: &Poly) -> Poly {
 /// - result is in coefficient form (K polynomials)
 ///
 /// This matches the FIPS 204 reference implementation flow:
-/// 1. For each row i, accumulate A\[i\]\[j\] · v\[j\] in NTT domain
+/// 1. For each row i, accumulate A[i][j] · v[j] in NTT domain
 /// 2. Apply inverse NTT once at the end per row
 ///
 /// # Arguments
@@ -1101,37 +1457,6 @@ pub fn matrix_vector_mul_ntt_optimized(
     result
 }
 
-/// Modular exponentiation: base^exp mod q
-#[allow(dead_code)]
-fn mod_pow(mut base: i64, mut exp: i64, modulus: i64) -> i64 {
-    let mut result = 1i64;
-    base %= modulus;
-
-    while exp > 0 {
-        if exp % 2 == 1 {
-            result = (result * base) % modulus;
-        }
-        base = (base * base) % modulus;
-        exp >>= 1;
-    }
-
-    result
-}
-
-/// Compute bit-reversed index
-#[inline]
-#[allow(dead_code)]
-const fn bit_reverse(mut x: usize, bits: u32) -> usize {
-    let mut result = 0;
-    let mut i = 0;
-    while i < bits {
-        result = (result << 1) | (x & 1);
-        x >>= 1;
-        i += 1;
-    }
-    result
-}
-
 // ==============================================================================
 // Const Generic Specialized NTT Implementation
 // ==============================================================================
@@ -1204,9 +1529,9 @@ macro_rules! ntt_layer_const {
 /// * Polynomial in NTT domain
 ///
 /// # Example
-/// ```ignoreignore
-/// use mldsa::poly::Poly;
-/// use mldsa::ntt::ntt_specialized;
+/// ```
+/// use hpcrypt_mldsa::poly::Poly;
+/// use hpcrypt_mldsa::ntt::ntt_specialized;
 ///
 /// let poly = Poly::new();
 /// let ntt_poly = ntt_specialized(&poly);
@@ -1253,7 +1578,7 @@ macro_rules! inv_ntt_layer_const {
 
         while start < N {
             $k -= 1;
-            let zeta = -ZETAS[$k]; // Negated for inverse transform!
+            let zeta = -ZETAS[$k];  // Negated for inverse transform!
 
             let mut j = start;
             while j < start + LEN {
@@ -1265,7 +1590,7 @@ macro_rules! inv_ntt_layer_const {
                 j += 1;
             }
 
-            start = start + 2 * LEN; // Different increment pattern for inverse NTT!
+            start = start + 2 * LEN;  // Different increment pattern for inverse NTT!
         }
     }};
 }
@@ -1284,9 +1609,9 @@ macro_rules! inv_ntt_layer_const {
 /// * Polynomial in coefficient form
 ///
 /// # Example
-/// ```ignoreignore
-/// use mldsa::poly::Poly;
-/// use mldsa::ntt::{ntt_specialized, inv_ntt_specialized};
+/// ```
+/// use hpcrypt_mldsa::poly::Poly;
+/// use hpcrypt_mldsa::ntt::{ntt_specialized, inv_ntt_specialized};
 ///
 /// let poly = Poly::new();
 /// let ntt_poly = ntt_specialized(&poly);
@@ -1315,9 +1640,90 @@ pub fn inv_ntt_specialized(poly: &Poly) -> Poly {
     a
 }
 
-#[allow(unused_imports)]
+// ============================================================================
+// Type-Safe NTT Functions
+// ============================================================================
+
+use crate::poly::NttPoly;
+
+/// Forward NTT with type safety: Poly → NttPoly
+///
+/// Transforms a polynomial from coefficient domain to NTT domain.
+/// The return type `NttPoly` prevents accidental use with coefficient-domain operations.
+///
+/// # Example
+/// ```
+/// use hpcrypt_mldsa::poly::Poly;
+/// use hpcrypt_mldsa::ntt::ntt_typed;
+///
+/// let poly = Poly::new();
+/// let ntt_poly = ntt_typed(&poly);  // Type: NttPoly
+/// // ntt_poly can only be used with NTT-domain operations
+/// ```
+#[inline(always)]
+pub fn ntt_typed(poly: &Poly) -> NttPoly {
+    NttPoly::from_poly_unchecked(ntt(poly))
+}
+
+/// Inverse NTT with type safety: NttPoly → Poly
+///
+/// Transforms a polynomial from NTT domain back to coefficient domain.
+/// Takes `NttPoly` to ensure input is actually in NTT domain.
+///
+/// # Example
+/// ```
+/// use hpcrypt_mldsa::poly::{Poly, NttPoly};
+/// use hpcrypt_mldsa::ntt::{ntt_typed, inv_ntt_typed};
+///
+/// let poly = Poly::new();
+/// let ntt_poly = ntt_typed(&poly);
+/// let recovered = inv_ntt_typed(&ntt_poly);  // Type: Poly
+/// ```
+#[inline(always)]
+pub fn inv_ntt_typed(ntt_poly: &NttPoly) -> Poly {
+    inv_ntt(ntt_poly.as_poly())
+}
+
+/// NTT multiplication with type safety: NttPoly × NttPoly → NttPoly
+///
+/// Performs pointwise multiplication in NTT domain.
+/// Type system ensures both inputs are in NTT domain.
+///
+/// # Example
+/// ```
+/// use hpcrypt_mldsa::poly::Poly;
+/// use hpcrypt_mldsa::ntt::{ntt_typed, ntt_multiply_typed, inv_ntt_typed};
+///
+/// let a = Poly::new();
+/// let b = Poly::new();
+///
+/// let a_ntt = ntt_typed(&a);
+/// let b_ntt = ntt_typed(&b);
+/// let c_ntt = ntt_multiply_typed(&a_ntt, &b_ntt);  // Type: NttPoly
+/// let c = inv_ntt_typed(&c_ntt);  // Type: Poly
+/// ```
+#[inline(always)]
+pub fn ntt_multiply_typed(a: &NttPoly, b: &NttPoly) -> NttPoly {
+    NttPoly::from_poly_unchecked(ntt_multiply(a.as_poly(), b.as_poly()))
+}
+
+/// NTT multiplication with cache and type safety
+///
+/// Like `ntt_multiply_typed` but uses precomputed cache for first operand.
+/// Useful when the same polynomial is multiplied multiple times.
+#[inline(always)]
+pub fn ntt_multiply_cached_typed(
+    a: &NttPoly,
+    a_cache: &crate::poly::PolyMulcache,
+    b: &NttPoly,
+) -> NttPoly {
+    NttPoly::from_poly_unchecked(ntt_multiply_cached(a.as_poly(), a_cache, b.as_poly()))
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
+    use crate::params::Q;
 
     #[test]
     #[cfg(feature = "std")]
@@ -1325,10 +1731,7 @@ mod tests {
         // Test individual montgomery_reduce calls
         let product = 25847i64 * -2i64;
         let result = montgomery_reduce(product);
-        println!(
-            "mont_reduce(25847 * -2) = mont_reduce({}) = {}",
-            product, result
-        );
+        println!("mont_reduce(25847 * -2) = mont_reduce({}) = {}", product, result);
         println!("Reference expects: -1235971");
         assert_eq!(result, -1235971);
     }
@@ -1357,8 +1760,7 @@ mod tests {
             let mut start = 0;
             let mut start_count = 0;
 
-            while start < N && start_count < 4 {
-                // Only trace first 4 starts
+            while start < N && start_count < 4 {  // Only trace first 4 starts
                 k += 1;
                 let zeta = ZETAS[k];
 
@@ -1366,8 +1768,7 @@ mod tests {
 
                 let mut j = start;
                 let mut j_count = 0;
-                while j < start + len && j_count < 4 {
-                    // Only trace first 4 j values per start
+                while j < start + len && j_count < 4 {  // Only trace first 4 j values per start
                     let idx1 = j;
                     let idx2 = j + len;
 
@@ -1378,21 +1779,10 @@ mod tests {
                     a.coeffs[idx2] = a.coeffs[idx1] - t;
                     a.coeffs[idx1] = a.coeffs[idx1] + t;
 
-                    if j < 4 {
-                        // Only print for first few indices
-                        println!(
-                            "    j={}: a[{}]={} a[{}]={} => t={} => a[{}]={} a[{}]={}",
-                            j,
-                            idx1,
-                            before_j,
-                            idx2,
-                            before_j_len,
-                            t,
-                            idx1,
-                            a.coeffs[idx1],
-                            idx2,
-                            a.coeffs[idx2]
-                        );
+                    if j < 4 {  // Only print for first few indices
+                        println!("    j={}: a[{}]={} a[{}]={} => t={} => a[{}]={} a[{}]={}",
+                                 j, idx1, before_j, idx2, before_j_len,
+                                 t, idx1, a.coeffs[idx1], idx2, a.coeffs[idx2]);
                     }
 
                     j += 1;
@@ -1440,30 +1830,6 @@ mod tests {
     }
 
     #[test]
-    fn test_ntt_inverse() {
-        let mut poly = Poly::new();
-        poly.coeffs[0] = 1;
-        poly.coeffs[1] = 2;
-        poly.coeffs[2] = 3;
-
-        let ntt_poly = ntt(&poly);
-        let mut recovered = inv_ntt(&ntt_poly);
-
-        // inv_ntt returns Montgomery form, convert back to standard form
-        for i in 0..N {
-            recovered.coeffs[i] = from_montgomery(recovered.coeffs[i]);
-        }
-
-        for i in 0..N {
-            assert_eq!(
-                poly.coeffs[i], recovered.coeffs[i],
-                "NTT inverse failed at index {}",
-                i
-            );
-        }
-    }
-
-    #[test]
     fn test_ntt_multiply_simple() {
         let mut a = Poly::new();
         let mut b = Poly::new();
@@ -1474,20 +1840,6 @@ mod tests {
         let c = poly_mul_ntt(&a, &b);
 
         assert_eq!(c.coeffs[0], 1);
-    }
-
-    #[test]
-    fn test_montgomery_reduce() {
-        // Test that Montgomery reduction works correctly
-        // Montgomery form of 1 is 2^32 mod Q = 4193792 ≡ -4186625
-        let mont_one = -4186625i32;
-        let standard_one = from_montgomery(mont_one);
-        assert_eq!(standard_one, 1, "from_montgomery(-4186625) should be 1");
-
-        // Also test with positive form
-        let mont_one_pos = 4193792i32;
-        let standard_one_pos = from_montgomery(mont_one_pos);
-        assert_eq!(standard_one_pos, 1, "from_montgomery(4193792) should be 1");
     }
 
     #[test]
@@ -1510,31 +1862,6 @@ mod tests {
     }
 
     #[test]
-    fn test_bit_reverse() {
-        assert_eq!(bit_reverse(0b000, 3), 0b000);
-        assert_eq!(bit_reverse(0b001, 3), 0b100);
-        assert_eq!(bit_reverse(0b010, 3), 0b010);
-        assert_eq!(bit_reverse(0b011, 3), 0b110);
-        assert_eq!(bit_reverse(0b100, 3), 0b001);
-    }
-
-    #[test]
-    fn test_mod_pow() {
-        // Test: 2^10 mod 1000 = 1024 mod 1000 = 24
-        assert_eq!(mod_pow(2, 10, 1000), 24);
-
-        // Test: 3^4 mod 7 = 81 mod 7 = 4
-        assert_eq!(mod_pow(3, 4, 7), 4);
-    }
-
-    #[test]
-    fn test_zeta_is_root_of_unity() {
-        // ζ^512 ≡ 1 (mod q)
-        let result = mod_pow(ZETA as i64, 512, Q as i64);
-        assert_eq!(result, 1, "ZETA should be a primitive 512-th root of unity");
-    }
-
-    #[test]
     #[cfg(feature = "std")]
     fn test_ntt_specialized_matches_baseline() {
         // Test that const generic specialized NTT produces same results as baseline
@@ -1543,20 +1870,16 @@ mod tests {
         let zero_poly = Poly::new();
         let ntt_result_baseline = ntt(&zero_poly);
         let ntt_result_specialized = ntt_specialized(&zero_poly);
-        assert_eq!(
-            ntt_result_baseline.coeffs, ntt_result_specialized.coeffs,
-            "Specialized NTT should match baseline for zero polynomial"
-        );
+        assert_eq!(ntt_result_baseline.coeffs, ntt_result_specialized.coeffs,
+                   "Specialized NTT should match baseline for zero polynomial");
 
         // Test 2: Simple polynomial [1, 0, 0, ...]
         let mut simple_poly = Poly::new();
         simple_poly.coeffs[0] = 1;
         let ntt_result_baseline = ntt(&simple_poly);
         let ntt_result_specialized = ntt_specialized(&simple_poly);
-        assert_eq!(
-            ntt_result_baseline.coeffs, ntt_result_specialized.coeffs,
-            "Specialized NTT should match baseline for simple polynomial"
-        );
+        assert_eq!(ntt_result_baseline.coeffs, ntt_result_specialized.coeffs,
+                   "Specialized NTT should match baseline for simple polynomial");
 
         // Test 3: Random-looking polynomial
         let mut random_poly = Poly::new();
@@ -1565,10 +1888,8 @@ mod tests {
         }
         let ntt_result_baseline = ntt(&random_poly);
         let ntt_result_specialized = ntt_specialized(&random_poly);
-        assert_eq!(
-            ntt_result_baseline.coeffs, ntt_result_specialized.coeffs,
-            "Specialized NTT should match baseline for random polynomial"
-        );
+        assert_eq!(ntt_result_baseline.coeffs, ntt_result_specialized.coeffs,
+                   "Specialized NTT should match baseline for random polynomial");
     }
 
     #[test]
@@ -1588,10 +1909,8 @@ mod tests {
         let inv_baseline = inv_ntt(&ntt_poly);
         let inv_specialized = inv_ntt_specialized(&ntt_poly);
 
-        assert_eq!(
-            inv_baseline.coeffs, inv_specialized.coeffs,
-            "Specialized inverse NTT should match baseline"
-        );
+        assert_eq!(inv_baseline.coeffs, inv_specialized.coeffs,
+                   "Specialized inverse NTT should match baseline");
     }
 
     #[test]
@@ -1614,10 +1933,8 @@ mod tests {
         let recovered_baseline = inv_ntt(&ntt_poly_baseline);
 
         // Both should recover the same result (matching baseline behavior)
-        assert_eq!(
-            recovered_specialized.coeffs, recovered_baseline.coeffs,
-            "Specialized roundtrip should match baseline roundtrip"
-        );
+        assert_eq!(recovered_specialized.coeffs, recovered_baseline.coeffs,
+                   "Specialized roundtrip should match baseline roundtrip");
     }
 
     #[test]
@@ -1642,7 +1959,8 @@ mod tests {
         for i in 0..N {
             let left = ntt_sum.coeffs[i].rem_euclid(Q);
             let right = sum_ntt.coeffs[i].rem_euclid(Q);
-            assert_eq!(left, right, "NTT linearity failed at index {}", i);
+            assert_eq!(left, right,
+                "NTT linearity failed at index {}", i);
         }
     }
 
@@ -1663,12 +1981,9 @@ mod tests {
                     eprintln!("Forward NTT mismatches found:");
                     has_mismatch = true;
                 }
-                if i < 10 || i >= N - 2 {
-                    // Only show first 10 and last 2
-                    eprintln!(
-                        "  index {}: standard={} merged={}",
-                        i, standard.coeffs[i], merged.coeffs[i]
-                    );
+                if i < 10 || i >= N - 2 {  // Only show first 10 and last 2
+                    eprintln!("  index {}: standard={} merged={}",
+                              i, standard.coeffs[i], merged.coeffs[i]);
                 }
             }
         }
@@ -1687,12 +2002,9 @@ mod tests {
                     eprintln!("\nInverse NTT mismatches found:");
                     inv_has_mismatch = true;
                 }
-                if i < 10 || i >= N - 2 {
-                    // Only show first 10 and last 2
-                    eprintln!(
-                        "  index {}: standard_inv={} merged_inv={}",
-                        i, standard_inv.coeffs[i], merged_inv.coeffs[i]
-                    );
+                if i < 10 || i >= N - 2 {  // Only show first 10 and last 2
+                    eprintln!("  index {}: standard_inv={} merged_inv={}",
+                              i, standard_inv.coeffs[i], merged_inv.coeffs[i]);
                 }
             }
         }
@@ -1704,10 +2016,8 @@ mod tests {
         for i in 0..N {
             let recovered = from_montgomery(standard_inv.coeffs[i]);
             if poly.coeffs[i] != recovered {
-                eprintln!(
-                    "Standard roundtrip mismatch at index {}: original={} recovered={}",
-                    i, poly.coeffs[i], recovered
-                );
+                eprintln!("Standard roundtrip mismatch at index {}: original={} recovered={}",
+                          i, poly.coeffs[i], recovered);
                 panic!("Standard roundtrip mismatch");
             }
         }
@@ -1716,10 +2026,8 @@ mod tests {
         for i in 0..N {
             let recovered = from_montgomery(merged_inv.coeffs[i]);
             if poly.coeffs[i] != recovered {
-                eprintln!(
-                    "Merged roundtrip mismatch at index {}: original={} recovered={}",
-                    i, poly.coeffs[i], recovered
-                );
+                eprintln!("Merged roundtrip mismatch at index {}: original={} recovered={}",
+                          i, poly.coeffs[i], recovered);
                 panic!("Merged roundtrip mismatch");
             }
         }

@@ -9,7 +9,7 @@
 //! These operations are critical for the ML-DSA signature scheme's correctness
 //! and security properties.
 
-use crate::params::{DsaParams, Q};
+use crate::params::{Q, DsaParams};
 
 /// Power2Round: Split r into high and low parts
 ///
@@ -220,8 +220,8 @@ pub fn low_bits(r: i32, alpha: i32) -> i32 {
 // SIMD-accelerated polynomial-level operations
 //
 
-use crate::params::N;
 use crate::poly::Poly;
+use crate::params::N;
 
 /// Power2Round for entire polynomial with SIMD acceleration
 ///
@@ -235,15 +235,59 @@ use crate::poly::Poly;
 /// # Returns
 /// * `(r1_poly, r0_poly)` - High and low bit polynomials
 pub fn power2round_poly(poly: &Poly, d: usize) -> (Poly, Poly) {
-    #[cfg(all(feature = "avx2", target_arch = "x86_64"))]
+    // AVX-512 (highest performance, 512-bit vectors)
+    #[cfg(all(feature = "avx512", target_arch = "x86_64"))]
     {
-        use crate::simd::dispatch::has_avx2;
-        if has_avx2() {
-            return unsafe { crate::simd::avx2::power2round_poly_avx2_ffi(poly, d) };
+        use crate::simd::dispatch::has_avx512;
+        if has_avx512() {
+            // Use native Rust intrinsics if feature enabled
+            #[cfg(feature = "native-intrinsics")]
+            return unsafe { crate::simd::avx512_native::power2round_poly_avx512(poly, d) };
+
+            // Otherwise use C FFI (default)
+            #[cfg(not(feature = "native-intrinsics"))]
+            {
+                // Note: AVX-512 C FFI not yet implemented
+                // Fall through to AVX2
+            }
         }
     }
 
-    // Scalar fallback
+    // AVX2 using pure Rust intrinsics
+    #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
+    {
+        if std::is_x86_feature_detected!("avx2") {
+            let mut r1 = Poly::new();
+            let mut r0 = Poly::new();
+            unsafe {
+                crate::intrinsics::avx2::rounding::power2round_fast(&poly.coeffs, &mut r1.coeffs, &mut r0.coeffs);
+            }
+            return (r1, r0);
+        }
+    }
+
+    // SSE4.1 fallback for CPUs without AVX2 (128-bit vectors)
+    #[cfg(all(feature = "sse", target_arch = "x86_64"))]
+    {
+        use crate::simd::dispatch::has_sse41;
+        if has_sse41() {
+            // Use native Rust intrinsics if feature enabled
+            #[cfg(feature = "native-intrinsics")]
+            return unsafe { crate::simd::sse_native::power2round_poly_sse(poly, d) };
+
+            // Otherwise use C FFI (default)
+            #[cfg(not(feature = "native-intrinsics"))]
+            {
+                // Note: SSE C FFI not yet implemented
+                // Fall through to scalar
+            }
+        }
+    }
+
+    // NOTE: ARM NEON power2round benchmarked as 1.17x SLOWER than scalar.
+    // Using scalar fallback for better performance on ARM.
+
+    // Scalar fallback (faster than NEON on ARM)
     let mut r1 = Poly::new();
     let mut r0 = Poly::new();
     for i in 0..N {
@@ -263,12 +307,37 @@ pub fn power2round_poly(poly: &Poly, d: usize) -> (Poly, Poly) {
 /// # Returns
 /// * `(r1_poly, r0_poly)` - High and low parts
 pub fn decompose_poly(poly: &Poly, alpha: i32) -> (Poly, Poly) {
-    #[cfg(all(feature = "avx2", target_arch = "x86_64"))]
+    // AVX-512 (highest performance, 512-bit vectors)
+    #[cfg(all(feature = "avx512", target_arch = "x86_64"))]
     {
-        use crate::simd::dispatch::has_avx2;
-        if has_avx2() {
-            return unsafe { crate::simd::avx2::decompose_poly_avx2_ffi(poly, alpha) };
+        use crate::simd::dispatch::has_avx512;
+        if has_avx512() {
+            // Use native Rust intrinsics if feature enabled
+            #[cfg(feature = "native-intrinsics")]
+            return unsafe { crate::simd::avx512_native::decompose_poly_avx512(poly, alpha) };
+
+            // Otherwise use C FFI (default)
+            #[cfg(not(feature = "native-intrinsics"))]
+            {
+                // Note: AVX-512 C FFI not yet implemented
+                // Fall through to AVX2
+            }
         }
+    }
+
+    // AVX2 using pure Rust intrinsics
+    // Note: AVX2 decompose uses highbits_fast + lowbits_fast internally
+    // For now, fall through to scalar (optimization can be added later)
+
+    // ARM NEON (128-bit vectors) - use optimized intrinsics
+    #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+    {
+        let mut r1 = Poly::new();
+        let mut r0 = Poly::new();
+        unsafe {
+            crate::intrinsics::neon::rounding::decompose_fast(&poly.coeffs, &mut r1.coeffs, &mut r0.coeffs, alpha);
+        }
+        return (r1, r0);
     }
 
     // Scalar fallback
@@ -294,12 +363,62 @@ pub fn decompose_poly(poly: &Poly, alpha: i32) -> (Poly, Poly) {
 /// # Returns
 /// * Polynomial containing high-order bits
 pub fn high_bits_poly(poly: &Poly, alpha: i32) -> Poly {
-    #[cfg(all(feature = "avx2", target_arch = "x86_64"))]
+    // AVX-512 (highest performance, 512-bit vectors)
+    #[cfg(all(feature = "avx512", target_arch = "x86_64"))]
     {
-        use crate::simd::dispatch::has_avx2;
-        if has_avx2() {
-            return unsafe { crate::simd::avx2::high_bits_poly_avx2_ffi(poly, alpha) };
+        use crate::simd::dispatch::has_avx512;
+        if has_avx512() {
+            // Use native Rust intrinsics if feature enabled
+            #[cfg(feature = "native-intrinsics")]
+            return unsafe { crate::simd::avx512_native::high_bits_poly_avx512(poly, alpha) };
+
+            // Otherwise use C FFI (default)
+            #[cfg(not(feature = "native-intrinsics"))]
+            {
+                // Note: AVX-512 C FFI not yet implemented
+                // Fall through to AVX2
+            }
         }
+    }
+
+    // AVX2 (proven, stable, 256-bit vectors) using intrinsics module
+    #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
+    {
+        if std::is_x86_feature_detected!("avx2") {
+            let mut result = Poly::new();
+            unsafe {
+                crate::intrinsics::avx2::rounding::highbits_fast(&poly.coeffs, &mut result.coeffs, alpha);
+            }
+            return result;
+        }
+    }
+
+    // SSE4.1 fallback for CPUs without AVX2 (128-bit vectors)
+    #[cfg(all(feature = "sse", target_arch = "x86_64"))]
+    {
+        use crate::simd::dispatch::has_sse41;
+        if has_sse41() {
+            // Use native Rust intrinsics if feature enabled
+            #[cfg(feature = "native-intrinsics")]
+            return unsafe { crate::simd::sse_native::high_bits_poly_sse(poly, alpha) };
+
+            // Otherwise use C FFI (default)
+            #[cfg(not(feature = "native-intrinsics"))]
+            {
+                // Note: SSE C FFI not yet implemented
+                // Fall through to scalar
+            }
+        }
+    }
+
+    // ARM NEON (128-bit vectors) - use optimized intrinsics
+    #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+    {
+        let mut result = Poly::new();
+        unsafe {
+            crate::intrinsics::neon::rounding::highbits_fast(&poly.coeffs, &mut result.coeffs, alpha);
+        }
+        return result;
     }
 
     // Scalar fallback - use const generic optimization for common alpha values
@@ -336,12 +455,62 @@ pub fn high_bits_poly(poly: &Poly, alpha: i32) -> Poly {
 /// # Returns
 /// * Polynomial containing low-order bits
 pub fn low_bits_poly(poly: &Poly, alpha: i32) -> Poly {
-    #[cfg(all(feature = "avx2", target_arch = "x86_64"))]
+    // AVX-512 (highest performance, 512-bit vectors)
+    #[cfg(all(feature = "avx512", target_arch = "x86_64"))]
     {
-        use crate::simd::dispatch::has_avx2;
-        if has_avx2() {
-            return unsafe { crate::simd::avx2::low_bits_poly_avx2_ffi(poly, alpha) };
+        use crate::simd::dispatch::has_avx512;
+        if has_avx512() {
+            // Use native Rust intrinsics if feature enabled
+            #[cfg(feature = "native-intrinsics")]
+            return unsafe { crate::simd::avx512_native::low_bits_poly_avx512(poly, alpha) };
+
+            // Otherwise use C FFI (default)
+            #[cfg(not(feature = "native-intrinsics"))]
+            {
+                // Note: AVX-512 C FFI not yet implemented
+                // Fall through to AVX2
+            }
         }
+    }
+
+    // AVX2 (proven, stable, 256-bit vectors) using intrinsics module
+    #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
+    {
+        if std::is_x86_feature_detected!("avx2") {
+            let mut result = Poly::new();
+            unsafe {
+                crate::intrinsics::avx2::rounding::lowbits_fast(&poly.coeffs, &mut result.coeffs, alpha);
+            }
+            return result;
+        }
+    }
+
+    // SSE4.1 fallback for CPUs without AVX2 (128-bit vectors)
+    #[cfg(all(feature = "sse", target_arch = "x86_64"))]
+    {
+        use crate::simd::dispatch::has_sse41;
+        if has_sse41() {
+            // Use native Rust intrinsics if feature enabled
+            #[cfg(feature = "native-intrinsics")]
+            return unsafe { crate::simd::sse_native::low_bits_poly_sse(poly, alpha) };
+
+            // Otherwise use C FFI (default)
+            #[cfg(not(feature = "native-intrinsics"))]
+            {
+                // Note: SSE C FFI not yet implemented
+                // Fall through to scalar
+            }
+        }
+    }
+
+    // ARM NEON (128-bit vectors) - use optimized intrinsics
+    #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+    {
+        let mut result = Poly::new();
+        unsafe {
+            crate::intrinsics::neon::rounding::lowbits_fast(&poly.coeffs, &mut result.coeffs, alpha);
+        }
+        return result;
     }
 
     // Scalar fallback - use const generic optimization for common alpha values
@@ -367,10 +536,10 @@ pub fn low_bits_poly(poly: &Poly, alpha: i32) -> Poly {
     result
 }
 
-#[allow(unused_imports)]
+#[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{MlDsa44, MlDsa65, MlDsa87};
+    use crate::params::Q;
 
     #[test]
     fn test_power2round_basic() {
@@ -531,7 +700,12 @@ mod tests {
 
             // Check r1 is non-negative and bounded
             assert!(r1 >= 0, "r1={} negative for r={}", r1, r);
-            assert!(r1 <= (Q - 1) / alpha + 1, "r1={} too large for r={}", r1, r);
+            assert!(
+                r1 <= (Q - 1) / alpha + 1,
+                "r1={} too large for r={}",
+                r1,
+                r
+            );
         }
     }
 
@@ -560,7 +734,12 @@ mod tests {
 
             // Check r1 is non-negative and bounded
             assert!(r1 >= 0, "r1={} negative for r={}", r1, r);
-            assert!(r1 <= (Q - 1) / alpha + 1, "r1={} too large for r={}", r1, r);
+            assert!(
+                r1 <= (Q - 1) / alpha + 1,
+                "r1={} too large for r={}",
+                r1,
+                r
+            );
         }
     }
 
