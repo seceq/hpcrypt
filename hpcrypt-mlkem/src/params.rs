@@ -1,12 +1,9 @@
 //! Parameter sets for ML-KEM
 //!
 //! This module defines the three security levels specified in NIST FIPS 203:
-//! - **ML-KEM-512** (NIST Security Level 1) - Equivalent to AES-128
-//! - **ML-KEM-768** (NIST Security Level 3) - Equivalent to AES-192 - **Recommended**
-//! - **ML-KEM-1024** (NIST Security Level 5) - Equivalent to AES-256
-//!
-//! Each parameter set provides a different trade-off between security level,
-//! key size, ciphertext size, and computational performance.
+//! - ML-KEM-512 (NIST Security Level 1)
+//! - ML-KEM-768 (NIST Security Level 3) - Recommended
+//! - ML-KEM-1024 (NIST Security Level 5)
 
 /// Degree of polynomials (n = 256 for all ML-KEM parameter sets)
 pub const N: usize = 256;
@@ -18,48 +15,35 @@ pub const Q: i16 = 3329;
 ///
 /// Each parameter set defines security-level-specific constants including
 /// the dimension k, eta values for noise sampling, and derived sizes.
-///
-/// This trait is implemented by [`MlKem512`], [`MlKem768`], and [`MlKem1024`].
-/// It is sealed and cannot be implemented by external types.
 pub trait Params: Send + Sync + 'static {
-    /// Dimension of the module lattice (k ∈ {2, 3, 4})
-    ///
-    /// - ML-KEM-512: k = 2
-    /// - ML-KEM-768: k = 3
-    /// - ML-KEM-1024: k = 4
+    /// Dimension of module (k ∈ {2, 3, 4})
     const K: usize;
 
-    /// Eta1 parameter for noise sampling during key generation (η₁)
+    /// Eta1 parameter for noise sampling (η₁)
     const ETA1: usize;
 
-    /// Eta2 parameter for noise sampling during encapsulation (η₂)
+    /// Eta2 parameter for noise sampling (η₂)
     const ETA2: usize;
 
-    /// Bits for compression of ciphertext u vector coefficients (dᵤ)
+    /// Bits for compression of public key polynomial coefficients (dᵤ)
     const DU: usize;
 
-    /// Bits for compression of ciphertext v polynomial coefficients (dᵥ)
+    /// Bits for compression of ciphertext polynomial coefficients (dᵥ)
     const DV: usize;
 
     /// Size of encapsulation key (public key) in bytes
-    ///
-    /// Formula: 384k + 32 (polynomial vector + seed)
     const EK_SIZE: usize = 384 * Self::K + 32;
 
     /// Size of decapsulation key (private key) in bytes
-    ///
-    /// Formula: 768k + 96 (includes ek, sk, H(ek), and z)
     const DK_SIZE: usize = 768 * Self::K + 96;
 
     /// Size of ciphertext in bytes
-    ///
-    /// Formula: 32·dᵤ·k + 32·dᵥ
     const CT_SIZE: usize = 32 * Self::DU * Self::K + 32 * Self::DV;
 
-    /// Size of shared secret in bytes (always 32 for all parameter sets)
+    /// Size of shared secret key in bytes (always 32 for all parameter sets)
     const SS_SIZE: usize = 32;
 
-    /// Human-readable name of the parameter set
+    /// Name of the parameter set
     const NAME: &'static str;
 }
 

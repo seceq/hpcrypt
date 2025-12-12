@@ -1,22 +1,15 @@
 //! ML-KEM Decapsulation Algorithm
 //!
-//! This module implements the decapsulation algorithms from NIST FIPS 203:
-//! - Algorithm 14: K-PKE.Decrypt (CPA-secure decryption)
-//! - Algorithm 17: ML-KEM.Decaps (CCA-secure decapsulation with implicit rejection)
-//!
-//! The decapsulation process:
-//! 1. Decrypts the ciphertext using the private key to recover message m'
-//! 2. Re-encrypts m' to produce ciphertext c'
-//! 3. Performs constant-time comparison of c and c'
-//! 4. Returns KDF(m', c) if valid, or KDF(z, c) if invalid (implicit rejection)
+//! This module implements Algorithm 14 (K-PKE.Decrypt) and Algorithm 17 (ML-KEM.Decaps)
+//! from FIPS 203.
 
-use crate::compress::compress_d1;
-use crate::encaps::kpke_encrypt;
-use crate::ntt::{intt, intt_after_basemul, ntt_inplace, PolyMulcache};
 use crate::params::Params;
-use crate::serialize::{decode_poly_compressed, decode_polyvec_12, decode_polyvec_compressed};
+use crate::serialize::{decode_polyvec_12, decode_polyvec_compressed, decode_poly_compressed};
+use crate::compress::extract_message;
 use crate::symmetric::{g, h, j, kdf};
 use crate::utils::ct_compare;
+use crate::encaps::kpke_encrypt;
+use crate::ntt::{ntt_inplace, intt_after_basemul, PolyMulcache};
 
 /// K-PKE Decrypt
 ///
@@ -30,13 +23,7 @@ use crate::utils::ct_compare;
 /// Decrypted message (32 bytes)
 #[inline(always)]
 #[allow(dead_code)]
-fn kpke_decrypt_impl<const K: usize>(
-    dk: &[u8],
-    ciphertext: &[u8],
-    du: u32,
-    dv: u32,
-    ct_size: usize,
-) -> [u8; 32] {
+fn kpke_decrypt_impl<const K: usize>(dk: &[u8], ciphertext: &[u8], du: u32, dv: u32, ct_size: usize) -> [u8; 32] {
     debug_assert_eq!(dk.len(), 384 * K);
     debug_assert_eq!(ciphertext.len(), ct_size);
 
@@ -54,35 +41,19 @@ fn kpke_decrypt_impl<const K: usize>(
     // and compute mulcaches in a single pass
     let mut u_caches: [PolyMulcache; K] = [PolyMulcache::new(); K];
 
-    for (cache, poly) in u_caches.iter_mut().zip(u.polys.iter_mut()) {
-        ntt_inplace(poly);
-        *cache = PolyMulcache::compute(poly);
+    for i in 0..K {
+        ntt_inplace(&mut u.polys[i]);
+        u_caches[i] = PolyMulcache::compute(&u.polys[i]);
     }
 
     // Compute s^T * u in NTT domain using cached multiplication
     let su_ntt = s_ntt.dot_ntt_cached(&u, &u_caches);
-    let su = intt(&su_ntt);
+    let su = intt_after_basemul(&su_ntt);
 
     let m_poly = v.sub(&su);
 
-    // 4. Compress and encode message
-    // Use specialized compress_d1 for better performance
-    // Process 8 coefficients at a time to form each byte
-    let mut m = [0u8; 32];
-    for (byte_idx, m_byte) in m.iter_mut().enumerate() {
-        let base_idx = byte_idx * 8;
-        let mut byte_val = 0u8;
-
-        // Process 8 bits at once
-        for bit_idx in 0..8 {
-            let compressed_bit = compress_d1(m_poly.coeffs[base_idx + bit_idx]);
-            byte_val |= (compressed_bit as u8) << bit_idx;
-        }
-
-        *m_byte = byte_val;
-    }
-
-    m
+    // 4. Compress and encode message using AVX2-accelerated extraction
+    extract_message(&m_poly.coeffs)
 }
 
 /// Specialized K=2 version with manual loop unrolling optimization
@@ -90,13 +61,7 @@ fn kpke_decrypt_impl<const K: usize>(
 /// This version uses polyvec_basemul_acc_cached_k2 which manually unrolls
 /// the inner k loop, reducing branch overhead by ~64 instructions.
 #[inline(always)]
-fn kpke_decrypt_impl_k2(
-    dk: &[u8],
-    ciphertext: &[u8],
-    du: u32,
-    dv: u32,
-    ct_size: usize,
-) -> [u8; 32] {
+fn kpke_decrypt_impl_k2(dk: &[u8], ciphertext: &[u8], du: u32, dv: u32, ct_size: usize) -> [u8; 32] {
     const K: usize = 2;
     debug_assert_eq!(dk.len(), 384 * K);
     debug_assert_eq!(ciphertext.len(), ct_size);
@@ -107,26 +72,16 @@ fn kpke_decrypt_impl_k2(
     let v = decode_poly_compressed(&ciphertext[u_len..], dv);
 
     let mut u_caches: [PolyMulcache; K] = [PolyMulcache::new(); K];
-    for (cache, poly) in u_caches.iter_mut().zip(u.polys.iter_mut()) {
-        ntt_inplace(poly);
-        *cache = PolyMulcache::compute(poly);
+    for i in 0..K {
+        ntt_inplace(&mut u.polys[i]);
+        u_caches[i] = PolyMulcache::compute(&u.polys[i]);
     }
 
     let su_ntt = s_ntt.dot_ntt_cached_k2(&u, &u_caches);
-    let su = intt_after_basemul(&su_ntt); // 18.2% faster lazy INTT for basemul outputs
+    let su = intt_after_basemul(&su_ntt);  // 18.2% faster lazy INTT for basemul outputs
     let m_poly = v.sub(&su);
 
-    let mut m = [0u8; 32];
-    for (byte_idx, m_byte) in m.iter_mut().enumerate() {
-        let base_idx = byte_idx * 8;
-        let mut byte_val = 0u8;
-        for bit_idx in 0..8 {
-            let compressed_bit = compress_d1(m_poly.coeffs[base_idx + bit_idx]);
-            byte_val |= (compressed_bit as u8) << bit_idx;
-        }
-        *m_byte = byte_val;
-    }
-    m
+    extract_message(&m_poly.coeffs)
 }
 
 /// Specialized K=3 version with manual loop unrolling optimization
@@ -134,13 +89,7 @@ fn kpke_decrypt_impl_k2(
 /// This version uses polyvec_basemul_acc_cached_k3 which manually unrolls
 /// the inner k loop, reducing branch overhead by ~128 instructions.
 #[inline(always)]
-fn kpke_decrypt_impl_k3(
-    dk: &[u8],
-    ciphertext: &[u8],
-    du: u32,
-    dv: u32,
-    ct_size: usize,
-) -> [u8; 32] {
+fn kpke_decrypt_impl_k3(dk: &[u8], ciphertext: &[u8], du: u32, dv: u32, ct_size: usize) -> [u8; 32] {
     const K: usize = 3;
     debug_assert_eq!(dk.len(), 384 * K);
     debug_assert_eq!(ciphertext.len(), ct_size);
@@ -151,26 +100,16 @@ fn kpke_decrypt_impl_k3(
     let v = decode_poly_compressed(&ciphertext[u_len..], dv);
 
     let mut u_caches: [PolyMulcache; K] = [PolyMulcache::new(); K];
-    for (cache, poly) in u_caches.iter_mut().zip(u.polys.iter_mut()) {
-        ntt_inplace(poly);
-        *cache = PolyMulcache::compute(poly);
+    for i in 0..K {
+        ntt_inplace(&mut u.polys[i]);
+        u_caches[i] = PolyMulcache::compute(&u.polys[i]);
     }
 
     let su_ntt = s_ntt.dot_ntt_cached_k3(&u, &u_caches);
-    let su = intt_after_basemul(&su_ntt); // 18.2% faster lazy INTT for basemul outputs
+    let su = intt_after_basemul(&su_ntt);  // 18.2% faster lazy INTT for basemul outputs
     let m_poly = v.sub(&su);
 
-    let mut m = [0u8; 32];
-    for (byte_idx, m_byte) in m.iter_mut().enumerate() {
-        let base_idx = byte_idx * 8;
-        let mut byte_val = 0u8;
-        for bit_idx in 0..8 {
-            let compressed_bit = compress_d1(m_poly.coeffs[base_idx + bit_idx]);
-            byte_val |= (compressed_bit as u8) << bit_idx;
-        }
-        *m_byte = byte_val;
-    }
-    m
+    extract_message(&m_poly.coeffs)
 }
 
 /// Specialized K=4 version with manual loop unrolling optimization
@@ -178,13 +117,7 @@ fn kpke_decrypt_impl_k3(
 /// This version uses polyvec_basemul_acc_cached_k4 which manually unrolls
 /// the inner k loop, reducing branch overhead by ~192 instructions.
 #[inline(always)]
-fn kpke_decrypt_impl_k4(
-    dk: &[u8],
-    ciphertext: &[u8],
-    du: u32,
-    dv: u32,
-    ct_size: usize,
-) -> [u8; 32] {
+fn kpke_decrypt_impl_k4(dk: &[u8], ciphertext: &[u8], du: u32, dv: u32, ct_size: usize) -> [u8; 32] {
     const K: usize = 4;
     debug_assert_eq!(dk.len(), 384 * K);
     debug_assert_eq!(ciphertext.len(), ct_size);
@@ -201,32 +134,19 @@ fn kpke_decrypt_impl_k4(
     // Convert u to NTT domain and compute mulcaches
     let mut u_caches: [PolyMulcache; K] = [PolyMulcache::new(); K];
 
-    for (cache, poly) in u_caches.iter_mut().zip(u.polys.iter_mut()) {
-        ntt_inplace(poly);
-        *cache = PolyMulcache::compute(poly);
+    for i in 0..K {
+        ntt_inplace(&mut u.polys[i]);
+        u_caches[i] = PolyMulcache::compute(&u.polys[i]);
     }
 
     // Use optimized K=4 dot product with manual loop unrolling
     let su_ntt = s_ntt.dot_ntt_cached_k4(&u, &u_caches);
-    let su = intt_after_basemul(&su_ntt); // 18.2% faster lazy INTT for basemul outputs
+    let su = intt_after_basemul(&su_ntt);  // 18.2% faster lazy INTT for basemul outputs
 
     let m_poly = v.sub(&su);
 
-    // 4. Compress and encode message
-    let mut m = [0u8; 32];
-    for (byte_idx, m_byte) in m.iter_mut().enumerate() {
-        let base_idx = byte_idx * 8;
-        let mut byte_val = 0u8;
-
-        for bit_idx in 0..8 {
-            let compressed_bit = compress_d1(m_poly.coeffs[base_idx + bit_idx]);
-            byte_val |= (compressed_bit as u8) << bit_idx;
-        }
-
-        *m_byte = byte_val;
-    }
-
-    m
+    // 4. Compress and encode message using AVX2-accelerated extraction
+    extract_message(&m_poly.coeffs)
 }
 
 /// K-PKE Decrypt (public wrapper)
@@ -254,40 +174,17 @@ pub fn kpke_decrypt<P: Params>(dk: &[u8], ciphertext: &[u8]) -> [u8; 32] {
 
 /// ML-KEM Decapsulation
 ///
-/// Implements Algorithm 17 (ML-KEM.Decaps) from NIST FIPS 203.
+/// Algorithm 17: ML-KEM.Decaps from FIPS 203
 ///
-/// Recovers the shared secret from a ciphertext using the private decapsulation key.
-/// This operation uses the Fujisaki-Okamoto transform with implicit rejection to
-/// provide IND-CCA2 security and resistance to timing attacks.
-///
-/// # Type Parameters
-///
-/// * `P` - Parameter set ([`MlKem512`], [`MlKem768`], or [`MlKem1024`])
+/// Implements the Fujisaki-Okamoto transform with implicit rejection
+/// for CCA2 security.
 ///
 /// # Arguments
-///
-/// * `dk` - Decapsulation (private) key bytes
+/// * `dk` - Decapsulation (private) key
 /// * `ciphertext` - Ciphertext to decapsulate
 ///
 /// # Returns
-///
-/// 32-byte shared secret. **Important**: This function always returns a value,
-/// even for invalid ciphertexts. Invalid ciphertexts produce pseudorandom outputs
-/// (implicit rejection) to prevent timing side-channels.
-///
-/// # Security
-///
-/// - **Constant-time operation**: Execution time is independent of ciphertext validity
-/// - **Implicit rejection**: Invalid ciphertexts produce pseudorandom shared secrets
-/// - **CCA2 security**: Secure against adaptive chosen-ciphertext attacks
-/// - **Re-encryption check**: Validates ciphertext integrity via re-encryption
-///
-/// The constant-time property prevents attackers from distinguishing valid from
-/// invalid ciphertexts by measuring decapsulation time.
-///
-/// [`MlKem512`]: crate::MlKem512
-/// [`MlKem768`]: crate::MlKem768
-/// [`MlKem1024`]: crate::MlKem1024
+/// Shared secret key (32 bytes)
 #[inline(always)]
 pub fn ml_kem_decaps<P: Params>(dk: &[u8], ciphertext: &[u8]) -> [u8; 32] {
     debug_assert_eq!(dk.len(), P::DK_SIZE);
@@ -326,7 +223,7 @@ pub fn ml_kem_decaps<P: Params>(dk: &[u8], ciphertext: &[u8]) -> [u8; 32] {
 
     let c_hash = h(ciphertext);
 
-    if valid {
+    let shared_secret = if valid {
         // Valid ciphertext: use K̄
         let kdf_input: [u8; 64] = j(k_bar, &c_hash);
         kdf(&kdf_input)
@@ -334,15 +231,17 @@ pub fn ml_kem_decaps<P: Params>(dk: &[u8], ciphertext: &[u8]) -> [u8; 32] {
         // Invalid ciphertext: use z for implicit rejection
         let kdf_input: [u8; 64] = j(z, &c_hash);
         kdf(&kdf_input)
-    }
+    };
+
+    shared_secret
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::encaps::ml_kem_encaps;
+    use crate::params::{MlKem512, MlKem768, MlKem1024};
     use crate::keygen::ml_kem_keygen;
-    use crate::params::{MlKem1024, MlKem512, MlKem768};
+    use crate::encaps::ml_kem_encaps;
 
     #[test]
     fn test_kpke_encrypt_decrypt_roundtrip_mlkem512() {

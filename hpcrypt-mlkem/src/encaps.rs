@@ -1,25 +1,21 @@
 //! ML-KEM Encapsulation Algorithm
 //!
-//! This module implements the encapsulation algorithms from NIST FIPS 203:
-//! - Algorithm 13: K-PKE.Encrypt (CPA-secure encryption)
-//! - Algorithm 16: ML-KEM.Encaps (CCA-secure encapsulation)
-//!
-//! The encapsulation process:
-//! 1. Generates a random message m
-//! 2. Derives randomness r from m and the public key hash
-//! 3. Encrypts m under the public key to produce ciphertext c
-//! 4. Derives the shared secret from m and c using a KDF
+//! This module implements Algorithm 13 (K-PKE.Encrypt) and Algorithm 16 (ML-KEM.Encaps)
+//! from FIPS 203.
 extern crate alloc;
-use alloc::vec;
 use alloc::vec::Vec;
+use alloc::vec;
 
-use crate::compress::decompress;
-use crate::ntt::{intt_after_basemul, ntt, PolyMulcache};
+
 use crate::params::{Params, N};
-use crate::poly::{Poly, PolyMat, PolyVec};
-use crate::sampling::{sample_ntt, sample_ntt_x4, sample_poly_cbd, sample_poly_cbd_x4};
-use crate::serialize::{decode_polyvec_12, encode_poly_compressed, encode_polyvec_compressed};
+use crate::poly::{Poly, PolyVec, PolyMat};
+use crate::sampling::{sample_ntt, sample_poly_cbd, sample_ntt_x4, sample_poly_cbd_x4};
+use crate::serialize::{
+    decode_polyvec_12, encode_poly_compressed, encode_polyvec_compressed,
+};
+use crate::compress::decompress;
 use crate::symmetric::{g, h, j, prf, Xof};
+use crate::ntt::{ntt, intt_after_basemul, PolyMulcache};
 
 /// Encapsulation result
 pub struct EncapsResult {
@@ -40,15 +36,7 @@ pub struct EncapsResult {
 ///
 /// # Returns
 /// Ciphertext
-fn kpke_encrypt_impl<const K: usize>(
-    ek: &[u8],
-    m: &[u8; 32],
-    r: &[u8; 32],
-    eta1: usize,
-    eta2: usize,
-    du: u32,
-    dv: u32,
-) -> Vec<u8> {
+fn kpke_encrypt_impl<const K: usize>(ek: &[u8], m: &[u8; 32], r: &[u8; 32], eta1: usize, eta2: usize, du: u32, dv: u32) -> Vec<u8> {
     debug_assert_eq!(ek.len(), 384 * K + 32);
 
     // 1. Decode public key: ek = (t, ρ)
@@ -222,49 +210,21 @@ pub fn kpke_encrypt<P: Params>(ek: &[u8], m: &[u8; 32], r: &[u8; 32]) -> Vec<u8>
 
 /// ML-KEM Encapsulation
 ///
-/// Implements Algorithm 16 (ML-KEM.Encaps) from NIST FIPS 203.
-///
-/// Generates a shared secret and encapsulates it using the recipient's public key.
-/// The resulting ciphertext can be transmitted over an insecure channel, and only
-/// the holder of the corresponding private key can recover the shared secret.
-///
-/// # Type Parameters
-///
-/// * `P` - Parameter set ([`MlKem512`], [`MlKem768`], or [`MlKem1024`])
+/// Algorithm 16: ML-KEM.Encaps from FIPS 203
 ///
 /// # Arguments
-///
-/// * `ek` - Encapsulation (public) key bytes
-/// * `m` - Optional 32-byte random message for deterministic encapsulation
-///   - If `None`: Uses OS CSPRNG (recommended for production)
-///   - If `Some(msg)`: Uses provided message (for testing/reproducibility only)
+/// * `ek` - Encapsulation (public) key
+/// * `m` - Optional random message (32 bytes). If None, generates cryptographically secure random message.
 ///
 /// # Returns
-///
-/// [`EncapsResult`] containing:
-/// - `ciphertext`: Can be safely transmitted over public channels
-/// - `shared_secret`: 32-byte secret for deriving symmetric keys
-///
-/// # Panics
-///
-/// Panics if `m` is `None` and the OS RNG fails (extremely rare).
-///
-/// # Security
-///
-/// - The shared secret is derived using a cryptographic KDF
-/// - Randomness is bound to the public key to prevent multi-target attacks
-/// - The ciphertext is IND-CCA2 secure under the MLWE assumption
-///
-/// [`MlKem512`]: crate::MlKem512
-/// [`MlKem768`]: crate::MlKem768
-/// [`MlKem1024`]: crate::MlKem1024
+/// Encapsulation result with ciphertext and shared secret
 pub fn ml_kem_encaps<P: Params>(ek: &[u8], m: Option<&[u8; 32]>) -> EncapsResult {
     debug_assert_eq!(ek.len(), P::EK_SIZE);
 
     // 1. Generate or use provided random message
-    let message = m
-        .cloned()
-        .unwrap_or_else(|| crate::random_bytes_32().expect("Failed to generate random message"));
+    let message = m.cloned().unwrap_or_else(|| {
+        crate::random_bytes_32().expect("RNG failure")
+    });
 
     // 2. Compute (K̄, r) = G(m || H(ek))
     let ek_hash = h(ek);
@@ -292,8 +252,8 @@ pub fn ml_kem_encaps<P: Params>(ek: &[u8], m: Option<&[u8; 32]>) -> EncapsResult
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::params::{MlKem512, MlKem768, MlKem1024};
     use crate::keygen::ml_kem_keygen;
-    use crate::params::{MlKem1024, MlKem512, MlKem768};
 
     #[test]
     fn test_kpke_encrypt_mlkem512() {

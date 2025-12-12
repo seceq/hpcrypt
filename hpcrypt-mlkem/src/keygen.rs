@@ -1,24 +1,18 @@
 //! ML-KEM Key Generation Algorithm
 //!
-//! This module implements the key generation algorithms from NIST FIPS 203:
-//! - Algorithm 12: K-PKE.KeyGen (CPA-secure encryption key generation)
-//! - Algorithm 15: ML-KEM.KeyGen (CCA-secure KEM key generation)
-//!
-//! The key generation process involves:
-//! 1. Generating a uniformly random matrix A from a seed
-//! 2. Sampling secret and error polynomial vectors from a CBD distribution
-//! 3. Computing the public key as t = A·s + e (in NTT domain)
-//! 4. Serializing keys with additional validation data for CCA security
+//! This module implements Algorithm 12 (K-PKE.KeyGen) and Algorithm 15 (ML-KEM.KeyGen)
+//! from FIPS 203.
 extern crate alloc;
-use alloc::vec;
 use alloc::vec::Vec;
+use alloc::vec;
 
-use crate::ntt::{intt, ntt, PolyMulcache};
+
 use crate::params::Params;
-use crate::poly::{PolyMat, PolyVec};
-use crate::sampling::{sample_ntt, sample_ntt_x4, sample_poly_cbd, sample_poly_cbd_x4};
+use crate::poly::{PolyVec, PolyMat};
+use crate::sampling::{sample_ntt, sample_poly_cbd, sample_ntt_x4, sample_poly_cbd_x4};
 use crate::serialize::encode_polyvec_12;
 use crate::symmetric::{g, h, prf, Xof};
+use crate::ntt::{ntt, intt_after_basemul, PolyMulcache};
 
 /// K-PKE (CPA-secure) key pair
 ///
@@ -60,14 +54,16 @@ fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
         while j + 4 <= K {
             // Batch of 4 using x4
             let mut seeds = [[0u8; 34]; 4];
-            for (k, seed) in seeds.iter_mut().enumerate() {
-                seed[0..32].copy_from_slice(rho);
-                seed[32] = (j + k) as u8; // j index
-                seed[33] = i as u8; // i index
+            for k in 0..4 {
+                seeds[k][0..32].copy_from_slice(rho);
+                seeds[k][32] = (j + k) as u8;  // j index
+                seeds[k][33] = i as u8;         // i index
             }
 
             let polys = sample_ntt_x4(&seeds);
-            a_mat.rows[i].polys[j..(j + 4)].copy_from_slice(&polys);
+            for k in 0..4 {
+                a_mat.rows[i].polys[j + k] = polys[k];
+            }
             j += 4;
         }
 
@@ -90,7 +86,9 @@ fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
         // Batch of 4 using x4
         let counters = [counter, counter + 1, counter + 2, counter + 3];
         let polys = sample_poly_cbd_x4(&sigma, counters, eta1);
-        s.polys[i..(i + 4)].copy_from_slice(&polys);
+        for k in 0..4 {
+            s.polys[i + k] = polys[k];
+        }
         counter += 4;
         i += 4;
     }
@@ -110,7 +108,9 @@ fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
         // Batch of 4 using x4
         let counters = [counter, counter + 1, counter + 2, counter + 3];
         let polys = sample_poly_cbd_x4(&sigma, counters, eta1);
-        e.polys[i..(i + 4)].copy_from_slice(&polys);
+        for k in 0..4 {
+            e.polys[i + k] = polys[k];
+        }
         counter += 4;
         i += 4;
     }
@@ -134,24 +134,27 @@ fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
     }
 
     // Pre-compute mulcaches for s_ntt
-    let s_caches: Vec<PolyMulcache> = s_ntt.polys.iter().map(PolyMulcache::compute).collect();
+    let s_caches: Vec<PolyMulcache> = s_ntt.polys.iter()
+        .map(|poly| PolyMulcache::compute(poly))
+        .collect();
 
     // Compute A * s in NTT domain using optimized mulcache accumulation
     let as_ntt = a_mat.mul_vec_ntt_cached(&s_ntt, &s_caches);
 
-    // Convert result back to coefficient form
-    let mut as_vec = PolyVec::<K>::new();
+    // Convert e to NTT domain
+    let mut e_ntt = PolyVec::<K>::new();
     for i in 0..K {
-        as_vec.polys[i] = intt(&as_ntt.polys[i]);
+        e_ntt.polys[i] = e.polys[i];
+        ntt(&mut e_ntt.polys[i]);
     }
 
-    // Add error vector e (in coefficient form)
-    // Use add_unreduced() because encoding handles reduction (4.65x faster)
-    let t = as_vec.add_unreduced(&e);
+    // Compute t_hat = A * s_hat + e_hat (all in NTT domain)
+    // Per FIPS 203: t̂ ← Â ∘ ŝ + ê
+    let t_hat = as_ntt.add_unreduced(&e_ntt);
 
     // 7. Encode keys
-    // ek = Encode(t) || ρ
-    let mut ek = encode_polyvec_12(&t);
+    // ek = ByteEncode_12(t_hat) || ρ (t_hat in NTT form per FIPS 203)
+    let mut ek = encode_polyvec_12(&t_hat);
     ek.extend_from_slice(rho);
 
     // dk = Encode(s_ntt) - Store secret key in NTT form for faster decaps
@@ -193,45 +196,21 @@ pub struct KeyPair {
 
 /// Generate ML-KEM key pair
 ///
-/// Implements Algorithm 15 (ML-KEM.KeyGen) from NIST FIPS 203.
+/// Algorithm 15: ML-KEM.KeyGen from FIPS 203
 ///
-/// This function generates a complete ML-KEM key pair including:
-/// - Public encapsulation key (ek) containing the matrix seed and public polynomial vector
-/// - Private decapsulation key (dk) containing the secret polynomial, public key,
-///   hash of the public key, and implicit rejection randomness
-///
-/// # Type Parameters
-///
-/// * `P` - Parameter set ([`MlKem512`], [`MlKem768`], or [`MlKem1024`])
+/// # Type Parameter
+/// * `P` - Parameter set (MlKem512, MlKem768, or MlKem1024)
 ///
 /// # Arguments
-///
-/// * `d` - Optional 32-byte seed for deterministic key generation.
-///   - If `None`: Uses OS CSPRNG (recommended for production)
-///   - If `Some(seed)`: Uses provided seed (for testing/reproducibility only)
+/// * `d` - Random seed (32 bytes). If None, generates cryptographically secure random seed.
 ///
 /// # Returns
-///
-/// [`KeyPair`] containing the encapsulation and decapsulation keys
-///
-/// # Panics
-///
-/// Panics if `d` is `None` and the OS RNG fails (extremely rare).
-///
-/// # Security
-///
-/// - Uses CBD (Centered Binomial Distribution) for noise sampling
-/// - Public key includes hash for validation in decapsulation
-/// - Private key includes randomness for implicit rejection
-///
-/// [`MlKem512`]: crate::MlKem512
-/// [`MlKem768`]: crate::MlKem768
-/// [`MlKem1024`]: crate::MlKem1024
+/// ML-KEM key pair with encapsulation and decapsulation keys
 pub fn ml_kem_keygen<P: Params>(d: Option<&[u8; 32]>) -> KeyPair {
     // Generate or use provided seed
-    let seed = d
-        .cloned()
-        .unwrap_or_else(|| crate::random_bytes_32().expect("Failed to generate random seed"));
+    let seed = d.cloned().unwrap_or_else(|| {
+        crate::random_bytes_32().expect("RNG failure")
+    });
 
     // 1. Generate K-PKE key pair
     let kpke_keys = kpke_keygen::<P>(&seed);
@@ -257,10 +236,41 @@ pub fn ml_kem_keygen<P: Params>(d: Option<&[u8; 32]>) -> KeyPair {
     KeyPair { ek, dk }
 }
 
+/// Generate ML-KEM key pair with explicit d and z seeds (for CAVP testing)
+///
+/// This function is specifically for NIST CAVP/ACVP test vectors which provide
+/// separate d and z values. For production use, use [`ml_kem_keygen`] instead.
+#[cfg(feature = "cavp")]
+pub fn ml_kem_keygen_internal<P: Params>(d: &[u8], z: &[u8]) -> KeyPair {
+    // Convert d to array
+    let mut d_array = [0u8; 32];
+    d_array.copy_from_slice(&d[..32]);
+
+    // 1. Generate K-PKE key pair
+    let kpke_keys = kpke_keygen::<P>(&d_array);
+
+    // 2. ek_pke = encapsulation key from K-PKE
+    let ek = kpke_keys.ek;
+
+    // 3. dk_pke = decapsulation key from K-PKE
+    let dk_pke = kpke_keys.dk;
+
+    // 4. Compute H(ek) for decapsulation key
+    let ek_hash = h(&ek);
+
+    // 5. Construct ML-KEM decapsulation key: dk = (dk_pke || ek || H(ek) || z)
+    let mut dk = dk_pke;
+    dk.extend_from_slice(&ek);
+    dk.extend_from_slice(&ek_hash);
+    dk.extend_from_slice(z);
+
+    KeyPair { ek, dk }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::params::{MlKem1024, MlKem512, MlKem768};
+    use crate::params::{MlKem512, MlKem768, MlKem1024};
 
     #[test]
     fn test_kpke_keygen_mlkem512() {
