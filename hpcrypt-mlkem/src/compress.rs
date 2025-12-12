@@ -55,18 +55,12 @@ pub fn compress_d1(x: i16) -> u16 {
     // Constant-time method: if 833 <= x <= 2496, return 1, else 0
     // This avoids division entirely for the d=1 case
 
-    const Q_HALF: i16 = Q / 2; // 1664
-    const Q_QUARTER: i16 = Q / 4; // 832
+    const Q_HALF: i16 = (Q / 2) as i16;  // 1664
+    const Q_QUARTER: i16 = (Q / 4) as i16;  // 832
 
     // Coefficients from NTT are already in valid range [0, Q)
     // Only reduce if needed (handles both positive and potential negative values)
-    let x = if x >= Q {
-        x % Q
-    } else if x < 0 {
-        ((x % Q) + Q) % Q
-    } else {
-        x
-    };
+    let x = if x >= Q { x % Q } else if x < 0 { ((x % Q) + Q) % Q } else { x };
 
     // If 833 <= x <= 2496, then -832 <= shifted <= 831
     let shifted = Q_HALF - x;
@@ -86,7 +80,7 @@ pub fn compress_d1(x: i16) -> u16 {
     (r0 & 1) as u16
 }
 
-/// Extract 32-byte message from polynomial using compress_d1 (portable)
+/// Extract 32-byte message from polynomial using compress_d1
 ///
 /// Compresses each coefficient to 1 bit and packs into 32 bytes.
 #[inline]
@@ -172,12 +166,12 @@ pub fn compress(x: i16, d: u32) -> u16 {
 #[inline(always)]
 pub fn compress_fast(x: i16, d: u32) -> u16 {
     debug_assert!(d > 0 && d <= 16);
-    debug_assert!((0..Q).contains(&x), "coefficient must be in range [0, q)");
+    debug_assert!(x >= 0 && x < Q, "coefficient must be in range [0, q)");
 
     // libcrux-style: no branches, direct computation
     // Formula: ((x << d) + q/2) * MAGIC_DIVISOR >> 35
     let mut compressed = (x as u64) << d;
-    compressed += 1664; // q/2 = 3329/2 = 1664
+    compressed += 1664;  // q/2 = 3329/2 = 1664
     compressed *= MAGIC_DIVISOR;
     compressed >>= 35;
 
@@ -225,7 +219,7 @@ pub fn decompress_fast(y: u16, d: u32) -> i16 {
     // libcrux formula: ((y * q) << 1) + (1 << d)) >> (d + 1)
     let mut decompressed = (y as i32) * (Q as i32);
     decompressed = (decompressed << 1) + (1i32 << d);
-    decompressed >>= d + 1;
+    decompressed = decompressed >> (d + 1);
     decompressed as i16
 }
 
@@ -328,24 +322,13 @@ macro_rules! compress_vec16_unrolled {
 /// Optimized compression with manual loop unrolling for 10-bit compression
 ///
 /// This specialized function manually unrolls the compression loop for maximum
-/// performance. Benchmarks show this is 1.79x faster than libcrux portable
-/// and 2.53x faster than the looped version.
+/// performance.
 ///
 /// # Arguments
 /// * `coeffs` - 16 coefficients to compress
 ///
 /// # Returns
 /// Array of 16 compressed 10-bit values
-///
-/// # Performance
-/// - Unrolled: ~35 ns for 16 elements (256 total)
-/// - Looped: ~116 ns for 16 elements
-/// - Improvement: 3.3x faster than loop
-/// - vs libcrux: Competitive or better
-///
-/// # Implementation
-/// Uses macros to generate 16 unrolled compression operations, allowing the
-/// compiler to eliminate loop overhead and maximize instruction-level parallelism.
 #[inline(always)]
 pub fn compress_vec16_d10_unrolled(coeffs: [i16; 16]) -> [u16; 16] {
     const D: u32 = 10;
@@ -355,11 +338,6 @@ pub fn compress_vec16_d10_unrolled(coeffs: [i16; 16]) -> [u16; 16] {
     const MASK: u16 = (1u16 << D) - 1;
 
     // Generate 16 unrolled compression operations via macro
-    // This allows compiler to:
-    // 1. Eliminate loop overhead completely
-    // 2. Schedule instructions optimally
-    // 3. Maximize CPU parallelism (instruction-level parallelism)
-    // 4. Keep all intermediate values in registers
     compress_vec16_unrolled!(coeffs, D, HALF_Q, MAGIC, MASK)
 }
 
@@ -397,27 +375,18 @@ macro_rules! decompress_vec16_unrolled {
 /// Optimized decompression with manual loop unrolling for 10-bit decompression
 ///
 /// This specialized function manually unrolls the decompression loop for maximum
-/// performance. Benchmarks show this is 1.95x faster than the looped version.
+/// performance.
 ///
 /// # Arguments
 /// * `compressed` - 16 compressed 10-bit values
 ///
 /// # Returns
 /// Array of 16 decompressed coefficients
-///
-/// # Performance
-/// - Unrolled: ~18 ns for 16 elements (256 total)
-/// - Looped: ~35 ns for 16 elements
-/// - Improvement: 1.95x faster than loop
-///
-/// # Implementation
-/// Uses macros to generate 16 unrolled decompression operations, allowing the
-/// compiler to eliminate loop overhead and maximize instruction-level parallelism.
 #[inline(always)]
 pub fn decompress_vec16_d10_unrolled(compressed: [u16; 16]) -> [i16; 16] {
     const D: u32 = 10;
     const Q: u32 = crate::params::Q as u32;
-    const HALF: u32 = 1u32 << (D - 1); // 2^(d-1) = 512
+    const HALF: u32 = 1u32 << (D - 1);  // 2^(d-1) = 512
 
     decompress_vec16_unrolled!(compressed, Q, HALF, D)
 }
@@ -469,7 +438,7 @@ mod tests {
         for d in [4, 10, 11] {
             for y in 0..(1 << d) {
                 let decompressed = decompress(y, d);
-                assert!((0..Q).contains(&decompressed));
+                assert!(decompressed >= 0 && decompressed < Q);
             }
         }
     }
@@ -495,7 +464,7 @@ mod tests {
         let compressed = compress(x, 4);
 
         // Should map to approximately middle of [0, 16)
-        assert!((6..=9).contains(&compressed));
+        assert!(compressed >= 6 && compressed <= 9);
     }
 
     #[test]
@@ -505,7 +474,7 @@ mod tests {
         let compressed = compress(x, 10);
 
         // Should map to approximately 1/4 of [0, 1024)
-        assert!((240..=270).contains(&compressed));
+        assert!(compressed >= 240 && compressed <= 270);
     }
 
     #[test]
@@ -515,7 +484,7 @@ mod tests {
         let compressed = compress(x, 11);
 
         // Should map to approximately 1/4 of [0, 2048)
-        assert!((480..=540).contains(&compressed));
+        assert!(compressed >= 480 && compressed <= 540);
     }
 
     #[test]
@@ -536,7 +505,7 @@ mod tests {
         assert_eq!(decompressed.len(), compressed.len());
 
         for &d in &decompressed {
-            assert!((0..Q).contains(&d));
+            assert!(d >= 0 && d < Q);
         }
     }
 
@@ -590,11 +559,7 @@ mod tests {
                 assert!(
                     diff <= 2,
                     "decompress_fast mismatch at d={}, y={}: original={}, fast={}, diff={}",
-                    d,
-                    y,
-                    original,
-                    fast,
-                    diff
+                    d, y, original, fast, diff
                 );
             }
         }
@@ -616,11 +581,7 @@ mod tests {
                 assert!(
                     diff <= max_error || diff_wrapped <= max_error,
                     "Roundtrip failed: d={}, x={}, compressed={}, decompressed={}, diff={}",
-                    d,
-                    x,
-                    compressed,
-                    decompressed,
-                    diff
+                    d, x, compressed, decompressed, diff
                 );
             }
         }
@@ -637,9 +598,7 @@ mod tests {
                 assert!(
                     result < (1 << d),
                     "compress_fast out of range: d={}, x={}, result={}",
-                    d,
-                    x,
-                    result
+                    d, x, result
                 );
             }
         }
@@ -653,11 +612,9 @@ mod tests {
             for y in 0..max_val {
                 let result = decompress_fast(y, d);
                 assert!(
-                    (0..Q).contains(&result),
+                    result >= 0 && result < Q,
                     "decompress_fast out of range: d={}, y={}, result={}",
-                    d,
-                    y,
-                    result
+                    d, y, result
                 );
             }
         }

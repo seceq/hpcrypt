@@ -333,7 +333,12 @@ mod tests {
     #[test]
     fn test_xof_x4_matches_sequential() {
         // Test that x4 batched XOF produces same results as sequential XOF
-        let seeds = [[1u8; 34], [2u8; 34], [3u8; 34], [4u8; 34]];
+        let seeds = [
+            [1u8; 34],
+            [2u8; 34],
+            [3u8; 34],
+            [4u8; 34],
+        ];
 
         // Batched version
         let mut outputs_batch = [[0u8; 168]; 4];
@@ -348,11 +353,8 @@ mod tests {
 
         // Should produce identical results
         for i in 0..4 {
-            assert_eq!(
-                outputs_batch[i], outputs_seq[i],
-                "Batched XOF output {} doesn't match sequential",
-                i
-            );
+            assert_eq!(outputs_batch[i], outputs_seq[i],
+                "Batched XOF output {} doesn't match sequential", i);
         }
     }
 
@@ -384,11 +386,8 @@ mod tests {
 
         // Should produce identical results
         for i in 0..4 {
-            assert_eq!(
-                outputs_batch[i], outputs_seq[i],
-                "Batched PRF output {} doesn't match sequential",
-                i
-            );
+            assert_eq!(outputs_batch[i], outputs_seq[i],
+                "Batched PRF output {} doesn't match sequential", i);
         }
     }
 }

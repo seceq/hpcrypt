@@ -4,15 +4,12 @@
 //! - SampleNTT: Uniform sampling using rejection sampling
 //! - SamplePolyCBD: Sampling from Centered Binomial Distribution
 
-#[allow(unused_imports)]
-use hpcrypt_hash::xof_reader::XofReader;
-
 extern crate alloc;
 use alloc::vec;
 
 use crate::params::{N, Q};
 use crate::poly::Poly;
-use crate::symmetric::{prf_x4, xof_x4, Xof};
+use crate::symmetric::{Xof, xof_x4, prf_x4};
 
 /// Sample a polynomial uniformly from Z_q using rejection sampling
 ///
@@ -36,12 +33,12 @@ use crate::symmetric::{prf_x4, xof_x4, Xof};
 /// Optimized with batch processing (24 bytes/iteration) and sequential
 /// memory writes for better CPU cache utilization and prefetching.
 pub fn sample_ntt(xof: &mut Xof) -> Poly {
-    let mut coeffs = [0i16; N]; // Temporary buffer for sequential writes
+    let mut coeffs = [0i16; N];  // Temporary buffer for sequential writes
     let mut reader = xof.reader();
     let mut idx = 0;
 
     while idx < N {
-        let mut buf = [0u8; 24]; // Process 24 bytes (8×3) at a time
+        let mut buf = [0u8; 24];  // Process 24 bytes (8×3) at a time
         reader.read(&mut buf);
 
         // Process 8 groups of 3 bytes (up to 16 coefficients per batch)
@@ -105,14 +102,17 @@ pub fn sample_poly_cbd(eta: usize, bytes: &[u8]) -> Poly {
 /// For η=2, each coefficient is computed as (a₀ + a₁) - (b₀ + b₁)
 /// where aᵢ, bᵢ are individual bits from the input.
 ///
-/// Dispatch priority: AVX2 (compile-time) > AVX2 (runtime) > Portable
+/// On x86_64 with AVX2, this automatically uses optimized SIMD intrinsics.
 #[inline]
 fn sample_poly_cbd2(bytes: &[u8]) -> Poly {
     debug_assert_eq!(bytes.len(), 128); // 64 * η = 64 * 2
 
+    let mut coeffs = [0i16; N];
+
     #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
     {
-        let mut coeffs = [0i16; N];
+        // Compile-time AVX2: use optimized intrinsics
+        // Safety: AVX2 is guaranteed by cfg attribute
         let bytes_arr: &[u8; 128] = bytes.try_into().unwrap();
         unsafe {
             crate::intrinsics::avx2::cbd2(bytes_arr, &mut coeffs);
@@ -122,8 +122,8 @@ fn sample_poly_cbd2(bytes: &[u8]) -> Poly {
 
     #[cfg(all(target_arch = "x86_64", not(target_feature = "avx2")))]
     {
+        // Runtime dispatch: check CPU features at runtime
         if crate::cpufeatures::has_avx2() {
-            let mut coeffs = [0i16; N];
             let bytes_arr: &[u8; 128] = bytes.try_into().unwrap();
             unsafe {
                 crate::intrinsics::avx2::cbd2(bytes_arr, &mut coeffs);
@@ -132,13 +132,14 @@ fn sample_poly_cbd2(bytes: &[u8]) -> Poly {
         }
     }
 
-    sample_poly_cbd2_portable(bytes)
+    // Portable fallback
+    sample_poly_cbd2_portable(bytes, &mut coeffs);
+    Poly { coeffs }
 }
 
-/// Portable implementation of CBD η=2
+/// Portable CBD2 implementation
 #[inline]
-fn sample_poly_cbd2_portable(bytes: &[u8]) -> Poly {
-    let mut coeffs = [0i16; N];
+fn sample_poly_cbd2_portable(bytes: &[u8], coeffs: &mut [i16; N]) {
     let mut idx = 0;
 
     // Process 4 bytes (8 coefficients) at a time
@@ -155,14 +156,12 @@ fn sample_poly_cbd2_portable(bytes: &[u8]) -> Poly {
         // Extract 8 coefficients (each uses 4 bits = 2 bits for a-sum + 2 bits for b-sum)
         for j in 0..8 {
             let bits = (d >> (4 * j)) & 0xF;
-            let a = (bits & 0x3) as i16; // Sum of a₀ + a₁ (bits 0-1)
+            let a = (bits & 0x3) as i16;        // Sum of a₀ + a₁ (bits 0-1)
             let b = ((bits >> 2) & 0x3) as i16; // Sum of b₀ + b₁ (bits 2-3)
             coeffs[idx] = a - b;
             idx += 1;
         }
     }
-
-    Poly { coeffs }
 }
 
 /// Sample from CBD with η = 3 (used in ML-KEM-512)
@@ -172,14 +171,17 @@ fn sample_poly_cbd2_portable(bytes: &[u8]) -> Poly {
 /// For η=3, each coefficient is computed as (a₀ + a₁ + a₂) - (b₀ + b₁ + b₂)
 /// where aᵢ, bᵢ are individual bits from the input.
 ///
-/// Dispatch priority: AVX2 (compile-time) > AVX2 (runtime) > Portable
+/// On x86_64 with AVX2, this automatically uses optimized SIMD intrinsics.
 #[inline]
 fn sample_poly_cbd3(bytes: &[u8]) -> Poly {
     debug_assert_eq!(bytes.len(), 192); // 64 * 3 bytes for 256 coefficients
 
+    let mut coeffs = [0i16; N];
+
     #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
     {
-        let mut coeffs = [0i16; N];
+        // Compile-time AVX2: use optimized intrinsics
+        // Safety: AVX2 is guaranteed by cfg attribute
         let bytes_arr: &[u8; 192] = bytes.try_into().unwrap();
         unsafe {
             crate::intrinsics::avx2::cbd3(bytes_arr, &mut coeffs);
@@ -189,8 +191,8 @@ fn sample_poly_cbd3(bytes: &[u8]) -> Poly {
 
     #[cfg(all(target_arch = "x86_64", not(target_feature = "avx2")))]
     {
+        // Runtime dispatch: check CPU features at runtime
         if crate::cpufeatures::has_avx2() {
-            let mut coeffs = [0i16; N];
             let bytes_arr: &[u8; 192] = bytes.try_into().unwrap();
             unsafe {
                 crate::intrinsics::avx2::cbd3(bytes_arr, &mut coeffs);
@@ -199,41 +201,33 @@ fn sample_poly_cbd3(bytes: &[u8]) -> Poly {
         }
     }
 
-    sample_poly_cbd3_portable(bytes)
+    // Portable fallback
+    sample_poly_cbd3_portable(bytes, &mut coeffs);
+    Poly { coeffs }
 }
 
-/// Portable implementation of CBD η=3
+/// Portable CBD3 implementation
 #[inline]
-fn sample_poly_cbd3_portable(bytes: &[u8]) -> Poly {
-    let mut coeffs = [0i16; N];
+fn sample_poly_cbd3_portable(bytes: &[u8], coeffs: &mut [i16; N]) {
     let mut idx = 0;
 
     // Process 3 bytes (4 coefficients) at a time
-    // Each coefficient uses 6 bits (3 bits for a-sum, 3 bits for b-sum)
-    // 4 coefficients × 6 bits = 24 bits = 3 bytes
     for chunk in bytes.chunks_exact(3) {
         let t = u32::from_le_bytes([chunk[0], chunk[1], chunk[2], 0]);
 
-        // SWAR popcount for η=3:
-        // Accumulate triplets of bits (a₀+a₁+a₂ and b₀+b₁+b₂)
-        // Magic constant 0x00249249 = 0b00000000_00100100_10010010_01001001
-        // Masks bits at positions: 0,3,6,9,12,15,18,21 (every 3rd bit)
+        // SWAR popcount for η=3
         let d = t & 0x00249249;
-        let d = d + ((t >> 1) & 0x00249249); // Add bits at positions 1,4,7,10,...
-        let d = d + ((t >> 2) & 0x00249249); // Add bits at positions 2,5,8,11,...
+        let d = d + ((t >> 1) & 0x00249249);
+        let d = d + ((t >> 2) & 0x00249249);
 
-        // Now d contains 3-bit sums in each 6-bit position
-        // Extract 4 coefficients (each uses 6 bits = 3 bits for a-sum + 3 bits for b-sum)
         for j in 0..4 {
             let bits = (d >> (6 * j)) & 0x3F;
-            let a = (bits & 0x7) as i16; // Sum of a₀ + a₁ + a₂ (bits 0-2)
-            let b = ((bits >> 3) & 0x7) as i16; // Sum of b₀ + b₁ + b₂ (bits 3-5)
+            let a = (bits & 0x7) as i16;
+            let b = ((bits >> 3) & 0x7) as i16;
             coeffs[idx] = a - b;
             idx += 1;
         }
     }
-
-    Poly { coeffs }
 }
 
 /// x4 Batched uniform sampling from 4 XOF seeds
@@ -251,7 +245,7 @@ fn sample_poly_cbd3_portable(bytes: &[u8]) -> Poly {
 /// This is significantly faster than calling `sample_ntt` 4 times sequentially.
 pub fn sample_ntt_x4(seeds: &[[u8; 34]; 4]) -> [Poly; 4] {
     let mut polys = [Poly::new(); 4];
-    let mut outputs = [[0u8; 168]; 4]; // SHAKE-128 rate is 168 bytes
+    let mut outputs = [[0u8; 168]; 4];  // SHAKE-128 rate is 168 bytes
     let mut indices = [0usize; 4];
 
     // Keep sampling until all 4 polynomials are complete
@@ -267,10 +261,10 @@ pub fn sample_ntt_x4(seeds: &[[u8; 34]; 4]) -> [Poly; 4] {
 
             let mut buf_idx = 0;
             while buf_idx + 2 < outputs[i].len() && indices[i] < N {
-                let d1 =
-                    (outputs[i][buf_idx] as u16) | ((outputs[i][buf_idx + 1] as u16 & 0x0F) << 8);
-                let d2 = ((outputs[i][buf_idx + 1] as u16) >> 4)
-                    | ((outputs[i][buf_idx + 2] as u16) << 4);
+                let d1 = (outputs[i][buf_idx] as u16) |
+                        ((outputs[i][buf_idx + 1] as u16 & 0x0F) << 8);
+                let d2 = ((outputs[i][buf_idx + 1] as u16) >> 4) |
+                        ((outputs[i][buf_idx + 2] as u16) << 4);
                 buf_idx += 3;
 
                 // Rejection sampling
@@ -339,7 +333,7 @@ mod tests {
 
         // All coefficients should be in valid range [0, q)
         for &coeff in &poly.coeffs {
-            assert!((0..Q).contains(&coeff));
+            assert!(coeff >= 0 && coeff < Q);
         }
     }
 
@@ -374,7 +368,7 @@ mod tests {
 
         // CBD_2 produces coefficients in [-2, 2]
         for &coeff in &poly.coeffs {
-            assert!((-2..=2).contains(&coeff));
+            assert!(coeff >= -2 && coeff <= 2);
         }
     }
 
@@ -385,7 +379,7 @@ mod tests {
 
         // CBD_3 produces coefficients in [-3, 3]
         for &coeff in &poly.coeffs {
-            assert!((-3..=3).contains(&coeff));
+            assert!(coeff >= -3 && coeff <= 3);
         }
     }
 
