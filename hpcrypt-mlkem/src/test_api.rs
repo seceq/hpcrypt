@@ -17,10 +17,13 @@
 
 #![cfg(feature = "cavp")]
 
+extern crate alloc;
+use alloc::vec::Vec;
+
+use crate::decaps;
+use crate::encaps;
 use crate::keygen::ml_kem_keygen_internal;
 use crate::params::Params;
-use crate::{encaps, decaps};
-use alloc::vec::Vec;
 
 /// Error type for CAVP test operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -149,7 +152,7 @@ impl KemCore for crate::params::MlKem1024 {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::params::{MlKem512, MlKem768, MlKem1024};
+    use crate::params::{MlKem1024, MlKem512, MlKem768};
 
     #[test]
     fn test_deterministic_keygen_mlkem512() {

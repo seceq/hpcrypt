@@ -3,13 +3,14 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 
+
 /// Convert byte to bits (LSB first)
 #[inline]
 #[allow(dead_code)]
 pub fn byte_to_bits(byte: u8) -> [u8; 8] {
     let mut bits = [0u8; 8];
-    for (i, bit) in bits.iter_mut().enumerate() {
-        *bit = (byte >> i) & 1;
+    for i in 0..8 {
+        bits[i] = (byte >> i) & 1;
     }
     bits
 }
@@ -20,8 +21,8 @@ pub fn byte_to_bits(byte: u8) -> [u8; 8] {
 pub fn bits_to_byte(bits: &[u8]) -> u8 {
     debug_assert!(bits.len() == 8);
     let mut byte = 0u8;
-    for (i, &bit) in bits.iter().enumerate().take(8) {
-        byte |= (bit & 1) << i;
+    for i in 0..8 {
+        byte |= (bits[i] & 1) << i;
     }
     byte
 }

@@ -37,7 +37,7 @@ use alloc::vec::Vec;
 /// # Examples
 ///
 /// ```
-/// use hpcrypt_mlkem::ct_verify::ct_eq;
+/// use mlkem::ct_verify::ct_eq;
 ///
 /// let a = b"secret";
 /// let b = b"secret";
@@ -63,8 +63,8 @@ pub fn ct_eq(a: &[u8], b: &[u8]) -> u8 {
     // Better: use (1 ^ ((diff | (!diff & diff.wrapping_neg())) >> 7))
     // Simplest: ((diff as u16 - 1) >> 15) as u8 inverted
     // Best constant-time way: check if diff is zero
-
-    ((diff | diff.wrapping_neg()) >> 7) ^ 1
+    let is_zero = ((diff | diff.wrapping_neg()) >> 7) ^ 1;
+    is_zero
 }
 
 /// Constant-time byte equality check
@@ -74,7 +74,7 @@ pub fn ct_eq(a: &[u8], b: &[u8]) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use hpcrypt_mlkem::ct_verify::ct_u8_eq;
+/// use mlkem::ct_verify::ct_u8_eq;
 ///
 /// assert_eq!(ct_u8_eq(5, 5), 0xFF);
 /// assert_eq!(ct_u8_eq(5, 6), 0x00);
@@ -99,7 +99,7 @@ pub const fn ct_u8_eq(a: u8, b: u8) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use hpcrypt_mlkem::ct_verify::ct_u8_lt;
+/// use mlkem::ct_verify::ct_u8_lt;
 ///
 /// assert_eq!(ct_u8_lt(3, 5), 0xFF);
 /// assert_eq!(ct_u8_lt(5, 3), 0x00);
@@ -124,7 +124,7 @@ pub const fn ct_u8_lt(a: u8, b: u8) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use hpcrypt_mlkem::ct_verify::ct_select_u8;
+/// use mlkem::ct_verify::ct_select_u8;
 ///
 /// assert_eq!(ct_select_u8(0xFF, 42, 17), 42);
 /// assert_eq!(ct_select_u8(0x00, 42, 17), 17);
@@ -155,7 +155,7 @@ pub const fn ct_select_i16(mask: u8, a: i16, b: i16) -> i16 {
 /// # Examples
 ///
 /// ```
-/// use hpcrypt_mlkem::ct_verify::ct_select;
+/// use mlkem::ct_verify::ct_select;
 ///
 /// let a = b"first";
 /// let b = b"secnd";
@@ -385,12 +385,7 @@ mod tests {
             let mut b = [0x00u8; 32];
             b[pos] = 0x01;
 
-            assert_eq!(
-                ct_eq(&a, &b),
-                0,
-                "Failed to detect difference at position {}",
-                pos
-            );
+            assert_eq!(ct_eq(&a, &b), 0, "Failed to detect difference at position {}", pos);
 
             a[pos] = 0x01;
             assert_eq!(ct_eq(&a, &b), 1, "False negative at position {}", pos);

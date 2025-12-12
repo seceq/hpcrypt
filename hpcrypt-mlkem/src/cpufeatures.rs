@@ -11,9 +11,10 @@ pub fn has_avx2() -> bool {
         }
         #[cfg(not(target_feature = "avx2"))]
         {
+            // Runtime detection requires std
             #[cfg(feature = "std")]
             {
-                std::is_x86_feature_detected!("avx2")
+                is_x86_feature_detected!("avx2")
             }
             #[cfg(not(feature = "std"))]
             {
@@ -34,6 +35,7 @@ mod tests {
 
     #[test]
     fn test_cpu_detection() {
+        // Just verify it doesn't crash
         let _avx2 = has_avx2();
     }
 }

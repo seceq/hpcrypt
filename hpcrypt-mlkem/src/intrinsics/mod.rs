@@ -4,22 +4,29 @@
 //! hardware intrinsics. Currently supports:
 //!
 //! - **AVX2**: x86-64 256-bit SIMD (Intel Haswell+, AMD Zen+)
+//! - **NEON**: ARM 128-bit SIMD (AArch64)
 //!
 //! # Module Organization
 //!
 //! ```text
 //! intrinsics/
 //! ├── mod.rs          (this file)
-//! └── avx2/           (AVX2 implementation)
+//! ├── avx2/           (AVX2 implementation)
+//! │   ├── mod.rs      (module root, re-exports)
+//! │   ├── consts.rs   (pre-computed constants)
+//! │   ├── arith.rs    (Montgomery/Barrett arithmetic)
+//! │   ├── ntt.rs      (NTT/INTT transforms)
+//! │   ├── poly.rs     (polynomial operations)
+//! │   ├── sampling.rs (CBD, rejection sampling)
+//! │   ├── compress.rs (compression/decompression)
+//! │   └── serialize.rs(byte encoding/decoding)
+//! └── neon/           (NEON implementation - faster functions only)
 //!     ├── mod.rs      (module root, re-exports)
 //!     ├── consts.rs   (pre-computed constants)
 //!     ├── arith.rs    (Montgomery/Barrett arithmetic)
-//!     ├── ntt.rs      (NTT/INTT transforms)
-//!     ├── poly.rs     (polynomial operations)
-//!     ├── sampling.rs (CBD, rejection sampling)
-//!     ├── compress.rs (compression/decompression)
-//!     ├── serialize.rs(byte encoding/decoding)
-//!     └── unpacked.rs (constant-time operations)
+//!     ├── ntt.rs      (NTT/INTT - 1.06-1.19x faster)
+//!     ├── sampling.rs (CBD2 only - 1.82x faster)
+//!     └── compress.rs (compress_d10 - 8% faster)
 //! ```
 //!
 //! # Usage
@@ -57,13 +64,20 @@
 #[cfg(target_arch = "x86_64")]
 pub mod avx2;
 
+#[cfg(any(target_arch = "aarch64", target_arch = "arm"))]
+pub mod neon;
+
 /// Check if any SIMD intrinsics are available on this platform
 pub fn simd_available() -> bool {
     #[cfg(target_arch = "x86_64")]
     {
         avx2::is_available()
     }
-    #[cfg(not(target_arch = "x86_64"))]
+    #[cfg(any(target_arch = "aarch64", target_arch = "arm"))]
+    {
+        neon::is_available()
+    }
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "arm")))]
     {
         false
     }
@@ -85,7 +99,15 @@ pub fn best_simd_name() -> &'static str {
             "None"
         }
     }
-    #[cfg(not(target_arch = "x86_64"))]
+    #[cfg(any(target_arch = "aarch64", target_arch = "arm"))]
+    {
+        if neon::is_available() {
+            "NEON"
+        } else {
+            "None"
+        }
+    }
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "arm")))]
     {
         "None"
     }
@@ -96,6 +118,8 @@ pub fn best_simd_name() -> &'static str {
 pub enum SimdTier {
     /// AVX2 (256-bit vectors, 16 i16 per vector)
     Avx2,
+    /// NEON (128-bit vectors, 8 i16 per vector)
+    Neon,
     /// No SIMD, portable fallback
     None,
 }
@@ -110,7 +134,15 @@ pub fn best_simd_tier() -> SimdTier {
             SimdTier::None
         }
     }
-    #[cfg(not(target_arch = "x86_64"))]
+    #[cfg(any(target_arch = "aarch64", target_arch = "arm"))]
+    {
+        if neon::is_available() {
+            SimdTier::Neon
+        } else {
+            SimdTier::None
+        }
+    }
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "arm")))]
     {
         SimdTier::None
     }
