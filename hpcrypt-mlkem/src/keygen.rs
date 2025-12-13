@@ -51,7 +51,8 @@ fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
     let mut counter: u8 = 0;
 
     // 3. Generate matrix Â from seed ρ using x4 batched sampling
-    // FIPS 203: Â[i][j] ← SampleNTT(XOF(ρ, i, j)) - seed is ρ || i || j
+    // FIPS 203 Algorithm 12, line 8: Â[i][j] ← SampleNTT(XOF(ρ, j, i))
+    // Note: XOF seed order is (ρ || j || i), NOT (ρ || i || j)
     let mut a_mat = PolyMat::<K>::new();
     for i in 0..K {
         // Process row in chunks of 4
@@ -61,8 +62,8 @@ fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
             let mut seeds = [[0u8; 34]; 4];
             for k in 0..4 {
                 seeds[k][0..32].copy_from_slice(rho);
-                seeds[k][32] = i as u8;          // i index (FIPS 203)
-                seeds[k][33] = (j + k) as u8;    // j index (FIPS 203)
+                seeds[k][32] = (j + k) as u8;    // j index first (FIPS 203)
+                seeds[k][33] = i as u8;          // i index second (FIPS 203)
             }
 
             let polys = sample_ntt_x4(&seeds);
@@ -76,8 +77,8 @@ fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
         while j < K {
             let mut seed = [0u8; 34];
             seed[0..32].copy_from_slice(rho);
-            seed[32] = i as u8;  // i index (FIPS 203)
-            seed[33] = j as u8;  // j index (FIPS 203)
+            seed[32] = j as u8;  // j index first (FIPS 203)
+            seed[33] = i as u8;  // i index second (FIPS 203)
             let mut xof = Xof::new(&seed);
             a_mat.rows[i].polys[j] = sample_ntt(&mut xof);
             j += 1;

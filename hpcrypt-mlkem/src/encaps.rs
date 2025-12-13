@@ -44,7 +44,8 @@ fn kpke_encrypt_impl<const K: usize>(ek: &[u8], m: &[u8; 32], r: &[u8; 32], eta1
     let rho = &ek[384 * K..384 * K + 32];
 
     // 2. Sample matrix Â^T from ρ using x4 batched sampling
-    // FIPS 203: Â^T[i][j] = Â[j][i] ← SampleNTT(XOF(ρ, j, i)) - seed is ρ || j || i
+    // FIPS 203: A[i][j] uses XOF(ρ, j, i), so A^T[i][j] = A[j][i] uses XOF(ρ, i, j)
+    // Seed order for A^T[i][j] is (ρ || i || j)
     let mut at_mat = PolyMat::<K>::new();
     for i in 0..K {
         // Process row in chunks of 4
@@ -54,9 +55,9 @@ fn kpke_encrypt_impl<const K: usize>(ek: &[u8], m: &[u8; 32], r: &[u8; 32], eta1
             let mut seeds = [[0u8; 34]; 4];
             for (k, seed) in seeds.iter_mut().enumerate() {
                 seed[0..32].copy_from_slice(rho);
-                // A^T[i][j] = A[j][i], so use seed ρ || j || i
-                seed[32] = (j + k) as u8;  // j index (FIPS 203)
-                seed[33] = i as u8;        // i index (FIPS 203)
+                // A^T[i][j] = A[j][i], which uses XOF(ρ, i, j)
+                seed[32] = i as u8;          // i index first (FIPS 203)
+                seed[33] = (j + k) as u8;    // j index second (FIPS 203)
             }
 
             let polys = sample_ntt_x4(&seeds);
@@ -68,8 +69,8 @@ fn kpke_encrypt_impl<const K: usize>(ek: &[u8], m: &[u8; 32], r: &[u8; 32], eta1
         while j < K {
             let mut seed = [0u8; 34];
             seed[0..32].copy_from_slice(rho);
-            seed[32] = j as u8;  // j index (FIPS 203)
-            seed[33] = i as u8;  // i index (FIPS 203)
+            seed[32] = i as u8;  // i index first (FIPS 203)
+            seed[33] = j as u8;  // j index second (FIPS 203)
             let mut xof = Xof::new(&seed);
             at_mat.rows[i].polys[j] = sample_ntt(&mut xof);
             j += 1;
