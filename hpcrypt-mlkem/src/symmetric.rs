@@ -143,6 +143,26 @@ pub fn j<const N: usize>(a: &[u8], b: &[u8]) -> [u8; N] {
     result
 }
 
+/// J function for implicit rejection (FIPS 203)
+///
+/// J(s) = SHAKE256(s, 32)
+///
+/// Used in ML-KEM.Decaps for implicit rejection key derivation.
+///
+/// # Arguments
+/// * `input` - Input bytes (typically z || c)
+///
+/// # Returns
+/// 32-byte output from SHAKE256
+pub fn shake256_j(input: &[u8]) -> [u8; 32] {
+    let mut output = [0u8; 32];
+    let mut hasher = Shake256::new();
+    hasher.update(input);
+    let mut reader = hasher.finalize_xof();
+    reader.read(&mut output);
+    output
+}
+
 /// x4 Batched XOF (SHAKE-128) for parallel sampling
 ///
 /// Processes 4 independent XOF operations simultaneously, providing 20-40% speedup
