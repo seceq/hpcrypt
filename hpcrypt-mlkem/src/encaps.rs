@@ -39,11 +39,12 @@ pub struct EncapsResult {
 fn kpke_encrypt_impl<const K: usize>(ek: &[u8], m: &[u8; 32], r: &[u8; 32], eta1: usize, eta2: usize, du: u32, dv: u32) -> Vec<u8> {
     debug_assert_eq!(ek.len(), 384 * K + 32);
 
-    // 1. Decode public key: ek = (t, ρ)
-    let t = decode_polyvec_12::<K>(&ek[0..384 * K]);
+    // 1. Decode public key: ek = (t̂, ρ) where t̂ is already in NTT form
+    let t_hat = decode_polyvec_12::<K>(&ek[0..384 * K]);
     let rho = &ek[384 * K..384 * K + 32];
 
-    // 2. Sample matrix A^T from ρ using x4 batched sampling
+    // 2. Sample matrix Â^T from ρ using x4 batched sampling
+    // FIPS 203: Â^T[i][j] = Â[j][i] ← SampleNTT(XOF(ρ, j, i)) - seed is ρ || j || i
     let mut at_mat = PolyMat::<K>::new();
     for i in 0..K {
         // Process row in chunks of 4
@@ -53,9 +54,9 @@ fn kpke_encrypt_impl<const K: usize>(ek: &[u8], m: &[u8; 32], r: &[u8; 32], eta1
             let mut seeds = [[0u8; 34]; 4];
             for (k, seed) in seeds.iter_mut().enumerate() {
                 seed[0..32].copy_from_slice(rho);
-                // Note: indices for A^T
-                seed[32] = i as u8;
-                seed[33] = (j + k) as u8;
+                // A^T[i][j] = A[j][i], so use seed ρ || j || i
+                seed[32] = (j + k) as u8;  // j index (FIPS 203)
+                seed[33] = i as u8;        // i index (FIPS 203)
             }
 
             let polys = sample_ntt_x4(&seeds);
@@ -67,8 +68,8 @@ fn kpke_encrypt_impl<const K: usize>(ek: &[u8], m: &[u8; 32], r: &[u8; 32], eta1
         while j < K {
             let mut seed = [0u8; 34];
             seed[0..32].copy_from_slice(rho);
-            seed[32] = i as u8;
-            seed[33] = j as u8;
+            seed[32] = j as u8;  // j index (FIPS 203)
+            seed[33] = i as u8;  // i index (FIPS 203)
             let mut xof = Xof::new(&seed);
             at_mat.rows[i].polys[j] = sample_ntt(&mut xof);
             j += 1;
@@ -154,18 +155,12 @@ fn kpke_encrypt_impl<const K: usize>(ek: &[u8], m: &[u8; 32], r: &[u8; 32], eta1
         m_poly.coeffs[i] = decompress(bit as u16, 1);
     }
 
-    // 6. Compute v = t^T * r + e2 + m
-    // t is in coefficient form (decoded from public key), r is in coefficient form
-    // We already have r_ntt and r_caches from above
+    // 6. Compute v = t̂^T ◦ r̂ + e2 + m  (FIPS 203)
+    // t̂ is already in NTT form (decoded directly from ek), r̂ is also in NTT form
+    // No NTT conversion needed - performance optimization!
 
-    // Convert t to NTT form
-    let mut t_ntt = PolyVec::<K>::new();
-    for i in 0..K {
-        t_ntt.polys[i] = ntt(&t.polys[i]);
-    }
-
-    // Compute t^T * r in NTT domain using cached r
-    let tr_ntt = t_ntt.dot_ntt_cached(&r_ntt, &r_caches);
+    // Compute t̂^T ◦ r̂ in NTT domain using cached r
+    let tr_ntt = t_hat.dot_ntt_cached(&r_ntt, &r_caches);
 
     // Convert result back to coefficient form using lazy INTT (18.2% faster for basemul outputs)
     let tr = intt_after_basemul(&tr_ntt);
