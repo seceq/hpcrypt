@@ -1,0 +1,11 @@
+# Cargo configuration for ML-DSA optimizations
+
+[build]
+# Enable native CPU optimizations
+# This allows the compiler to use CPU-specific instructions available on the build machine
+# without requiring explicit SIMD code
+rustflags = [
+    "-C", "target-cpu=native",
+    "-C", "llvm-args=-enable-gvn-hoist",  # GVN with hoisting
+    "-C", "llvm-args=-enable-load-pre"    # Load PRE
+]
