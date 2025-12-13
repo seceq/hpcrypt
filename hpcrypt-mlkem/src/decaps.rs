@@ -3,10 +3,12 @@
 //! This module implements Algorithm 14 (K-PKE.Decrypt) and Algorithm 17 (ML-KEM.Decaps)
 //! from FIPS 203.
 
+extern crate alloc;
+
 use crate::params::Params;
 use crate::serialize::{decode_polyvec_12, decode_polyvec_compressed, decode_poly_compressed};
 use crate::compress::extract_message;
-use crate::symmetric::{g, h, j, kdf};
+use crate::symmetric::{g, h, j, kdf, shake256_j};
 use crate::utils::ct_compare;
 use crate::encaps::kpke_encrypt;
 use crate::ntt::{ntt_inplace, intt_after_basemul, PolyMulcache};
@@ -217,19 +219,26 @@ pub fn ml_kem_decaps<P: Params>(dk: &[u8], ciphertext: &[u8]) -> [u8; 32] {
     // 5. Constant-time comparison: c == c'?
     let valid = ct_compare(ciphertext, &c_prime);
 
-    // 6. Compute shared secret with implicit rejection
-    // If valid: K = KDF(K̄ || H(c))
-    // If invalid: K = KDF(z || H(c))  (implicit rejection)
+    // 6. Compute shared secret with implicit rejection (FIPS 203 Algorithm 17)
+    // Line 4: K̄ = J(z || c)  where J = SHAKE256(..., 32)
+    // Line 6: if c' ≠ c then K̄' ← K̄
+    // Line 7: K = KDF(K̄' || H(c))
 
     let c_hash = h(ciphertext);
 
+    // Pre-compute implicit rejection K̄ = J(z || c) = SHAKE256(z || c, 32)
+    let mut z_c = alloc::vec::Vec::with_capacity(z.len() + ciphertext.len());
+    z_c.extend_from_slice(z);
+    z_c.extend_from_slice(ciphertext);
+    let k_bar_reject = shake256_j(&z_c);
+
     let shared_secret = if valid {
-        // Valid ciphertext: use K̄
+        // Valid ciphertext: use K̄' from G(m' || H(ek))
         let kdf_input: [u8; 64] = j(k_bar, &c_hash);
         kdf(&kdf_input)
     } else {
-        // Invalid ciphertext: use z for implicit rejection
-        let kdf_input: [u8; 64] = j(z, &c_hash);
+        // Invalid ciphertext: use K̄ = J(z || c) for implicit rejection
+        let kdf_input: [u8; 64] = j(&k_bar_reject, &c_hash);
         kdf(&kdf_input)
     };
 
