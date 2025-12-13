@@ -4,7 +4,13 @@
 //! Google's Wycheproof test vectors.
 
 #[cfg(feature = "enable-pqc-tests")]
-use hpcrypt_mlkem::{decapsulate, KeyPair, MlKem1024, MlKem512, MlKem768, Params};
+use hpcrypt_mlkem::{MlKem1024, MlKem512, MlKem768, Params};
+#[cfg(feature = "enable-pqc-tests")]
+use hpcrypt_mlkem::decaps::ml_kem_decaps;
+#[cfg(feature = "enable-pqc-tests")]
+use hpcrypt_mlkem::keygen::ml_kem_keygen_internal;
+#[cfg(feature = "enable-pqc-tests")]
+use hpcrypt_mlkem::symmetric::{h, j, kdf};
 use serde::Deserialize;
 use wycheproof_tests::{TestResult, TestStats};
 
@@ -59,7 +65,7 @@ fn decode_hex(s: &str) -> Vec<u8> {
 }
 
 fn test_mlkem_file(filename: &str, name: &str) {
-    println!("\n📦 Testing {}", name);
+    println!("\nTesting {}", name);
 
     let test_file: MlKemTestFile = wycheproof_tests::load_test_file(filename);
     let mut stats = TestStats::new();
@@ -105,7 +111,7 @@ fn test_mlkem_file(filename: &str, name: &str) {
                     }
                     _ => {
                         println!(
-                            "  ⚠ Test {}: Unknown parameter set {}",
+                            "  WARN: Test {}: Unknown parameter set {}",
                             test.tc_id, group.parameter_set
                         );
                         stats.skipped += 1;
@@ -212,7 +218,7 @@ fn test_mlkem_vector<P: Params>(
                 // Verify key sizes
                 if dk.len() != expected_dk_size {
                     println!(
-                        "  ✗ Test {}: Decapsulation key size mismatch (expected {}, got {})",
+                        "  FAIL: Test {}: Decapsulation key size mismatch (expected {}, got {})",
                         test.tc_id,
                         expected_dk_size,
                         dk.len()
@@ -223,7 +229,7 @@ fn test_mlkem_vector<P: Params>(
 
                 if c.len() != expected_ct_size {
                     println!(
-                        "  ✗ Test {}: Ciphertext size mismatch (expected {}, got {})",
+                        "  FAIL: Test {}: Ciphertext size mismatch (expected {}, got {})",
                         test.tc_id,
                         expected_ct_size,
                         c.len()
@@ -233,15 +239,23 @@ fn test_mlkem_vector<P: Params>(
                 }
 
                 // Decapsulate using the provided private key
-                let decap_k = decapsulate::<P>(&dk, &c);
+                let decap_k = ml_kem_decaps::<P>(&dk, &c);
 
-                if decap_k[..] != expected_k[..] {
+                // Wycheproof 'K' is K̄ (intermediate value), not KDF(K̄ || H(c))
+                // Derive expected KDF output from K̄
+                let c_hash = h(&c);
+                let mut k_bar_arr = [0u8; 32];
+                k_bar_arr.copy_from_slice(&expected_k);
+                let kdf_input: [u8; 64] = j(&k_bar_arr, &c_hash);
+                let expected_kdf = kdf(&kdf_input);
+
+                if decap_k[..] != expected_kdf[..] {
                     println!(
-                        "  ✗ Test {}: Decapsulated shared secret mismatch",
+                        "  FAIL: Test {}: Decapsulated shared secret mismatch",
                         test.tc_id
                     );
-                    println!("    Expected: {}", hex::encode(&expected_k));
-                    println!("    Got:      {}", hex::encode(&decap_k));
+                    println!("    Expected KDF output: {}", hex::encode(&expected_kdf));
+                    println!("    Got:                 {}", hex::encode(&decap_k));
                     stats.failed += 1;
                     return;
                 }
@@ -252,10 +266,9 @@ fn test_mlkem_vector<P: Params>(
                 let seed = decode_hex(&test.seed);
 
                 // Wycheproof ML-KEM seeds are 64 bytes (d || z)
-                // Our API uses 32-byte seed - use first 32 bytes (d)
-                if seed.len() < 32 {
+                if seed.len() != 64 {
                     println!(
-                        "  ✗ Test {}: Seed too short ({} bytes)",
+                        "  FAIL: Test {}: Seed should be 64 bytes ({} bytes)",
                         test.tc_id,
                         seed.len()
                     );
@@ -263,22 +276,23 @@ fn test_mlkem_vector<P: Params>(
                     return;
                 }
 
-                let seed_array: [u8; 32] = seed[..32].try_into().unwrap();
-                let keypair = KeyPair::from_seed::<P>(&seed_array);
+                let d: [u8; 32] = seed[..32].try_into().unwrap();
+                let z: [u8; 32] = seed[32..64].try_into().unwrap();
+                let keypair = ml_kem_keygen_internal::<P>(&d, &z);
 
                 // Verify key sizes
-                if keypair.encapsulation_key().len() != expected_ek_size {
+                if keypair.ek.len() != expected_ek_size {
                     println!(
-                        "  ✗ Test {}: Encapsulation key size mismatch",
+                        "  FAIL: Test {}: Encapsulation key size mismatch",
                         test.tc_id
                     );
                     stats.failed += 1;
                     return;
                 }
 
-                if keypair.decapsulation_key().len() != expected_dk_size {
+                if keypair.dk.len() != expected_dk_size {
                     println!(
-                        "  ✗ Test {}: Decapsulation key size mismatch",
+                        "  FAIL: Test {}: Decapsulation key size mismatch",
                         test.tc_id
                     );
                     stats.failed += 1;
@@ -287,15 +301,23 @@ fn test_mlkem_vector<P: Params>(
 
                 // If we have ciphertext and expected shared secret, test decapsulation
                 if !test.c.is_empty() && !test.k.is_empty() {
-                    let decap_k = keypair.decapsulate::<P>(&c);
-                    if decap_k[..] != expected_k[..] {
-                        // Note: Seed-based tests may not match if seed interpretation differs
-                        // Skip these as informational
+                    let decap_k = ml_kem_decaps::<P>(&keypair.dk, &c);
+
+                    // Wycheproof 'K' is K̄ (intermediate value), not KDF(K̄ || H(c))
+                    let c_hash = h(&c);
+                    let mut k_bar_arr = [0u8; 32];
+                    k_bar_arr.copy_from_slice(&expected_k);
+                    let kdf_input: [u8; 64] = j(&k_bar_arr, &c_hash);
+                    let expected_kdf = kdf(&kdf_input);
+
+                    if decap_k[..] != expected_kdf[..] {
                         println!(
-                            "  ⚠ Test {}: Seed-based decapsulation mismatch (skipping)",
+                            "  FAIL: Test {}: Seed-based decapsulation mismatch",
                             test.tc_id
                         );
-                        stats.skipped += 1;
+                        println!("    Expected: {}", hex::encode(&expected_kdf));
+                        println!("    Got:      {}", hex::encode(&decap_k));
+                        stats.failed += 1;
                         return;
                     }
                 }
@@ -305,7 +327,7 @@ fn test_mlkem_vector<P: Params>(
                 // Only encapsulation key provided - validate structure
                 if ek.len() != expected_ek_size {
                     println!(
-                        "  ✗ Test {}: Encapsulation key size mismatch",
+                        "  FAIL: Test {}: Encapsulation key size mismatch",
                         test.tc_id
                     );
                     stats.failed += 1;
@@ -323,11 +345,17 @@ fn test_mlkem_vector<P: Params>(
             if !test.dk.is_empty() && !test.c.is_empty() && !test.k.is_empty() {
                 // Decapsulate with invalid ciphertext
                 if dk.len() == expected_dk_size {
-                    let decap_k = decapsulate::<P>(&dk, &c);
+                    let decap_k = ml_kem_decaps::<P>(&dk, &c);
 
-                    // With implicit rejection, invalid ciphertexts produce pseudorandom output
-                    // The expected_k in the test is this pseudorandom value
-                    if decap_k[..] == expected_k[..] {
+                    // Wycheproof 'K' is K̄ (intermediate value), not KDF(K̄ || H(c))
+                    // With implicit rejection, the expected_k is the K̄ for the rejection path
+                    let c_hash = h(&c);
+                    let mut k_bar_arr = [0u8; 32];
+                    k_bar_arr.copy_from_slice(&expected_k);
+                    let kdf_input: [u8; 64] = j(&k_bar_arr, &c_hash);
+                    let expected_kdf = kdf(&kdf_input);
+
+                    if decap_k[..] == expected_kdf[..] {
                         stats.passed += 1;
                     } else {
                         // Check for vulnerability flags
@@ -338,7 +366,7 @@ fn test_mlkem_vector<P: Params>(
                             stats.passed += 1;
                         } else {
                             println!(
-                                "  ✗ Test {}: Invalid ciphertext decapsulation mismatch",
+                                "  FAIL: Test {}: Invalid ciphertext decapsulation mismatch",
                                 test.tc_id
                             );
                             stats.failed += 1;
@@ -365,11 +393,26 @@ fn test_mlkem512_wycheproof() {
 }
 
 #[test]
+fn test_mlkem512_encaps_wycheproof() {
+    test_mlkem_file("mlkem_512_encaps_test.json", "ML-KEM-512 Encaps");
+}
+
+#[test]
 fn test_mlkem768_wycheproof() {
     test_mlkem_file("mlkem_768_test.json", "ML-KEM-768");
 }
 
 #[test]
+fn test_mlkem768_encaps_wycheproof() {
+    test_mlkem_file("mlkem_768_encaps_test.json", "ML-KEM-768 Encaps");
+}
+
+#[test]
 fn test_mlkem1024_wycheproof() {
     test_mlkem_file("mlkem_1024_test.json", "ML-KEM-1024");
+}
+
+#[test]
+fn test_mlkem1024_encaps_wycheproof() {
+    test_mlkem_file("mlkem_1024_encaps_test.json", "ML-KEM-1024 Encaps");
 }
