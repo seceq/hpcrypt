@@ -37,8 +37,12 @@ pub struct KpkeKeyPair {
 fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
     debug_assert_eq!(d.len(), 32);
 
-    // 1. (ρ, σ) ← G(d)  (split 64 bytes into two 32-byte parts)
-    let g_output = g(d);
+    // 1. (ρ, σ) ← G(d || k)  (FIPS 203 domain separation)
+    // Append k parameter to seed before hashing
+    let mut seed_with_k = [0u8; 33];
+    seed_with_k[..32].copy_from_slice(d);
+    seed_with_k[32] = K as u8;
+    let g_output = g(&seed_with_k);
     let rho = &g_output[0..32];
     let mut sigma = [0u8; 32];
     sigma.copy_from_slice(&g_output[32..64]);
@@ -46,7 +50,8 @@ fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
     // 2. N ← 0
     let mut counter: u8 = 0;
 
-    // 3. Generate matrix A from seed ρ using x4 batched sampling
+    // 3. Generate matrix Â from seed ρ using x4 batched sampling
+    // FIPS 203: Â[i][j] ← SampleNTT(XOF(ρ, i, j)) - seed is ρ || i || j
     let mut a_mat = PolyMat::<K>::new();
     for i in 0..K {
         // Process row in chunks of 4
@@ -56,8 +61,8 @@ fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
             let mut seeds = [[0u8; 34]; 4];
             for k in 0..4 {
                 seeds[k][0..32].copy_from_slice(rho);
-                seeds[k][32] = (j + k) as u8;  // j index
-                seeds[k][33] = i as u8;         // i index
+                seeds[k][32] = i as u8;          // i index (FIPS 203)
+                seeds[k][33] = (j + k) as u8;    // j index (FIPS 203)
             }
 
             let polys = sample_ntt_x4(&seeds);
@@ -71,8 +76,8 @@ fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
         while j < K {
             let mut seed = [0u8; 34];
             seed[0..32].copy_from_slice(rho);
-            seed[32] = j as u8;
-            seed[33] = i as u8;
+            seed[32] = i as u8;  // i index (FIPS 203)
+            seed[33] = j as u8;  // j index (FIPS 203)
             let mut xof = Xof::new(&seed);
             a_mat.rows[i].polys[j] = sample_ntt(&mut xof);
             j += 1;
@@ -123,11 +128,10 @@ fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
         i += 1;
     }
 
-    // 6. Compute t = A*s + e
-    // A is in NTT form, s and e are in coefficient form
-    // Convert s to NTT form, compute A*s in NTT domain, then convert back
+    // 6. Compute t = A*s + e, then t̂ = NTT(t)
+    // FIPS 203 stores t̂ (NTT form) in ek for efficient encapsulation
 
-    // Convert s to NTT form
+    // Convert s to NTT form: ŝ ← NTT(s)
     let mut s_ntt = PolyVec::<K>::new();
     for i in 0..K {
         s_ntt.polys[i] = ntt(&s.polys[i]);
@@ -138,27 +142,31 @@ fn kpke_keygen_impl<const K: usize>(d: &[u8; 32], eta1: usize) -> KpkeKeyPair {
         .map(|poly| PolyMulcache::compute(poly))
         .collect();
 
-    // Compute A * s in NTT domain using optimized mulcache accumulation
+    // Compute Â ◦ ŝ in NTT domain using optimized mulcache accumulation
     let as_ntt = a_mat.mul_vec_ntt_cached(&s_ntt, &s_caches);
 
-    // Convert e to NTT domain
-    let mut e_ntt = PolyVec::<K>::new();
+    // Convert result back to coefficient form
+    let mut as_vec = PolyVec::<K>::new();
     for i in 0..K {
-        e_ntt.polys[i] = e.polys[i];
-        ntt(&mut e_ntt.polys[i]);
+        as_vec.polys[i] = intt_after_basemul(&as_ntt.polys[i]);
     }
 
-    // Compute t_hat = A * s_hat + e_hat (all in NTT domain)
-    // Per FIPS 203: t̂ ← Â ∘ ŝ + ê
-    let t_hat = as_ntt.add_unreduced(&e_ntt);
+    // Add error vector e (in coefficient form): t = A*s + e
+    let t = as_vec.add(&e);
+
+    // Convert t to NTT form for storage: t̂ = NTT(t)
+    // FIPS 203: ek stores t̂ in NTT form, saving NTT in encaps
+    let mut t_hat = PolyVec::<K>::new();
+    for i in 0..K {
+        t_hat.polys[i] = ntt(&t.polys[i]);
+    }
 
     // 7. Encode keys
-    // ek = ByteEncode_12(t_hat) || ρ (t_hat in NTT form per FIPS 203)
+    // ek = ByteEncode₁₂(t̂) || ρ  (FIPS 203: t̂ is in NTT form)
     let mut ek = encode_polyvec_12(&t_hat);
     ek.extend_from_slice(rho);
 
-    // dk = Encode(s_ntt) - Store secret key in NTT form for faster decaps
-    // This saves K NTT transforms per decapsulation (6-9 µs for ML-KEM-768)
+    // dk = ByteEncode₁₂(ŝ) - secret key in NTT form
     let dk = encode_polyvec_12(&s_ntt);
 
     KpkeKeyPair { ek, dk }
