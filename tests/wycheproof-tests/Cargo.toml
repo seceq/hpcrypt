@@ -20,7 +20,7 @@ hpcrypt-cipher = { workspace = true, features = ["std"], optional = true }
 hpcrypt-kdf = { workspace = true, features = ["std"], optional = true }
 hpcrypt-curves = { workspace = true, features = ["std"], optional = true }
 hpcrypt-fpe = { workspace = true, features = ["std"], optional = true }
-hpcrypt-mlkem = { workspace = true, features = ["std"], optional = true }
+hpcrypt-mlkem = { workspace = true, features = ["std", "cavp"], optional = true }
 hpcrypt-mldsa = { workspace = true, features = ["std"], optional = true }
 hpcrypt-hash = { workspace = true, optional = true }
 num-bigint = { version = "0.4", optional = true }
