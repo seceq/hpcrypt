@@ -245,13 +245,27 @@ fn sample_poly_cbd3_portable(bytes: &[u8], coeffs: &mut [i16; N]) {
 /// This is significantly faster than calling `sample_ntt` 4 times sequentially.
 pub fn sample_ntt_x4(seeds: &[[u8; 34]; 4]) -> [Poly; 4] {
     let mut polys = [Poly::new(); 4];
-    let mut outputs = [[0u8; 168]; 4];  // SHAKE-128 rate is 168 bytes
     let mut indices = [0usize; 4];
+
+    // Create stateful XOF readers that persist across squeeze operations
+    // This is critical - we must continue squeezing from the same XOF state,
+    // not restart from the beginning each time!
+    let xof0 = Xof::new(&seeds[0]);
+    let xof1 = Xof::new(&seeds[1]);
+    let xof2 = Xof::new(&seeds[2]);
+    let xof3 = Xof::new(&seeds[3]);
+    let mut readers = [xof0.reader(), xof1.reader(), xof2.reader(), xof3.reader()];
 
     // Keep sampling until all 4 polynomials are complete
     while indices.iter().any(|&idx| idx < N) {
-        // Get output from x4 batched XOF
-        xof_x4(seeds, &mut outputs);
+        let mut outputs = [[0u8; 168]; 4];
+
+        // Squeeze from stateful readers (NOT restarting XOF)
+        for i in 0..4 {
+            if indices[i] < N {
+                readers[i].read(&mut outputs[i]);
+            }
+        }
 
         // Process outputs for each polynomial
         for i in 0..4 {
