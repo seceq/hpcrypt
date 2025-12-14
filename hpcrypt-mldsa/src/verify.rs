@@ -111,21 +111,8 @@ pub fn verify<P: DsaParams>(
                     }
                 }
             }
-            // ARM NEON acceleration (always available on aarch64)
-            #[cfg(all(feature = "neon", target_arch = "aarch64"))]
-            {
-                unsafe {
-                    crate::intrinsics::neon::poly::poly_add_acc_lazy(
-                        &mut acc_ntt.coeffs,
-                        &prod_ntt.coeffs,
-                    );
-                }
-            }
-            // Scalar fallback
-            #[cfg(not(any(
-                all(feature = "avx2", feature = "std", target_arch = "x86_64"),
-                all(feature = "neon", target_arch = "aarch64")
-            )))]
+            // Scalar fallback (also used for NEON - NEON poly_add is slower)
+            #[cfg(not(all(feature = "avx2", feature = "std", target_arch = "x86_64")))]
             {
                 for k in 0..N {
                     acc_ntt.coeffs[k] += prod_ntt.coeffs[k];
@@ -153,21 +140,8 @@ pub fn verify<P: DsaParams>(
                 }
             }
         }
-        // ARM NEON acceleration
-        #[cfg(all(feature = "neon", target_arch = "aarch64"))]
-        {
-            unsafe {
-                crate::intrinsics::neon::poly::poly_sub_acc_lazy(
-                    &mut acc_ntt.coeffs,
-                    &c_t1_ntt.coeffs,
-                );
-            }
-        }
-        // Scalar fallback
-        #[cfg(not(any(
-            all(feature = "avx2", feature = "std", target_arch = "x86_64"),
-            all(feature = "neon", target_arch = "aarch64")
-        )))]
+        // Scalar fallback (also used for NEON - NEON poly_sub is slower)
+        #[cfg(not(all(feature = "avx2", feature = "std", target_arch = "x86_64")))]
         {
             for k in 0..N {
                 acc_ntt.coeffs[k] -= c_t1_ntt.coeffs[k];
@@ -187,18 +161,8 @@ pub fn verify<P: DsaParams>(
                 }
             }
         }
-        // ARM NEON acceleration
-        #[cfg(all(feature = "neon", target_arch = "aarch64"))]
-        {
-            unsafe {
-                crate::intrinsics::neon::poly::poly_reduce32(&mut acc_ntt.coeffs);
-            }
-        }
-        // Scalar fallback
-        #[cfg(not(any(
-            all(feature = "avx2", feature = "std", target_arch = "x86_64"),
-            all(feature = "neon", target_arch = "aarch64")
-        )))]
+        // Scalar fallback (also used for NEON - NEON poly_reduce is slower)
+        #[cfg(not(all(feature = "avx2", feature = "std", target_arch = "x86_64")))]
         {
             for k in 0..N {
                 acc_ntt.coeffs[k] = reduce32(acc_ntt.coeffs[k]);

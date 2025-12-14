@@ -381,21 +381,8 @@ fn sign_internal_with_mu<P: DsaParams>(
                         }
                     }
                 }
-                // ARM NEON acceleration (always available on aarch64)
-                #[cfg(all(feature = "neon", target_arch = "aarch64"))]
-                {
-                    unsafe {
-                        crate::intrinsics::neon::poly::poly_add_acc_lazy(
-                            &mut acc_ntt.coeffs,
-                            &prod_ntt.coeffs,
-                        );
-                    }
-                }
-                // Scalar fallback
-                #[cfg(not(any(
-                    all(feature = "avx2", feature = "std", target_arch = "x86_64"),
-                    all(feature = "neon", target_arch = "aarch64")
-                )))]
+                // Scalar fallback (also used for NEON - NEON poly_add is slower)
+                #[cfg(not(all(feature = "avx2", feature = "std", target_arch = "x86_64")))]
                 {
                     for k in 0..crate::params::N {
                         acc_ntt.coeffs[k] += prod_ntt.coeffs[k];
@@ -852,36 +839,10 @@ fn encode_w1<P: DsaParams>(w1: &[Poly]) -> Vec<u8> {
         }
     }
 
-    // ARM NEON accelerated packing
-    #[cfg(all(feature = "neon", target_arch = "aarch64"))]
-    {
-        if P::W1_BITS == 4 {
-            // 4-bit packing: 128 bytes per poly (ML-DSA-65/87)
-            for (i, poly) in w1.iter().enumerate() {
-                let offset = i * 128;
-                unsafe {
-                    crate::intrinsics::neon::packing::pack_w1_65_fast(
-                        &poly.coeffs,
-                        &mut bytes[offset..offset + 128],
-                    );
-                }
-            }
-        } else if P::W1_BITS == 6 {
-            // 6-bit packing: 192 bytes per poly (ML-DSA-44)
-            for (i, poly) in w1.iter().enumerate() {
-                let offset = i * 192;
-                unsafe {
-                    crate::intrinsics::neon::packing::pack_w1_44_fast(
-                        &poly.coeffs,
-                        &mut bytes[offset..offset + 192],
-                    );
-                }
-            }
-        }
-        return bytes;
-    }
+    // NOTE: NEON packing is intentionally not used here - benchmarks show it's
+    // 1.5-4x slower than scalar. The scalar implementation below is used for NEON builds.
 
-    // Scalar fallback
+    // Scalar fallback (also used for NEON)
     let mut idx = 0;
     if P::W1_BITS == 4 {
         // 4-bit packing: 2 coefficients per byte (ML-DSA-65/87)
