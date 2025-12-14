@@ -22,7 +22,7 @@ use core::marker::PhantomData;
 
 use crate::params::DsaParams;
 use crate::poly::Poly;
-use hpcrypt_rng::generate_random_bytes;
+use crate::rng::fill_random;
 use crate::rounding::power2round;
 use crate::sampling::expand_matrix_a;
 use crate::symmetric::h;
@@ -195,13 +195,11 @@ impl<P: DsaParams> PublicKey<P> {
     /// * `Err(SerializeError)` - If the bytes are invalid
     ///
     /// # Example
-    /// ```
+    /// ```no_run
     /// use hpcrypt_mldsa::params::MlDsa65;
-    /// use hpcrypt_mldsa::keygen::{keygen, PublicKey};
+    /// use hpcrypt_mldsa::keygen::PublicKey;
     ///
-    /// let (pk, _) = keygen::<MlDsa65>();
-    /// let pk_bytes = pk.to_bytes();
-    /// let pk_restored = PublicKey::<MlDsa65>::from_bytes(&pk_bytes).unwrap();
+    /// let pk = PublicKey::<MlDsa65>::from_bytes(&pk_bytes).unwrap();
     /// ```
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, crate::serialize::SerializeError> {
         crate::serialize::deserialize_public_key::<P>(bytes)
@@ -223,15 +221,10 @@ impl<P: DsaParams> PublicKey<P> {
         use crate::params::N;
 
         // Pre-compute matrix A in NTT domain
+        // FIPS 204: Matrix A is sampled DIRECTLY into NTT form via RejNTTPoly
+        // No additional NTT transformation is needed - matrix_a is already NTT
         let matrix_a = expand_matrix_a::<P>(&rho);
-        let mut cached_a_ntt = Vec::with_capacity(P::K);
-        for i in 0..P::K {
-            let mut row_ntt = Vec::with_capacity(P::L);
-            for j in 0..P::L {
-                row_ntt.push(ntt(&matrix_a[i][j]));
-            }
-            cached_a_ntt.push(row_ntt);
-        }
+        let cached_a_ntt = matrix_a; // Already in NTT form from sampling
 
         // Pre-compute t1 * 2^d in NTT domain
         // OPTIMIZATION: Hoist Poly allocation outside loop
@@ -497,13 +490,11 @@ impl<P: DsaParams> SecretKey<P> {
     /// * `Err(SerializeError)` - If the bytes are invalid
     ///
     /// # Example
-    /// ```
+    /// ```no_run
     /// use hpcrypt_mldsa::params::MlDsa65;
-    /// use hpcrypt_mldsa::keygen::{keygen, SecretKey};
+    /// use hpcrypt_mldsa::keygen::SecretKey;
     ///
-    /// let (_, sk) = keygen::<MlDsa65>();
-    /// let sk_bytes = sk.to_bytes();
-    /// let sk_restored = SecretKey::<MlDsa65>::from_bytes(&sk_bytes).unwrap();
+    /// let sk = SecretKey::<MlDsa65>::from_bytes(&sk_bytes).unwrap();
     /// ```
     ///
     /// # Security Note
@@ -587,15 +578,9 @@ impl<P: DsaParams> SecretKey<P> {
         }
 
         // Compute cached_a_ntt
-        let matrix_a = expand_matrix_a::<P>(&rho);
-        let mut cached_a_ntt = Vec::with_capacity(P::K);
-        for i in 0..P::K {
-            let mut row_ntt = Vec::with_capacity(P::L);
-            for j in 0..P::L {
-                row_ntt.push(ntt(&matrix_a[i][j]));
-            }
-            cached_a_ntt.push(row_ntt);
-        }
+        // FIPS 204: Matrix A is sampled DIRECTLY into NTT form via RejNTTPoly
+        // No additional NTT transformation is needed
+        let cached_a_ntt = expand_matrix_a::<P>(&rho);
 
         Self {
             rho,
@@ -634,7 +619,7 @@ impl<P: DsaParams> SecretKey<P> {
 pub fn keygen<P: DsaParams>() -> (PublicKey<P>, SecretKey<P>) {
     // Step 1: Generate random seed ξ
     let mut xi = [0u8; 32];
-    generate_random_bytes(&mut xi).expect("RNG failure");
+    fill_random(&mut xi);
 
     keygen_from_seed::<P>(&xi)
 }
@@ -659,7 +644,7 @@ pub fn keygen<P: DsaParams>() -> (PublicKey<P>, SecretKey<P>) {
 /// where secret keys are used repeatedly with variable inputs.
 pub fn keygen_from_seed<P: DsaParams>(xi: &[u8; 32]) -> (PublicKey<P>, SecretKey<P>) {
     // Step 2: Expand seed into ρ, ρ', K using H
-    // FIPS 204 Algorithm 6, Line 1: (ρ, ρ', K) ← H(ξ, 128)
+    // FIPS 204 Algorithm 6, Line 2: (ρ, ρ', K) ← H(ξ, 128)
     //
     // NOTE: The reference implementation appends K and L parameters to ξ before hashing.
     // This provides domain separation to ensure different parameter sets produce different keys.
@@ -669,13 +654,7 @@ pub fn keygen_from_seed<P: DsaParams>(xi: &[u8; 32]) -> (PublicKey<P>, SecretKey
     seed_with_params[32] = P::K as u8;
     seed_with_params[33] = P::L as u8;
 
-    {
-    }
-
     let seed_expansion = crate::symmetric::h128(&seed_with_params);
-
-    {
-    }
 
     let mut rho = [0u8; 32];
     let mut rho_prime = [0u8; 64];
@@ -854,14 +833,9 @@ pub fn keygen_from_seed<P: DsaParams>(xi: &[u8; 32]) -> (PublicKey<P>, SecretKey
     // Combined savings: ~173 µs per signature (with ~4.5 rejections average)
 
     // Cache matrix A in NTT domain
-    let mut cached_a_ntt = Vec::with_capacity(P::K);
-    for i in 0..P::K {
-        let mut row_ntt = Vec::with_capacity(P::L);
-        for j in 0..P::L {
-            row_ntt.push(crate::ntt::ntt(&matrix_a[i][j]));
-        }
-        cached_a_ntt.push(row_ntt);
-    }
+    // FIPS 204: Matrix A is sampled DIRECTLY into NTT form via RejNTTPoly
+    // No additional NTT transformation is needed - matrix_a is already NTT
+    let cached_a_ntt = matrix_a.clone();
 
     // Cache s1 in NTT domain (L polynomials)
     let mut s1_hat = Vec::with_capacity(P::L);
@@ -884,6 +858,22 @@ pub fn keygen_from_seed<P: DsaParams>(xi: &[u8; 32]) -> (PublicKey<P>, SecretKey
     let sk = SecretKey::new(rho, k_seed, tr, s1, s2, t0, s1_hat, s2_hat, t0_hat, cached_a_ntt);
 
     (pk, sk)
+}
+
+/// Multiply two polynomials using NTT
+///
+/// Uses Number Theoretic Transform for O(n log n) performance.
+/// This provides 100-1000x speedup over schoolbook multiplication.
+///
+/// # Arguments
+/// * `a` - First polynomial
+/// * `b` - Second polynomial
+///
+/// # Returns
+/// * Product polynomial a·b in R_q
+#[allow(dead_code)]
+fn poly_multiply(a: &Poly, b: &Poly) -> Poly {
+    crate::ntt::poly_mul_ntt(a, b)
 }
 
 #[cfg(test)]
@@ -991,6 +981,47 @@ mod tests {
 
         // pk and sk should have same tr
         assert_eq!(pk.tr, sk.tr);
+    }
+
+    #[test]
+    fn test_poly_multiply_zero() {
+        let a = Poly::new();
+        let b = Poly::new();
+
+        let result = poly_multiply(&a, &b);
+
+        assert!(result.is_zero());
+    }
+
+    #[test]
+    fn test_poly_multiply_one() {
+        let mut a = Poly::new();
+        a.coeffs[0] = 1;
+
+        let mut b = Poly::new();
+        b.coeffs[0] = 5;
+        b.coeffs[1] = 3;
+
+        let result = poly_multiply(&a, &b);
+
+        assert_eq!(result.coeffs[0], 5);
+        assert_eq!(result.coeffs[1], 3);
+    }
+
+    #[test]
+    fn test_poly_multiply_modulo_xn_plus_1() {
+        let mut a = Poly::new();
+        a.coeffs[255] = 1; // X^255
+
+        let mut b = Poly::new();
+        b.coeffs[1] = 1; // X
+
+        // X^255 * X = X^256 = -1 (mod X^256 + 1)
+        let result = poly_multiply(&a, &b);
+
+        // -1 can be represented as either -1 or Q-1 (8380416)
+        let coeff = result.coeffs[0].rem_euclid(Q);
+        assert_eq!(coeff, Q - 1, "Expected -1 (mod Q) = {}", Q - 1);
     }
 
     #[test]

@@ -21,7 +21,7 @@ use alloc::vec::Vec;
 use crate::keygen::SecretKey;
 use crate::params::DsaParams;
 use crate::poly::Poly;
-use hpcrypt_rng::generate_random_bytes;
+use crate::rng::fill_random;
 use crate::rounding::{high_bits_poly, low_bits_poly};
 use crate::hints::{make_hint_poly_optimized, poly_hint_count};
 use crate::sampling::{expand_mask_poly_optimized, sample_in_ball};
@@ -127,7 +127,7 @@ impl<P: DsaParams> Signature<P> {
 pub fn sign<P: DsaParams>(sk: &SecretKey<P>, message: &[u8]) -> Option<Signature<P>> {
     // Generate random seed for signing
     let mut rnd = [0u8; 32];
-    generate_random_bytes(&mut rnd).expect("RNG failure");
+    fill_random(&mut rnd);
 
     sign_internal::<P>(sk, message, &rnd)
 }
@@ -149,6 +149,50 @@ pub fn sign_deterministic<P: DsaParams>(
     sign_internal::<P>(sk, message, rnd)
 }
 
+/// Deterministic signing - FIPS 204 compliant version (no early rejection optimization)
+///
+/// Use this for ACVP testing where deterministic signature matching is required.
+pub fn sign_deterministic_fips<P: DsaParams>(
+    sk: &SecretKey<P>,
+    message: &[u8],
+    rnd: &[u8; 32],
+) -> Option<Signature<P>> {
+    sign_internal_fips::<P>(sk, message, rnd)
+}
+
+/// Sign with pre-computed μ (for ACVP internal interface testing)
+///
+/// This function accepts the message hash μ directly, bypassing the
+/// μ = H(tr || M) computation. Used for ACVP internal interface tests
+/// where μ is provided in the test vector.
+///
+/// # Arguments
+/// * `sk` - Secret key
+/// * `mu` - Pre-computed 64-byte message hash
+/// * `rnd` - 32-byte randomness seed (use zeros for deterministic)
+///
+/// # Returns
+/// * Signature or None if signing fails after max rejections
+pub fn sign_with_mu<P: DsaParams>(
+    sk: &SecretKey<P>,
+    mu: &[u8; 64],
+    rnd: &[u8; 32],
+) -> Option<Signature<P>> {
+    sign_internal_with_mu::<P>(sk, mu, rnd)
+}
+
+/// Sign with pre-computed μ (FIPS 204 compliant, no early rejection optimization)
+///
+/// This function follows FIPS 204 exactly without the early rejection optimization.
+/// Use this for ACVP testing where deterministic behavior is required.
+pub fn sign_with_mu_fips<P: DsaParams>(
+    sk: &SecretKey<P>,
+    mu: &[u8; 64],
+    rnd: &[u8; 32],
+) -> Option<Signature<P>> {
+    sign_internal_with_mu_fips::<P>(sk, mu, rnd)
+}
+
 /// Internal signing implementation
 fn sign_internal<P: DsaParams>(
     sk: &SecretKey<P>,
@@ -162,13 +206,38 @@ fn sign_internal<P: DsaParams>(
     mu_input.extend_from_slice(message);
     let mu = h(&mu_input);
 
+    sign_internal_with_mu::<P>(sk, &mu, rnd)
+}
+
+/// Internal signing implementation - FIPS 204 compliant (no early rejection)
+fn sign_internal_fips<P: DsaParams>(
+    sk: &SecretKey<P>,
+    message: &[u8],
+    rnd: &[u8; 32],
+) -> Option<Signature<P>> {
+    // Step 1: Compute μ = H(tr || M)
+    let mut mu_input = Vec::with_capacity(64 + message.len());
+    mu_input.extend_from_slice(&sk.tr);
+    mu_input.extend_from_slice(message);
+    let mu = h(&mu_input);
+
+    sign_internal_with_mu_fips::<P>(sk, &mu, rnd)
+}
+
+/// Internal signing with pre-computed μ
+fn sign_internal_with_mu<P: DsaParams>(
+    sk: &SecretKey<P>,
+    mu: &[u8; 64],
+    rnd: &[u8; 32],
+) -> Option<Signature<P>> {
+
 
     // Step 2: Generate seed for masking
     // rho_prime = H(K || rnd || μ)
     let mut rho_prime_input = Vec::with_capacity(32 + 32 + 64);
     rho_prime_input.extend_from_slice(&sk.k);
     rho_prime_input.extend_from_slice(rnd);
-    rho_prime_input.extend_from_slice(&mu);
+    rho_prime_input.extend_from_slice(mu);
     let rho_prime = h(&rho_prime_input);
 
 
@@ -355,7 +424,7 @@ fn sign_internal<P: DsaParams>(
         // Step 7: Compute challenge c = H(μ || w1)
         let w1_bytes = encode_w1::<P>(w1_slice);
         let mut c_input = Vec::with_capacity(64 + w1_bytes.len());
-        c_input.extend_from_slice(&mu);
+        c_input.extend_from_slice(mu);
         c_input.extend_from_slice(&w1_bytes);
 
         {
@@ -394,7 +463,10 @@ fn sign_internal<P: DsaParams>(
             // Note: Rejection sampling is generally not timing-sensitive since the number
             // of rejections doesn't leak secret key material. However, we use constant-time
             // operations for defense-in-depth.
-            let exceeds = ct_norm_exceeds(&z_i, P::GAMMA1 - P::BETA);
+            // FIPS 204: reject if ||z||∞ ≥ γ₁ - β
+            // ct_norm_exceeds returns 1 if ||poly||∞ > threshold
+            // So we use threshold = γ₁ - β - 1 to get ≥ behavior
+            let exceeds = ct_norm_exceeds(&z_i, P::GAMMA1 - P::BETA - 1);
             if exceeds != 0 {
                 z_valid = false;
                 break; // Early exit is safe - rejection count is public
@@ -510,6 +582,200 @@ fn sign_internal<P: DsaParams>(
     None
 }
 
+/// Internal signing with pre-computed μ (FIPS 204 compliant, no early rejection)
+///
+/// This follows FIPS 204 exactly without the early rejection optimization.
+/// The early rejection changes the rejection pattern which affects deterministic tests.
+fn sign_internal_with_mu_fips<P: DsaParams>(
+    sk: &SecretKey<P>,
+    mu: &[u8; 64],
+    rnd: &[u8; 32],
+) -> Option<Signature<P>> {
+
+    // Step 2: Generate seed for masking
+    // rho_prime = H(K || rnd || μ)
+    let mut rho_prime_input = Vec::with_capacity(32 + 32 + 64);
+    rho_prime_input.extend_from_slice(&sk.k);
+    rho_prime_input.extend_from_slice(rnd);
+    rho_prime_input.extend_from_slice(mu);
+    let rho_prime = h(&rho_prime_input);
+
+    // Step 3: Use cached matrix A in NTT domain from secret key
+    let matrix_a_ntt = &sk.cached_a_ntt;
+
+    // Rejection sampling loop (no early rejection - FIPS compliant)
+    let mut kappa: u16 = 0;
+
+    // Pre-allocate arrays outside the loop
+    let mut y_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
+                       Poly::new(), Poly::new(), Poly::new(), Poly::new()];
+    let mut y_ntt_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
+                           Poly::new(), Poly::new(), Poly::new(), Poly::new()];
+    let mut w_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
+                       Poly::new(), Poly::new(), Poly::new(), Poly::new()];
+    let mut w1_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
+                        Poly::new(), Poly::new(), Poly::new(), Poly::new()];
+    let mut z_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
+                       Poly::new(), Poly::new(), Poly::new(), Poly::new()];
+    let mut r0_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
+                        Poly::new(), Poly::new(), Poly::new(), Poly::new()];
+    let mut c_s2_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
+                          Poly::new(), Poly::new(), Poly::new(), Poly::new()];
+    let mut c_t0_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
+                          Poly::new(), Poly::new(), Poly::new(), Poly::new()];
+    let mut h_array = [Poly::new(), Poly::new(), Poly::new(), Poly::new(),
+                       Poly::new(), Poly::new(), Poly::new(), Poly::new()];
+
+    for _attempt in 0..MAX_REJECTIONS {
+        // Step 4: Sample masking vector y
+        let y_slice = &mut y_array[..P::L];
+
+        for i in 0..P::L {
+            y_slice[i] = expand_mask_poly_optimized(&rho_prime, kappa + i as u16, P::GAMMA1);
+        }
+
+        kappa = kappa.wrapping_add(P::L as u16);
+
+        // NO EARLY REJECTION - follow FIPS 204 exactly
+
+        // Step 5: Compute w = A·y
+        let y_ntt_slice = &mut y_ntt_array[..P::L];
+        for i in 0..P::L {
+            y_ntt_slice[i] = crate::ntt::ntt(&y_slice[i]);
+        }
+
+        let w_slice = &mut w_array[..P::K];
+        for i in 0..P::K {
+            let mut acc_ntt = crate::ntt::ntt_multiply(&matrix_a_ntt[i][0], &y_ntt_slice[0]);
+            for j in 1..P::L {
+                let prod_ntt = crate::ntt::ntt_multiply(&matrix_a_ntt[i][j], &y_ntt_slice[j]);
+                for k in 0..crate::params::N {
+                    acc_ntt.coeffs[k] += prod_ntt.coeffs[k];
+                }
+            }
+            w_slice[i] = crate::ntt::inv_ntt(&acc_ntt);
+            w_slice[i].reduce();
+        }
+
+        // Step 6: Extract high bits w1 = HighBits(w, 2γ₂)
+        let w1_slice = &mut w1_array[..P::K];
+        for (idx, w_i) in w_slice.iter().enumerate() {
+            w1_slice[idx] = high_bits_poly(w_i, 2 * P::GAMMA2);
+        }
+
+        // Step 7: Compute challenge c = H(μ || w1)
+        let w1_bytes = encode_w1::<P>(w1_slice);
+        let mut c_input = Vec::with_capacity(64 + w1_bytes.len());
+        c_input.extend_from_slice(mu);
+        c_input.extend_from_slice(&w1_bytes);
+
+        let c_tilde = h_var(&c_input, P::CTILDEBYTES);
+
+        // Sample challenge polynomial
+        let c = sample_in_ball(&c_tilde, P::TAU);
+        let c_hat = crate::ntt::ntt(&c);
+
+        // Step 8: Compute response z = y + c·s1
+        let z_slice = &mut z_array[..P::L];
+        let mut z_valid = true;
+
+        for i in 0..P::L {
+            let c_s1 = crate::ntt::inv_ntt(&crate::ntt::ntt_multiply(&c_hat, &sk.s1_hat[i]));
+            let z_i = y_slice[i].add(&c_s1);
+
+            // FIPS 204: reject if ||z||∞ ≥ γ₁ - β
+            // ct_norm_exceeds returns 1 if ||poly||∞ > threshold
+            // So we use threshold = γ₁ - β - 1 to get ≥ behavior
+            let exceeds = ct_norm_exceeds(&z_i, P::GAMMA1 - P::BETA - 1);
+            if exceeds != 0 {
+                z_valid = false;
+                break;
+            }
+
+            z_slice[i] = z_i;
+        }
+
+        if !z_valid {
+            continue;
+        }
+
+        // Step 9: Compute r0 (low bits of w - c·s2)
+        let r0_slice = &mut r0_array[..P::K];
+        let c_s2_slice = &mut c_s2_array[..P::K];
+        let mut r0_valid = true;
+
+        for i in 0..P::K {
+            c_s2_slice[i] = crate::ntt::inv_ntt(&crate::ntt::ntt_multiply(&c_hat, &sk.s2_hat[i]));
+            let w_minus_cs2 = w_slice[i].sub(&c_s2_slice[i]);
+            let r0_i = low_bits_poly(&w_minus_cs2, 2 * P::GAMMA2);
+
+            let exceeds = ct_norm_exceeds(&r0_i, P::GAMMA2 - P::BETA - 1);
+            if exceeds != 0 {
+                r0_valid = false;
+                break;
+            }
+
+            r0_slice[i] = r0_i;
+        }
+
+        if !r0_valid {
+            continue;
+        }
+
+        // Step 10: Compute c·t0 for hint generation
+        let c_t0_slice = &mut c_t0_array[..P::K];
+        for i in 0..P::K {
+            c_t0_slice[i] = crate::ntt::inv_ntt(&crate::ntt::ntt_multiply(&c_hat, &sk.t0_hat[i]));
+        }
+
+        // Step 11: Compute hints h
+        let h_slice = &mut h_array[..P::K];
+        let mut total_hint_count = 0;
+
+        for i in 0..P::K {
+            let mut w_cs2_ct0 = w_slice[i].sub_lazy(&c_s2_slice[i]).add_lazy(&c_t0_slice[i]);
+            w_cs2_ct0.reduce();
+            let neg_ct0 = c_t0_slice[i].negate();
+
+            let h_i = make_hint_poly_optimized::<P>(&neg_ct0, &w_cs2_ct0);
+            let hint_count = poly_hint_count(&h_i);
+            total_hint_count += hint_count;
+
+            h_slice[i] = h_i;
+        }
+
+        if total_hint_count > P::OMEGA {
+            continue;
+        }
+
+        // Success!
+        #[cfg(feature = "cavp")]
+        {
+            eprintln!("CAVP_DEBUG: sign_internal_with_mu_fips succeeded at attempt {}, kappa = {}", _attempt, kappa);
+            eprintln!("CAVP_DEBUG: c_tilde = {:02x?}", &c_tilde[..32.min(c_tilde.len())]);
+            eprintln!("CAVP_DEBUG: mu = {:02x?}", &mu[..32]);
+            eprintln!("CAVP_DEBUG: rho_prime = {:02x?}", &rho_prime[..32]);
+            // Print first few y[0] coefficients
+            eprintln!("CAVP_DEBUG: y[0].coeffs[0..8] = {:?}", &y_slice[0].coeffs[0..8]);
+            // Print first few w1 encoded bytes
+            eprintln!("CAVP_DEBUG: w1_bytes[0..16] = {:02x?}", &w1_bytes[..16.min(w1_bytes.len())]);
+        }
+        let z_vec = z_slice.to_vec();
+        let h_vec = h_slice.to_vec();
+        return Some(Signature::new(c_tilde, z_vec, h_vec));
+    }
+
+    None
+}
+
+/// Multiply two polynomials using NTT
+///
+/// Uses Number Theoretic Transform for O(n log n) performance.
+/// This provides 100-1000x speedup over schoolbook multiplication.
+fn poly_multiply(a: &Poly, b: &Poly) -> Poly {
+    crate::ntt::poly_mul_ntt(a, b)
+}
+
 /// Constant-time check if polynomial infinity norm exceeds threshold
 ///
 /// Returns 1 if ||poly||∞ > threshold, 0 otherwise
@@ -530,6 +796,19 @@ fn ct_norm_exceeds(poly: &Poly, threshold: i32) -> u8 {
         exceeds |= is_greater;
     }
     exceeds
+}
+
+/// Constant-time check if value exceeds threshold
+///
+/// Returns 1 if value > threshold, 0 otherwise
+#[inline]
+#[allow(dead_code)]
+fn ct_exceeds(value: usize, threshold: usize) -> u8 {
+    if value > threshold {
+        1
+    } else {
+        0
+    }
 }
 
 /// Encode w1 vector to bytes using FIPS 204 SimpleBitPack
@@ -741,6 +1020,18 @@ mod tests {
     }
 
     #[test]
+    fn test_poly_multiply_basic() {
+        let mut a = Poly::new();
+        let mut b = Poly::new();
+
+        a.coeffs[0] = 1;
+        b.coeffs[0] = 1;
+
+        let c = poly_multiply(&a, &b);
+        assert_eq!(c.coeffs[0], 1);
+    }
+
+    #[test]
     fn test_encode_w1_size() {
         let w1 = vec![Poly::new(); 4];
         let encoded = encode_w1::<MlDsa44>(&w1);
@@ -773,6 +1064,13 @@ mod tests {
         poly.coeffs[5] = 100;
         assert_eq!(ct_norm_exceeds(&poly, 100), 0); // Exactly at threshold
         assert_eq!(ct_norm_exceeds(&poly, 99), 1);  // Just over threshold
+    }
+
+    #[test]
+    fn test_ct_exceeds() {
+        assert_eq!(ct_exceeds(50, 100), 0);
+        assert_eq!(ct_exceeds(100, 100), 0);
+        assert_eq!(ct_exceeds(101, 100), 1);
     }
 
     #[test]

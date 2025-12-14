@@ -24,7 +24,7 @@ use alloc::vec::Vec;
 
 use crate::keygen::PublicKey;
 use crate::sign::Signature;
-use crate::params::{DsaParams, N};
+use crate::params::{DsaParams, N, Q};
 use crate::poly::Poly;
 use crate::hints::{use_hint_poly_optimized, poly_hint_count};
 use crate::sampling::sample_in_ball;
@@ -233,6 +233,103 @@ pub fn verify<P: DsaParams>(
     // Step 9: Compare challenges using constant-time comparison
     // This prevents timing attacks by ensuring comparison time is independent
     // of where differences occur in the byte arrays
+    use crate::constant_time::ct_compare;
+    let result = ct_compare(&c_prime_tilde, &signature.c_tilde);
+
+    result == 1
+}
+
+/// Verify a signature using pre-computed μ (for ACVP internal interface tests)
+///
+/// This function accepts the 64-byte message hash μ directly, bypassing the
+/// μ = H(tr || M) computation. Used for ACVP internal interface tests where μ
+/// is provided in the test vector.
+///
+/// # Arguments
+/// * `pk` - Public key
+/// * `mu` - Pre-computed 64-byte message hash
+/// * `signature` - Signature to verify
+///
+/// # Returns
+/// * `true` if signature is valid, `false` otherwise
+pub fn verify_with_mu<P: DsaParams>(
+    pk: &PublicKey<P>,
+    mu: &[u8; 64],
+    signature: &Signature<P>,
+) -> bool {
+    // Step 1: Check signature dimensions
+    if signature.z.len() != P::L || signature.h.len() != P::K {
+        return false;
+    }
+
+    // Step 2: Check that all z polynomials are bounded
+    for z_i in &signature.z {
+        let norm = z_i.infinity_norm();
+        if norm > P::GAMMA1 - P::BETA {
+            return false;
+        }
+    }
+
+    // Step 3: Check total number of hints
+    let mut total_hints = 0;
+    for h_i in &signature.h {
+        total_hints += poly_hint_count(h_i);
+    }
+    if total_hints > P::OMEGA {
+        return false;
+    }
+
+    // Step 4: Use pre-computed μ (skip H(tr || M) computation)
+    // μ is provided directly for internal interface tests
+
+    // Step 5: Sample challenge polynomial c from signature
+    let c = sample_in_ball(&signature.c_tilde, P::TAU);
+
+    // Transform z and c to NTT domain
+    let z_ntt: Vec<Poly> = signature.z.iter().map(|p| ntt(p)).collect();
+    let c_ntt = ntt(&c);
+
+    // Step 6: Compute w' = A·z - c·t1·2^d using NTT-domain operations
+    let mut w_prime = Vec::with_capacity(P::K);
+    for i in 0..P::K {
+        let mut acc_ntt = ntt_multiply(&pk.cached_a_ntt[i][0], &z_ntt[0]);
+        for j in 1..P::L {
+            let prod_ntt = ntt_multiply(&pk.cached_a_ntt[i][j], &z_ntt[j]);
+            for k in 0..N {
+                acc_ntt.coeffs[k] += prod_ntt.coeffs[k];
+            }
+        }
+
+        let c_t1_ntt = ntt_multiply(&c_ntt, &pk.t1_scaled_ntt[i]);
+        for k in 0..N {
+            acc_ntt.coeffs[k] -= c_t1_ntt.coeffs[k];
+        }
+
+        for k in 0..N {
+            acc_ntt.coeffs[k] = reduce32(acc_ntt.coeffs[k]);
+        }
+
+        let mut w_prime_i = inv_ntt(&acc_ntt);
+        w_prime_i.reduce();
+        w_prime.push(w_prime_i);
+    }
+
+    // Step 7: Apply hints to recover high bits w'₁
+    let mut w1_prime = Vec::with_capacity(P::K);
+    for i in 0..P::K {
+        let w1_prime_i = use_hint_poly_optimized::<P>(&signature.h[i], &w_prime[i]);
+        w1_prime.push(w1_prime_i);
+    }
+
+    // Step 8: Encode w'₁ and compute challenge c'
+    let w1_prime_bytes = encode_w1::<P>(&w1_prime);
+    let mut c_prime_input = Vec::with_capacity(64 + w1_prime_bytes.len());
+    c_prime_input.extend_from_slice(mu);
+    c_prime_input.extend_from_slice(&w1_prime_bytes);
+
+    let c_prime_tilde = h_var(&c_prime_input, P::CTILDEBYTES);
+
+    // Step 9: Compare challenges using constant-time comparison
     use crate::constant_time::ct_compare;
     let result = ct_compare(&c_prime_tilde, &signature.c_tilde);
 
