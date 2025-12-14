@@ -15,6 +15,11 @@
 //!
 //! This test API exposes low-level deterministic operations required by CAVP tests,
 //! whereas the production API may use additional security features like hedged signatures.
+//!
+//! # FIPS 204 Interface Types
+//!
+//! - **External Interface**: Uses context encoding: M = 0x00 || len(ctx) || ctx || M'
+//! - **Internal Interface**: Uses raw message directly (for internal interface tests)
 
 #![cfg(feature = "cavp")]
 
@@ -23,9 +28,13 @@ use alloc::vec::Vec;
 
 use crate::keygen;
 use crate::params::DsaParams;
+use crate::prehash::{HashAlgorithm, encode_hash_ml_dsa_message};
 use crate::serialize;
 use crate::sign;
 use crate::verify;
+
+/// Maximum context string length as per FIPS 204
+pub const MAX_CONTEXT_LENGTH: usize = 255;
 
 /// Error type for CAVP test operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,6 +51,28 @@ pub enum CavpError {
     InvalidSignature,
     /// Signing operation failed
     SigningFailed,
+    /// Context string exceeds maximum length (255 bytes)
+    ContextTooLong,
+}
+
+/// Encode message with context string as per FIPS 204 external interface
+///
+/// Format: 0x00 || len(ctx) || ctx || message
+fn encode_message_with_context(message: &[u8], context: &[u8]) -> Result<Vec<u8>, CavpError> {
+    if context.len() > MAX_CONTEXT_LENGTH {
+        return Err(CavpError::ContextTooLong);
+    }
+
+    // Allocate: 1 byte (0x00) + 1 byte (len) + context + message
+    let mut encoded = Vec::with_capacity(2 + context.len() + message.len());
+
+    // FIPS 204 encoding: 0x00 || len(ctx) || ctx || M
+    encoded.push(0x00);
+    encoded.push(context.len() as u8);
+    encoded.extend_from_slice(context);
+    encoded.extend_from_slice(message);
+
+    Ok(encoded)
 }
 
 /// Public key (verification key)
@@ -121,8 +152,9 @@ pub trait SignatureScheme: DsaParams {
         // Use zero randomness for pure deterministic mode
         let zero_rnd = [0u8; 32];
 
-        // Sign and serialize
-        let signature = sign::sign_deterministic::<Self>(&secret_key, message, &zero_rnd)
+        // Sign using FIPS-compliant function (no early rejection optimization)
+        // This ensures deterministic behavior required by CAVP test vectors
+        let signature = sign::sign_deterministic_fips::<Self>(&secret_key, message, &zero_rnd)
             .ok_or(CavpError::SigningFailed)?;
 
         Ok(serialize::serialize_signature(&signature))
@@ -163,14 +195,15 @@ pub trait SignatureScheme: DsaParams {
         let mut rnd_array = [0u8; 32];
         rnd_array.copy_from_slice(rnd);
 
-        // Sign and serialize
-        let signature = sign::sign_deterministic::<Self>(&secret_key, message, &rnd_array)
+        // Sign using FIPS-compliant function (no early rejection optimization)
+        // This ensures deterministic behavior required by CAVP test vectors
+        let signature = sign::sign_deterministic_fips::<Self>(&secret_key, message, &rnd_array)
             .ok_or(CavpError::SigningFailed)?;
 
         Ok(serialize::serialize_signature(&signature))
     }
 
-    /// Verify a signature
+    /// Verify a signature (internal interface - no context encoding)
     ///
     /// # Arguments
     ///
@@ -197,6 +230,341 @@ pub trait SignatureScheme: DsaParams {
         };
 
         verify::verify::<Self>(&public_key, message, &sig)
+    }
+
+    // ========================================================================
+    // EXTERNAL INTERFACE (with context encoding per FIPS 204)
+    // Message encoding: M = 0x00 || len(ctx) || ctx || M'
+    // ========================================================================
+
+    /// Sign a message with context (FIPS 204 external interface, deterministic mode)
+    ///
+    /// Encodes message as: 0x00 || len(ctx) || ctx || message
+    /// Uses zero randomness for pure deterministic mode.
+    ///
+    /// # Arguments
+    ///
+    /// * `sk` - Secret (signing) key bytes
+    /// * `message` - Message to sign (M')
+    /// * `context` - Context string (max 255 bytes)
+    ///
+    /// # Returns
+    ///
+    /// The signature bytes on success
+    fn sign_with_context(sk: &[u8], message: &[u8], context: &[u8]) -> Result<Signature, CavpError>
+    where
+        Self: Sized,
+    {
+        // Encode message with context per FIPS 204: 0x00 || len(ctx) || ctx || M'
+        let encoded_message = encode_message_with_context(message, context)?;
+
+        // Deserialize secret key
+        let secret_key = serialize::deserialize_secret_key::<Self>(sk)
+            .map_err(|_| CavpError::InvalidSecretKey)?;
+
+        // Use zero randomness for pure deterministic mode
+        let zero_rnd = [0u8; 32];
+
+        // Sign using FIPS-compliant function
+        let signature = sign::sign_deterministic_fips::<Self>(&secret_key, &encoded_message, &zero_rnd)
+            .ok_or(CavpError::SigningFailed)?;
+
+        Ok(serialize::serialize_signature(&signature))
+    }
+
+    /// Sign a message with context and explicit randomness (FIPS 204 external interface)
+    ///
+    /// Encodes message as: 0x00 || len(ctx) || ctx || message
+    /// Uses provided randomness for hedged/randomized mode.
+    ///
+    /// # Arguments
+    ///
+    /// * `sk` - Secret (signing) key bytes
+    /// * `message` - Message to sign (M')
+    /// * `context` - Context string (max 255 bytes)
+    /// * `rnd` - 32-byte random value
+    ///
+    /// # Returns
+    ///
+    /// The signature bytes on success
+    fn sign_with_context_and_randomness(
+        sk: &[u8],
+        message: &[u8],
+        context: &[u8],
+        rnd: &[u8],
+    ) -> Result<Signature, CavpError>
+    where
+        Self: Sized,
+    {
+        if rnd.len() != 32 {
+            return Err(CavpError::InvalidRandomnessLength);
+        }
+
+        // Encode message with context per FIPS 204: 0x00 || len(ctx) || ctx || M'
+        let encoded_message = encode_message_with_context(message, context)?;
+
+        // Deserialize secret key
+        let secret_key = serialize::deserialize_secret_key::<Self>(sk)
+            .map_err(|_| CavpError::InvalidSecretKey)?;
+
+        // Convert randomness to array
+        let mut rnd_array = [0u8; 32];
+        rnd_array.copy_from_slice(rnd);
+
+        // Sign using FIPS-compliant function
+        let signature = sign::sign_deterministic_fips::<Self>(&secret_key, &encoded_message, &rnd_array)
+            .ok_or(CavpError::SigningFailed)?;
+
+        Ok(serialize::serialize_signature(&signature))
+    }
+
+    /// Verify a signature with context (FIPS 204 external interface)
+    ///
+    /// Encodes message as: 0x00 || len(ctx) || ctx || message
+    ///
+    /// # Arguments
+    ///
+    /// * `pk` - Public (verification) key bytes
+    /// * `message` - Original message (M')
+    /// * `context` - Context string (must match signing context)
+    /// * `signature` - Signature bytes to verify
+    ///
+    /// # Returns
+    ///
+    /// `true` if the signature is valid, `false` otherwise
+    fn verify_with_context(pk: &[u8], message: &[u8], context: &[u8], signature: &[u8]) -> bool
+    where
+        Self: Sized,
+    {
+        // Encode message with context per FIPS 204: 0x00 || len(ctx) || ctx || M'
+        let encoded_message = match encode_message_with_context(message, context) {
+            Ok(m) => m,
+            Err(_) => return false,
+        };
+
+        // Deserialize public key and signature
+        let public_key = match serialize::deserialize_public_key::<Self>(pk) {
+            Ok(pk) => pk,
+            Err(_) => return false,
+        };
+
+        let sig = match serialize::deserialize_signature::<Self>(signature) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+
+        verify::verify::<Self>(&public_key, &encoded_message, &sig)
+    }
+
+    // ========================================================================
+    // INTERNAL INTERFACE WITH PRE-COMPUTED μ
+    // For ACVP internal interface tests where μ is provided directly
+    // ========================================================================
+
+    /// Sign with pre-computed μ (internal interface with pre-computed hash)
+    ///
+    /// This function accepts the 64-byte message hash μ directly, bypassing the
+    /// μ = H(tr || M) computation. Used for ACVP internal interface tests.
+    ///
+    /// # Arguments
+    ///
+    /// * `sk` - Secret (signing) key bytes
+    /// * `mu` - Pre-computed 64-byte message hash
+    /// * `rnd` - Optional 32-byte randomness (zeros for deterministic)
+    ///
+    /// # Returns
+    ///
+    /// The signature bytes on success
+    fn sign_with_mu(sk: &[u8], mu: &[u8], rnd: Option<&[u8]>) -> Result<Signature, CavpError>
+    where
+        Self: Sized,
+    {
+        if mu.len() != 64 {
+            return Err(CavpError::SigningFailed);
+        }
+
+        // Deserialize secret key
+        let secret_key = serialize::deserialize_secret_key::<Self>(sk)
+            .map_err(|_| CavpError::InvalidSecretKey)?;
+
+        // Convert mu to array
+        let mut mu_array = [0u8; 64];
+        mu_array.copy_from_slice(mu);
+
+        // Use provided rnd or zeros for deterministic mode
+        let rnd_array = match rnd {
+            Some(r) if r.len() == 32 => {
+                let mut arr = [0u8; 32];
+                arr.copy_from_slice(r);
+                arr
+            }
+            Some(_) => return Err(CavpError::InvalidRandomnessLength),
+            None => [0u8; 32],
+        };
+
+        // Sign using FIPS-compliant function with pre-computed μ
+        let signature = sign::sign_with_mu_fips::<Self>(&secret_key, &mu_array, &rnd_array)
+            .ok_or(CavpError::SigningFailed)?;
+
+        Ok(serialize::serialize_signature(&signature))
+    }
+
+    /// Verify a signature with pre-computed μ (internal interface)
+    ///
+    /// This function accepts the 64-byte message hash μ directly, bypassing the
+    /// μ = H(tr || M) computation. Used for ACVP internal interface tests.
+    ///
+    /// # Arguments
+    ///
+    /// * `pk` - Public (verification) key bytes
+    /// * `mu` - Pre-computed 64-byte message hash
+    /// * `signature` - Signature bytes to verify
+    ///
+    /// # Returns
+    ///
+    /// `true` if the signature is valid, `false` otherwise
+    fn verify_with_mu(pk: &[u8], mu: &[u8], signature: &[u8]) -> bool
+    where
+        Self: Sized,
+    {
+        if mu.len() != 64 {
+            return false;
+        }
+
+        // Deserialize public key and signature
+        let public_key = match serialize::deserialize_public_key::<Self>(pk) {
+            Ok(pk) => pk,
+            Err(_) => return false,
+        };
+
+        let sig = match serialize::deserialize_signature::<Self>(signature) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+
+        // Convert mu to array
+        let mut mu_array = [0u8; 64];
+        mu_array.copy_from_slice(mu);
+
+        // Use internal verification with pre-computed μ
+        verify::verify_with_mu::<Self>(&public_key, &mu_array, &sig)
+    }
+
+    // ========================================================================
+    // HASHML-DSA (PRE-HASH MODE) - FIPS 204 Section 5.4
+    // Message encoding: M' = 0x01 || len(ctx) || ctx || OID || PH(M)
+    // ========================================================================
+
+    /// Sign a message using HashML-DSA (pre-hash mode)
+    ///
+    /// This implements Algorithm 4 from FIPS 204 Section 5.4.
+    /// The message is first hashed with the specified hash algorithm,
+    /// then the signature is computed over:
+    /// M' = 0x01 || len(ctx) || ctx || OID || PH(M)
+    ///
+    /// # Arguments
+    ///
+    /// * `sk` - Secret (signing) key bytes
+    /// * `message` - Message to sign (will be pre-hashed)
+    /// * `context` - Context string (max 255 bytes)
+    /// * `hash_alg_name` - ACVP hash algorithm name (e.g., "SHA2-256", "SHA3-512")
+    /// * `rnd` - Optional 32-byte randomness (zeros for deterministic)
+    ///
+    /// # Returns
+    ///
+    /// The signature bytes on success
+    fn sign_hash_ml_dsa(
+        sk: &[u8],
+        message: &[u8],
+        context: &[u8],
+        hash_alg_name: &str,
+        rnd: Option<&[u8]>,
+    ) -> Result<Signature, CavpError>
+    where
+        Self: Sized,
+    {
+        // Parse hash algorithm
+        let hash_alg = HashAlgorithm::from_acvp_name(hash_alg_name)
+            .ok_or(CavpError::SigningFailed)?;
+
+        // Encode message: 0x01 || len(ctx) || ctx || OID || PH(M)
+        let encoded_message = encode_hash_ml_dsa_message(message, context, hash_alg)
+            .map_err(|_| CavpError::ContextTooLong)?;
+
+        // Deserialize secret key
+        let secret_key = serialize::deserialize_secret_key::<Self>(sk)
+            .map_err(|_| CavpError::InvalidSecretKey)?;
+
+        // Use provided rnd or zeros for deterministic mode
+        let rnd_array = match rnd {
+            Some(r) if r.len() == 32 => {
+                let mut arr = [0u8; 32];
+                arr.copy_from_slice(r);
+                arr
+            }
+            Some(_) => return Err(CavpError::InvalidRandomnessLength),
+            None => [0u8; 32],
+        };
+
+        // Sign using FIPS-compliant function
+        let signature = sign::sign_deterministic_fips::<Self>(&secret_key, &encoded_message, &rnd_array)
+            .ok_or(CavpError::SigningFailed)?;
+
+        Ok(serialize::serialize_signature(&signature))
+    }
+
+    /// Verify a HashML-DSA signature (pre-hash mode)
+    ///
+    /// This implements Algorithm 5 from FIPS 204 Section 5.4.
+    /// The message is first hashed with the specified hash algorithm,
+    /// then verification is performed over:
+    /// M' = 0x01 || len(ctx) || ctx || OID || PH(M)
+    ///
+    /// # Arguments
+    ///
+    /// * `pk` - Public (verification) key bytes
+    /// * `message` - Original message (will be pre-hashed)
+    /// * `context` - Context string (must match signing context)
+    /// * `hash_alg_name` - ACVP hash algorithm name (e.g., "SHA2-256", "SHA3-512")
+    /// * `signature` - Signature bytes to verify
+    ///
+    /// # Returns
+    ///
+    /// `true` if the signature is valid, `false` otherwise
+    fn verify_hash_ml_dsa(
+        pk: &[u8],
+        message: &[u8],
+        context: &[u8],
+        hash_alg_name: &str,
+        signature: &[u8],
+    ) -> bool
+    where
+        Self: Sized,
+    {
+        // Parse hash algorithm
+        let hash_alg = match HashAlgorithm::from_acvp_name(hash_alg_name) {
+            Some(alg) => alg,
+            None => return false,
+        };
+
+        // Encode message: 0x01 || len(ctx) || ctx || OID || PH(M)
+        let encoded_message = match encode_hash_ml_dsa_message(message, context, hash_alg) {
+            Ok(m) => m,
+            Err(_) => return false,
+        };
+
+        // Deserialize public key and signature
+        let public_key = match serialize::deserialize_public_key::<Self>(pk) {
+            Ok(pk) => pk,
+            Err(_) => return false,
+        };
+
+        let sig = match serialize::deserialize_signature::<Self>(signature) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+
+        verify::verify::<Self>(&public_key, &encoded_message, &sig)
     }
 }
 

@@ -55,7 +55,7 @@ use alloc::vec;
 use std::vec::Vec;
 
 use crate::keygen::SecretKey;
-use crate::params::DsaParams;
+use crate::params::{DsaParams, Q};
 use crate::sign::{Signature, sign};
 use crate::poly::Poly;
 
