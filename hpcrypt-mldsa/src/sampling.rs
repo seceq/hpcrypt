@@ -23,7 +23,7 @@ use crate::symmetric::{expand_a as expand_a_element, expand_s as expand_s_xof, S
 ///
 /// For eta=2, we map nibble values 0-14 to coefficients in [-2, 2]:
 /// - nibble % 5 gives us 0-4
-/// - 2 - (nibble % 5) gives us coefficients [2, 1, 0, -1, -2]
+/// - pq-crystals reference: 2 - (nibble % 5) gives coefficients [2, 1, 0, -1, -2]
 ///
 /// This table precomputes the final coefficient for valid nibbles (0-14).
 /// Nibble value 15 is invalid (rejection), so we use 127 as a sentinel.
@@ -32,7 +32,7 @@ const ETA2_COEFF_TABLE: [i32; 16] = {
     let mut i = 0;
     while i < 15 {
         let mod5 = (i % 5) as i32;
-        table[i] = 2 - mod5;
+        table[i] = 2 - mod5;  // pq-crystals: eta - (nibble % 5)
         i += 1;
     }
     table
@@ -41,7 +41,7 @@ const ETA2_COEFF_TABLE: [i32; 16] = {
 /// Lookup table for nibble value to coefficient mapping (eta=4)
 ///
 /// For eta=4, we accept nibbles 0-8 and map them to coefficients in [-4, 4]:
-/// - 4 - nibble gives us coefficients [4, 3, 2, 1, 0, -1, -2, -3, -4]
+/// - FIPS 204 CoefFromHalfByte: nibble - 4 gives coefficients [-4, -3, -2, -1, 0, 1, 2, 3, 4]
 ///
 /// This table precomputes the final coefficient for valid nibbles (0-8).
 /// Nibble values 9-15 are invalid (rejection), so we use 127 as a sentinel.
@@ -49,7 +49,7 @@ const ETA4_COEFF_TABLE: [i32; 16] = {
     let mut table = [127i32; 16];
     let mut i = 0;
     while i <= 8 {
-        table[i] = 4 - (i as i32);
+        table[i] = 4 - (i as i32);  // pq-crystals/ACVP: eta - nibble
         i += 1;
     }
     table
@@ -171,54 +171,41 @@ pub fn sample_in_ball(seed: &[u8], tau: usize) -> Poly {
     debug_assert!(tau <= N, "tau must be <= N");
 
     let mut poly = Poly::new();
-    let mut signs = 0u64;
 
-    // Use SHAKE-256 to generate random bits
+    // FIPS 204 Algorithm 30 (SampleInBall):
+    // 1. First read 8 bytes for sign bits (BEFORE position sampling!)
     let mut xof = Shake256Xof::new(seed);
-    let mut buf = [0u8; 8]; // For reading 64-bit value for signs
+    let mut sign_buf = [0u8; 8];
+    xof.read(&mut sign_buf);
+    let mut signs = u64::from_le_bytes(sign_buf);
 
-    // Sample tau positions uniformly without replacement using rejection sampling
-    let mut indices = [0usize; 256]; // Will hold the τ selected indices
-    let mut positions_selected = 0;
-
+    // 2. Fisher-Yates-like shuffle from index 256-τ to 255
+    // For each i from 256-τ to 255:
+    //   - Sample j uniformly from [0, i]
+    //   - Swap c[i] with c[j], then set c[j] to ±1
     let mut position_buf = [0u8; 1];
 
-    while positions_selected < tau {
-        xof.read(&mut position_buf);
-        let pos = position_buf[0] as usize;
+    for i in (N - tau)..N {
+        // Sample j uniformly from [0, i] using rejection sampling
+        loop {
+            xof.read(&mut position_buf);
+            let j = position_buf[0] as usize;
 
-        // Reject if position >= 256
-        if pos >= N {
-            continue;
-        }
+            // Reject if j > i (ensures uniform distribution in [0, i])
+            if j <= i {
+                // c[i] ← c[j] (swap - but c[i] was 0, so just copy)
+                poly.coeffs[i] = poly.coeffs[j];
 
-        // Check if this position was already selected
-        let mut already_used = false;
-        for i in 0..positions_selected {
-            if indices[i] == pos {
-                already_used = true;
+                // c[j] ← (-1)^(sign_bit)
+                let sign_bit = signs & 1;
+                poly.coeffs[j] = if sign_bit == 0 { 1 } else { Q - 1 }; // 1 or -1 (mod q)
+
+                // Consume sign bit
+                signs >>= 1;
+
                 break;
             }
         }
-
-        if !already_used {
-            indices[positions_selected] = pos;
-            positions_selected += 1;
-        }
-    }
-
-    // Set the coefficients: use sign bits to determine ±1
-    for i in 0..tau {
-        let pos = indices[i];
-
-        // Get new sign bits every 64 coefficients
-        if i % 64 == 0 {
-            xof.read(&mut buf);
-            signs = u64::from_le_bytes(buf);
-        }
-
-        let sign_bit = (signs >> (i % 64)) & 1;
-        poly.coeffs[pos] = if sign_bit == 0 { 1 } else { Q - 1 }; // 1 or -1 (mod q)
     }
 
     poly
@@ -432,10 +419,10 @@ pub fn sample_poly_eta_from_bytes(bytes: &mut &[u8], eta: i32) -> Poly {
             let t0 = byte & 0x0F;        // Low nibble
             let t1 = (byte >> 4) & 0x0F; // High nibble
 
-            // Process low nibble
+            // Process low nibble (pq-crystals/ACVP: eta - (nibble % 5))
             if t0 < 15 {
                 let t0_mod5 = t0 % 5;
-                let coeff = 2 - t0_mod5 as i32;
+                let coeff = 2 - (t0_mod5 as i32);  // pq-crystals/ACVP CoefFromHalfByte
                 poly.coeffs[coeffs_generated] = coeff;
                 coeffs_generated += 1;
             }
@@ -444,17 +431,17 @@ pub fn sample_poly_eta_from_bytes(bytes: &mut &[u8], eta: i32) -> Poly {
                 break;
             }
 
-            // Process high nibble
+            // Process high nibble (pq-crystals/ACVP: eta - (nibble % 5))
             if t1 < 15 {
                 let t1_mod5 = t1 % 5;
-                let coeff = 2 - t1_mod5 as i32;
+                let coeff = 2 - (t1_mod5 as i32);  // pq-crystals/ACVP CoefFromHalfByte
                 poly.coeffs[coeffs_generated] = coeff;
                 coeffs_generated += 1;
             }
         }
     } else {
         // eta == 4
-        // Process 2 coefficients per byte
+        // Process 2 coefficients per byte (FIPS 204: nibble - eta)
         while coeffs_generated < N && byte_idx < bytes.len() {
             let byte = bytes[byte_idx];
             byte_idx += 1;
@@ -463,7 +450,7 @@ pub fn sample_poly_eta_from_bytes(bytes: &mut &[u8], eta: i32) -> Poly {
             let high = (byte >> 4) & 0x0F;
 
             if low <= 8 {
-                poly.coeffs[coeffs_generated] = 4 - low as i32;
+                poly.coeffs[coeffs_generated] = 4 - (low as i32);  // pq-crystals/ACVP: eta - nibble
                 coeffs_generated += 1;
                 if coeffs_generated >= N {
                     break;
@@ -471,7 +458,7 @@ pub fn sample_poly_eta_from_bytes(bytes: &mut &[u8], eta: i32) -> Poly {
             }
 
             if high <= 8 {
-                poly.coeffs[coeffs_generated] = 4 - high as i32;
+                poly.coeffs[coeffs_generated] = 4 - (high as i32);  // pq-crystals/ACVP: eta - nibble
                 coeffs_generated += 1;
             }
         }
@@ -550,17 +537,12 @@ pub fn expand_mask_poly(rho_prime: &[u8; 64], kappa: u16, _index: u8, gamma1: i3
 
         val &= mask;
 
-        // Map to [-γ₁, γ₁]
-        // Valid range is [0, 2*γ₁] which maps to [γ₁, -γ₁]
-        // For γ₁ = 2^19, this is [0, 2^20] but mask is 2^20-1
-        // So we accept if val < 2*γ₁ (not <=) to stay in valid range
+        // FIPS 204 Algorithm 37 + Algorithm 20 BitUnpack:
+        // coefficient = γ1 - extracted_value (per BitUnpack: c[i] = a - z)
+        // Valid range is [0, 2*γ₁-1] which maps to [-γ₁+1, γ₁]
         if val < (2 * gamma1) as u32 {
-            let coeff = gamma1 - val as i32;
-            poly.coeffs[coeffs_generated] = if coeff < 0 {
-                Q + coeff // Convert to [0, q)
-            } else {
-                coeff
-            };
+            let coeff = gamma1 - (val as i32);
+            poly.coeffs[coeffs_generated] = coeff;
             coeffs_generated += 1;
         }
 
@@ -588,9 +570,10 @@ pub fn expand_mask_poly(rho_prime: &[u8; 64], kappa: u16, _index: u8, gamma1: i3
 /// * `gamma1` - Bound on coefficient magnitude (2^17 or 2^19)
 #[inline]
 pub fn expand_mask_poly_optimized(rho_prime: &[u8; 64], kappa: u16, gamma1: i32) -> Poly {
-    // No rejection sampling needed in ExpandMask since all unpacked values are valid:
-    // - gamma1 = 2^17 uses 18 bits, max val = 2^18 - 1 < 2*gamma1
-    // - gamma1 = 2^19 uses 20 bits, max val = 2^20 - 1 < 2*gamma1
+    // OPTIMIZATION: For ML-DSA, no rejection sampling is needed in ExpandMask!
+    // - gamma1 = 2^17 uses 18 bits → max val = 2^18 - 1 < 2*gamma1 = 2^18 ✓
+    // - gamma1 = 2^19 uses 20 bits → max val = 2^20 - 1 < 2*gamma1 = 2^20 ✓
+    // All masked values are valid, so we can use direct unpacking without rejection.
 
     // Construct input: rho_prime || kappa (little-endian)
     let mut input = [0u8; 66];
@@ -620,11 +603,12 @@ pub fn expand_mask_poly_optimized(rho_prime: &[u8; 64], kappa: u16, gamma1: i32)
             }
         }
 
-        // NOTE: ARM NEON sampling benchmarked as 1.35x SLOWER than scalar.
-        // Using scalar fallback for better performance on ARM.
-
         // Scalar fallback: Unpack 18-bit coefficients
-        let gamma1_u32 = gamma1 as u32;
+        // FIPS 204 Algorithm 37 (ExpandMask) + Algorithm 20 (BitUnpack):
+        // BitUnpack calls: c[i] = a - z where a = γ1 and z is extracted value
+        // coefficient = γ1 - extracted_value
+        // This gives range [-γ1+1, γ1] (centered around 0)
+        let gamma1_i32 = gamma1;
         let mut i = 0;
         let mut byte_idx = 0;
 
@@ -644,10 +628,11 @@ pub fn expand_mask_poly_optimized(rho_prime: &[u8; 64], kappa: u16, gamma1: i32)
             let v2 = (b4 >> 4) | (b5 << 4) | ((b6 & 0x3F) << 12);
             let v3 = (b6 >> 6) | (b7 << 2) | (b8 << 10);
 
-            poly.coeffs[i] = (gamma1_u32.wrapping_sub(v0)) as i32;
-            poly.coeffs[i + 1] = (gamma1_u32.wrapping_sub(v1)) as i32;
-            poly.coeffs[i + 2] = (gamma1_u32.wrapping_sub(v2)) as i32;
-            poly.coeffs[i + 3] = (gamma1_u32.wrapping_sub(v3)) as i32;
+            // FIPS 204 BitUnpack: coefficient = γ1 - z where z is extracted value
+            poly.coeffs[i] = gamma1_i32 - (v0 as i32);
+            poly.coeffs[i + 1] = gamma1_i32 - (v1 as i32);
+            poly.coeffs[i + 2] = gamma1_i32 - (v2 as i32);
+            poly.coeffs[i + 3] = gamma1_i32 - (v3 as i32);
 
             i += 4;
             byte_idx += 9;
@@ -668,11 +653,12 @@ pub fn expand_mask_poly_optimized(rho_prime: &[u8; 64], kappa: u16, gamma1: i32)
             }
         }
 
-        // NOTE: ARM NEON sampling benchmarked as 1.35x SLOWER than scalar.
-        // Using scalar fallback for better performance on ARM.
-
         // Scalar fallback: Unpack 20-bit coefficients
-        let gamma1_u32 = gamma1 as u32;
+        // FIPS 204 Algorithm 37 (ExpandMask) + Algorithm 20 (BitUnpack):
+        // BitUnpack calls: c[i] = a - z where a = γ1 and z is extracted value
+        // coefficient = γ1 - extracted_value
+        // This gives range [-γ1+1, γ1] (centered around 0)
+        let gamma1_i32 = gamma1;
         let mut i = 0;
         let mut byte_idx = 0;
 
@@ -693,10 +679,11 @@ pub fn expand_mask_poly_optimized(rho_prime: &[u8; 64], kappa: u16, gamma1: i32)
             let v2 = b5 | (b6 << 8) | ((b7 & 0x0F) << 16);
             let v3 = (b7 >> 4) | (b8 << 4) | (b9 << 12);
 
-            poly.coeffs[i] = (gamma1_u32.wrapping_sub(v0)) as i32;
-            poly.coeffs[i + 1] = (gamma1_u32.wrapping_sub(v1)) as i32;
-            poly.coeffs[i + 2] = (gamma1_u32.wrapping_sub(v2)) as i32;
-            poly.coeffs[i + 3] = (gamma1_u32.wrapping_sub(v3)) as i32;
+            // FIPS 204 BitUnpack: coefficient = γ1 - z where z is extracted value
+            poly.coeffs[i] = gamma1_i32 - (v0 as i32);
+            poly.coeffs[i + 1] = gamma1_i32 - (v1 as i32);
+            poly.coeffs[i + 2] = gamma1_i32 - (v2 as i32);
+            poly.coeffs[i + 3] = gamma1_i32 - (v3 as i32);
 
             i += 4;
             byte_idx += 10;
@@ -718,50 +705,80 @@ pub fn expand_mask_poly_optimized(rho_prime: &[u8; 64], kappa: u16, gamma1: i32)
 /// # Returns
 /// * Polynomial with all coefficients in [-γ₁, γ₁]
 pub fn sample_mask_from_bytes(bytes: &[u8], gamma1: i32) -> Poly {
-    // Determine bits per coefficient based on gamma1
-    let bits_per_coeff = if gamma1 == (1 << 17) {
-        18 // For γ₁ = 2^17, need 18 bits to represent [-2^17, 2^17]
+    let mut poly = Poly::new();
+
+    // FIPS 204 Algorithm 37 + Algorithm 20 BitUnpack uses bit-packed coefficients:
+    // - γ₁ = 2^17: 18 bits per coefficient, 4 coefficients from 9 bytes
+    // - γ₁ = 2^19: 20 bits per coefficient, 4 coefficients from 10 bytes
+
+    if gamma1 == (1 << 17) {
+        // 18-bit coefficients: 4 from 9 bytes
+        // FIPS 204 BitUnpack: coefficient = γ1 - z where z is extracted value
+        let gamma1_i32 = gamma1;
+        let mut i = 0;
+        let mut byte_idx = 0;
+
+        while i < N && byte_idx + 9 <= bytes.len() {
+            let b0 = bytes[byte_idx] as u32;
+            let b1 = bytes[byte_idx + 1] as u32;
+            let b2 = bytes[byte_idx + 2] as u32;
+            let b3 = bytes[byte_idx + 3] as u32;
+            let b4 = bytes[byte_idx + 4] as u32;
+            let b5 = bytes[byte_idx + 5] as u32;
+            let b6 = bytes[byte_idx + 6] as u32;
+            let b7 = bytes[byte_idx + 7] as u32;
+            let b8 = bytes[byte_idx + 8] as u32;
+
+            let v0 = b0 | (b1 << 8) | ((b2 & 0x03) << 16);
+            let v1 = (b2 >> 2) | (b3 << 6) | ((b4 & 0x0F) << 14);
+            let v2 = (b4 >> 4) | (b5 << 4) | ((b6 & 0x3F) << 12);
+            let v3 = (b6 >> 6) | (b7 << 2) | (b8 << 10);
+
+            // FIPS 204 BitUnpack: coefficient = γ1 - z where z is extracted value
+            poly.coeffs[i] = gamma1_i32 - (v0 as i32);
+            poly.coeffs[i + 1] = gamma1_i32 - (v1 as i32);
+            poly.coeffs[i + 2] = gamma1_i32 - (v2 as i32);
+            poly.coeffs[i + 3] = gamma1_i32 - (v3 as i32);
+
+            i += 4;
+            byte_idx += 9;
+        }
     } else if gamma1 == (1 << 19) {
-        20 // For γ₁ = 2^19, need 20 bits
+        // 20-bit coefficients: 4 from 10 bytes
+        // FIPS 204 BitUnpack: coefficient = γ1 - z where z is extracted value
+        let gamma1_i32 = gamma1;
+        let mut i = 0;
+        let mut byte_idx = 0;
+
+        while i < N && byte_idx + 10 <= bytes.len() {
+            let b0 = bytes[byte_idx] as u32;
+            let b1 = bytes[byte_idx + 1] as u32;
+            let b2 = bytes[byte_idx + 2] as u32;
+            let b3 = bytes[byte_idx + 3] as u32;
+            let b4 = bytes[byte_idx + 4] as u32;
+            let b5 = bytes[byte_idx + 5] as u32;
+            let b6 = bytes[byte_idx + 6] as u32;
+            let b7 = bytes[byte_idx + 7] as u32;
+            let b8 = bytes[byte_idx + 8] as u32;
+            let b9 = bytes[byte_idx + 9] as u32;
+
+            let v0 = b0 | (b1 << 8) | ((b2 & 0x0F) << 16);
+            let v1 = (b2 >> 4) | (b3 << 4) | ((b4 & 0xFF) << 12);
+            let v2 = b5 | (b6 << 8) | ((b7 & 0x0F) << 16);
+            let v3 = (b7 >> 4) | (b8 << 4) | (b9 << 12);
+
+            // FIPS 204 BitUnpack: coefficient = γ1 - z where z is extracted value
+            poly.coeffs[i] = gamma1_i32 - (v0 as i32);
+            poly.coeffs[i + 1] = gamma1_i32 - (v1 as i32);
+            poly.coeffs[i + 2] = gamma1_i32 - (v2 as i32);
+            poly.coeffs[i + 3] = gamma1_i32 - (v3 as i32);
+
+            i += 4;
+            byte_idx += 10;
+        }
     } else {
         panic!("Invalid gamma1 value");
-    };
-
-    let mut poly = Poly::new();
-    let mut coeffs_generated = 0;
-
-    let bytes_per_coeff = (bits_per_coeff + 7) / 8; // Round up to bytes
-    let mask = (1u32 << bits_per_coeff) - 1;
-
-    let mut byte_offset = 0;
-
-    while coeffs_generated < N && byte_offset + bytes_per_coeff <= bytes.len() {
-        // Read enough bytes for one coefficient
-        let mut val = 0u32;
-        for i in 0..bytes_per_coeff {
-            val |= (bytes[byte_offset + i] as u32) << (8 * i);
-        }
-        byte_offset += bytes_per_coeff;
-
-        val &= mask;
-
-        // Map to [-γ₁, γ₁]
-        // Valid range is [0, 2*γ₁] which maps to [γ₁, -γ₁]
-        if val < (2 * gamma1) as u32 {
-            let coeff = gamma1 - val as i32;
-            poly.coeffs[coeffs_generated] = if coeff < 0 {
-                Q + coeff // Convert to [0, q)
-            } else {
-                coeff
-            };
-            coeffs_generated += 1;
-        }
     }
-
-    // If we didn't generate enough coefficients, something is wrong
-    // (640 bytes should be more than enough for 256 coefficients)
-    debug_assert_eq!(coeffs_generated, N,
-        "Not enough bytes to generate all coefficients: {} < {}", coeffs_generated, N);
 
     poly
 }
@@ -833,7 +850,7 @@ pub fn expand_secret_vec<const K: usize>(
 /// In the actual implementation, we might want a more cache-friendly representation
 pub fn expand_matrix_a<P: DsaParams>(rho: &[u8; 32]) -> Vec<Vec<Poly>> {
     // AVX2 path: process 4 matrix elements at a time
-    #[cfg(all(feature = "avx2", feature = "simd", feature = "std", target_arch = "x86_64"))]
+    #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
         if std::is_x86_feature_detected!("avx2") {
             return expand_matrix_a_avx2::<P>(rho);
@@ -860,7 +877,7 @@ pub fn expand_matrix_a<P: DsaParams>(rho: &[u8; 32]) -> Vec<Vec<Poly>> {
 }
 
 /// AVX2 optimized matrix expansion using 4-way parallel SHAKE-128
-#[cfg(all(feature = "avx2", feature = "simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
 fn expand_matrix_a_avx2<P: DsaParams>(rho: &[u8; 32]) -> Vec<Vec<Poly>> {
     use crate::symmetric::expand_a_x4_avx2;
 
@@ -890,7 +907,7 @@ fn expand_matrix_a_avx2<P: DsaParams>(rho: &[u8; 32]) -> Vec<Vec<Poly>> {
         let outputs = expand_a_x4_avx2(rho, batch_indices);
 
         for (k, output) in outputs.iter().enumerate() {
-            let (i, j) = indices[idx + k];
+            let (i, _j) = indices[idx + k];
             let poly = sample_poly_uniform_from_bytes(output);
             matrix[i as usize].push(poly);
         }
@@ -999,7 +1016,7 @@ fn rej_uniform(coeffs: &mut [i32], start: usize, len: usize, buf: &[u8], buflen:
 ///
 /// # Panics
 /// Panics if buffer doesn't contain enough bytes for 256 coefficients (extremely rare)
-#[cfg(all(feature = "avx2", feature = "simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
 pub fn sample_poly_uniform_from_bytes(buf: &[u8]) -> Poly {
     let mut poly = Poly::new();
     let coeffs_generated = rej_uniform(&mut poly.coeffs, 0, N, buf, buf.len());

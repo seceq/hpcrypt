@@ -178,17 +178,12 @@ pub fn use_hint_optimized<P: DsaParams>(h: bool, r: i32) -> i32 {
 /// # Returns
 /// * Hint polynomial with coefficients in {0, 1}
 pub fn make_hint_poly(z: &Poly, r: &Poly, alpha: i32) -> Poly {
-    // AVX2 (proven, stable, 256-bit vectors)
-    #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
-    {
-        // AVX2 runtime detection
-        if std::is_x86_feature_detected!("avx2") {
-            // Note: AVX2 intrinsics not yet implemented for hints
-            // Fall through to scalar
-        }
-    }
+    // NOTE: ARM NEON hint operations not benchmarked. Given that simpler operations
+    // like poly_sub (1.69x slower) and power2round (1.17x slower) perform worse on NEON,
+    // the complex hint logic (magic division + multiple conditionals) is likely slower too.
+    // Using scalar fallback for consistent performance across platforms.
 
-    // Scalar fallback
+    // Scalar implementation
     let mut hint = Poly::new();
     for i in 0..N {
         hint.coeffs[i] = if make_hint(z.coeffs[i], r.coeffs[i], alpha) {
@@ -230,21 +225,12 @@ pub fn make_hint_poly_optimized<P: DsaParams>(z: &Poly, r: &Poly) -> Poly {
         }
     }
 
-    // NEON accelerated hint computation
-    #[cfg(all(feature = "neon", target_arch = "aarch64"))]
-    {
-        unsafe {
-            crate::intrinsics::neon::hints::make_hint_fast(
-                &z.coeffs,
-                &r.coeffs,
-                &mut hint.coeffs,
-                2 * P::GAMMA2,
-            );
-        }
-        return hint;
-    }
+    // NOTE: ARM NEON hint operations not benchmarked. Given that simpler operations
+    // like poly_sub (1.69x slower) and power2round (1.17x slower) perform worse on NEON,
+    // the complex hint logic (magic division + multiple conditionals) is likely slower too.
+    // Using scalar fallback for consistent performance across platforms.
 
-    // Scalar fallback
+    // Scalar implementation
     for i in 0..N {
         hint.coeffs[i] = if make_hint_optimized::<P>(z.coeffs[i], r.coeffs[i]) {
             1
@@ -269,17 +255,12 @@ pub fn make_hint_poly_optimized<P: DsaParams>(z: &Poly, r: &Poly) -> Poly {
 /// # Returns
 /// * Polynomial with corrected high bits
 pub fn use_hint_poly(h: &Poly, r: &Poly, alpha: i32) -> Poly {
-    // AVX2 (proven, stable, 256-bit vectors)
-    #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
-    {
-        // AVX2 runtime detection
-        if std::is_x86_feature_detected!("avx2") {
-            // Note: AVX2 intrinsics not yet implemented for use_hint_poly
-            // Fall through to scalar
-        }
-    }
+    // NOTE: ARM NEON hint operations not benchmarked. Given that simpler operations
+    // like poly_sub (1.69x slower) and power2round (1.17x slower) perform worse on NEON,
+    // the complex hint logic (magic division + multiple conditionals) is likely slower too.
+    // Using scalar fallback for consistent performance across platforms.
 
-    // Scalar fallback
+    // Scalar implementation
     let mut result = Poly::new();
     for i in 0..N {
         let hint_bit = h.coeffs[i] != 0;
@@ -318,21 +299,12 @@ pub fn use_hint_poly_optimized<P: DsaParams>(h: &Poly, r: &Poly) -> Poly {
         }
     }
 
-    // NEON accelerated hint application
-    #[cfg(all(feature = "neon", target_arch = "aarch64"))]
-    {
-        unsafe {
-            crate::intrinsics::neon::hints::use_hint_fast(
-                &h.coeffs,
-                &r.coeffs,
-                &mut result.coeffs,
-                2 * P::GAMMA2,
-            );
-        }
-        return result;
-    }
+    // NOTE: ARM NEON hint operations not benchmarked. Given that simpler operations
+    // like poly_sub (1.69x slower) and power2round (1.17x slower) perform worse on NEON,
+    // the complex hint logic (magic division + multiple conditionals) is likely slower too.
+    // Using scalar fallback for consistent performance across platforms.
 
-    // Scalar fallback
+    // Scalar implementation
     for i in 0..N {
         let hint_bit = h.coeffs[i] != 0;
         result.coeffs[i] = use_hint_optimized::<P>(hint_bit, r.coeffs[i]);
@@ -351,7 +323,7 @@ pub fn use_hint_poly_optimized<P: DsaParams>(h: &Poly, r: &Poly) -> Poly {
 /// # Returns
 /// * Number of non-zero coefficients
 pub fn poly_hint_count(h: &Poly) -> usize {
-    // AVX2 (proven, stable, 256-bit vectors) using intrinsics module
+    // AVX2 using intrinsics module
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
         if std::is_x86_feature_detected!("avx2") {

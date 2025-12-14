@@ -235,28 +235,11 @@ use crate::params::N;
 /// # Returns
 /// * `(r1_poly, r0_poly)` - High and low bit polynomials
 pub fn power2round_poly(poly: &Poly, d: usize) -> (Poly, Poly) {
-    // AVX-512 (highest performance, 512-bit vectors)
-    #[cfg(all(feature = "avx512", target_arch = "x86_64"))]
-    {
-        use crate::simd::dispatch::has_avx512;
-        if has_avx512() {
-            // Use native Rust intrinsics if feature enabled
-            #[cfg(feature = "native-intrinsics")]
-            return unsafe { crate::simd::avx512_native::power2round_poly_avx512(poly, d) };
-
-            // Otherwise use C FFI (default)
-            #[cfg(not(feature = "native-intrinsics"))]
-            {
-                // Note: AVX-512 C FFI not yet implemented
-                // Fall through to AVX2
-            }
-        }
-    }
-
-    // AVX2 using pure Rust intrinsics
+    // AVX2 using intrinsics module (hardcoded D=13 for ML-DSA standard)
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        if std::is_x86_feature_detected!("avx2") {
+        // D=13 is the standard for all ML-DSA parameter sets
+        if d == 13 && std::is_x86_feature_detected!("avx2") {
             let mut r1 = Poly::new();
             let mut r0 = Poly::new();
             unsafe {
@@ -266,28 +249,10 @@ pub fn power2round_poly(poly: &Poly, d: usize) -> (Poly, Poly) {
         }
     }
 
-    // SSE4.1 fallback for CPUs without AVX2 (128-bit vectors)
-    #[cfg(all(feature = "sse", target_arch = "x86_64"))]
-    {
-        use crate::simd::dispatch::has_sse41;
-        if has_sse41() {
-            // Use native Rust intrinsics if feature enabled
-            #[cfg(feature = "native-intrinsics")]
-            return unsafe { crate::simd::sse_native::power2round_poly_sse(poly, d) };
-
-            // Otherwise use C FFI (default)
-            #[cfg(not(feature = "native-intrinsics"))]
-            {
-                // Note: SSE C FFI not yet implemented
-                // Fall through to scalar
-            }
-        }
-    }
-
-    // NOTE: ARM NEON power2round benchmarked as 1.17x SLOWER than scalar.
+    // NOTE: ARM NEON power2round_fast benchmarked as 1.17x SLOWER than scalar.
     // Using scalar fallback for better performance on ARM.
 
-    // Scalar fallback (faster than NEON on ARM)
+    // Scalar implementation (faster than NEON on ARM)
     let mut r1 = Poly::new();
     let mut r0 = Poly::new();
     for i in 0..N {
@@ -307,29 +272,20 @@ pub fn power2round_poly(poly: &Poly, d: usize) -> (Poly, Poly) {
 /// # Returns
 /// * `(r1_poly, r0_poly)` - High and low parts
 pub fn decompose_poly(poly: &Poly, alpha: i32) -> (Poly, Poly) {
-    // AVX-512 (highest performance, 512-bit vectors)
-    #[cfg(all(feature = "avx512", target_arch = "x86_64"))]
+    // AVX2 using intrinsics module
+    #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        use crate::simd::dispatch::has_avx512;
-        if has_avx512() {
-            // Use native Rust intrinsics if feature enabled
-            #[cfg(feature = "native-intrinsics")]
-            return unsafe { crate::simd::avx512_native::decompose_poly_avx512(poly, alpha) };
-
-            // Otherwise use C FFI (default)
-            #[cfg(not(feature = "native-intrinsics"))]
-            {
-                // Note: AVX-512 C FFI not yet implemented
-                // Fall through to AVX2
+        if std::is_x86_feature_detected!("avx2") {
+            let mut r1 = Poly::new();
+            let mut r0 = Poly::new();
+            unsafe {
+                crate::intrinsics::avx2::rounding::decompose(&poly.coeffs, &mut r1.coeffs, &mut r0.coeffs, alpha);
             }
+            return (r1, r0);
         }
     }
 
-    // AVX2 using pure Rust intrinsics
-    // Note: AVX2 decompose uses highbits_fast + lowbits_fast internally
-    // For now, fall through to scalar (optimization can be added later)
-
-    // ARM NEON (128-bit vectors) - use optimized intrinsics
+    // ARM NEON using intrinsics module
     #[cfg(all(feature = "neon", target_arch = "aarch64"))]
     {
         let mut r1 = Poly::new();
@@ -363,25 +319,7 @@ pub fn decompose_poly(poly: &Poly, alpha: i32) -> (Poly, Poly) {
 /// # Returns
 /// * Polynomial containing high-order bits
 pub fn high_bits_poly(poly: &Poly, alpha: i32) -> Poly {
-    // AVX-512 (highest performance, 512-bit vectors)
-    #[cfg(all(feature = "avx512", target_arch = "x86_64"))]
-    {
-        use crate::simd::dispatch::has_avx512;
-        if has_avx512() {
-            // Use native Rust intrinsics if feature enabled
-            #[cfg(feature = "native-intrinsics")]
-            return unsafe { crate::simd::avx512_native::high_bits_poly_avx512(poly, alpha) };
-
-            // Otherwise use C FFI (default)
-            #[cfg(not(feature = "native-intrinsics"))]
-            {
-                // Note: AVX-512 C FFI not yet implemented
-                // Fall through to AVX2
-            }
-        }
-    }
-
-    // AVX2 (proven, stable, 256-bit vectors) using intrinsics module
+    // AVX2 using intrinsics module
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
         if std::is_x86_feature_detected!("avx2") {
@@ -393,25 +331,7 @@ pub fn high_bits_poly(poly: &Poly, alpha: i32) -> Poly {
         }
     }
 
-    // SSE4.1 fallback for CPUs without AVX2 (128-bit vectors)
-    #[cfg(all(feature = "sse", target_arch = "x86_64"))]
-    {
-        use crate::simd::dispatch::has_sse41;
-        if has_sse41() {
-            // Use native Rust intrinsics if feature enabled
-            #[cfg(feature = "native-intrinsics")]
-            return unsafe { crate::simd::sse_native::high_bits_poly_sse(poly, alpha) };
-
-            // Otherwise use C FFI (default)
-            #[cfg(not(feature = "native-intrinsics"))]
-            {
-                // Note: SSE C FFI not yet implemented
-                // Fall through to scalar
-            }
-        }
-    }
-
-    // ARM NEON (128-bit vectors) - use optimized intrinsics
+    // ARM NEON using intrinsics module
     #[cfg(all(feature = "neon", target_arch = "aarch64"))]
     {
         let mut result = Poly::new();
@@ -455,25 +375,7 @@ pub fn high_bits_poly(poly: &Poly, alpha: i32) -> Poly {
 /// # Returns
 /// * Polynomial containing low-order bits
 pub fn low_bits_poly(poly: &Poly, alpha: i32) -> Poly {
-    // AVX-512 (highest performance, 512-bit vectors)
-    #[cfg(all(feature = "avx512", target_arch = "x86_64"))]
-    {
-        use crate::simd::dispatch::has_avx512;
-        if has_avx512() {
-            // Use native Rust intrinsics if feature enabled
-            #[cfg(feature = "native-intrinsics")]
-            return unsafe { crate::simd::avx512_native::low_bits_poly_avx512(poly, alpha) };
-
-            // Otherwise use C FFI (default)
-            #[cfg(not(feature = "native-intrinsics"))]
-            {
-                // Note: AVX-512 C FFI not yet implemented
-                // Fall through to AVX2
-            }
-        }
-    }
-
-    // AVX2 (proven, stable, 256-bit vectors) using intrinsics module
+    // AVX2 using intrinsics module
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
         if std::is_x86_feature_detected!("avx2") {
@@ -485,25 +387,7 @@ pub fn low_bits_poly(poly: &Poly, alpha: i32) -> Poly {
         }
     }
 
-    // SSE4.1 fallback for CPUs without AVX2 (128-bit vectors)
-    #[cfg(all(feature = "sse", target_arch = "x86_64"))]
-    {
-        use crate::simd::dispatch::has_sse41;
-        if has_sse41() {
-            // Use native Rust intrinsics if feature enabled
-            #[cfg(feature = "native-intrinsics")]
-            return unsafe { crate::simd::sse_native::low_bits_poly_sse(poly, alpha) };
-
-            // Otherwise use C FFI (default)
-            #[cfg(not(feature = "native-intrinsics"))]
-            {
-                // Note: SSE C FFI not yet implemented
-                // Fall through to scalar
-            }
-        }
-    }
-
-    // ARM NEON (128-bit vectors) - use optimized intrinsics
+    // ARM NEON using intrinsics module
     #[cfg(all(feature = "neon", target_arch = "aarch64"))]
     {
         let mut result = Poly::new();

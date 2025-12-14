@@ -204,7 +204,7 @@ pub fn expand_a(rho: &[u8; 32], i: u8, j: u8) -> Xof {
 ///
 /// # Returns
 /// Array of 4 SHAKE-128 XOF outputs (840 bytes each for uniform sampling)
-#[cfg(all(feature = "avx2", feature = "simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
 pub fn expand_a_x4_avx2(rho: &[u8; 32], indices: [(u8, u8); 4]) -> [Vec<u8>; 4] {
     // 840 bytes = 5 SHAKE-128 blocks, enough for rejection sampling
     const OUTPUT_LEN: usize = 840;
@@ -305,7 +305,7 @@ pub fn j<const N: usize>(a: &[u8], b: &[u8]) -> [u8; N] {
 ///
 /// # Returns
 /// Array of 4 SHAKE-256 XOF outputs (256 bytes each for eta sampling)
-#[cfg(all(feature = "avx2", feature = "simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
 pub fn expand_s_x4_avx2(rho_prime: &[u8; 64], indices: [u16; 4]) -> [Vec<u8>; 4] {
     [
         {
@@ -345,7 +345,7 @@ pub fn expand_s_x4_avx2(rho_prime: &[u8; 64], indices: [u16; 4]) -> [Vec<u8>; 4]
 ///
 /// # Returns
 /// Array of 4 SHAKE-256 XOF outputs (640 bytes each for mask sampling)
-#[cfg(all(feature = "avx2", feature = "simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
 pub fn expand_mask_x4_avx2(rho_prime: &[u8; 64], kappas: [u16; 4]) -> [Vec<u8>; 4] {
     [
         {

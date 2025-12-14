@@ -73,16 +73,17 @@ fn encode_poly_z_20bit(poly: &Poly, gamma1: i32) -> Vec<u8> {
         let c2 = poly.coeffs[4 * i + 2];
         let c3 = poly.coeffs[4 * i + 3];
 
-        // Normalize to signed centered representation and shift to [0, 2*gamma1]
+        // Normalize to signed centered representation
+        // FIPS 204 / pq-crystals uses: v = γ₁ - coeff (NOT coeff + γ₁)
         let n0 = if c0 > Q / 2 { c0 - Q } else { c0 };
         let n1 = if c1 > Q / 2 { c1 - Q } else { c1 };
         let n2 = if c2 > Q / 2 { c2 - Q } else { c2 };
         let n3 = if c3 > Q / 2 { c3 - Q } else { c3 };
 
-        let v0 = (n0 + gamma1) as u32;
-        let v1 = (n1 + gamma1) as u32;
-        let v2 = (n2 + gamma1) as u32;
-        let v3 = (n3 + gamma1) as u32;
+        let v0 = (gamma1 - n0) as u32;
+        let v1 = (gamma1 - n1) as u32;
+        let v2 = (gamma1 - n2) as u32;
+        let v3 = (gamma1 - n3) as u32;
 
         // Pack 4 x 20-bit values into 10 bytes
         let base = i * 10;
@@ -115,15 +116,16 @@ fn encode_poly_z_18bit(poly: &Poly, gamma1: i32) -> Vec<u8> {
         let c2 = poly.coeffs[4 * i + 2];
         let c3 = poly.coeffs[4 * i + 3];
 
+        // FIPS 204 / pq-crystals uses: v = γ₁ - coeff (NOT coeff + γ₁)
         let n0 = if c0 > Q / 2 { c0 - Q } else { c0 };
         let n1 = if c1 > Q / 2 { c1 - Q } else { c1 };
         let n2 = if c2 > Q / 2 { c2 - Q } else { c2 };
         let n3 = if c3 > Q / 2 { c3 - Q } else { c3 };
 
-        let v0 = (n0 + gamma1) as u32;
-        let v1 = (n1 + gamma1) as u32;
-        let v2 = (n2 + gamma1) as u32;
-        let v3 = (n3 + gamma1) as u32;
+        let v0 = (gamma1 - n0) as u32;
+        let v1 = (gamma1 - n1) as u32;
+        let v2 = (gamma1 - n2) as u32;
+        let v3 = (gamma1 - n3) as u32;
 
         // Pack 4 x 18-bit values into 9 bytes
         let base = i * 9;
@@ -188,10 +190,11 @@ fn decode_poly_z_20bit(bytes: &[u8], gamma1: i32) -> Result<Poly, SerializeError
         let v2 = b5 | (b6 << 8) | ((b7 & 0x0F) << 16);
         let v3 = (b7 >> 4) | (b8 << 4) | (b9 << 12);
 
-        poly.coeffs[4 * i + 0] = (v0 as i32) - gamma1;
-        poly.coeffs[4 * i + 1] = (v1 as i32) - gamma1;
-        poly.coeffs[4 * i + 2] = (v2 as i32) - gamma1;
-        poly.coeffs[4 * i + 3] = (v3 as i32) - gamma1;
+        // FIPS 204 / pq-crystals uses: coeff = γ₁ - v (NOT v - γ₁)
+        poly.coeffs[4 * i + 0] = gamma1 - (v0 as i32);
+        poly.coeffs[4 * i + 1] = gamma1 - (v1 as i32);
+        poly.coeffs[4 * i + 2] = gamma1 - (v2 as i32);
+        poly.coeffs[4 * i + 3] = gamma1 - (v3 as i32);
     }
 
     Ok(poly)
@@ -228,10 +231,11 @@ fn decode_poly_z_18bit(bytes: &[u8], gamma1: i32) -> Result<Poly, SerializeError
         let v2 = (b4 >> 4) | (b5 << 4) | ((b6 & 0x3F) << 12);
         let v3 = (b6 >> 6) | (b7 << 2) | (b8 << 10);
 
-        poly.coeffs[4 * i + 0] = (v0 as i32) - gamma1;
-        poly.coeffs[4 * i + 1] = (v1 as i32) - gamma1;
-        poly.coeffs[4 * i + 2] = (v2 as i32) - gamma1;
-        poly.coeffs[4 * i + 3] = (v3 as i32) - gamma1;
+        // FIPS 204 / pq-crystals uses: coeff = γ₁ - v (NOT v - γ₁)
+        poly.coeffs[4 * i + 0] = gamma1 - (v0 as i32);
+        poly.coeffs[4 * i + 1] = gamma1 - (v1 as i32);
+        poly.coeffs[4 * i + 2] = gamma1 - (v2 as i32);
+        poly.coeffs[4 * i + 3] = gamma1 - (v3 as i32);
     }
 
     Ok(poly)
@@ -255,6 +259,9 @@ fn encode_poly_eta(poly: &Poly, eta: i32) -> Vec<u8> {
 
 /// Optimized 4-bit encoding for η=4
 /// Packs 2 coefficients into 1 byte at a time.
+///
+/// Uses pq-crystals/ACVP convention: unsigned = eta - coeff
+/// This maps coefficients [-4, ..., 4] to unsigned [8, ..., 0]
 #[inline(always)]
 fn encode_poly_eta_4bit(poly: &Poly, eta: i32) -> Vec<u8> {
     const NUM_BYTES: usize = 128; // 256 * 4 / 8
@@ -269,9 +276,9 @@ fn encode_poly_eta_4bit(poly: &Poly, eta: i32) -> Vec<u8> {
         let n0 = if c0 > Q / 2 { c0 - Q } else { c0 };
         let n1 = if c1 > Q / 2 { c1 - Q } else { c1 };
 
-        // Clamp and shift to [0, 2*eta] = [0, 8]
-        let v0 = (n0.max(-eta).min(eta) + eta) as u8;
-        let v1 = (n1.max(-eta).min(eta) + eta) as u8;
+        // pq-crystals/ACVP convention: unsigned = eta - coeff
+        let v0 = (eta - n0.max(-eta).min(eta)) as u8;
+        let v1 = (eta - n1.max(-eta).min(eta)) as u8;
 
         // Pack 2 x 4-bit values into 1 byte
         bytes[i] = (v0 & 0x0F) | ((v1 & 0x0F) << 4);
@@ -282,6 +289,9 @@ fn encode_poly_eta_4bit(poly: &Poly, eta: i32) -> Vec<u8> {
 
 /// Optimized 3-bit encoding for η=2
 /// Packs 8 coefficients (24 bits) into 3 bytes at a time.
+///
+/// Uses pq-crystals/ACVP convention: unsigned = eta - coeff
+/// This maps coefficients [-2, -1, 0, 1, 2] to unsigned [4, 3, 2, 1, 0]
 #[inline(always)]
 fn encode_poly_eta_3bit(poly: &Poly, eta: i32) -> Vec<u8> {
     const NUM_BYTES: usize = 96; // 256 * 3 / 8
@@ -294,7 +304,8 @@ fn encode_poly_eta_3bit(poly: &Poly, eta: i32) -> Vec<u8> {
         for j in 0..8 {
             let coeff = poly.coeffs[8 * i + j];
             let n = if coeff > Q / 2 { coeff - Q } else { coeff };
-            c[j] = (n.max(-eta).min(eta) + eta) as u32;
+            // pq-crystals/ACVP convention: unsigned = eta - coeff
+            c[j] = (eta - n.max(-eta).min(eta)) as u32;
         }
 
         // Pack 8 x 3-bit values into 3 bytes (24 bits)
@@ -320,6 +331,9 @@ fn decode_poly_eta(bytes: &[u8], eta: i32) -> Result<Poly, SerializeError> {
 }
 
 /// Optimized 4-bit decoding for η=4
+///
+/// Uses pq-crystals/ACVP convention: coeff = eta - unsigned
+/// This maps unsigned [8, ..., 0] to coefficients [-4, ..., 4]
 #[inline(always)]
 fn decode_poly_eta_4bit(bytes: &[u8], eta: i32) -> Result<Poly, SerializeError> {
     const NUM_BYTES: usize = 128;
@@ -333,14 +347,18 @@ fn decode_poly_eta_4bit(bytes: &[u8], eta: i32) -> Result<Poly, SerializeError> 
     // Unpack 1 byte into 2 coefficients at a time
     for i in 0..(N / 2) {
         let b = bytes[i];
-        poly.coeffs[2 * i + 0] = (b & 0x0F) as i32 - eta;
-        poly.coeffs[2 * i + 1] = (b >> 4) as i32 - eta;
+        // pq-crystals/ACVP convention: coeff = eta - unsigned
+        poly.coeffs[2 * i + 0] = eta - (b & 0x0F) as i32;
+        poly.coeffs[2 * i + 1] = eta - (b >> 4) as i32;
     }
 
     Ok(poly)
 }
 
 /// Optimized 3-bit decoding for η=2
+///
+/// Uses pq-crystals/ACVP convention: coeff = eta - unsigned
+/// This maps unsigned [4, 3, 2, 1, 0] to coefficients [-2, -1, 0, 1, 2]
 #[inline(always)]
 fn decode_poly_eta_3bit(bytes: &[u8], eta: i32) -> Result<Poly, SerializeError> {
     const NUM_BYTES: usize = 96;
@@ -358,14 +376,15 @@ fn decode_poly_eta_3bit(bytes: &[u8], eta: i32) -> Result<Poly, SerializeError> 
         let b1 = bytes[base + 1] as u32;
         let b2 = bytes[base + 2] as u32;
 
-        poly.coeffs[8 * i + 0] = (b0 & 0x07) as i32 - eta;
-        poly.coeffs[8 * i + 1] = ((b0 >> 3) & 0x07) as i32 - eta;
-        poly.coeffs[8 * i + 2] = (((b0 >> 6) | (b1 << 2)) & 0x07) as i32 - eta;
-        poly.coeffs[8 * i + 3] = ((b1 >> 1) & 0x07) as i32 - eta;
-        poly.coeffs[8 * i + 4] = ((b1 >> 4) & 0x07) as i32 - eta;
-        poly.coeffs[8 * i + 5] = (((b1 >> 7) | (b2 << 1)) & 0x07) as i32 - eta;
-        poly.coeffs[8 * i + 6] = ((b2 >> 2) & 0x07) as i32 - eta;
-        poly.coeffs[8 * i + 7] = ((b2 >> 5) & 0x07) as i32 - eta;
+        // pq-crystals/ACVP convention: coeff = eta - unsigned
+        poly.coeffs[8 * i + 0] = eta - (b0 & 0x07) as i32;
+        poly.coeffs[8 * i + 1] = eta - ((b0 >> 3) & 0x07) as i32;
+        poly.coeffs[8 * i + 2] = eta - (((b0 >> 6) | (b1 << 2)) & 0x07) as i32;
+        poly.coeffs[8 * i + 3] = eta - ((b1 >> 1) & 0x07) as i32;
+        poly.coeffs[8 * i + 4] = eta - ((b1 >> 4) & 0x07) as i32;
+        poly.coeffs[8 * i + 5] = eta - (((b1 >> 7) | (b2 << 1)) & 0x07) as i32;
+        poly.coeffs[8 * i + 6] = eta - ((b2 >> 2) & 0x07) as i32;
+        poly.coeffs[8 * i + 7] = eta - ((b2 >> 5) & 0x07) as i32;
     }
 
     Ok(poly)
@@ -448,23 +467,27 @@ fn encode_poly_t0(poly: &Poly, d: usize) -> Vec<u8> {
 
 /// Optimized 13-bit encoding for t0 polynomials
 /// Packs 8 coefficients (104 bits) into 13 bytes at a time.
+///
+/// FIPS 204: t0 coefficients are in range [-(2^(d-1)), 2^(d-1)]
+/// Encoding adds 2^(d-1) to shift to unsigned range [0, 2^d)
+/// For d=13: shift by 2^12 = 4096
 #[inline(always)]
 fn encode_poly_t0_13bit(poly: &Poly) -> Vec<u8> {
     const NUM_BYTES: usize = 416; // 256 * 13 / 8
-    const MASK: u32 = (1 << 13) - 1; // 0x1FFF
+    const SHIFT: i32 = 1 << 12; // 2^(d-1) = 4096
     let mut bytes = vec![0u8; NUM_BYTES];
 
     // Process 8 coefficients at a time -> 104 bits -> 13 bytes
     for i in 0..(N / 8) {
-        // Convert to positive range [0, 2^13) using bitwise AND (faster than rem_euclid)
-        let c0 = (poly.coeffs[8 * i + 0] as u32) & MASK;
-        let c1 = (poly.coeffs[8 * i + 1] as u32) & MASK;
-        let c2 = (poly.coeffs[8 * i + 2] as u32) & MASK;
-        let c3 = (poly.coeffs[8 * i + 3] as u32) & MASK;
-        let c4 = (poly.coeffs[8 * i + 4] as u32) & MASK;
-        let c5 = (poly.coeffs[8 * i + 5] as u32) & MASK;
-        let c6 = (poly.coeffs[8 * i + 6] as u32) & MASK;
-        let c7 = (poly.coeffs[8 * i + 7] as u32) & MASK;
+        // FIPS 204: unsigned = t0 + 2^(d-1) (shift to [0, 2^d) range)
+        let c0 = (SHIFT - poly.coeffs[8 * i + 0]) as u32;
+        let c1 = (SHIFT - poly.coeffs[8 * i + 1]) as u32;
+        let c2 = (SHIFT - poly.coeffs[8 * i + 2]) as u32;
+        let c3 = (SHIFT - poly.coeffs[8 * i + 3]) as u32;
+        let c4 = (SHIFT - poly.coeffs[8 * i + 4]) as u32;
+        let c5 = (SHIFT - poly.coeffs[8 * i + 5]) as u32;
+        let c6 = (SHIFT - poly.coeffs[8 * i + 6]) as u32;
+        let c7 = (SHIFT - poly.coeffs[8 * i + 7]) as u32;
 
         // Pack 8 x 13-bit values into 13 bytes (104 bits)
         let base = i * 13;
@@ -497,12 +520,14 @@ fn decode_poly_t0(bytes: &[u8], d: usize) -> Result<Poly, SerializeError> {
 }
 
 /// Optimized 13-bit decoding for t0 polynomials
+///
+/// pq-crystals/ACVP convention: t0 = 2^(d-1) - unsigned
+/// This reverses the encoding: unsigned = 2^(d-1) - t0
 #[inline(always)]
 fn decode_poly_t0_13bit(bytes: &[u8]) -> Result<Poly, SerializeError> {
     const NUM_BYTES: usize = 416; // 256 * 13 / 8
     const MASK: u32 = (1 << 13) - 1;
-    const HALF: i32 = 1 << 12; // 4096
-    const FULL: i32 = 1 << 13; // 8192
+    const SHIFT: i32 = 1 << 12; // 2^(d-1) = 4096
 
     if bytes.len() != NUM_BYTES {
         return Err(SerializeError::InvalidLength);
@@ -537,15 +562,15 @@ fn decode_poly_t0_13bit(bytes: &[u8]) -> Result<Poly, SerializeError> {
         let v6 = ((b9 >> 6) | (b10 << 2) | (b11 << 10)) & MASK;
         let v7 = ((b11 >> 3) | (b12 << 5)) & MASK;
 
-        // Convert to signed centered range (-2^(d-1), 2^(d-1)]
-        poly.coeffs[8 * i + 0] = if v0 as i32 > HALF { v0 as i32 - FULL } else { v0 as i32 };
-        poly.coeffs[8 * i + 1] = if v1 as i32 > HALF { v1 as i32 - FULL } else { v1 as i32 };
-        poly.coeffs[8 * i + 2] = if v2 as i32 > HALF { v2 as i32 - FULL } else { v2 as i32 };
-        poly.coeffs[8 * i + 3] = if v3 as i32 > HALF { v3 as i32 - FULL } else { v3 as i32 };
-        poly.coeffs[8 * i + 4] = if v4 as i32 > HALF { v4 as i32 - FULL } else { v4 as i32 };
-        poly.coeffs[8 * i + 5] = if v5 as i32 > HALF { v5 as i32 - FULL } else { v5 as i32 };
-        poly.coeffs[8 * i + 6] = if v6 as i32 > HALF { v6 as i32 - FULL } else { v6 as i32 };
-        poly.coeffs[8 * i + 7] = if v7 as i32 > HALF { v7 as i32 - FULL } else { v7 as i32 };
+        // pq-crystals/ACVP convention: t0 = 2^(d-1) - unsigned
+        poly.coeffs[8 * i + 0] = SHIFT - v0 as i32;
+        poly.coeffs[8 * i + 1] = SHIFT - v1 as i32;
+        poly.coeffs[8 * i + 2] = SHIFT - v2 as i32;
+        poly.coeffs[8 * i + 3] = SHIFT - v3 as i32;
+        poly.coeffs[8 * i + 4] = SHIFT - v4 as i32;
+        poly.coeffs[8 * i + 5] = SHIFT - v5 as i32;
+        poly.coeffs[8 * i + 6] = SHIFT - v6 as i32;
+        poly.coeffs[8 * i + 7] = SHIFT - v7 as i32;
     }
 
     Ok(poly)
@@ -585,13 +610,17 @@ fn encode_hints_fips204<P: DsaParams>(h: &[Poly]) -> Vec<u8> {
 
 /// Decode hints from FIPS 204 position encoding (HintBitUnpack)
 ///
-/// Inverse of encode_hints_fips204. Reconstructs K hint polynomials from position encoding.
+/// Implements FIPS 204 Algorithm 16 (HintBitUnpack) with all required validations:
+/// 1. End indices must be monotonically increasing
+/// 2. Positions within each polynomial must be strictly increasing
+/// 3. Unused positions (after last end index) must be zero
 ///
 /// # Arguments
 /// * `bytes` - Position-encoded hints (ω + K bytes)
 ///
 /// # Returns
 /// * Vector of K polynomials where coefficients are 0 or 1
+/// * Error if any validation fails
 fn decode_hints_fips204<P: DsaParams>(bytes: &[u8]) -> Result<Vec<Poly>, SerializeError> {
     if bytes.len() != P::OMEGA + P::K {
         return Err(SerializeError::InvalidLength);
@@ -603,21 +632,39 @@ fn decode_hints_fips204<P: DsaParams>(bytes: &[u8]) -> Result<Vec<Poly>, Seriali
     for poly_idx in 0..P::K {
         let end_index = bytes[P::OMEGA + poly_idx] as usize;
 
-        // Validate end_index is monotonically increasing
+        // Validate end_index is monotonically increasing and within bounds
         if end_index < prev_index || end_index > P::OMEGA {
             return Err(SerializeError::InvalidHint);
         }
 
-        // Decode positions for this polynomial
+        // Decode positions for this polynomial with strict ordering validation
+        let mut prev_pos: Option<u8> = None;
         for pos_idx in prev_index..end_index {
-            let coeff_pos = bytes[pos_idx] as usize;
-            if coeff_pos >= N {
+            let coeff_pos = bytes[pos_idx];
+
+            // FIPS 204: positions must be strictly increasing within each polynomial
+            if let Some(prev) = prev_pos {
+                if coeff_pos <= prev {
+                    return Err(SerializeError::InvalidHint);
+                }
+            }
+            prev_pos = Some(coeff_pos);
+
+            if coeff_pos as usize >= N {
                 return Err(SerializeError::InvalidHint);
             }
-            h[poly_idx].coeffs[coeff_pos] = 1;
+            h[poly_idx].coeffs[coeff_pos as usize] = 1;
         }
 
         prev_index = end_index;
+    }
+
+    // FIPS 204: unused positions (from last end index to OMEGA) must be zero
+    let last_end_index = bytes[P::OMEGA + P::K - 1] as usize;
+    for pos_idx in last_end_index..P::OMEGA {
+        if bytes[pos_idx] != 0 {
+            return Err(SerializeError::InvalidHint);
+        }
     }
 
     Ok(h)
@@ -749,15 +796,9 @@ pub fn deserialize_secret_key<P: DsaParams>(bytes: &[u8]) -> Result<SecretKey<P>
     use crate::ntt::ntt;
 
     // Cache matrix A in NTT domain
-    let matrix_a = expand_matrix_a::<P>(&rho);
-    let mut cached_a_ntt = Vec::with_capacity(P::K);
-    for i in 0..P::K {
-        let mut row_ntt = Vec::with_capacity(P::L);
-        for j in 0..P::L {
-            row_ntt.push(ntt(&matrix_a[i][j]));
-        }
-        cached_a_ntt.push(row_ntt);
-    }
+    // FIPS 204: Matrix A is sampled DIRECTLY into NTT form via RejNTTPoly
+    // No additional NTT transformation is needed - matrix_a is already NTT
+    let cached_a_ntt = expand_matrix_a::<P>(&rho);
 
     // Cache s1 in NTT domain
     let mut s1_hat = Vec::with_capacity(P::L);
@@ -837,8 +878,7 @@ pub fn deserialize_signature<P: DsaParams>(bytes: &[u8]) -> Result<Signature<P>,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::params::{MlDsa44, MlDsa65};
-    #[allow(unused_imports)]
+    use crate::params::{DsaParams, MlDsa44, MlDsa65};
     use crate::poly::Poly;
     use crate::keygen::keygen_from_seed;
 
