@@ -11,7 +11,6 @@
 //! - decompose: ~2.4x faster
 //! - highbits: ~1.94x faster
 //! - lowbits: ~2.27x faster
-//! - make_hint/use_hint: ~1.5-2x faster
 //! - infinity_norm: faster
 //! - infinity_norm_threshold: ~3.65x faster (with early exit)
 //!
@@ -47,7 +46,8 @@ pub mod reduce;
 pub mod ntt;
 pub mod poly;
 pub mod rounding;
-pub mod hints;
+// NOTE: hints module removed - NEON hint operations not benchmarked and likely slower
+// than scalar (similar to poly_sub 1.69x slower, power2round 1.17x slower)
 
 // Re-export only the faster functions
 pub use ntt::{ntt_neon, inv_ntt_neon, ntt_multiply, ntt_multiply_add};
@@ -61,4 +61,3 @@ pub use poly::{
 };
 pub use reduce::{fqmul_neon, fqmul_shoup_neon, reduce32_neon, caddq_neon};
 pub use rounding::{decompose_fast, highbits_fast, lowbits_fast};
-pub use hints::{make_hint_fast, use_hint_fast};

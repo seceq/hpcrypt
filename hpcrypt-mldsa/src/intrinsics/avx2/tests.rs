@@ -1248,7 +1248,12 @@ fn test_radix2_vs_radix4_ntt() {
 fn test_radix2_fwd_with_crate_inv() {
     // Test: radix-2 forward NTT followed by crate's inverse NTT
     use crate::poly::Poly;
-    use crate::ntt::{inv_ntt as crate_invntt, from_montgomery};
+    use crate::ntt::inv_ntt as crate_invntt;
+
+    // Local from_montgomery helper (same as montgomery_reduce for single coefficient)
+    fn from_montgomery(a: i32) -> i32 {
+        crate::ntt::montgomery_reduce(a as i64)
+    }
 
     let original = test_poly(12345);
 

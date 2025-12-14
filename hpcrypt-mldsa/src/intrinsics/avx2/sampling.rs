@@ -409,7 +409,7 @@ unsafe fn expand_mask_17(a: &mut [i32; N], buf: &[u8]) {
         // v3 = bits 6-23 of bytes 6-8
         let v3 = (((b[6] as i32) >> 6) | ((b[7] as i32) << 2) | ((b[8] as i32) << 10)) & mask18;
 
-        // Convert from unsigned to centered representation: c = γ₁ - v
+        // FIPS 204 BitUnpack: coefficient = γ1 - z where z is extracted value
         a[ctr] = gamma1 - v0;
         a[ctr + 1] = gamma1 - v1;
         a[ctr + 2] = gamma1 - v2;
@@ -448,7 +448,7 @@ unsafe fn expand_mask_19(a: &mut [i32; N], buf: &[u8]) {
         // v3 = bits 60-79 (bytes 7[4:7],8,9)
         let v3 = (((b[7] as i32) >> 4) | ((b[8] as i32) << 4) | ((b[9] as i32) << 12)) & mask20;
 
-        // Convert from unsigned to centered representation: c = γ₁ - v
+        // FIPS 204 BitUnpack: coefficient = γ1 - z where z is extracted value
         a[ctr] = gamma1 - v0;
         a[ctr + 1] = gamma1 - v1;
         a[ctr + 2] = gamma1 - v2;
@@ -486,6 +486,7 @@ pub unsafe fn expand_mask_17_fast(a: &mut [i32; N], buf: &[u8]) {
         let v7 = (((b[15] as i32) >> 6) | ((b[16] as i32) << 2) | ((b[17] as i32) << 10)) & mask18;
 
         // Use SIMD for the subtraction
+        // FIPS 204 BitUnpack: coefficient = γ1 - z where z is extracted value
         let vals = _mm256_setr_epi32(v0, v1, v2, v3, v4, v5, v6, v7);
         let result = _mm256_sub_epi32(gamma1_vec, vals);
 
@@ -504,6 +505,7 @@ pub unsafe fn expand_mask_17_fast(a: &mut [i32; N], buf: &[u8]) {
         let v2 = (((b[4] as i32) >> 4) | ((b[5] as i32) << 4) | (((b[6] as i32) & 0x3F) << 12)) & mask18;
         let v3 = (((b[6] as i32) >> 6) | ((b[7] as i32) << 2) | ((b[8] as i32) << 10)) & mask18;
 
+        // FIPS 204 BitUnpack: coefficient = γ1 - z
         a[ctr] = gamma1 - v0;
         a[ctr + 1] = gamma1 - v1;
         a[ctr + 2] = gamma1 - v2;
@@ -538,6 +540,7 @@ pub unsafe fn expand_mask_19_fast(a: &mut [i32; N], buf: &[u8]) {
         let v6 = ((b[15] as i32) | ((b[16] as i32) << 8) | (((b[17] as i32) & 0x0F) << 16)) & mask20;
         let v7 = (((b[17] as i32) >> 4) | ((b[18] as i32) << 4) | ((b[19] as i32) << 12)) & mask20;
 
+        // FIPS 204 BitUnpack: coefficient = γ1 - z where z is extracted value
         let vals = _mm256_setr_epi32(v0, v1, v2, v3, v4, v5, v6, v7);
         let result = _mm256_sub_epi32(gamma1_vec, vals);
 
@@ -556,6 +559,7 @@ pub unsafe fn expand_mask_19_fast(a: &mut [i32; N], buf: &[u8]) {
         let v2 = ((b[5] as i32) | ((b[6] as i32) << 8) | (((b[7] as i32) & 0x0F) << 16)) & mask20;
         let v3 = (((b[7] as i32) >> 4) | ((b[8] as i32) << 4) | ((b[9] as i32) << 12)) & mask20;
 
+        // FIPS 204 BitUnpack: coefficient = γ1 - z
         a[ctr] = gamma1 - v0;
         a[ctr + 1] = gamma1 - v1;
         a[ctr + 2] = gamma1 - v2;
@@ -716,7 +720,8 @@ mod tests {
             expand_mask(&mut a, &buf, 17);
 
             let gamma1 = 1 << 17;
-            // All zeros expand to gamma1 - 0 = gamma1
+            // FIPS 204 BitUnpack: coefficient = γ1 - z
+            // All zeros: gamma1 - 0 = gamma1
             for &c in &a {
                 assert_eq!(c, gamma1);
             }
