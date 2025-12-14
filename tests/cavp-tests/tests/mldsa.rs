@@ -81,6 +81,8 @@ struct SigGenTestGroup {
     test_type: String,
     parameter_set: String,
     deterministic: bool,
+    #[serde(default)]
+    signature_interface: Option<String>,
     tests: Vec<SigGenTestCase>,
 }
 
@@ -92,7 +94,13 @@ struct SigGenTestCase {
     #[serde(default)]
     message: Option<String>,
     #[serde(default)]
+    mu: Option<String>,
+    #[serde(default)]
     rnd: Option<String>,
+    #[serde(default)]
+    context: Option<String>,
+    #[serde(default)]
+    hash_alg: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -134,6 +142,8 @@ struct SigVerTestGroup {
     tg_id: u32,
     test_type: String,
     parameter_set: String,
+    #[serde(default)]
+    signature_interface: Option<String>,
     tests: Vec<SigVerTestCase>,
 }
 
@@ -144,7 +154,13 @@ struct SigVerTestCase {
     pk: String,
     #[serde(default)]
     message: Option<String>,
+    #[serde(default)]
+    mu: Option<String>,
     signature: String,
+    #[serde(default)]
+    context: Option<String>,
+    #[serde(default)]
+    hash_alg: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -265,49 +281,38 @@ fn test_mldsa_siggen_cavp() {
     for (group, expected_group) in prompt.test_groups.iter().zip(&expected.test_groups) {
         assert_eq!(group.tg_id, expected_group.tg_id);
 
+        // Check if this is an external interface test (requires context encoding)
+        let is_external = group.signature_interface.as_deref() == Some("external");
+
         for (test, expected_test) in group.tests.iter().zip(&expected_group.tests) {
             assert_eq!(test.tc_id, expected_test.tc_id);
 
             let sk = decode_hex(&test.sk);
-            let message = test.message.as_ref().map(|m| decode_hex(m)).unwrap_or_default();
+            let message = test.message.as_ref().map(|m| decode_hex(m));
+            let mu = test.mu.as_ref().map(|m| decode_hex(m));
             let expected_sig = decode_hex(&expected_test.signature);
+            let context = test.context.as_ref().map(|c| decode_hex(c)).unwrap_or_default();
+            let rnd = test.rnd.as_ref().map(|r| decode_hex(r));
+            let hash_alg = test.hash_alg.as_deref();
 
             match group.parameter_set.as_str() {
                 "ML-DSA-44" => {
-                    if group.deterministic {
-                        test_siggen_deterministic::<MlDsa44>(
-                            &sk, &message, &expected_sig, &mut stats, test.tc_id
-                        );
-                    } else {
-                        let rnd = test.rnd.as_ref().map(|r| decode_hex(r));
-                        test_siggen_hedged::<MlDsa44>(
-                            &sk, &message, rnd.as_deref(), &expected_sig, &mut stats, test.tc_id
-                        );
-                    }
+                    test_siggen::<MlDsa44>(
+                        &sk, message.as_deref(), mu.as_deref(), &context, rnd.as_deref(),
+                        &expected_sig, &mut stats, test.tc_id, is_external, hash_alg
+                    );
                 }
                 "ML-DSA-65" => {
-                    if group.deterministic {
-                        test_siggen_deterministic::<MlDsa65>(
-                            &sk, &message, &expected_sig, &mut stats, test.tc_id
-                        );
-                    } else {
-                        let rnd = test.rnd.as_ref().map(|r| decode_hex(r));
-                        test_siggen_hedged::<MlDsa65>(
-                            &sk, &message, rnd.as_deref(), &expected_sig, &mut stats, test.tc_id
-                        );
-                    }
+                    test_siggen::<MlDsa65>(
+                        &sk, message.as_deref(), mu.as_deref(), &context, rnd.as_deref(),
+                        &expected_sig, &mut stats, test.tc_id, is_external, hash_alg
+                    );
                 }
                 "ML-DSA-87" => {
-                    if group.deterministic {
-                        test_siggen_deterministic::<MlDsa87>(
-                            &sk, &message, &expected_sig, &mut stats, test.tc_id
-                        );
-                    } else {
-                        let rnd = test.rnd.as_ref().map(|r| decode_hex(r));
-                        test_siggen_hedged::<MlDsa87>(
-                            &sk, &message, rnd.as_deref(), &expected_sig, &mut stats, test.tc_id
-                        );
-                    }
+                    test_siggen::<MlDsa87>(
+                        &sk, message.as_deref(), mu.as_deref(), &context, rnd.as_deref(),
+                        &expected_sig, &mut stats, test.tc_id, is_external, hash_alg
+                    );
                 }
                 _ => {
                     stats.skipped += 1;
@@ -327,42 +332,49 @@ fn test_mldsa_siggen_cavp() {
 }
 
 #[cfg(feature = "enable-pqc-tests")]
-fn test_siggen_deterministic<S: SignatureScheme>(
+fn test_siggen<S: SignatureScheme>(
     sk: &[u8],
-    message: &[u8],
-    expected_sig: &[u8],
-    stats: &mut TestStats,
-    tc_id: u32,
-) {
-    match S::sign_deterministic(sk, message) {
-        Ok(signature) => {
-            if signature.as_slice() == expected_sig {
-                stats.passed += 1;
-            } else {
-                eprintln!("Test case {} FAILED: Signature mismatch", tc_id);
-                stats.failed += 1;
-            }
-        }
-        Err(e) => {
-            eprintln!("Test case {} FAILED: Sign error: {:?}", tc_id, e);
-            stats.failed += 1;
-        }
-    }
-}
-
-#[cfg(feature = "enable-pqc-tests")]
-fn test_siggen_hedged<S: SignatureScheme>(
-    sk: &[u8],
-    message: &[u8],
+    message: Option<&[u8]>,
+    mu: Option<&[u8]>,
+    context: &[u8],
     rnd: Option<&[u8]>,
     expected_sig: &[u8],
     stats: &mut TestStats,
     tc_id: u32,
+    is_external: bool,
+    hash_alg: Option<&str>,
 ) {
-    let result = if let Some(rnd_bytes) = rnd {
-        S::sign_with_randomness(sk, message, rnd_bytes)
+    // FIPS 204 interface handling:
+    // 1. HashML-DSA: pre-hash mode with OID encoding
+    // 2. Internal interface with mu: use pre-computed μ directly
+    // 3. External interface: encode message with context (0x00 || len(ctx) || ctx || M')
+    // 4. Internal interface with message: use raw message directly
+    // Debug: print test case ID for CAVP debugging
+    if tc_id == 199 || tc_id == 333 || tc_id == 198 || tc_id == 332 {
+        eprintln!("CAVP_TEST: Starting test case {}", tc_id);
+    }
+
+    let result = if let Some(hash_alg_name) = hash_alg {
+        // HashML-DSA (pre-hash mode): M' = 0x01 || len(ctx) || ctx || OID || PH(M)
+        let msg = message.unwrap_or(&[]);
+        S::sign_hash_ml_dsa(sk, msg, context, hash_alg_name, rnd)
+    } else if let Some(mu_bytes) = mu {
+        // Internal interface with pre-computed μ
+        S::sign_with_mu(sk, mu_bytes, rnd)
+    } else if is_external {
+        // External interface: use context-aware signing
+        let msg = message.unwrap_or(&[]);
+        match rnd {
+            Some(rnd_bytes) => S::sign_with_context_and_randomness(sk, msg, context, rnd_bytes),
+            None => S::sign_with_context(sk, msg, context),
+        }
     } else {
-        S::sign_deterministic(sk, message)
+        // Internal interface with message: use raw message directly
+        let msg = message.unwrap_or(&[]);
+        match rnd {
+            Some(rnd_bytes) => S::sign_with_randomness(sk, msg, rnd_bytes),
+            None => S::sign_deterministic(sk, msg),
+        }
     };
 
     match result {
@@ -371,6 +383,52 @@ fn test_siggen_hedged<S: SignatureScheme>(
                 stats.passed += 1;
             } else {
                 eprintln!("Test case {} FAILED: Signature mismatch", tc_id);
+                // Debug output for specific failing tests
+                if tc_id == 199 || tc_id == 333 {
+                    let sig = signature.as_slice();
+                    eprintln!("  Generated sig len: {}, Expected sig len: {}", sig.len(), expected_sig.len());
+                    eprintln!("  Generated first 32 bytes: {:02x?}", &sig[..32.min(sig.len())]);
+                    eprintln!("  Expected first 32 bytes:  {:02x?}", &expected_sig[..32.min(expected_sig.len())]);
+                    // Find first difference
+                    for (i, (a, b)) in sig.iter().zip(expected_sig.iter()).enumerate() {
+                        if a != b {
+                            eprintln!("  First diff at byte {}: got {:02x}, expected {:02x}", i, a, b);
+                            break;
+                        }
+                    }
+                    // Also test if our generated signature verifies
+                    // Extract pk from sk (first bytes of sk are pk for ML-DSA)
+                    let pk_len = match std::any::type_name::<S>() {
+                        n if n.contains("MlDsa44") => 1312,
+                        n if n.contains("MlDsa65") => 1952,
+                        n if n.contains("MlDsa87") => 2592,
+                        _ => 0,
+                    };
+                    // Print c_tilde values
+                    eprintln!("  c_tilde (our): {:02x?}", &sig[..32]);
+                    eprintln!("  c_tilde (ref): {:02x?}", &expected_sig[..32]);
+
+                    // Verify OUR signature using our own implementation
+                    let our_sig_verify = if let Some(hash_alg_name) = hash_alg {
+                        // HashML-DSA verification
+                        let msg = message.unwrap_or(&[]);
+                        // Need pk - derive from sk via keygen with same seed? No, extract tr from sk
+                        eprintln!("  [Cannot verify: need pk derivation for HashML-DSA]");
+                        false
+                    } else if let Some(mu_bytes) = mu {
+                        // Internal mu verification
+                        eprintln!("  [Cannot verify: need pk derivation for internal mu]");
+                        false
+                    } else {
+                        false
+                    };
+                    if our_sig_verify {
+                        eprintln!("  OUR signature verifies with our impl!");
+                    }
+
+                    // Check if the expected signature verifies with our implementation
+                    // This would tell us if our verify is consistent with theirs
+                }
                 stats.failed += 1;
             }
         }
@@ -396,27 +454,36 @@ fn test_mldsa_sigver_cavp() {
     for (group, expected_group) in prompt.test_groups.iter().zip(&expected.test_groups) {
         assert_eq!(group.tg_id, expected_group.tg_id);
 
+        // Check if this is an external interface test (requires context encoding)
+        let is_external = group.signature_interface.as_deref() == Some("external");
+
         for (test, expected_test) in group.tests.iter().zip(&expected_group.tests) {
             assert_eq!(test.tc_id, expected_test.tc_id);
 
             let pk = decode_hex(&test.pk);
-            let message = test.message.as_ref().map(|m| decode_hex(m)).unwrap_or_default();
+            let message = test.message.as_ref().map(|m| decode_hex(m));
+            let mu = test.mu.as_ref().map(|m| decode_hex(m));
             let signature = decode_hex(&test.signature);
+            let context = test.context.as_ref().map(|c| decode_hex(c)).unwrap_or_default();
+            let hash_alg = test.hash_alg.as_deref();
 
             match group.parameter_set.as_str() {
                 "ML-DSA-44" => {
                     test_sigver::<MlDsa44>(
-                        &pk, &message, &signature, expected_test.test_passed, &mut stats, test.tc_id
+                        &pk, message.as_deref(), mu.as_deref(), &context, &signature,
+                        expected_test.test_passed, &mut stats, test.tc_id, is_external, hash_alg
                     );
                 }
                 "ML-DSA-65" => {
                     test_sigver::<MlDsa65>(
-                        &pk, &message, &signature, expected_test.test_passed, &mut stats, test.tc_id
+                        &pk, message.as_deref(), mu.as_deref(), &context, &signature,
+                        expected_test.test_passed, &mut stats, test.tc_id, is_external, hash_alg
                     );
                 }
                 "ML-DSA-87" => {
                     test_sigver::<MlDsa87>(
-                        &pk, &message, &signature, expected_test.test_passed, &mut stats, test.tc_id
+                        &pk, message.as_deref(), mu.as_deref(), &context, &signature,
+                        expected_test.test_passed, &mut stats, test.tc_id, is_external, hash_alg
                     );
                 }
                 _ => {
@@ -439,13 +506,37 @@ fn test_mldsa_sigver_cavp() {
 #[cfg(feature = "enable-pqc-tests")]
 fn test_sigver<S: SignatureScheme>(
     pk: &[u8],
-    message: &[u8],
+    message: Option<&[u8]>,
+    mu: Option<&[u8]>,
+    context: &[u8],
     signature: &[u8],
     should_pass: bool,
     stats: &mut TestStats,
     tc_id: u32,
+    is_external: bool,
+    hash_alg: Option<&str>,
 ) {
-    let result = S::verify(pk, message, signature);
+    // FIPS 204 interface handling:
+    // 1. HashML-DSA: pre-hash mode with OID encoding
+    // 2. Internal interface with mu: use pre-computed μ directly
+    // 3. External interface: encode message with context (0x00 || len(ctx) || ctx || M')
+    // 4. Internal interface with message: use raw message directly
+    let result = if let Some(hash_alg_name) = hash_alg {
+        // HashML-DSA (pre-hash mode): M' = 0x01 || len(ctx) || ctx || OID || PH(M)
+        let msg = message.unwrap_or(&[]);
+        S::verify_hash_ml_dsa(pk, msg, context, hash_alg_name, signature)
+    } else if let Some(mu_bytes) = mu {
+        // Internal interface with pre-computed μ
+        S::verify_with_mu(pk, mu_bytes, signature)
+    } else if is_external {
+        // External interface: use context-aware verification
+        let msg = message.unwrap_or(&[]);
+        S::verify_with_context(pk, msg, context, signature)
+    } else {
+        // Internal interface with message: use raw message directly
+        let msg = message.unwrap_or(&[]);
+        S::verify(pk, msg, signature)
+    };
 
     if result == should_pass {
         stats.passed += 1;
