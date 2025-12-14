@@ -927,7 +927,7 @@ pub fn ntt_multiply(a: &Poly, b: &Poly) -> Poly {
 ///     let result = ntt_multiply_cached(&a_ntt, &cache, &b_ntt);
 /// }
 /// ```
-pub fn ntt_multiply_cached(_a: &Poly, a_cache: &crate::poly::PolyMulcache, b: &Poly) -> Poly {
+pub fn ntt_multiply_cached(a: &Poly, a_cache: &crate::poly::PolyMulcache, b: &Poly) -> Poly {
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
         // AVX2 runtime detection
@@ -953,7 +953,7 @@ pub fn ntt_multiply_cached(_a: &Poly, a_cache: &crate::poly::PolyMulcache, b: &P
 #[target_feature(enable = "avx2")]
 #[inline]
 unsafe fn ntt_multiply_cached_avx2(
-    _a: &Poly,
+    a: &Poly,
     a_cache: &crate::poly::PolyMulcache,
     b: &Poly,
 ) -> Poly {
@@ -1328,6 +1328,13 @@ pub fn poly_mul_ntt(a: &Poly, b: &Poly) -> Poly {
 ///
 /// # Returns
 /// * Vector of K polynomials (coefficient form)
+///
+/// # FIPS 204 Compliance Note
+///
+/// In FIPS 204 (ML-DSA), matrix A is sampled DIRECTLY into NTT form via RejNTTPoly.
+/// The coefficients produced by sample_poly_uniform ARE the NTT representation.
+/// Therefore, matrix_a elements should NOT have NTT applied to them - they are
+/// already in NTT domain from the sampling process.
 pub fn matrix_vector_mul_ntt(
     matrix_a: &[Vec<Poly>],
     v_ntt: &[Poly],
@@ -1337,30 +1344,26 @@ pub fn matrix_vector_mul_ntt(
     let mut result = Vec::with_capacity(k);
 
     for i in 0..k {
-        // Transform matrix A row to NTT domain
-        // We must do NTT(A[i][j]) before multiplying with v[j] (which is already in NTT form)
-        let mut a_row_ntt = Vec::with_capacity(l);
-        for j in 0..l {
-            a_row_ntt.push(ntt(&matrix_a[i][j]));
-        }
+        // FIPS 204: Matrix A is already in NTT form from RejNTTPoly sampling
+        // Do NOT apply NTT to matrix_a[i][j] - use directly!
 
-        // Compute first product: A[i][0] (NTT) × v[0] (NTT)
-        let mut acc_ntt = ntt_multiply(&a_row_ntt[0], &v_ntt[0]);
+        // Compute first product: A[i][0] (already NTT) × v[0] (NTT)
+        let mut acc_ntt = ntt_multiply(&matrix_a[i][0], &v_ntt[0]);
 
         // Accumulate remaining products (j = 1..l)
         for j in 1..l {
-            // Pointwise multiply A[i][j] (NTT) with v[j] (NTT)
-            let prod_ntt = ntt_multiply(&a_row_ntt[j], &v_ntt[j]);
+            // Pointwise multiply A[i][j] (already NTT) with v[j] (NTT)
+            let prod_ntt = ntt_multiply(&matrix_a[i][j], &v_ntt[j]);
 
             // Add to accumulator (poly_add in reference)
-            for k in 0..N {
-                acc_ntt.coeffs[k] += prod_ntt.coeffs[k];
+            for coeff_idx in 0..N {
+                acc_ntt.coeffs[coeff_idx] += prod_ntt.coeffs[coeff_idx];
             }
         }
 
         // Reduce accumulated coefficients before inverse NTT (matches reference polyveck_reduce)
-        for k in 0..N {
-            acc_ntt.coeffs[k] = reduce32(acc_ntt.coeffs[k]);
+        for coeff_idx in 0..N {
+            acc_ntt.coeffs[coeff_idx] = reduce32(acc_ntt.coeffs[coeff_idx]);
         }
 
         // Transform accumulated result back to coefficient form (once per row)
@@ -1388,11 +1391,8 @@ pub fn matrix_vector_mul_ntt_optimized(
     let mut result = Vec::with_capacity(k);
 
     for i in 0..k {
-        // Transform matrix A row to NTT domain
-        let mut a_row_ntt = Vec::with_capacity(l);
-        for j in 0..l {
-            a_row_ntt.push(ntt(&matrix_a[i][j]));
-        }
+        // FIPS 204: Matrix A is already in NTT form from RejNTTPoly sampling
+        // Use matrix_a directly without additional NTT transformation
 
         // Multiple accumulators for ILP (4-way parallelism)
         let mut acc0_ntt = Poly::new();
@@ -1404,17 +1404,17 @@ pub fn matrix_vector_mul_ntt_optimized(
         let mut j = 0;
         while j + 3 < l {
             // CPU can execute all 4 multiplications in parallel
-            let prod0_ntt = ntt_multiply(&a_row_ntt[j], &v_ntt[j]);
-            let prod1_ntt = ntt_multiply(&a_row_ntt[j + 1], &v_ntt[j + 1]);
-            let prod2_ntt = ntt_multiply(&a_row_ntt[j + 2], &v_ntt[j + 2]);
-            let prod3_ntt = ntt_multiply(&a_row_ntt[j + 3], &v_ntt[j + 3]);
+            let prod0_ntt = ntt_multiply(&matrix_a[i][j], &v_ntt[j]);
+            let prod1_ntt = ntt_multiply(&matrix_a[i][j + 1], &v_ntt[j + 1]);
+            let prod2_ntt = ntt_multiply(&matrix_a[i][j + 2], &v_ntt[j + 2]);
+            let prod3_ntt = ntt_multiply(&matrix_a[i][j + 3], &v_ntt[j + 3]);
 
             // Accumulate into separate accumulators (exposes parallelism)
-            for k in 0..N {
-                acc0_ntt.coeffs[k] += prod0_ntt.coeffs[k];
-                acc1_ntt.coeffs[k] += prod1_ntt.coeffs[k];
-                acc2_ntt.coeffs[k] += prod2_ntt.coeffs[k];
-                acc3_ntt.coeffs[k] += prod3_ntt.coeffs[k];
+            for coeff_k in 0..N {
+                acc0_ntt.coeffs[coeff_k] += prod0_ntt.coeffs[coeff_k];
+                acc1_ntt.coeffs[coeff_k] += prod1_ntt.coeffs[coeff_k];
+                acc2_ntt.coeffs[coeff_k] += prod2_ntt.coeffs[coeff_k];
+                acc3_ntt.coeffs[coeff_k] += prod3_ntt.coeffs[coeff_k];
             }
 
             j += 4;
@@ -1423,9 +1423,9 @@ pub fn matrix_vector_mul_ntt_optimized(
         // Handle remaining elements (if l is not multiple of 4)
         let mut acc_remainder = Poly::new();
         while j < l {
-            let prod_ntt = ntt_multiply(&a_row_ntt[j], &v_ntt[j]);
-            for k in 0..N {
-                acc_remainder.coeffs[k] += prod_ntt.coeffs[k];
+            let prod_ntt = ntt_multiply(&matrix_a[i][j], &v_ntt[j]);
+            for coeff_k in 0..N {
+                acc_remainder.coeffs[coeff_k] += prod_ntt.coeffs[coeff_k];
             }
             j += 1;
         }
@@ -1725,6 +1725,39 @@ mod tests {
     use super::*;
     use crate::params::Q;
 
+    /// Primitive 512th root of unity modulo Q
+    const ZETA: i32 = 1753;
+
+    /// Convert from Montgomery form to standard form
+    #[inline]
+    fn from_montgomery(a: i32) -> i32 {
+        montgomery_reduce(a as i64)
+    }
+
+    /// Bit-reverse a number with the given number of bits
+    fn bit_reverse(mut n: u32, bits: u32) -> u32 {
+        let mut result = 0;
+        for _ in 0..bits {
+            result = (result << 1) | (n & 1);
+            n >>= 1;
+        }
+        result
+    }
+
+    /// Compute base^exp mod modulus
+    fn mod_pow(mut base: i64, mut exp: i64, modulus: i64) -> i64 {
+        let mut result = 1i64;
+        base %= modulus;
+        while exp > 0 {
+            if exp % 2 == 1 {
+                result = (result * base) % modulus;
+            }
+            exp /= 2;
+            base = (base * base) % modulus;
+        }
+        result
+    }
+
     #[test]
     #[cfg(feature = "std")]
     fn test_montgomery_reduce_values() {
@@ -1830,6 +1863,27 @@ mod tests {
     }
 
     #[test]
+    fn test_ntt_inverse() {
+        let mut poly = Poly::new();
+        poly.coeffs[0] = 1;
+        poly.coeffs[1] = 2;
+        poly.coeffs[2] = 3;
+
+        let ntt_poly = ntt(&poly);
+        let mut recovered = inv_ntt(&ntt_poly);
+
+        // inv_ntt returns Montgomery form, convert back to standard form
+        for i in 0..N {
+            recovered.coeffs[i] = from_montgomery(recovered.coeffs[i]);
+        }
+
+        for i in 0..N {
+            assert_eq!(poly.coeffs[i], recovered.coeffs[i],
+                "NTT inverse failed at index {}", i);
+        }
+    }
+
+    #[test]
     fn test_ntt_multiply_simple() {
         let mut a = Poly::new();
         let mut b = Poly::new();
@@ -1840,6 +1894,20 @@ mod tests {
         let c = poly_mul_ntt(&a, &b);
 
         assert_eq!(c.coeffs[0], 1);
+    }
+
+    #[test]
+    fn test_montgomery_reduce() {
+        // Test that Montgomery reduction works correctly
+        // Montgomery form of 1 is 2^32 mod Q = 4193792 ≡ -4186625
+        let mont_one = -4186625i32;
+        let standard_one = from_montgomery(mont_one);
+        assert_eq!(standard_one, 1, "from_montgomery(-4186625) should be 1");
+
+        // Also test with positive form
+        let mont_one_pos = 4193792i32;
+        let standard_one_pos = from_montgomery(mont_one_pos);
+        assert_eq!(standard_one_pos, 1, "from_montgomery(4193792) should be 1");
     }
 
     #[test]
@@ -1859,6 +1927,31 @@ mod tests {
         assert_eq!(c_ntt.coeffs[0], 3, "Constant term should be 3");
         assert_eq!(c_ntt.coeffs[1], 10, "X term should be 10");
         assert_eq!(c_ntt.coeffs[2], 8, "X² term should be 8");
+    }
+
+    #[test]
+    fn test_bit_reverse() {
+        assert_eq!(bit_reverse(0b000, 3), 0b000);
+        assert_eq!(bit_reverse(0b001, 3), 0b100);
+        assert_eq!(bit_reverse(0b010, 3), 0b010);
+        assert_eq!(bit_reverse(0b011, 3), 0b110);
+        assert_eq!(bit_reverse(0b100, 3), 0b001);
+    }
+
+    #[test]
+    fn test_mod_pow() {
+        // Test: 2^10 mod 1000 = 1024 mod 1000 = 24
+        assert_eq!(mod_pow(2, 10, 1000), 24);
+
+        // Test: 3^4 mod 7 = 81 mod 7 = 4
+        assert_eq!(mod_pow(3, 4, 7), 4);
+    }
+
+    #[test]
+    fn test_zeta_is_root_of_unity() {
+        // ζ^512 ≡ 1 (mod q)
+        let result = mod_pow(ZETA as i64, 512, Q as i64);
+        assert_eq!(result, 1, "ZETA should be a primitive 512-th root of unity");
     }
 
     #[test]

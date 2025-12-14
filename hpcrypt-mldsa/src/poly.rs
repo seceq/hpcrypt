@@ -51,7 +51,7 @@ impl Poly {
     ///
     /// Computes (self + other) mod q
     pub fn add(&self, other: &Poly) -> Poly {
-        // AVX2 using pure Rust intrinsics
+        // AVX2 using intrinsics module
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
             if std::is_x86_feature_detected!("avx2") {
@@ -78,7 +78,7 @@ impl Poly {
     ///
     /// Computes (self - other) mod q
     pub fn sub(&self, other: &Poly) -> Poly {
-        // AVX2 using pure Rust intrinsics
+        // AVX2 using intrinsics module
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
             if std::is_x86_feature_detected!("avx2") {
@@ -89,6 +89,9 @@ impl Poly {
                 return result;
             }
         }
+
+        // NOTE: ARM NEON poly_sub benchmarked as 1.69x SLOWER than scalar.
+        // Using scalar fallback for better performance on ARM.
 
         // Scalar fallback
         let mut result = Poly::new();
@@ -274,7 +277,7 @@ impl Poly {
     ///
     /// Computes -self mod q
     pub fn negate(&self) -> Poly {
-        // AVX2 using pure Rust intrinsics
+        // AVX2 using intrinsics module
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
             if std::is_x86_feature_detected!("avx2") {
@@ -308,23 +311,18 @@ impl Poly {
     ///
     /// Returns max(|coeffs[i]|) where coefficients are in centered representation [-q/2, q/2]
     pub fn infinity_norm(&self) -> i32 {
-        // AVX2 using pure Rust intrinsics
+        // AVX2 using the struct's embedded method
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
             if std::is_x86_feature_detected!("avx2") {
-                // Use threshold version with max threshold to compute full norm
-                return unsafe {
-                    crate::intrinsics::avx2::poly::infinity_norm_avx2_threshold(&self.coeffs, i32::MAX)
-                };
+                return unsafe { self.infinity_norm_avx2() };
             }
         }
 
-        // ARM NEON (faster than scalar)
+        // ARM NEON using intrinsics module
         #[cfg(all(feature = "neon", target_arch = "aarch64"))]
         {
-            return unsafe {
-                crate::intrinsics::neon::poly::poly_infinity_norm_centered(&self.coeffs)
-            };
+            return unsafe { crate::intrinsics::neon::poly::poly_infinity_norm_centered(&self.coeffs) };
         }
 
         self.infinity_norm_scalar()
@@ -366,24 +364,24 @@ impl Poly {
     /// # Returns
     /// The actual max if all coefficients ≤ threshold, or any value > threshold if exceeded
     pub fn infinity_norm_with_threshold(&self, threshold: i32) -> i32 {
+        // AVX2 using intrinsics module
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
             if std::is_x86_feature_detected!("avx2") {
-                return unsafe {
-                    crate::intrinsics::avx2::poly::infinity_norm_avx2_threshold(&self.coeffs, threshold)
-                };
+                return unsafe { self.infinity_norm_avx2_threshold(threshold) };
             }
         }
 
-        // ARM NEON (~3.65x faster than scalar with early exit)
+        // NEON with early exit (checks if norm >= threshold)
         #[cfg(all(feature = "neon", target_arch = "aarch64"))]
         {
-            return unsafe {
-                match crate::intrinsics::neon::poly::poly_infinity_norm_threshold_centered(&self.coeffs, threshold) {
-                    Some(norm) => norm,
-                    None => threshold + 1, // Exceeded threshold
-                }
-            };
+            // Use NEON chknorm with early exit - if it exceeds, return threshold+1
+            let exceeds = unsafe { crate::intrinsics::neon::poly::poly_chknorm_centered(&self.coeffs, threshold) };
+            if exceeds {
+                return threshold + 1; // Signal that threshold was exceeded
+            }
+            // If not exceeded, compute full norm
+            return unsafe { crate::intrinsics::neon::poly::poly_infinity_norm_centered(&self.coeffs) };
         }
 
         self.infinity_norm_scalar_threshold(threshold)
@@ -406,6 +404,126 @@ impl Poly {
         max
     }
 
+    /// AVX2-optimized infinity norm
+    #[cfg(all(feature = "avx2", target_arch = "x86_64"))]
+    #[target_feature(enable = "avx2")]
+    unsafe fn infinity_norm_avx2(&self) -> i32 {
+        #[cfg(target_arch = "x86_64")]
+        {
+            use core::arch::x86_64::*;
+
+            const Q_DIV_2: i32 = Q / 2;
+            let q_div_2_vec = _mm256_set1_epi32(Q_DIV_2);
+            let q_vec = _mm256_set1_epi32(Q);
+
+            let mut max_vec = _mm256_setzero_si256();
+
+            // Process 8 coefficients at a time
+            for i in (0..N).step_by(8) {
+                // Load 8 coefficients
+                let coeffs = _mm256_loadu_si256(self.coeffs.as_ptr().add(i) as *const __m256i);
+
+                // Center: if coeff > Q/2, coeff -= Q
+                let mask = _mm256_cmpgt_epi32(coeffs, q_div_2_vec);
+                let adjusted = _mm256_sub_epi32(coeffs, q_vec);
+                let centered = _mm256_blendv_epi8(coeffs, adjusted, mask);
+
+                // Absolute value: abs(x) = max(x, -x)
+                let negated = _mm256_sub_epi32(_mm256_setzero_si256(), centered);
+                let abs_vals = _mm256_max_epi32(centered, negated);
+
+                // Track maximum
+                max_vec = _mm256_max_epi32(max_vec, abs_vals);
+            }
+
+            // Horizontal maximum reduction
+            // max_vec contains 8 i32 values, we need the max of all
+            let high = _mm256_extracti128_si256(max_vec, 1);
+            let low = _mm256_castsi256_si128(max_vec);
+            let max_128 = _mm_max_epi32(low, high);
+
+            // Further reduce 4 values to 1
+            let shuf = _mm_shuffle_epi32(max_128, 0b00_01_10_11);
+            let max_128 = _mm_max_epi32(max_128, shuf);
+            let shuf = _mm_shuffle_epi32(max_128, 0b00_00_00_01);
+            let max_128 = _mm_max_epi32(max_128, shuf);
+
+            _mm_extract_epi32(max_128, 0)
+        }
+
+        #[cfg(not(target_arch = "x86_64"))]
+        {
+            self.infinity_norm_scalar()
+        }
+    }
+
+    /// AVX2-optimized infinity norm with early exit threshold
+    #[cfg(all(feature = "avx2", target_arch = "x86_64"))]
+    #[target_feature(enable = "avx2")]
+    unsafe fn infinity_norm_avx2_threshold(&self, threshold: i32) -> i32 {
+        #[cfg(target_arch = "x86_64")]
+        {
+            use core::arch::x86_64::*;
+
+            const Q_DIV_2: i32 = Q / 2;
+            let q_div_2_vec = _mm256_set1_epi32(Q_DIV_2);
+            let q_vec = _mm256_set1_epi32(Q);
+            let threshold_vec = _mm256_set1_epi32(threshold);
+
+            let mut max_vec = _mm256_setzero_si256();
+
+            // Process 8 coefficients at a time
+            for i in (0..N).step_by(8) {
+                // Load 8 coefficients
+                let coeffs = _mm256_loadu_si256(self.coeffs.as_ptr().add(i) as *const __m256i);
+
+                // Center: if coeff > Q/2, coeff -= Q
+                let mask = _mm256_cmpgt_epi32(coeffs, q_div_2_vec);
+                let adjusted = _mm256_sub_epi32(coeffs, q_vec);
+                let centered = _mm256_blendv_epi8(coeffs, adjusted, mask);
+
+                // Absolute value
+                let negated = _mm256_sub_epi32(_mm256_setzero_si256(), centered);
+                let abs_vals = _mm256_max_epi32(centered, negated);
+
+                // Early exit check: if any value > threshold
+                let exceeds_mask = _mm256_cmpgt_epi32(abs_vals, threshold_vec);
+                let exceeds = _mm256_movemask_epi8(exceeds_mask);
+                if exceeds != 0 {
+                    // At least one value exceeds threshold - early exit
+                    // Extract the actual max for accuracy
+                    let max_so_far = _mm256_max_epi32(max_vec, abs_vals);
+                    let high = _mm256_extracti128_si256(max_so_far, 1);
+                    let low = _mm256_castsi256_si128(max_so_far);
+                    let max_128 = _mm_max_epi32(low, high);
+                    let shuf = _mm_shuffle_epi32(max_128, 0b00_01_10_11);
+                    let max_128 = _mm_max_epi32(max_128, shuf);
+                    let shuf = _mm_shuffle_epi32(max_128, 0b00_00_00_01);
+                    let max_128 = _mm_max_epi32(max_128, shuf);
+                    return _mm_extract_epi32(max_128, 0);
+                }
+
+                // Track maximum
+                max_vec = _mm256_max_epi32(max_vec, abs_vals);
+            }
+
+            // Horizontal maximum reduction
+            let high = _mm256_extracti128_si256(max_vec, 1);
+            let low = _mm256_castsi256_si128(max_vec);
+            let max_128 = _mm_max_epi32(low, high);
+            let shuf = _mm_shuffle_epi32(max_128, 0b00_01_10_11);
+            let max_128 = _mm_max_epi32(max_128, shuf);
+            let shuf = _mm_shuffle_epi32(max_128, 0b00_00_00_01);
+            let max_128 = _mm_max_epi32(max_128, shuf);
+
+            _mm_extract_epi32(max_128, 0)
+        }
+
+        #[cfg(not(target_arch = "x86_64"))]
+        {
+            self.infinity_norm_scalar_threshold(threshold)
+        }
+    }
 }
 
 impl Default for Poly {
@@ -647,17 +765,14 @@ impl<const K: usize> Default for NttPolyVec<K> {
 ///
 /// # Usage Pattern
 /// ```
-/// use hpcrypt_mldsa::poly::{Poly, PolyMulcache};
-/// use hpcrypt_mldsa::ntt::{ntt, ntt_multiply_cached};
-///
-/// let a = Poly::new();  // Create polynomial
 /// let a_ntt = ntt(&a);  // Transform to NTT domain
-/// let cache = PolyMulcache::compute(&a_ntt);  // Pre-compute cache
+/// let cache = PolyMulcache::compute(&a_ntt);  // Pre-compute cache (one-time cost)
 ///
 /// // Reuse cache for multiple multiplications
-/// let b = Poly::new();
-/// let b_ntt = ntt(&b);
-/// let _result = ntt_multiply_cached(&a_ntt, &cache, &b_ntt);
+/// for b in vectors {
+///     let b_ntt = ntt(&b);
+///     let result = ntt_multiply_cached(&a_ntt, &cache, &b_ntt);
+/// }
 /// ```
 #[repr(align(64))]
 #[derive(Clone)]
