@@ -38,6 +38,11 @@ enable-kdf-tests = ["hpcrypt-kdf"]
 enable-hash-tests = ["hpcrypt-hash"]
 enable-pqc-tests = ["hpcrypt-mlkem", "hpcrypt-mldsa", "hpcrypt-slhdsa"]
 enable-drbg-tests = ["hpcrypt-rng", "hpcrypt-hash", "hpcrypt-core", "hpcrypt-cipher"]
+
+# SIMD intrinsics feature passthrough for PQC crates
+avx2 = ["hpcrypt-mlkem/avx2", "hpcrypt-mldsa/avx2"]
+neon = ["hpcrypt-mlkem/neon", "hpcrypt-mldsa/neon"]
+
 # Enable all actual implementation tests
 enable-all-tests = [
     "enable-aead-tests",

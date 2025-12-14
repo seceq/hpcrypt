@@ -35,6 +35,11 @@ enable-cipher-tests = ["hpcrypt-cipher"]
 enable-kdf-tests = ["hpcrypt-kdf"]
 enable-fpe-tests = ["hpcrypt-fpe"]
 enable-pqc-tests = ["hpcrypt-mlkem", "hpcrypt-mldsa"]
+
+# SIMD intrinsics feature passthrough for PQC crates
+avx2 = ["hpcrypt-mlkem/avx2", "hpcrypt-mldsa/avx2"]
+neon = ["hpcrypt-mlkem/neon", "hpcrypt-mldsa/neon"]
+
 # Enable all actual implementation tests
 enable-all-tests = [
     "enable-aead-tests",
