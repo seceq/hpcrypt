@@ -39,6 +39,9 @@ serde = ["dep:serde"]
 zeroize = ["dep:zeroize"]
 timing-tests = []
 cavp = []
+# SIMD optimizations
+avx2 = []
+neon = []
 
 [profile.release]
 opt-level = 3
