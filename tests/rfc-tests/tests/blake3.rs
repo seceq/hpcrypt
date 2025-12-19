@@ -6,6 +6,7 @@
 //! BLAKE3 is a cryptographic hash function based on Bao and BLAKE2, designed
 //! for high performance with SIMD instructions.
 
+use hpcrypt_hash::HashFunction;
 use rfc_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 
