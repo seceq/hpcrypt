@@ -3,7 +3,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hpcrypt_slhdsa::{sign, KeyPair, Sha2_128f, Sha2_128s, Sha2_192s, Sha2_256s};
-use rand::rngs::OsRng;
+use hpcrypt_rng::OsRng;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 // Global counters for hash operations

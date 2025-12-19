@@ -26,6 +26,7 @@ fn bench_no_cache(c: &mut Criterion) {
                 black_box(&sk_seed),
                 black_box(&pk_seed),
                 black_box(0),
+                black_box(0),
                 &mut addr,
                 &hash,
             )
@@ -57,6 +58,7 @@ fn bench_with_cache(c: &mut Criterion) {
                         black_box(&message),
                         black_box(&sk_seed),
                         black_box(&pk_seed),
+                        black_box(0),
                         black_box(0),
                         &mut addr,
                         &hash,

@@ -5,7 +5,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hpcrypt_slhdsa::{KeyPair, Sha2_128f, Sha2_128s, Sha2_192s};
-use rand::rngs::OsRng;
+use hpcrypt_rng::OsRng;
 
 fn bench_fors_signing(c: &mut Criterion) {
     let mut group = c.benchmark_group("fors_root_optimization");

@@ -5,7 +5,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hpcrypt_slhdsa::{KeyPair, Sha2_128s};
-use rand::rngs::OsRng;
+use hpcrypt_rng::OsRng;
 
 fn bench_hypertree_signing_baseline(c: &mut Criterion) {
     let mut group = c.benchmark_group("hypertree_clone_optimization");

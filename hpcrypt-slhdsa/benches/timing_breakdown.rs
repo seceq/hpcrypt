@@ -5,7 +5,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hpcrypt_slhdsa::{sign, KeyPair, Sha2_128s};
-use rand::rngs::OsRng;
+use hpcrypt_rng::OsRng;
 use std::time::Instant;
 
 fn timing_breakdown_analysis(_c: &mut Criterion) {

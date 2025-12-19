@@ -4,7 +4,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use hpcrypt_slhdsa::Sha2_128s;
-use rand::rngs::OsRng;
+use hpcrypt_rng::OsRng;
 use rand::RngCore;
 
 // We need to access internal modules for component benchmarking

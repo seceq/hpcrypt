@@ -4,7 +4,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use hpcrypt_slhdsa::{KeyPair, Sha2_128f, Sha2_128s, Sha2_192f, Sha2_192s, Sha2_256f, Sha2_256s};
-use rand::rngs::OsRng;
+use hpcrypt_rng::OsRng;
 
 fn bench_keygen_sha2_128s(c: &mut Criterion) {
     c.bench_function("keygen_sha2_128s", |b| {

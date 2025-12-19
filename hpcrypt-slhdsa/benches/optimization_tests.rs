@@ -4,7 +4,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use hpcrypt_slhdsa::{sign, verify, KeyPair, Sha2_128s};
-use rand::rngs::OsRng;
+use hpcrypt_rng::OsRng;
 
 // ============================================================================
 // BASELINE: Current implementation benchmarks
