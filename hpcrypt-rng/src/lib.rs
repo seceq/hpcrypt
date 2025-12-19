@@ -75,7 +75,7 @@ pub use error::{Result, RngError};
 #[cfg(feature = "os-rng")]
 mod os_rng;
 #[cfg(feature = "os-rng")]
-pub use os_rng::*;
+pub use os_rng::{fill_random, OsRng};
 
 // DRBG module (Deterministic Random Bit Generators)
 pub mod drbg;
