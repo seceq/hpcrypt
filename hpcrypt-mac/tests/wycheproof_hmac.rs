@@ -9,6 +9,7 @@
 //! - FIPS 198-1
 
 use hpcrypt_mac::hmac::{HmacSha256, HmacSha384, HmacSha512};
+use hpcrypt_mac::Mac;
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -73,8 +74,7 @@ fn run_hmac_sha256_test(test: &TestCase) -> bool {
         return true; // Skip truncated tags for now
     }
 
-    let hmac = HmacSha256::new(&test.key);
-    let computed_tag = hmac.compute(&test.msg);
+    let computed_tag = HmacSha256::compute(&test.key, &test.msg);
 
     match test.result {
         TestResult::Valid => {
@@ -110,8 +110,7 @@ fn run_hmac_sha384_test(test: &TestCase) -> bool {
         return true; // Skip truncated tags for now
     }
 
-    let hmac = HmacSha384::new(&test.key);
-    let computed_tag = hmac.compute(&test.msg);
+    let computed_tag = HmacSha384::compute(&test.key, &test.msg);
 
     match test.result {
         TestResult::Valid => {
@@ -146,8 +145,7 @@ fn run_hmac_sha512_test(test: &TestCase) -> bool {
         return true; // Skip truncated tags for now
     }
 
-    let hmac = HmacSha512::new(&test.key);
-    let computed_tag = hmac.compute(&test.msg);
+    let computed_tag = HmacSha512::compute(&test.key, &test.msg);
 
     match test.result {
         TestResult::Valid => {
