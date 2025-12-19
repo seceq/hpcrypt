@@ -97,8 +97,6 @@ impl HmacDrbg {
     /// Updates the internal state (K, V) using provided data.
     fn update(&mut self, provided_data: Option<&[u8]>) {
         // K = HMAC(K, V || 0x00 || provided_data)
-        let hmac = HmacSha256::new(&self.k);
-
         let mut data = alloc::vec::Vec::with_capacity(OUTLEN + 1 + provided_data.map(|d| d.len()).unwrap_or(0));
         data.extend_from_slice(&self.v);
         data.push(0x00);
@@ -106,17 +104,14 @@ impl HmacDrbg {
             data.extend_from_slice(pd);
         }
 
-        self.k = hmac.compute(&data);
+        self.k = HmacSha256::compute(&self.k, &data);
 
         // V = HMAC(K, V)
-        let hmac = HmacSha256::new(&self.k);
-        self.v = hmac.compute(&self.v);
+        self.v = HmacSha256::compute(&self.k, &self.v);
 
         // If provided_data is present, do another update
         if provided_data.is_some() {
             // K = HMAC(K, V || 0x01 || provided_data)
-            let hmac = HmacSha256::new(&self.k);
-
             let mut data = alloc::vec::Vec::with_capacity(OUTLEN + 1 + provided_data.map(|d| d.len()).unwrap_or(0));
             data.extend_from_slice(&self.v);
             data.push(0x01);
@@ -124,11 +119,10 @@ impl HmacDrbg {
                 data.extend_from_slice(pd);
             }
 
-            self.k = hmac.compute(&data);
+            self.k = HmacSha256::compute(&self.k, &data);
 
             // V = HMAC(K, V)
-            let hmac = HmacSha256::new(&self.k);
-            self.v = hmac.compute(&self.v);
+            self.v = HmacSha256::compute(&self.k, &self.v);
         }
 
         // Zeroize temporary data
@@ -205,8 +199,7 @@ impl Drbg for HmacDrbg {
 
         while remaining > 0 {
             // V = HMAC(K, V)
-            let hmac = HmacSha256::new(&self.k);
-            self.v = hmac.compute(&self.v);
+            self.v = HmacSha256::compute(&self.k, &self.v);
 
             let to_copy = core::cmp::min(remaining, OUTLEN);
             output[offset..offset + to_copy].copy_from_slice(&self.v[..to_copy]);
