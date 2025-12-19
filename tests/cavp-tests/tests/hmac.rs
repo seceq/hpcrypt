@@ -6,7 +6,7 @@ use cavp_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 
 #[cfg(feature = "enable-mac-tests")]
-use hpcrypt_mac::{HmacSha256, HmacSha384, HmacSha512};
+use hpcrypt_mac::{HmacSha256, HmacSha384, HmacSha512, Mac};
 
 // ============================================================================
 // Test Data Structures
@@ -87,8 +87,7 @@ fn test_hmac_sha256_cavp() {
             let msg = decode_hex(&test.msg);
             let expected_mac = decode_hex(&expected_test.mac);
 
-            let hmac = HmacSha256::new(&key);
-            let mac = hmac.compute(&msg);
+            let mac = HmacSha256::compute(&key, &msg);
 
             // Truncate to requested MAC length (in bits)
             let mac_len_bytes = (test.mac_len + 7) / 8;
@@ -129,8 +128,7 @@ fn test_hmac_sha384_cavp() {
             let msg = decode_hex(&test.msg);
             let expected_mac = decode_hex(&expected_test.mac);
 
-            let hmac = HmacSha384::new(&key);
-            let mac = hmac.compute(&msg);
+            let mac = HmacSha384::compute(&key, &msg);
 
             // Truncate to requested MAC length (in bits)
             let mac_len_bytes = (test.mac_len + 7) / 8;
@@ -171,8 +169,7 @@ fn test_hmac_sha512_cavp() {
             let msg = decode_hex(&test.msg);
             let expected_mac = decode_hex(&expected_test.mac);
 
-            let hmac = HmacSha512::new(&key);
-            let mac = hmac.compute(&msg);
+            let mac = HmacSha512::compute(&key, &msg);
 
             // Truncate to requested MAC length (in bits)
             let mac_len_bytes = (test.mac_len + 7) / 8;
