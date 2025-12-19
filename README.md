@@ -313,7 +313,7 @@ Dual-licensed under your choice of:
 
 ### Research Papers
 - "[Deferred Reduction Optimizations for Post-Quantum Lattice Cryptography](https://zenodo.org/records/17772583)" - Tarsha Kurdi (2025)
-- "[Efficient GHASH and POLYVAL Implementation](https://eprint.iacr.org/2025/2171)" - Polynomial Multiplication Optimization (2025)
+- "[Efficient GHASH and POLYVAL Implementation](https://eprint.iacr.org/2025/2171)" - Tarsha Kurdi & Möller (2025)
 - "[Fixslicing AES-like Ciphers](https://eprint.iacr.org/2020/1123)" - Adomnicai & Peyrin (IACR TCHES 2021)
 - "[Fast constant-time gcd computation](https://eprint.iacr.org/2019/266)" - Bernstein & Yang (2019)
 
