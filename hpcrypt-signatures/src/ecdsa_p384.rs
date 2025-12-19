@@ -31,8 +31,8 @@ use hpcrypt_core::error::CurveError;
 use hpcrypt_curves::p384::{Point, Scalar};
 // Note: scalar_mul_generator_fast disabled due to bug in precomputed table
 use hpcrypt_curves::ct_utils::ConstantTimeEq;
-use hpcrypt_hash::sha384::Sha384;
-use hpcrypt_mac::HmacSha384;
+use hpcrypt_hash::{sha384::Sha384, HashFunction};
+use hpcrypt_mac::{HmacSha384, Mac};
 
 /// ECDSA-P384 signature (r, s) components
 ///
@@ -391,12 +391,10 @@ impl SigningKey {
         data[49..97].copy_from_slice(&self.secret);
         data[97..145].copy_from_slice(hash);
 
-        let hmac = HmacSha384::new(&k);
-        k = hmac.compute(&data);
+        k = HmacSha384::compute(&k, &data);
 
         // Step 4: V = HMAC_K(V)
-        let hmac = HmacSha384::new(&k);
-        v = hmac.compute(&v);
+        v = HmacSha384::compute(&k, &v);
 
         // Step 5: K = HMAC_K(V || 0x01 || private_key || hash)
         data[0..48].copy_from_slice(&v);
@@ -404,18 +402,15 @@ impl SigningKey {
         data[49..97].copy_from_slice(&self.secret);
         data[97..145].copy_from_slice(hash);
 
-        let hmac = HmacSha384::new(&k);
-        k = hmac.compute(&data);
+        k = HmacSha384::compute(&k, &data);
 
         // Step 6: V = HMAC_K(V)
-        let hmac = HmacSha384::new(&k);
-        v = hmac.compute(&v);
+        v = HmacSha384::compute(&k, &v);
 
         // Step 7: Generate candidates until we find one in range [1, n-1]
         loop {
             // V = HMAC_K(V)
-            let hmac = HmacSha384::new(&k);
-            v = hmac.compute(&v);
+            v = HmacSha384::compute(&k, &v);
 
             // Check if V is a valid k (in range [1, n-1])
             let k_scalar = Scalar::from_bytes(&v);
@@ -431,12 +426,10 @@ impl SigningKey {
             data[0..48].copy_from_slice(&v);
             data[48] = 0x00;
 
-            let hmac = HmacSha384::new(&k);
-            k = hmac.compute(&data);
+            k = HmacSha384::compute(&k, &data);
 
             // V = HMAC_K(V)
-            let hmac = HmacSha384::new(&k);
-            v = hmac.compute(&v);
+            v = HmacSha384::compute(&k, &v);
         }
     }
 }

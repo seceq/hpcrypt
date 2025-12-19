@@ -31,8 +31,9 @@ use hpcrypt_curves::ct_utils::ConstantTimeEq;
 use hpcrypt_curves::p256::{
     scalar_mul_generator, AffinePoint, FieldElement, Point, Scalar, P256_B,
 };
+use hpcrypt_hash::HashFunction;
 use hpcrypt_hash::sha256::Sha256;
-use hpcrypt_mac::HmacSha256;
+use hpcrypt_mac::{HmacSha256, Mac};
 
 /// ECDSA signature (r, s) components
 ///
@@ -418,12 +419,10 @@ impl SigningKey {
         data[33..65].copy_from_slice(&self.secret);
         data[65..97].copy_from_slice(hash);
 
-        let hmac = HmacSha256::new(&k);
-        k = hmac.compute(&data);
+        k = HmacSha256::compute(&k, &data);
 
         // Step 4: V = HMAC_K(V)
-        let hmac = HmacSha256::new(&k);
-        v = hmac.compute(&v);
+        v = HmacSha256::compute(&k, &v);
 
         // Step 5: K = HMAC_K(V || 0x01 || private_key || hash)
         data[0..32].copy_from_slice(&v);
@@ -431,18 +430,15 @@ impl SigningKey {
         data[33..65].copy_from_slice(&self.secret);
         data[65..97].copy_from_slice(hash);
 
-        let hmac = HmacSha256::new(&k);
-        k = hmac.compute(&data);
+        k = HmacSha256::compute(&k, &data);
 
         // Step 6: V = HMAC_K(V)
-        let hmac = HmacSha256::new(&k);
-        v = hmac.compute(&v);
+        v = HmacSha256::compute(&k, &v);
 
         // Step 7: Generate candidates until we find one in range [1, n-1]
         loop {
             // V = HMAC_K(V)
-            let hmac = HmacSha256::new(&k);
-            v = hmac.compute(&v);
+            v = HmacSha256::compute(&k, &v);
 
             // Check if V is a valid k (in range [1, n-1])
             let k_scalar = Scalar::from_bytes(&v);
@@ -458,12 +454,10 @@ impl SigningKey {
             data[0..32].copy_from_slice(&v);
             data[32] = 0x00;
 
-            let hmac = HmacSha256::new(&k);
-            k = hmac.compute(&data);
+            k = HmacSha256::compute(&k, &data);
 
             // V = HMAC_K(V)
-            let hmac = HmacSha256::new(&k);
-            v = hmac.compute(&v);
+            v = HmacSha256::compute(&k, &v);
         }
     }
 }

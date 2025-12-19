@@ -31,8 +31,8 @@ use hpcrypt_core::error::CurveError;
 use hpcrypt_curves::p521::{Point, Scalar};
 // Note: generator_mul disabled due to potential precomputed table bug (similar to P-384 issue)
 use hpcrypt_curves::ct_utils::ConstantTimeEq;
-use hpcrypt_mac::HmacSha512;
-use hpcrypt_hash::sha512::Sha512;
+use hpcrypt_mac::{HmacSha512, Mac};
+use hpcrypt_hash::{sha512::Sha512, HashFunction};
 
 /// ECDSA-P521 signature (r, s) components
 ///
@@ -357,30 +357,25 @@ impl SigningKey {
         data[64] = 0x00;
         data[65..131].copy_from_slice(&secret_bytes);
         data[131..197].copy_from_slice(&hash_truncated);
-        let hmac = HmacSha512::new(&k);
-        k = hmac.compute(&data[..197]);
+        k = HmacSha512::compute(&k, &data[..197]);
 
         // V = HMAC_K(V)
-        let hmac = HmacSha512::new(&k);
-        v = hmac.compute(&v);
+        v = HmacSha512::compute(&k, &v);
 
         // K = HMAC_K(V || 0x01 || secret || hash)
         data[0..64].copy_from_slice(&v);
         data[64] = 0x01;
         data[65..131].copy_from_slice(&secret_bytes);
         data[131..197].copy_from_slice(&hash_truncated);
-        let hmac = HmacSha512::new(&k);
-        k = hmac.compute(&data[..197]);
+        k = HmacSha512::compute(&k, &data[..197]);
 
         // V = HMAC_K(V)
-        let hmac = HmacSha512::new(&k);
-        v = hmac.compute(&v);
+        v = HmacSha512::compute(&k, &v);
 
         // Generate nonce candidates
         loop {
             // V = HMAC_K(V)
-            let hmac = HmacSha512::new(&k);
-            v = hmac.compute(&v);
+            v = HmacSha512::compute(&k, &v);
 
             // Try to convert V to a valid scalar (reduction handled automatically)
             let mut candidate = [0u8; 66];
@@ -395,11 +390,9 @@ impl SigningKey {
             let mut data2 = [0u8; 65]; // V + 0x00
             data2[0..64].copy_from_slice(&v);
             data2[64] = 0x00;
-            let hmac = HmacSha512::new(&k);
-            k = hmac.compute(&data2);
+            k = HmacSha512::compute(&k, &data2);
 
-            let hmac = HmacSha512::new(&k);
-            v = hmac.compute(&v);
+            v = HmacSha512::compute(&k, &v);
         }
     }
 }
@@ -699,7 +692,7 @@ mod tests {
     #[test]
     fn test_simple_sign_verify() {
         use hpcrypt_curves::p521::Scalar;
-        use hpcrypt_hash::sha512::Sha512;
+        use hpcrypt_hash::{sha512::Sha512, HashFunction};
 
         // Use a simple known private key: d = 2
         let two = Scalar::from_u64(2);
@@ -783,7 +776,7 @@ mod tests {
     #[test]
     fn test_ecdsa_step_by_step() {
         use hpcrypt_curves::p521::{Point, Scalar};
-        use hpcrypt_hash::sha512::Sha512;
+        use hpcrypt_hash::{sha512::Sha512, HashFunction};
 
         // Use d = 2, k = 3 for easy verification
         let d = Scalar::from_u64(2);
