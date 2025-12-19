@@ -14,6 +14,9 @@ categories = ["cryptography", "no-std"]
 # Core dependency for OS random number generation
 getrandom = { version = "0.2", default-features = false }
 
+# For compatibility with rand ecosystem
+rand_core = { version = "0.6", default-features = false }
+
 # For zeroization of sensitive material
 zeroize = { version = "1.7", default-features = false, features = ["alloc"] }
 
