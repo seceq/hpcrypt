@@ -5,6 +5,7 @@
 //! BLAKE2 is a cryptographic hash function faster than MD5, SHA-1, SHA-2, and SHA-3,
 //! while being at least as secure as SHA-3.
 
+use hpcrypt_hash::HashFunction;
 use rfc_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 
@@ -117,7 +118,7 @@ fn test_blake2_rfc7693() {
                     // Unkeyed hash mode
                     match test.hash_length {
                         16 => {
-                            let mut hasher = Blake2s::new_with_size(16);
+                            let mut hasher = Blake2s::new_with_output_len(16);
                             hasher.update(&input);
                             hasher.finalize()
                         }
@@ -133,8 +134,8 @@ fn test_blake2_rfc7693() {
                         }
                     }
                 } else {
-                    // Keyed hash mode (MAC) - always 32 bytes output
-                    let mut hasher = Blake2s::new_keyed(&key);
+                    // Keyed hash mode (MAC)
+                    let mut hasher = Blake2s::new_keyed(&key, test.hash_length);
                     hasher.update(&input);
                     hasher.finalize()
                 };
@@ -258,7 +259,7 @@ fn test_blake2_mac_functionality() {
     // BLAKE2s MAC
     println!("  Testing BLAKE2s MAC...");
     let key_s = b"secret_key_for_blake2s";
-    let mut hasher_s = Blake2s::new_keyed(key_s);
+    let mut hasher_s = Blake2s::new_keyed(key_s, 32);
     hasher_s.update(message);
     let mac_s = hasher_s.finalize();
     assert_eq!(mac_s.len(), 32, "BLAKE2s MAC should be 32 bytes");
@@ -287,7 +288,7 @@ fn test_blake2_variable_output() {
     // BLAKE2s supports 1-32 byte outputs
     println!("  Testing BLAKE2s variable outputs...");
     for len in [16, 24, 32] {
-        let mut hasher = Blake2s::new_with_size(len);
+        let mut hasher = Blake2s::new_with_output_len(len);
         hasher.update(b"test");
         let hash = hasher.finalize();
         assert_eq!(hash.len(), len, "BLAKE2s output length mismatch");
