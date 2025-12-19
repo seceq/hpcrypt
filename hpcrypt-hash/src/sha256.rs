@@ -31,67 +31,13 @@ pub struct Sha256 {
 
 impl Default for Sha256 {
     fn default() -> Self {
+        use crate::traits::HashFunction;
         Self::new()
     }
 }
 
 impl Sha256 {
-    pub fn new() -> Self {
-        Self {
-            h: H0,
-            buf: [0; BLOCK_LEN],
-            buflen: 0,
-            len: 0,
-        }
-    }
-
-    pub fn update(&mut self, mut input: &[u8]) {
-        self.len = self.len.wrapping_add(input.len() as u64);
-
-        while !input.is_empty() {
-            if self.buflen == BLOCK_LEN {
-                self.process_block();
-                self.buflen = 0;
-            }
-
-            let take = (BLOCK_LEN - self.buflen).min(input.len());
-            self.buf[self.buflen..self.buflen + take].copy_from_slice(&input[..take]);
-            self.buflen += take;
-            input = &input[take..];
-        }
-    }
-
-    pub fn finalize(mut self) -> [u8; OUT_LEN] {
-        if self.buflen == BLOCK_LEN {
-            self.process_block();
-            self.buflen = 0;
-        }
-
-        self.buf[self.buflen] = 0x80;
-        self.buflen += 1;
-
-        if self.buflen > 56 {
-            self.buf[self.buflen..BLOCK_LEN].fill(0);
-            self.process_block();
-            self.buflen = 0;
-        }
-
-        self.buf[self.buflen..56].fill(0);
-
-        let bit_len = self.len.wrapping_mul(8);
-        write_u32_be(&mut self.buf[56..60], (bit_len >> 32) as u32);
-        write_u32_be(&mut self.buf[60..64], bit_len as u32);
-
-        self.process_block();
-
-        let mut out = [0u8; OUT_LEN];
-        for i in 0..8 {
-            write_u32_be(&mut out[i * 4..(i + 1) * 4], self.h[i]);
-        }
-
-        out
-    }
-
+    /// Internal helper: process a single 512-bit block
     #[inline(always)]
     fn process_block(&mut self) {
         // Rolling macros for better code organization
@@ -310,7 +256,79 @@ impl Sha256 {
 }
 
 pub fn sha256(data: &[u8]) -> [u8; OUT_LEN] {
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    hasher.finalize()
+    use crate::traits::HashFunction;
+    Sha256::hash(data)
+}
+
+// Implement HashFunction trait
+impl crate::traits::HashFunction for Sha256 {
+    type Output = [u8; OUT_LEN];
+    const OUTPUT_SIZE: usize = OUT_LEN;
+    const BLOCK_SIZE: usize = BLOCK_LEN;
+
+    #[inline]
+    fn new() -> Self {
+        Self {
+            h: H0,
+            buf: [0; BLOCK_LEN],
+            buflen: 0,
+            len: 0,
+        }
+    }
+
+    #[inline]
+    fn update(&mut self, mut data: &[u8]) {
+        self.len = self.len.wrapping_add(data.len() as u64);
+
+        while !data.is_empty() {
+            if self.buflen == BLOCK_LEN {
+                self.process_block();
+                self.buflen = 0;
+            }
+
+            let take = (BLOCK_LEN - self.buflen).min(data.len());
+            self.buf[self.buflen..self.buflen + take].copy_from_slice(&data[..take]);
+            self.buflen += take;
+            data = &data[take..];
+        }
+    }
+
+    #[inline]
+    fn finalize(mut self) -> Self::Output {
+        if self.buflen == BLOCK_LEN {
+            self.process_block();
+            self.buflen = 0;
+        }
+
+        self.buf[self.buflen] = 0x80;
+        self.buflen += 1;
+
+        if self.buflen > 56 {
+            self.buf[self.buflen..BLOCK_LEN].fill(0);
+            self.process_block();
+            self.buflen = 0;
+        }
+
+        self.buf[self.buflen..56].fill(0);
+
+        let bit_len = self.len.wrapping_mul(8);
+        write_u32_be(&mut self.buf[56..60], (bit_len >> 32) as u32);
+        write_u32_be(&mut self.buf[60..64], bit_len as u32);
+
+        self.process_block();
+
+        let mut out = [0u8; OUT_LEN];
+        for i in 0..8 {
+            write_u32_be(&mut out[i * 4..(i + 1) * 4], self.h[i]);
+        }
+
+        out
+    }
+
+    #[inline]
+    fn finalize_reset(&mut self) -> Self::Output {
+        let result = self.clone().finalize();
+        *self = Self::new();
+        result
+    }
 }

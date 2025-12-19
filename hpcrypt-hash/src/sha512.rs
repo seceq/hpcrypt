@@ -111,62 +111,6 @@ pub struct Sha512 {
 }
 
 impl Sha512 {
-    pub fn new() -> Self {
-        Self {
-            h: H0_512,
-            buf: [0; BLOCK_LEN],
-            buflen: 0,
-            len: 0,
-        }
-    }
-
-    pub fn update(&mut self, mut input: &[u8]) {
-        self.len = self.len.wrapping_add(input.len() as u128);
-
-        while !input.is_empty() {
-            if self.buflen == BLOCK_LEN {
-                self.process_block();
-                self.buflen = 0;
-            }
-
-            let take = (BLOCK_LEN - self.buflen).min(input.len());
-            self.buf[self.buflen..self.buflen + take].copy_from_slice(&input[..take]);
-            self.buflen += take;
-            input = &input[take..];
-        }
-    }
-
-    pub fn finalize(mut self) -> [u8; OUT_LEN] {
-        if self.buflen == BLOCK_LEN {
-            self.process_block();
-            self.buflen = 0;
-        }
-
-        self.buf[self.buflen] = 0x80;
-        self.buflen += 1;
-
-        if self.buflen > 112 {
-            self.buf[self.buflen..BLOCK_LEN].fill(0);
-            self.process_block();
-            self.buflen = 0;
-        }
-
-        self.buf[self.buflen..112].fill(0);
-
-        let bit_len = self.len.wrapping_mul(8);
-        write_u64_be(&mut self.buf[112..120], (bit_len >> 64) as u64);
-        write_u64_be(&mut self.buf[120..128], bit_len as u64);
-
-        self.process_block();
-
-        let mut out = [0u8; OUT_LEN];
-        for i in 0..8 {
-            write_u64_be(&mut out[i * 8..(i + 1) * 8], self.h[i]);
-        }
-
-        out
-    }
-
     /// Process a single 1024-bit block with 4-way partial unrolling
     #[inline(always)]
     fn process_block(&mut self) {
@@ -421,12 +365,87 @@ impl Sha512 {
 
 impl Default for Sha512 {
     fn default() -> Self {
+        use crate::traits::HashFunction;
         Self::new()
     }
 }
 
 pub fn sha512(data: &[u8]) -> [u8; OUT_LEN] {
+    use crate::traits::HashFunction;
     let mut hasher = Sha512::new();
     hasher.update(data);
     hasher.finalize()
+}
+
+// Implement HashFunction trait
+impl crate::traits::HashFunction for Sha512 {
+    type Output = [u8; OUT_LEN];
+    const OUTPUT_SIZE: usize = OUT_LEN;
+    const BLOCK_SIZE: usize = BLOCK_LEN;
+
+    #[inline]
+    fn new() -> Self {
+        Self {
+            h: H0_512,
+            buf: [0; BLOCK_LEN],
+            buflen: 0,
+            len: 0,
+        }
+    }
+
+    #[inline]
+    fn update(&mut self, mut input: &[u8]) {
+        self.len = self.len.wrapping_add(input.len() as u128);
+
+        while !input.is_empty() {
+            if self.buflen == BLOCK_LEN {
+                self.process_block();
+                self.buflen = 0;
+            }
+
+            let take = (BLOCK_LEN - self.buflen).min(input.len());
+            self.buf[self.buflen..self.buflen + take].copy_from_slice(&input[..take]);
+            self.buflen += take;
+            input = &input[take..];
+        }
+    }
+
+    #[inline]
+    fn finalize(mut self) -> Self::Output {
+        if self.buflen == BLOCK_LEN {
+            self.process_block();
+            self.buflen = 0;
+        }
+
+        self.buf[self.buflen] = 0x80;
+        self.buflen += 1;
+
+        if self.buflen > 112 {
+            self.buf[self.buflen..BLOCK_LEN].fill(0);
+            self.process_block();
+            self.buflen = 0;
+        }
+
+        self.buf[self.buflen..112].fill(0);
+
+        let bit_len = self.len.wrapping_mul(8);
+        write_u64_be(&mut self.buf[112..120], (bit_len >> 64) as u64);
+        write_u64_be(&mut self.buf[120..128], bit_len as u64);
+
+        self.process_block();
+
+        let mut out = [0u8; OUT_LEN];
+        for i in 0..8 {
+            write_u64_be(&mut out[i * 8..(i + 1) * 8], self.h[i]);
+        }
+
+        out
+    }
+
+    #[inline]
+    fn finalize_reset(&mut self) -> Self::Output {
+        let result = self.clone().finalize();
+        *self = Self::new();
+        result
+    }
 }

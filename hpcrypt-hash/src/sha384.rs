@@ -25,85 +25,6 @@ pub struct Sha384 {
 }
 
 impl Sha384 {
-    /// Create a new SHA-384 hasher
-    pub fn new() -> Self {
-        Self {
-            // SHA-384 initial values (different from SHA-512)
-            state: [
-                0xcbbb9d5dc1059ed8,
-                0x629a292a367cd507,
-                0x9159015a3070dd17,
-                0x152fecd8f70e5939,
-                0x67332667ffc00b31,
-                0x8eb44a8768581511,
-                0xdb0c2e0d64f98fa7,
-                0x47b5481dbefa4fa4,
-            ],
-            buffer: [0u8; BLOCK_LEN],
-            buffer_len: 0,
-            total_len: 0,
-        }
-    }
-
-    /// Update the hasher with data
-    pub fn update(&mut self, data: &[u8]) {
-        let mut data = data;
-
-        while !data.is_empty() {
-            let available = BLOCK_LEN - self.buffer_len;
-            let to_copy = data.len().min(available);
-
-            self.buffer[self.buffer_len..self.buffer_len + to_copy]
-                .copy_from_slice(&data[..to_copy]);
-            self.buffer_len += to_copy;
-            self.total_len += to_copy as u64;
-            data = &data[to_copy..];
-
-            if self.buffer_len == BLOCK_LEN {
-                let block = self.buffer;
-                self.process_block(&block);
-                self.buffer_len = 0;
-            }
-        }
-    }
-
-    /// Finalize and return the hash (384 bits = 48 bytes)
-    pub fn finalize(mut self) -> [u8; 48] {
-        // Padding: add 1 bit followed by zeros, then length
-        let bit_len = self.total_len.wrapping_mul(8);
-
-        // Append 0x80 byte (10000000 in binary)
-        self.buffer[self.buffer_len] = 0x80;
-        self.buffer_len += 1;
-
-        // If not enough room for length (16 bytes), pad and process block
-        if self.buffer_len > BLOCK_LEN - 16 {
-            self.buffer[self.buffer_len..BLOCK_LEN].fill(0);
-            let block = self.buffer;
-            self.process_block(&block);
-            self.buffer.fill(0);
-            self.buffer_len = 0;
-        }
-
-        // Pad with zeros up to length field
-        self.buffer[self.buffer_len..BLOCK_LEN - 16].fill(0);
-
-        // Append length in bits as 128-bit big-endian (upper 64 bits are 0)
-        self.buffer[BLOCK_LEN - 16..BLOCK_LEN - 8].copy_from_slice(&0u64.to_be_bytes());
-        self.buffer[BLOCK_LEN - 8..BLOCK_LEN].copy_from_slice(&bit_len.to_be_bytes());
-
-        // Process final block
-        let block = self.buffer;
-        self.process_block(&block);
-
-        // Output first 48 bytes (6 words) of state
-        let mut output = [0u8; 48];
-        for i in 0..6 {
-            output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_be_bytes());
-        }
-        output
-    }
-
     /// Process a single 1024-bit block
     #[inline(always)]
     fn process_block(&mut self, block: &[u8]) {
@@ -270,12 +191,106 @@ impl Sha384 {
 
 impl Default for Sha384 {
     fn default() -> Self {
+        use crate::traits::HashFunction;
         Self::new()
+    }
+}
+
+impl crate::traits::HashFunction for Sha384 {
+    type Output = [u8; OUTPUT_LEN];
+    const OUTPUT_SIZE: usize = OUTPUT_LEN;
+    const BLOCK_SIZE: usize = BLOCK_LEN;
+
+    #[inline]
+    fn new() -> Self {
+        Self {
+            // SHA-384 initial values (different from SHA-512)
+            state: [
+                0xcbbb9d5dc1059ed8,
+                0x629a292a367cd507,
+                0x9159015a3070dd17,
+                0x152fecd8f70e5939,
+                0x67332667ffc00b31,
+                0x8eb44a8768581511,
+                0xdb0c2e0d64f98fa7,
+                0x47b5481dbefa4fa4,
+            ],
+            buffer: [0u8; BLOCK_LEN],
+            buffer_len: 0,
+            total_len: 0,
+        }
+    }
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        let mut data = data;
+
+        while !data.is_empty() {
+            let available = BLOCK_LEN - self.buffer_len;
+            let to_copy = data.len().min(available);
+
+            self.buffer[self.buffer_len..self.buffer_len + to_copy]
+                .copy_from_slice(&data[..to_copy]);
+            self.buffer_len += to_copy;
+            self.total_len += to_copy as u64;
+            data = &data[to_copy..];
+
+            if self.buffer_len == BLOCK_LEN {
+                let block = self.buffer;
+                self.process_block(&block);
+                self.buffer_len = 0;
+            }
+        }
+    }
+
+    #[inline]
+    fn finalize(mut self) -> Self::Output {
+        // Padding: add 1 bit followed by zeros, then length
+        let bit_len = self.total_len.wrapping_mul(8);
+
+        // Append 0x80 byte (10000000 in binary)
+        self.buffer[self.buffer_len] = 0x80;
+        self.buffer_len += 1;
+
+        // If not enough room for length (16 bytes), pad and process block
+        if self.buffer_len > BLOCK_LEN - 16 {
+            self.buffer[self.buffer_len..BLOCK_LEN].fill(0);
+            let block = self.buffer;
+            self.process_block(&block);
+            self.buffer.fill(0);
+            self.buffer_len = 0;
+        }
+
+        // Pad with zeros up to length field
+        self.buffer[self.buffer_len..BLOCK_LEN - 16].fill(0);
+
+        // Append length in bits as 128-bit big-endian (upper 64 bits are 0)
+        self.buffer[BLOCK_LEN - 16..BLOCK_LEN - 8].copy_from_slice(&0u64.to_be_bytes());
+        self.buffer[BLOCK_LEN - 8..BLOCK_LEN].copy_from_slice(&bit_len.to_be_bytes());
+
+        // Process final block
+        let block = self.buffer;
+        self.process_block(&block);
+
+        // Output first 48 bytes (6 words) of state
+        let mut output = [0u8; 48];
+        for i in 0..6 {
+            output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_be_bytes());
+        }
+        output
+    }
+
+    #[inline]
+    fn finalize_reset(&mut self) -> Self::Output {
+        let result = self.clone().finalize();
+        *self = Self::new();
+        result
     }
 }
 
 /// One-shot SHA-384 hash
 pub fn sha384(data: &[u8]) -> [u8; OUTPUT_LEN] {
+    use crate::traits::HashFunction;
     let mut hasher = Sha384::new();
     hasher.update(data);
     hasher.finalize()
@@ -284,6 +299,7 @@ pub fn sha384(data: &[u8]) -> [u8; OUTPUT_LEN] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::traits::HashFunction;
 
     #[test]
     fn test_empty() {

@@ -6,6 +6,12 @@
 //!
 //! Consider using SHA-256, SHA-384, or SHA-512 for new applications.
 
+/// SHA-1 output length in bytes (160 bits)
+pub const OUT_LEN: usize = 20;
+
+/// SHA-1 block length in bytes (512 bits)
+pub const BLOCK_LEN: usize = 64;
+
 const K: [u32; 4] = [
     0x5A827999, // 0  <= t <= 19
     0x6ED9EBA1, // 20 <= t <= 39
@@ -107,6 +113,7 @@ impl AlignedBlock {
 
 /// SHA-1 hasher
 #[repr(align(64))] // Cache line alignment for better performance
+#[derive(Clone)]
 pub struct Sha1 {
     h: [u32; 5],
     buffer: [u8; 64],
@@ -115,8 +122,11 @@ pub struct Sha1 {
 }
 
 impl Sha1 {
-    /// Create a new SHA-1 hasher
-    pub fn new() -> Self {
+    // No public methods - use HashFunction trait methods instead
+
+    /// Internal: Create a new SHA-1 hasher
+    #[inline]
+    fn new_internal() -> Self {
         Self {
             h: H_INIT,
             buffer: [0u8; 64],
@@ -125,9 +135,9 @@ impl Sha1 {
         }
     }
 
-    /// Update the hasher with input data
+    /// Internal: Update the hasher with input data
     #[inline]
-    pub fn update(&mut self, data: &[u8]) {
+    fn update_internal(&mut self, data: &[u8]) {
         let mut remaining = data;
 
         while !remaining.is_empty() {
@@ -169,9 +179,9 @@ impl Sha1 {
         self.process_block(&final_block);
     }
 
-    /// Finalize the hash and return the digest
+    /// Internal: Finalize the hash and return the digest
     #[inline]
-    pub fn finalize(mut self) -> [u8; 20] {
+    fn finalize_internal(mut self) -> [u8; 20] {
         let bit_len = self.total_len + (self.buffer_len as u64 * 8);
 
         // Append padding
@@ -626,7 +636,42 @@ impl Sha1 {
 
 impl Default for Sha1 {
     fn default() -> Self {
-        Self::new()
+        Self::new_internal()
+    }
+}
+
+// ===== HashFunction Trait Implementation =====
+
+impl crate::traits::HashFunction for Sha1 {
+    type Output = [u8; OUT_LEN];
+    const OUTPUT_SIZE: usize = OUT_LEN;
+    const BLOCK_SIZE: usize = BLOCK_LEN;
+
+    #[inline]
+    fn new() -> Self {
+        Self::new_internal()
+    }
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        self.update_internal(data)
+    }
+
+    #[inline]
+    fn finalize(self) -> Self::Output {
+        self.finalize_internal()
+    }
+
+    #[inline]
+    fn finalize_reset(&mut self) -> Self::Output {
+        let clone = self.clone();
+        *self = Self::new_internal();
+        clone.finalize_internal()
+    }
+
+    #[inline]
+    fn hash(data: &[u8]) -> Self::Output {
+        sha1(data)
     }
 }
 
@@ -894,14 +939,15 @@ pub fn sha1(data: &[u8]) -> [u8; 20] {
     }
 
     // General-purpose path for larger data
-    let mut hasher = Sha1::new();
-    hasher.update(data);
-    hasher.finalize()
+    let mut hasher = Sha1::new_internal();
+    hasher.update_internal(data);
+    hasher.finalize_internal()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::traits::HashFunction;
 
     #[test]
     fn test_sha1_empty() {
