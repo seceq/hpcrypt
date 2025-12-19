@@ -9,7 +9,7 @@ use crate::oprf::{EvaluatedElement, OprfError};
 use hpcrypt_curves::ed25519::{base_point, EdwardsPoint, Scalar};
 use hpcrypt_hash::sha512;
 use hpcrypt_kdf::{HkdfSha256, HkdfSha512};
-use hpcrypt_mac::{HmacSha256, HmacSha512};
+use hpcrypt_mac::{HmacSha256, HmacSha512, Mac};
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -275,12 +275,10 @@ pub fn key_stretch(input: &[u8], config: &Config) -> Result<Vec<u8>, OpaqueError
 pub fn compute_mac(key: &[u8], message: &[u8], config: &Config) -> Result<Vec<u8>, OpaqueError> {
     match config.mac {
         MacFunction::HmacSha256 => {
-            let hmac = HmacSha256::new(key);
-            Ok(hmac.compute(message).to_vec())
+            Ok(HmacSha256::compute(key, message).to_vec())
         }
         MacFunction::HmacSha512 => {
-            let hmac = HmacSha512::new(key);
-            Ok(hmac.compute(message).to_vec())
+            Ok(HmacSha512::compute(key, message).to_vec())
         }
     }
 }
