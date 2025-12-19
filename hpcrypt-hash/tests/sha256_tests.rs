@@ -1,5 +1,6 @@
 // Comprehensive SHA-256 tests
 
+use hpcrypt_hash::HashFunction;
 use hpcrypt_hash::sha256::{sha256, Sha256};
 
 #[test]
