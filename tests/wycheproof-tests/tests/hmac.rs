@@ -6,7 +6,7 @@
 //! - HMAC-SHA-512
 
 #[cfg(feature = "enable-mac-tests")]
-use hpcrypt_mac::{HmacSha256, HmacSha384, HmacSha512};
+use hpcrypt_mac::{HmacSha256, HmacSha384, HmacSha512, Mac};
 use serde::Deserialize;
 use wycheproof_tests::{decode_hex, TestResult, TestStats};
 
@@ -76,16 +76,13 @@ fn test_hmac_file(filename: &str, algorithm_name: &str, hash_bits: usize) {
             // Compute HMAC based on hash variant
             let computed_tag: Vec<u8> = match hash_bits {
                 256 => {
-                    let hmac = HmacSha256::new(&key);
-                    hmac.compute(&message).to_vec()
+                    HmacSha256::compute(&key, &message).to_vec()
                 }
                 384 => {
-                    let hmac = HmacSha384::new(&key);
-                    hmac.compute(&message).to_vec()
+                    HmacSha384::compute(&key, &message).to_vec()
                 }
                 512 => {
-                    let hmac = HmacSha512::new(&key);
-                    hmac.compute(&message).to_vec()
+                    HmacSha512::compute(&key, &message).to_vec()
                 }
                 _ => panic!("Unsupported hash size"),
             };
