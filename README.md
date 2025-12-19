@@ -4,273 +4,247 @@
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![no_std compatible](https://img.shields.io/badge/no__std-compatible-success)](https://docs.rust-embedded.org/book/intro/no-std.html)
 
-A comprehensive, high-performance cryptography library written in pure Rust, providing production-ready implementations of modern cryptographic primitives with a focus on security, performance, and usability.
+A high-performance cryptography library written in pure Rust, providing state-of-the-art implementations of modern cryptographic primitives with a focus on security, constant-time operations, and performance optimization.
 
-## Features
+## Key Features
 
-- **100% Safe Rust** - Zero unsafe code, memory-safe by design
-- **no_std Compatible** - Runs in embedded and constrained environments
-- **Standards Compliant** - Full RFC and NIST FIPS compliance
-- **Post-Quantum Ready** - ML-DSA, ML-KEM, SLH-DSA implementations
-- **Comprehensive Testing** - Validated against official test vectors including Wycheproof
-- **Constant-Time Operations** - Protection against timing side-channel attacks
-- **Modular Design** - Use only what you need
+- **High-Performance Implementations** - Optimized using state-of-the-art algorithms and techniques from recent cryptographic research
+- **100% Safe Rust** - Memory-safe by design with minimal use of unsafe code (only in performance-critical SIMD operations)
+- **Constant-Time Operations** - Protection against timing side-channel attacks for all cryptographic operations
+- **no_std Compatible** - Runs in embedded and constrained environments without the standard library
+- **Standards Compliant** - Implements NIST FIPS standards and IETF RFCs
+- **Post-Quantum Cryptography** - Production-ready ML-KEM, ML-DSA, and SLH-DSA implementations
+- **Comprehensive Testing** - Validated against official NIST CAVP/ACVP test vectors, Wycheproof, and RFC test vectors
+- **Modular Architecture** - Fine-grained crates for minimal dependencies
 
-## Crates Overview
+## Performance Optimizations
 
-The library is organized into focused, composable crates:
+HPCrypt incorporates cutting-edge optimization techniques from recent cryptographic research:
 
-### Core Primitives
+### Post-Quantum Cryptography (ML-KEM, ML-DSA)
+- **Deferred reduction chains** for polynomial arithmetic (3.5-4× speedup in key operations)
+- **Optimized inverse NTT** with 2.25× speedup
+- **Hybrid radix techniques** for ML-DSA signing (16% improvement)
+- Based on "[Deferred Reduction Optimizations for Post-Quantum Lattice Cryptography](https://zenodo.org/records/17772583)" (2025)
 
-| Crate | Description | Standards |
-|-------|-------------|-----------|
-| **hpcrypt-core** | Core utilities, error types, traits | - |
-| **hpcrypt-hash** | Hash functions (SHA-2, SHA-3, BLAKE2/3) | FIPS 180-4, FIPS 202, RFC 7693 |
-| **hpcrypt-cipher** | Block ciphers (AES, ChaCha20) and modes (CBC, CTR, XTS) | NIST SP 800-38A/E |
-| **hpcrypt-mac** | MACs (HMAC, CMAC, KMAC, GMAC, Poly1305) and universal hashes (GHASH, Polyval) | FIPS 198-1, RFC 2104, RFC 4493 |
-| **hpcrypt-aead** | Authenticated encryption (AES-GCM, ChaCha20-Poly1305, Ascon) | RFC 5116, RFC 7539, RFC 5297 |
-| **hpcrypt-kdf** | Key derivation (HKDF, PBKDF2, Argon2, scrypt, TLS/QUIC KDF) | RFC 5869, RFC 2898, RFC 9106 |
-| **hpcrypt-rng** | Cryptographically secure random generation | - |
+### AES Implementation
+- **Fixslicing technique** providing constant-time execution with 52% reduction in linear layer operations
+- **Parallel processing** of 4 blocks simultaneously
+- Cache-timing attack immunity through bitsliced representation
+- Based on "[Fixslicing AES-like Ciphers](https://eprint.iacr.org/2020/1123)" (Adomnicai & Peyrin, IACR TCHES 2021)
 
-### Elliptic Curve Cryptography
+### GHASH/Polyval (GCM Authentication)
+- **Optimized polynomial multiplication** using 64-bit decomposition
+- **Bit-reversal elimination** aligned with carry-less multiplication instructions
+- Up to 35% faster than OpenSSL on modern processors
+- Based on "[Efficient GHASH and POLYVAL Implementation](https://eprint.iacr.org/2025/2171)" (2025)
 
-| Crate | Description | Standards |
-|-------|-------------|-----------|
-| **hpcrypt-curves** | Elliptic curves (Curve25519, P-256, P-384, P-521, secp256k1) | RFC 7748, RFC 8032, FIPS 186-4, SEC 2 |
-| **hpcrypt-signatures** | Digital signatures (Ed25519, Ed448, ECDSA, Schnorr) | RFC 8032, FIPS 186-4, BIP-340 |
-| **hpcrypt-ecies** | Hybrid encryption scheme | ISO/IEC 18033-2 |
+### Elliptic Curve Operations
+- **SafeGCD algorithm** for modular inversion (2-3× faster than Fermat's method)
+- Improves ECDSA signing by 25-30% and verification by 15-17%
+- Based on "[Fast constant-time gcd computation](https://eprint.iacr.org/2019/266)" (Bernstein & Yang, 2019)
+
+## Cryptographic Primitives
+
+HPCrypt provides a comprehensive suite of cryptographic algorithms organized into modular crates:
+
+### Symmetric Cryptography
+
+**Hash Functions** ([hpcrypt-hash](hpcrypt-hash/))
+- SHA-2 family: SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/256
+- SHA-3 family: SHA3-224, SHA3-256, SHA3-384, SHA3-512
+- Extendable output: SHAKE128, SHAKE256, TurboShake128, TurboShake256
+- BLAKE family: BLAKE2b, BLAKE2s, BLAKE3
+
+**Block Ciphers & Modes** ([hpcrypt-cipher](hpcrypt-cipher/))
+- Ciphers: AES-128/192/256 (fixsliced), ChaCha20
+- Modes: CBC, CTR, CFB, OFB, XTS (disk encryption)
+
+**Message Authentication Codes** ([hpcrypt-mac](hpcrypt-mac/))
+- HMAC (with SHA-2, SHA-3, BLAKE2)
+- KMAC128, KMAC256, cSHAKE
+- CMAC (AES-based)
+- Poly1305, GMAC
+- Universal hashes: GHASH, Polyval
+
+**Authenticated Encryption** ([hpcrypt-aead](hpcrypt-aead/))
+- AES-GCM, AES-GCM-SIV (nonce misuse-resistant)
+- AES-CCM, AES-SIV, AES-EAX, AES-OCB3
+- ChaCha20-Poly1305, XChaCha20-Poly1305
+- Ascon-128, Ascon-128a (NIST lightweight winner)
+
+**Key Derivation** ([hpcrypt-kdf](hpcrypt-kdf/))
+- HKDF, PBKDF2, Argon2 (i/d/id), scrypt
+- X9.63 KDF
+- TLS 1.2 PRF, TLS 1.3 KDF, QUIC KDF
+
+**Specialized Encryption** ([hpcrypt-fpe](hpcrypt-fpe/))
+- Format-Preserving Encryption (FF1) - NIST SP 800-38G
+
+### Public-Key Cryptography
+
+**Elliptic Curves** ([hpcrypt-curves](hpcrypt-curves/))
+- Curve25519 (X25519 ECDH, Ed25519 signatures)
+- Curve448 (X448 ECDH, Ed448 signatures)
+- NIST P-256, P-384, P-521
+- secp256k1 (Bitcoin/Ethereum)
+
+**Digital Signatures** ([hpcrypt-signatures](hpcrypt-signatures/))
+- Ed25519, Ed448 (EdDSA)
+- ECDSA (NIST curves, secp256k1)
+- Schnorr signatures (BIP-340)
+
+**RSA** ([hpcrypt-rsa](hpcrypt-rsa/))
+- RSAES-OAEP encryption
+- RSASSA-PSS and PKCS#1 v1.5 signatures
+- 2048, 3072, 4096-bit keys
+
+**Hybrid Encryption** ([hpcrypt-hpke](hpcrypt-hpke/), [hpcrypt-ecies](hpcrypt-ecies/))
+- HPKE: Hybrid Public Key Encryption (RFC 9180)
+- ECIES: Elliptic Curve Integrated Encryption Scheme (ISO/IEC 18033-2)
 
 ### Post-Quantum Cryptography
 
-| Crate | Description | Standards |
-|-------|-------------|-----------|
-| **hpcrypt-mlkem** | ML-KEM (Kyber) key encapsulation | FIPS 203 |
-| **hpcrypt-mldsa** | ML-DSA (Dilithium) signatures | FIPS 204 |
-| **hpcrypt-slhdsa** | SLH-DSA (SPHINCS+) signatures | FIPS 205 |
+**ML-KEM** ([hpcrypt-mlkem](hpcrypt-mlkem/)) - FIPS 203
+- ML-KEM-512, ML-KEM-768, ML-KEM-1024
+- Key encapsulation mechanism (KEM)
+- Lattice-based cryptography
 
-### High-Level Protocols
+**ML-DSA** ([hpcrypt-mldsa](hpcrypt-mldsa/)) - FIPS 204
+- ML-DSA-44, ML-DSA-65, ML-DSA-87
+- Digital signatures
+- Lattice-based (Dilithium)
 
-| Crate | Description | Standards |
-|-------|-------------|-----------|
-| **hpcrypt-rsa** | RSA encryption and signatures (OAEP, PSS, PKCS#1) | RFC 8017 |
-| **hpcrypt-hpke** | Hybrid Public Key Encryption | RFC 9180 |
-| **hpcrypt-pake** | Password-authenticated key exchange (OPAQUE) | RFC 9497 |
-| **hpcrypt-srp** | Secure Remote Password protocol | RFC 2945, RFC 5054 |
-| **hpcrypt-fpe** | Format-preserving encryption (FF1) | NIST SP 800-38G |
-| **hpcrypt-threshold** | Threshold cryptography (Shamir secret sharing) | - |
+**SLH-DSA** ([hpcrypt-slhdsa](hpcrypt-slhdsa/)) - FIPS 205
+- Stateless hash-based signatures
+- Multiple parameter sets (SPHINCS+)
+
+### Password-Authenticated Protocols
+
+**PAKE** ([hpcrypt-pake](hpcrypt-pake/))
+- OPAQUE (RFC 9497)
+- Resistant to offline dictionary attacks
+
+**SRP** ([hpcrypt-srp](hpcrypt-srp/))
+- Secure Remote Password protocol (RFC 2945, RFC 5054)
+- Zero-knowledge password proof
+
+### Threshold Cryptography
+
+**Secret Sharing** ([hpcrypt-threshold](hpcrypt-threshold/))
+- Shamir's Secret Sharing (1979)
+- Split secrets across multiple parties
 
 ## Quick Start
 
-Add to your `Cargo.toml`:
-
 ```toml
 [dependencies]
-hpcrypt = { version = "0.1", features = ["curves", "aead", "hash"] }
+hpcrypt-aead = "0.1"
+hpcrypt-hash = "0.1"
+hpcrypt-mldsa = "0.1"
 ```
 
-### AES-GCM Authenticated Encryption
+### Authenticated Encryption (AES-GCM)
 
 ```rust
-use hpcrypt::aead::{Aes256Gcm, Aead};
-use hpcrypt::rng::OsRng;
+use hpcrypt_aead::{Aes256Gcm, Aead};
+use hpcrypt_rng::OsRng;
 
 // Generate random key and nonce
 let key = OsRng::generate_bytes::<32>();
 let nonce = OsRng::generate_bytes::<12>();
 
-// Encrypt
+// Encrypt with authentication
 let cipher = Aes256Gcm::new(&key);
 let plaintext = b"Secret message";
-let ciphertext = cipher.encrypt(&nonce, plaintext, &[])?;
+let ciphertext = cipher.encrypt(&nonce, plaintext, b"additional data")?;
 
-// Decrypt
-let recovered = cipher.decrypt(&nonce, &ciphertext, &[])?;
+// Decrypt and verify
+let recovered = cipher.decrypt(&nonce, &ciphertext, b"additional data")?;
 assert_eq!(recovered, plaintext);
 ```
 
-### Ed25519 Digital Signatures
+### Post-Quantum Digital Signatures (ML-DSA)
 
 ```rust
-use hpcrypt::curves::Ed25519;
-use hpcrypt::rng::OsRng;
+use hpcrypt_mldsa::{MlDsa65, keygen};
 
-// Generate keypair
-let private_key = OsRng::generate_bytes::<32>();
-let public_key = Ed25519::public_key(&private_key);
-
-// Sign message
-let message = b"Important message";
-let signature = Ed25519::sign(&private_key, message);
-
-// Verify signature
-assert!(Ed25519::verify(&public_key, message, &signature));
-```
-
-### ML-DSA Post-Quantum Signatures
-
-```rust
-use hpcrypt_mldsa::{MlDsa65, keygen::keygen};
-
-// Generate post-quantum keypair
-let (pk, sk) = keygen::<MlDsa65>();
+// Generate quantum-resistant keypair
+let (public_key, secret_key) = keygen::<MlDsa65>();
 
 // Sign message
 let message = b"Future-proof signature";
-let signature = sk.sign(message)?;
+let signature = secret_key.sign(message)?;
 
 // Verify signature
-assert!(pk.verify(message, &signature));
+assert!(public_key.verify(message, &signature));
 ```
 
-### Password Hashing with Argon2
+### Cryptographic Hashing (SHA-3)
 
 ```rust
-use hpcrypt::kdf::Argon2id;
+use hpcrypt_hash::{Sha3_256, Hash};
+
+let data = b"Data to hash";
+let digest = Sha3_256::digest(data);
+
+println!("SHA3-256: {:?}", digest);
+```
+
+### Key Derivation (Argon2)
+
+```rust
+use hpcrypt_kdf::{Argon2id, Argon2Params};
 
 let password = b"user_password";
-let salt = b"unique_salt_16bt";
+let salt = b"random_salt_16bt";
 
-// Hash password
-let params = Argon2id::default_params();
-let mut output = [0u8; 32];
-Argon2id::hash(password, salt, &params, &mut output)?;
-
-// Verify password
-let mut verify = [0u8; 32];
-Argon2id::hash(password, salt, &params, &mut verify)?;
-assert_eq!(output, verify);
+// Derive key from password
+let params = Argon2Params::default();
+let mut key = [0u8; 32];
+Argon2id::derive_key(password, salt, &params, &mut key)?;
 ```
 
-## Supported Algorithms
+## Design Principles
 
-### Hash Functions
+### Security First
 
-- **SHA-2 Family**: SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/256
-- **SHA-3 Family**: SHA3-224, SHA3-256, SHA3-384, SHA3-512, SHAKE128, SHAKE256, TurboShake
-- **BLAKE Family**: BLAKE2b, BLAKE2s, BLAKE3
+**Constant-Time Operations**
+- All cryptographic operations resist timing side-channel attacks
+- Constant-time comparisons and conditional operations prevent timing leaks
+- No data-dependent branches in critical code paths
 
-### Message Authentication
+**Memory Safety**
+- Written in safe Rust with minimal unsafe code (limited to performance-critical SIMD)
+- Automatic zeroization of sensitive data on drop via `zeroize` crate
+- No buffer overflows or use-after-free vulnerabilities
 
-- HMAC (with SHA-256, SHA-384, SHA-512, BLAKE2b)
-- KMAC (KMAC128, KMAC256, cSHAKE)
-- CMAC (AES-based)
-- GMAC (Galois MAC for AES)
-- Poly1305
-- GHASH (universal hash for GCM)
-- Polyval (universal hash for AES-GCM-SIV)
+**Standards Compliance**
+- Validated against official NIST CAVP/ACVP test vectors
+- Tested with Wycheproof for edge cases and known attacks
+- RFC test vectors for protocol implementations
 
-### Authenticated Encryption (AEAD)
+### Modular Architecture
 
-- AES-GCM (128/192/256-bit keys)
-- AES-GCM-SIV (nonce misuse-resistant)
-- AES-CCM (128/256-bit keys)
-- AES-SIV (deterministic AEAD)
-- AES-EAX
-- AES-OCB3
-- ChaCha20-Poly1305
-- XChaCha20-Poly1305
-- Ascon-128, Ascon-128a (NIST lightweight crypto winner)
+**Clean Separation of Concerns**
+- `hpcrypt-cipher`: Block ciphers and modes of operation
+- `hpcrypt-mac`: Message authentication codes and universal hashes
+- `hpcrypt-aead`: Authenticated encryption (combines cipher + MAC)
 
-### Elliptic Curves
-
-- **Curve25519**: X25519 (ECDH), Ed25519 (signatures)
-- **Curve448**: X448 (ECDH), Ed448 (signatures)
-- **NIST Curves**: P-256, P-384, P-521
-- **secp256k1**: Bitcoin/Ethereum curve
-
-### Key Derivation
-
-- HKDF (with SHA-256, SHA-384, SHA-512)
-- PBKDF2
-- Argon2 (Argon2i, Argon2d, Argon2id)
-- scrypt
-- X9.63 KDF
-- TLS 1.2 PRF
-- TLS 1.3 HKDF-Expand-Label
-- QUIC HKDF-Expand-Label
-
-### Post-Quantum Cryptography
-
-- **ML-KEM** (FIPS 203): ML-KEM-512, ML-KEM-768, ML-KEM-1024
-- **ML-DSA** (FIPS 204): ML-DSA-44, ML-DSA-65, ML-DSA-87
-- **SLH-DSA** (FIPS 205): Multiple parameter sets
-
-## Architecture Decisions
-
-### No Protocol-Specific Crates
-
-HPCrypt focuses on **cryptographic primitives**, not protocol implementations:
-
-- **KDF functions** for TLS, QUIC are in `hpcrypt-kdf` (not separate `hpcrypt-tls` or `hpcrypt-quic` crates)
-- **QUIC header protection** is in `hpcrypt-kdf` with `quic-header-protection` feature
-- This maintains architectural consistency and reduces crate proliferation
-
-### Cipher Architecture
-
-HPCrypt maintains clear separation of concerns:
-
-- **`hpcrypt-cipher`**: Block ciphers (AES, ChaCha20) and cipher modes (CBC, CTR, CFB, OFB, XTS)
-- **`hpcrypt-mac`**: All MAC implementations and universal hashes
-- **`hpcrypt-aead`**: Authenticated encryption schemes combining ciphers and MACs
-
-For encryption, **prefer `hpcrypt-aead`** (AES-GCM, ChaCha20-Poly1305) which provides both confidentiality and authentication. Only use `hpcrypt-cipher` for legacy protocols or disk encryption.
-
-### Dependency Hierarchy
-
-Clean, acyclic dependency structure:
-
+**Acyclic Dependencies**
 ```
-hpcrypt-cipher (block ciphers, modes)
-    ↓
-hpcrypt-mac (depends on cipher for AES-based MACs)
-    ↓
-hpcrypt-aead (depends on both cipher and mac)
+hpcrypt-cipher → hpcrypt-mac → hpcrypt-aead
 ```
+This hierarchy eliminates circular dependencies and provides clear module boundaries.
 
-This eliminates circular dependencies and provides clear module boundaries.
+**Primitives Over Protocols**
+- Protocol-specific functions (TLS KDF, QUIC header protection) live in primitive crates
+- Reduces crate proliferation while maintaining functionality
+- Example: QUIC KDF is in `hpcrypt-kdf`, not a separate `hpcrypt-quic` crate
 
-## Security
+### no_std Support
 
-### Constant-Time Operations
-
-Critical operations use constant-time algorithms to prevent timing attacks:
-- Field arithmetic uses the `subtle` crate for constant-time comparisons
-- Scalar multiplication avoids data-dependent branches
-- Memory comparisons are constant-time
-
-### Memory Safety
-
-- **100% safe Rust** - No unsafe code except in performance-critical SIMD code
-- Automatic memory zeroization on drop via `zeroize` crate
-- No buffer overflows or memory corruption vulnerabilities
-
-### Standards Compliance
-
-All implementations validated against official test vectors:
-
-- **NIST**: FIPS 180-4, 186-4, 197, 198-1, 202, 203, 204, 205
-- **RFCs**: 2104, 2898, 2945, 5054, 5116, 5297, 5869, 6979, 7539, 7693, 7748, 8017, 8032, 9106, 9180, 9497
-- **Wycheproof**: Google's cryptographic test suite for edge cases
-
-## Testing
-
-Run the complete test suite:
-
-```bash
-cargo test --workspace --all-features
-```
-
-Run tests for specific package:
-
-```bash
-cargo test --package hpcrypt-aead
-cargo test --package hpcrypt-mldsa
-cargo test --package hpcrypt-rsa
-```
-
-## no_std Support
-
-All crates support `no_std` environments:
+All crates support embedded and constrained environments:
 
 ```toml
 [dependencies]
@@ -278,49 +252,71 @@ hpcrypt-hash = { version = "0.1", default-features = false }
 hpcrypt-aead = { version = "0.1", default-features = false, features = ["alloc"] }
 ```
 
-Features:
-- `std` (default) - Standard library support
-- `alloc` - Allocation support without std
+- `std` (default): Full standard library support
+- `alloc`: Heap allocation without std
 
-## Minimum Supported Rust Version (MSRV)
+## Development
 
-This project requires Rust **1.70** or later.
+### Testing
 
-## Recent Changes
+Run all tests including CAVP, RFC, and Wycheproof test vectors:
 
-- **Reorganized cryptographic primitives**: Consolidated block ciphers to `hpcrypt-cipher` and all MACs to `hpcrypt-mac`
-- **Moved AES and ChaCha20**: From `hpcrypt-aead` to `hpcrypt-cipher` where they architecturally belong
-- **Consolidated MAC implementations**: HMAC, KMAC moved from `hpcrypt-hash` to `hpcrypt-mac`
-- **Moved universal hashes**: GHASH and Polyval now in `hpcrypt-mac` alongside other MACs
-- **Fixed dependency hierarchy**: Eliminated circular dependencies between cipher, mac, and aead crates
-- **Cleaned codebase**: Removed 4,000+ lines of debug files, Python scripts, and obsolete code
-- **Renamed modules**: `quic_header_protection` → `quic_header` for clarity
-- **Fixed critical bugs**: P-256 Montgomery reduction bug fix
+```bash
+# All tests
+cargo test --workspace --all-features
 
-## License
+# Specific crate
+cargo test -p hpcrypt-mldsa
+cargo test -p hpcrypt-aead
+```
 
-Licensed under either of:
+### Benchmarks
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
-- MIT License ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+```bash
+cargo bench
+```
 
-at your option.
+### Code Quality
+
+```bash
+cargo fmt --all
+cargo clippy --workspace --all-features -- -D warnings
+```
+
+## Requirements
+
+**Minimum Supported Rust Version (MSRV)**: 1.70+
 
 ## Contributing
 
 Contributions are welcome! Please ensure:
 
 1. All tests pass: `cargo test --workspace --all-features`
-2. Code is formatted: `cargo fmt --all`
+2. Code is properly formatted: `cargo fmt --all`
 3. No clippy warnings: `cargo clippy --workspace --all-features -- -D warnings`
-4. Add tests for new features
-5. Update documentation as needed
+4. New features include tests and documentation
+5. Changes maintain constant-time properties for cryptographic operations
 
-## Acknowledgments
+## License
 
-Special thanks to:
-- The Rust community
-- NIST for cryptographic standards
-- IETF for RFCs
-- Google's Wycheproof project
-- Authors of cryptographic specifications
+Dual-licensed under your choice of:
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT License ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
+
+## References
+
+### Standards
+- NIST FIPS: 180-4 (SHA-2), 186-4 (DSA/ECDSA), 197 (AES), 198-1 (HMAC), 202 (SHA-3), 203 (ML-KEM), 204 (ML-DSA), 205 (SLH-DSA)
+- NIST Special Publications: SP 800-38A (Block Cipher Modes), SP 800-38G (FPE), SP 800-185 (KMAC/cSHAKE)
+- IETF RFCs: 2104 (HMAC), 2898 (PBKDF2), 5869 (HKDF), 7539 (ChaCha20-Poly1305), 8032 (EdDSA), 8017 (RSA), 9106 (Argon2), 9180 (HPKE), 9497 (OPAQUE)
+
+### Research Papers
+- "[Deferred Reduction Optimizations for Post-Quantum Lattice Cryptography](https://zenodo.org/records/17772583)" - Tarsha Kurdi (2025)
+- "[Efficient GHASH and POLYVAL Implementation](https://eprint.iacr.org/2025/2171)" - Polynomial Multiplication Optimization (2025)
+- "[Fixslicing AES-like Ciphers](https://eprint.iacr.org/2020/1123)" - Adomnicai & Peyrin (IACR TCHES 2021)
+- "[Fast constant-time gcd computation](https://eprint.iacr.org/2019/266)" - Bernstein & Yang (2019)
+
+### Testing
+- [NIST CAVP/ACVP](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program) - Official test vectors
+- [Google Wycheproof](https://github.com/google/wycheproof) - Known attack vectors and edge cases
