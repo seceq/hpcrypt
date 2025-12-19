@@ -1275,7 +1275,7 @@ mod tests {
     #[cfg(feature = "std")]
     fn test_uniform_eta_matches_c_reference() {
         use crate::params::MlDsa65;
-        use hpcrypt_hash::Shake256;
+        use hpcrypt_hash::{Shake256, XofFunction};
 
         // KAT xi seed
         let xi: [u8; 32] = [

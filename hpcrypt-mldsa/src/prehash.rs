@@ -27,6 +27,7 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 
+use hpcrypt_hash::{HashFunction, XofFunction};
 use hpcrypt_hash::{
     Sha256, Sha384, Sha512,
     Sha3_224, Sha3_256, Sha3_384, Sha3_512,

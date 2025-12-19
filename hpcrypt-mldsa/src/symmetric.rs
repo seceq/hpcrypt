@@ -15,7 +15,7 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 
-use hpcrypt_hash::{Shake128, Shake256};
+use hpcrypt_hash::{Shake128, Shake256, XofFunction};
 
 /// Extendable Output Function (XOF)
 ///
