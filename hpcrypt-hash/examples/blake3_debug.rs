@@ -1,3 +1,4 @@
+use hpcrypt_hash::HashFunction;
 use hpcrypt_hash::blake3::Blake3;
 
 fn main() {

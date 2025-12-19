@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use hpcrypt_hash::{Shake128, Shake256, TurboShake128, TurboShake256};
+use hpcrypt_hash::{Shake128, Shake256, TurboShake128, TurboShake256, XofFunction};
 
 /// Benchmark SHAKE128 with 32-byte output (common use case)
 fn shake128_32b_output(c: &mut Criterion) {
@@ -11,7 +11,7 @@ fn shake128_32b_output(c: &mut Criterion) {
             let mut hasher = Shake128::new();
             hasher.update(black_box(b"abc"));
             let mut output = [0u8; 32];
-            hasher.finalize(&mut output);
+            hasher.clone().finalize(&mut output);
             black_box(output);
         });
     });
@@ -30,7 +30,7 @@ fn shake128_various_outputs(c: &mut Criterion) {
                 let mut hasher = Shake128::new();
                 hasher.update(black_box(b"abc"));
                 let mut output = vec![0u8; size];
-                hasher.finalize(&mut output);
+                hasher.clone().finalize(&mut output);
                 black_box(output);
             });
         });
@@ -52,7 +52,7 @@ fn shake128_large_input(c: &mut Criterion) {
                 let mut hasher = Shake128::new();
                 hasher.update(black_box(data));
                 let mut output = [0u8; 32];
-                hasher.finalize(&mut output);
+                hasher.clone().finalize(&mut output);
                 black_box(output);
             });
         });
@@ -73,7 +73,7 @@ fn shake128_incremental(c: &mut Criterion) {
             hasher.update(black_box(&data[20..30]));
             hasher.update(black_box(&data[30..]));
             let mut output = [0u8; 32];
-            hasher.finalize(&mut output);
+            hasher.clone().finalize(&mut output);
             black_box(output);
         });
     });
@@ -89,7 +89,7 @@ fn shake256_64b_output(c: &mut Criterion) {
             let mut hasher = Shake256::new();
             hasher.update(black_box(b"abc"));
             let mut output = [0u8; 64];
-            hasher.finalize(&mut output);
+            hasher.clone().finalize(&mut output);
             black_box(output);
         });
     });
@@ -108,7 +108,7 @@ fn shake256_various_outputs(c: &mut Criterion) {
                 let mut hasher = Shake256::new();
                 hasher.update(black_box(b"abc"));
                 let mut output = vec![0u8; size];
-                hasher.finalize(&mut output);
+                hasher.clone().finalize(&mut output);
                 black_box(output);
             });
         });
@@ -130,7 +130,7 @@ fn shake256_large_input(c: &mut Criterion) {
                 let mut hasher = Shake256::new();
                 hasher.update(black_box(data));
                 let mut output = [0u8; 64];
-                hasher.finalize(&mut output);
+                hasher.clone().finalize(&mut output);
                 black_box(output);
             });
         });
@@ -145,7 +145,7 @@ fn shake_empty_input(c: &mut Criterion) {
         b.iter(|| {
             let mut hasher = Shake128::new();
             let mut output = [0u8; 32];
-            hasher.finalize(&mut output);
+            hasher.clone().finalize(&mut output);
             black_box(output);
         });
     });
@@ -154,7 +154,7 @@ fn shake_empty_input(c: &mut Criterion) {
         b.iter(|| {
             let mut hasher = Shake256::new();
             let mut output = [0u8; 64];
-            hasher.finalize(&mut output);
+            hasher.clone().finalize(&mut output);
             black_box(output);
         });
     });
@@ -172,7 +172,7 @@ fn turboshake128_vs_shake128(c: &mut Criterion) {
             let mut hasher = Shake128::new();
             hasher.update(black_box(b"abc"));
             let mut output = [0u8; 32];
-            hasher.finalize(&mut output);
+            hasher.clone().finalize(&mut output);
             black_box(output);
         });
     });
@@ -182,7 +182,7 @@ fn turboshake128_vs_shake128(c: &mut Criterion) {
             let mut hasher = TurboShake128::new();
             hasher.update(black_box(b"abc"));
             let mut output = [0u8; 32];
-            hasher.finalize(&mut output);
+            hasher.clone().finalize(&mut output);
             black_box(output);
         });
     });
@@ -200,7 +200,7 @@ fn turboshake256_vs_shake256(c: &mut Criterion) {
             let mut hasher = Shake256::new();
             hasher.update(black_box(b"abc"));
             let mut output = [0u8; 64];
-            hasher.finalize(&mut output);
+            hasher.clone().finalize(&mut output);
             black_box(output);
         });
     });
@@ -210,7 +210,7 @@ fn turboshake256_vs_shake256(c: &mut Criterion) {
             let mut hasher = TurboShake256::new();
             hasher.update(black_box(b"abc"));
             let mut output = [0u8; 64];
-            hasher.finalize(&mut output);
+            hasher.clone().finalize(&mut output);
             black_box(output);
         });
     });
@@ -229,7 +229,7 @@ fn turboshake128_various_outputs(c: &mut Criterion) {
                 let mut hasher = TurboShake128::new();
                 hasher.update(black_box(b"abc"));
                 let mut output = vec![0u8; size];
-                hasher.finalize(&mut output);
+                hasher.clone().finalize(&mut output);
                 black_box(output);
             });
         });
@@ -251,7 +251,7 @@ fn turboshake128_large_input(c: &mut Criterion) {
                 let mut hasher = TurboShake128::new();
                 hasher.update(black_box(data));
                 let mut output = [0u8; 32];
-                hasher.finalize(&mut output);
+                hasher.clone().finalize(&mut output);
                 black_box(output);
             });
         });
