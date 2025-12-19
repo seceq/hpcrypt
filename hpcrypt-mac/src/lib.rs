@@ -16,6 +16,9 @@
 #[cfg(feature = "std")]
 extern crate std;
 
+// Traits
+pub mod traits;
+
 // MAC implementations
 pub mod cmac;
 pub mod ghash;
@@ -40,3 +43,6 @@ pub use kmac::{kmac128, kmac256};
 pub use kmac::{CShake128, CShake256, Kmac128, Kmac256};
 pub use poly1305::{poly1305, Poly1305};
 pub use polyval::{polyval, Polyval};
+
+// Re-export traits
+pub use traits::{Mac, MacContext};
