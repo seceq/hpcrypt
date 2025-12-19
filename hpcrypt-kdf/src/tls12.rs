@@ -39,7 +39,7 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-use hpcrypt_mac::{HmacSha256, HmacSha384, HmacSha512};
+use hpcrypt_mac::{HmacSha256, HmacSha384, HmacSha512, Mac, MacContext};
 
 /// TLS 1.2 PRF using SHA-256
 ///
@@ -114,16 +114,14 @@ fn p_hash_sha256(secret: &[u8], seed: &[u8], output: &mut [u8]) {
 
     while offset < output.len() {
         // A(i) = HMAC(secret, A(i-1))
-        let hmac = HmacSha256::new(secret);
-        a = hmac.compute(&a).to_vec();
+        a = HmacSha256::compute(secret, &a).to_vec();
 
         // P_hash chunk = HMAC(secret, A(i) + seed)
-        let mut data = Vec::new();
-        data.extend_from_slice(&a);
-        data.extend_from_slice(seed);
-
-        let hmac = HmacSha256::new(secret);
-        let chunk = hmac.compute(&data);
+        // Use streaming HMAC API to avoid allocating 'data' Vec
+        let mut ctx = HmacSha256::new_context(secret);
+        ctx.update(&a);
+        ctx.update(seed);
+        let chunk = ctx.finalize();
 
         let to_copy = core::cmp::min(hash_len, output.len() - offset);
         output[offset..offset + to_copy].copy_from_slice(&chunk[..to_copy]);
@@ -138,15 +136,13 @@ fn p_hash_sha384(secret: &[u8], seed: &[u8], output: &mut [u8]) {
     let mut offset = 0;
 
     while offset < output.len() {
-        let hmac = HmacSha384::new(secret);
-        a = hmac.compute(&a).to_vec();
+        a = HmacSha384::compute(secret, &a).to_vec();
 
-        let mut data = Vec::new();
-        data.extend_from_slice(&a);
-        data.extend_from_slice(seed);
-
-        let hmac = HmacSha384::new(secret);
-        let chunk = hmac.compute(&data);
+        // Use streaming HMAC API to avoid allocating 'data' Vec
+        let mut ctx = HmacSha384::new_context(secret);
+        ctx.update(&a);
+        ctx.update(seed);
+        let chunk = ctx.finalize();
 
         let to_copy = core::cmp::min(hash_len, output.len() - offset);
         output[offset..offset + to_copy].copy_from_slice(&chunk[..to_copy]);
@@ -161,15 +157,13 @@ fn p_hash_sha512(secret: &[u8], seed: &[u8], output: &mut [u8]) {
     let mut offset = 0;
 
     while offset < output.len() {
-        let hmac = HmacSha512::new(secret);
-        a = hmac.compute(&a).to_vec();
+        a = HmacSha512::compute(secret, &a).to_vec();
 
-        let mut data = Vec::new();
-        data.extend_from_slice(&a);
-        data.extend_from_slice(seed);
-
-        let hmac = HmacSha512::new(secret);
-        let chunk = hmac.compute(&data);
+        // Use streaming HMAC API to avoid allocating 'data' Vec
+        let mut ctx = HmacSha512::new_context(secret);
+        ctx.update(&a);
+        ctx.update(seed);
+        let chunk = ctx.finalize();
 
         let to_copy = core::cmp::min(hash_len, output.len() - offset);
         output[offset..offset + to_copy].copy_from_slice(&chunk[..to_copy]);

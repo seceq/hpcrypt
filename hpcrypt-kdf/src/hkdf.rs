@@ -5,7 +5,7 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-use hpcrypt_mac::{HmacBlake2b, HmacSha256, HmacSha384, HmacSha512};
+use hpcrypt_mac::{HmacBlake2b, HmacSha256, HmacSha384, HmacSha512, Mac, MacContext};
 
 /// HKDF using SHA-256
 pub struct HkdfSha256 {
@@ -22,7 +22,7 @@ impl HkdfSha256 {
         let zero_salt = [0u8; 32];
         let salt_key = if salt.is_empty() { &zero_salt } else { salt };
 
-        let prk = HmacSha256::new(salt_key).compute(ikm);
+        let prk = HmacSha256::compute(salt_key, ikm);
         let mut result = [0u8; 32];
         result.copy_from_slice(&prk);
         result
@@ -58,13 +58,12 @@ impl HkdfSha256 {
         let mut offset = 0;
 
         for i in 1..=n {
-            let mut data = Vec::new();
-            data.extend_from_slice(&t);
-            data.extend_from_slice(info);
-            data.push(i as u8);
-
-            let hmac = HmacSha256::new(&self.prk);
-            t = hmac.compute(&data).to_vec();
+            // Use streaming HMAC API to avoid allocating 'data' Vec
+            let mut ctx = HmacSha256::new_context(&self.prk);
+            ctx.update(&t);
+            ctx.update(info);
+            ctx.update(&[i as u8]);
+            t = ctx.finalize().to_vec();
 
             let to_copy = core::cmp::min(hash_len, output.len() - offset);
             output[offset..offset + to_copy].copy_from_slice(&t[..to_copy]);
@@ -90,7 +89,7 @@ impl HkdfSha384 {
         let zero_salt = [0u8; 48];
         let salt_key = if salt.is_empty() { &zero_salt } else { salt };
 
-        let prk = HmacSha384::new(salt_key).compute(ikm);
+        let prk = HmacSha384::compute(salt_key, ikm);
         let mut result = [0u8; 48];
         result.copy_from_slice(&prk);
         result
@@ -126,13 +125,12 @@ impl HkdfSha384 {
         let mut offset = 0;
 
         for i in 1..=n {
-            let mut data = Vec::new();
-            data.extend_from_slice(&t);
-            data.extend_from_slice(info);
-            data.push(i as u8);
-
-            let hmac = HmacSha384::new(&self.prk);
-            t = hmac.compute(&data).to_vec();
+            // Use streaming HMAC API to avoid allocating 'data' Vec
+            let mut ctx = HmacSha384::new_context(&self.prk);
+            ctx.update(&t);
+            ctx.update(info);
+            ctx.update(&[i as u8]);
+            t = ctx.finalize().to_vec();
 
             let to_copy = core::cmp::min(hash_len, output.len() - offset);
             output[offset..offset + to_copy].copy_from_slice(&t[..to_copy]);
@@ -158,7 +156,7 @@ impl HkdfSha512 {
         let zero_salt = [0u8; 64];
         let salt_key = if salt.is_empty() { &zero_salt } else { salt };
 
-        let prk = HmacSha512::new(salt_key).compute(ikm);
+        let prk = HmacSha512::compute(salt_key, ikm);
         let mut result = [0u8; 64];
         result.copy_from_slice(&prk);
         result
@@ -194,13 +192,12 @@ impl HkdfSha512 {
         let mut offset = 0;
 
         for i in 1..=n {
-            let mut data = Vec::new();
-            data.extend_from_slice(&t);
-            data.extend_from_slice(info);
-            data.push(i as u8);
-
-            let hmac = HmacSha512::new(&self.prk);
-            t = hmac.compute(&data).to_vec();
+            // Use streaming HMAC API to avoid allocating 'data' Vec
+            let mut ctx = HmacSha512::new_context(&self.prk);
+            ctx.update(&t);
+            ctx.update(info);
+            ctx.update(&[i as u8]);
+            t = ctx.finalize().to_vec();
 
             let to_copy = core::cmp::min(hash_len, output.len() - offset);
             output[offset..offset + to_copy].copy_from_slice(&t[..to_copy]);
@@ -226,10 +223,7 @@ impl HkdfBlake2b {
         let zero_salt = [0u8; 64];
         let salt_key = if salt.is_empty() { &zero_salt } else { salt };
 
-        let prk = HmacBlake2b::new(salt_key).compute(ikm);
-        let mut result = [0u8; 64];
-        result.copy_from_slice(&prk);
-        result
+        HmacBlake2b::compute(salt_key, ikm)
     }
 
     /// Create an HKDF instance from a pre-computed pseudorandom key.
@@ -262,13 +256,12 @@ impl HkdfBlake2b {
         let mut offset = 0;
 
         for i in 1..=n {
-            let mut data = Vec::new();
-            data.extend_from_slice(&t);
-            data.extend_from_slice(info);
-            data.push(i as u8);
-
-            let hmac = HmacBlake2b::new(&self.prk);
-            t = hmac.compute(&data).to_vec();
+            // Use streaming HMAC API to avoid allocating 'data' Vec
+            let mut ctx = HmacBlake2b::new_context(&self.prk);
+            ctx.update(&t);
+            ctx.update(info);
+            ctx.update(&[i as u8]);
+            t = ctx.finalize().to_vec();
 
             let to_copy = core::cmp::min(hash_len, output.len() - offset);
             output[offset..offset + to_copy].copy_from_slice(&t[..to_copy]);
@@ -289,7 +282,7 @@ pub fn hkdf_sha256(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
     } else {
         salt
     };
-    let prk = HmacSha256::new(salt_key).compute(ikm);
+    let prk = HmacSha256::compute(salt_key, ikm);
 
     // Expand
     let hash_len = 32;
@@ -303,13 +296,12 @@ pub fn hkdf_sha256(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
     let mut offset = 0;
 
     for i in 1..=n {
-        let mut data = Vec::new();
-        data.extend_from_slice(&t);
-        data.extend_from_slice(info);
-        data.push(i as u8);
-
-        let hmac = HmacSha256::new(&prk);
-        t = hmac.compute(&data).to_vec();
+        // Use streaming HMAC API to avoid allocating 'data' Vec
+        let mut ctx = HmacSha256::new_context(&prk);
+        ctx.update(&t);
+        ctx.update(info);
+        ctx.update(&[i as u8]);
+        t = ctx.finalize().to_vec();
 
         let to_copy = core::cmp::min(hash_len, output.len() - offset);
         output[offset..offset + to_copy].copy_from_slice(&t[..to_copy]);
@@ -326,7 +318,7 @@ pub fn hkdf_sha384(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
     } else {
         salt
     };
-    let prk = HmacSha384::new(salt_key).compute(ikm);
+    let prk = HmacSha384::compute(salt_key, ikm);
 
     // Expand
     let hash_len = 48;
@@ -340,13 +332,12 @@ pub fn hkdf_sha384(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
     let mut offset = 0;
 
     for i in 1..=n {
-        let mut data = Vec::new();
-        data.extend_from_slice(&t);
-        data.extend_from_slice(info);
-        data.push(i as u8);
-
-        let hmac = HmacSha384::new(&prk);
-        t = hmac.compute(&data).to_vec();
+        // Use streaming HMAC API to avoid allocating 'data' Vec
+        let mut ctx = HmacSha384::new_context(&prk);
+        ctx.update(&t);
+        ctx.update(info);
+        ctx.update(&[i as u8]);
+        t = ctx.finalize().to_vec();
 
         let to_copy = core::cmp::min(hash_len, output.len() - offset);
         output[offset..offset + to_copy].copy_from_slice(&t[..to_copy]);
@@ -363,7 +354,7 @@ pub fn hkdf_sha512(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
     } else {
         salt
     };
-    let prk = HmacSha512::new(salt_key).compute(ikm);
+    let prk = HmacSha512::compute(salt_key, ikm);
 
     // Expand
     let hash_len = 64;
@@ -377,13 +368,12 @@ pub fn hkdf_sha512(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
     let mut offset = 0;
 
     for i in 1..=n {
-        let mut data = Vec::new();
-        data.extend_from_slice(&t);
-        data.extend_from_slice(info);
-        data.push(i as u8);
-
-        let hmac = HmacSha512::new(&prk);
-        t = hmac.compute(&data).to_vec();
+        // Use streaming HMAC API to avoid allocating 'data' Vec
+        let mut ctx = HmacSha512::new_context(&prk);
+        ctx.update(&t);
+        ctx.update(info);
+        ctx.update(&[i as u8]);
+        t = ctx.finalize().to_vec();
 
         let to_copy = core::cmp::min(hash_len, output.len() - offset);
         output[offset..offset + to_copy].copy_from_slice(&t[..to_copy]);
@@ -400,7 +390,7 @@ pub fn hkdf_blake2b(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
     } else {
         salt
     };
-    let prk = HmacBlake2b::new(salt_key).compute(ikm);
+    let prk = HmacBlake2b::compute(salt_key, ikm);
 
     // Expand
     let hash_len = 64;
@@ -414,13 +404,12 @@ pub fn hkdf_blake2b(salt: &[u8], ikm: &[u8], info: &[u8], output: &mut [u8]) {
     let mut offset = 0;
 
     for i in 1..=n {
-        let mut data = Vec::new();
-        data.extend_from_slice(&t);
-        data.extend_from_slice(info);
-        data.push(i as u8);
-
-        let hmac = HmacBlake2b::new(&prk);
-        t = hmac.compute(&data).to_vec();
+        // Use streaming HMAC API to avoid allocating 'data' Vec
+        let mut ctx = HmacBlake2b::new_context(&prk);
+        ctx.update(&t);
+        ctx.update(info);
+        ctx.update(&[i as u8]);
+        t = ctx.finalize().to_vec();
 
         let to_copy = core::cmp::min(hash_len, output.len() - offset);
         output[offset..offset + to_copy].copy_from_slice(&t[..to_copy]);

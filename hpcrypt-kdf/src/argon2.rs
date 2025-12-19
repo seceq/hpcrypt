@@ -13,6 +13,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 use hpcrypt_core::error::KdfError;
+use hpcrypt_hash::HashFunction;
 use hpcrypt_hash::blake2b::{Blake2b, OUT_LEN as BLAKE2B_OUT_LEN};
 
 /// Argon2 block size in bytes (1024 bytes = 128 u64 words)
@@ -262,7 +263,7 @@ impl Argon2 {
             hasher.update(ad);
         }
 
-        hasher.finalize_fixed()
+        hasher.finalize()
     }
 
     /// Fill memory blocks sequentially (single-threaded)
@@ -458,10 +459,11 @@ const ADDRESSES_IN_BLOCK: usize = 128;
 fn hash_variable(input: &[u8], outlen: usize) -> Vec<u8> {
     if outlen <= BLAKE2B_OUT_LEN {
         // H'(X) = BLAKE2b(τ || X, τ) with τ-byte output
-        let mut hasher = Blake2b::new_with_output_len(outlen);
-        hasher.update(&(outlen as u32).to_le_bytes());
-        hasher.update(input);
-        hasher.finalize()
+        // Note: Using hpcrypt_hash::blake2b_variable for variable-length output
+        let mut data = Vec::with_capacity(4 + input.len());
+        data.extend_from_slice(&(outlen as u32).to_le_bytes());
+        data.extend_from_slice(input);
+        hpcrypt_hash::blake2b_variable(&data, outlen)
     } else {
         // For outputs > 64 bytes, use chained BLAKE2b
         // Reference implementation logic (matches argon2 crate blake2b_long):
@@ -474,7 +476,7 @@ fn hash_variable(input: &[u8], outlen: usize) -> Vec<u8> {
         let mut hasher = Blake2b::new();
         hasher.update(&(outlen as u32).to_le_bytes());
         hasher.update(input);
-        let mut prev = hasher.finalize_fixed();
+        let mut prev = hasher.finalize();
 
         // Take first 32 bytes from V1
         result.extend_from_slice(&prev[..32]);
@@ -485,14 +487,12 @@ fn hash_variable(input: &[u8], outlen: usize) -> Vec<u8> {
             let remaining = outlen - result.len();
             if remaining <= BLAKE2B_OUT_LEN {
                 // Final block: use variable-length output (1-64 bytes)
-                let mut hasher = Blake2b::new_with_output_len(remaining);
-                hasher.update(&prev);
-                result.extend_from_slice(&hasher.finalize());
+                result.extend_from_slice(&hpcrypt_hash::blake2b_variable(&prev, remaining));
             } else {
                 // Intermediate block: Vi = BLAKE2b(V_{i-1}), take first 32 bytes
                 let mut hasher = Blake2b::new();
                 hasher.update(&prev);
-                prev = hasher.finalize_fixed();
+                prev = hasher.finalize();
                 result.extend_from_slice(&prev[..32]);
             }
         }
@@ -770,7 +770,7 @@ mod tests {
         // Our implementation
         let mut our_blake = Blake2b::new();
         our_blake.update(b"abc");
-        let our_hash = our_blake.finalize_fixed();
+        let our_hash = our_blake.finalize();
 
         // Reference blake2 crate
         let mut ref_blake = Blake2bRef::<blake2::digest::consts::U64>::new();

@@ -20,7 +20,7 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 
-use hpcrypt_mac::HmacSha256;
+use hpcrypt_mac::{HmacSha256, Mac};
 
 /// Scrypt parameters
 #[derive(Debug, Clone, Copy)]
@@ -307,12 +307,12 @@ fn pbkdf2_hmac_sha256(password: &[u8], salt: &[u8], iterations: usize, output: &
         let mut salt_with_index = salt.to_vec();
         salt_with_index.extend_from_slice(&(block_index as u32).to_be_bytes());
 
-        let mut u = HmacSha256::new(password).compute(&salt_with_index);
+        let mut u = HmacSha256::compute(password, &salt_with_index);
         block.copy_from_slice(&u);
 
         // U2, U3, ... = PRF(password, U_prev)
         for _ in 1..iterations {
-            u = HmacSha256::new(password).compute(&u);
+            u = HmacSha256::compute(password, &u);
             for (b, &u_byte) in block.iter_mut().zip(u.iter()) {
                 *b ^= u_byte;
             }

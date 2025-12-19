@@ -70,31 +70,24 @@ where
 /// X9.63 KDF with SHA-256
 pub fn x963_kdf_sha256(shared_secret: &[u8], shared_info: &[u8], key_len: usize) -> Vec<u8> {
     x963_kdf(shared_secret, shared_info, key_len, |input| {
-        // Use hpcrypt-hash SHA-256
-        use sha2::{Digest, Sha256};
-        let mut hasher = Sha256::new();
-        hasher.update(input);
-        hasher.finalize().to_vec()
+        use hpcrypt_hash::{HashFunction, Sha256};
+        Sha256::hash(input).to_vec()
     })
 }
 
 /// X9.63 KDF with SHA-384
 pub fn x963_kdf_sha384(shared_secret: &[u8], shared_info: &[u8], key_len: usize) -> Vec<u8> {
     x963_kdf(shared_secret, shared_info, key_len, |input| {
-        use sha2::{Digest, Sha384};
-        let mut hasher = Sha384::new();
-        hasher.update(input);
-        hasher.finalize().to_vec()
+        use hpcrypt_hash::{HashFunction, Sha384};
+        Sha384::hash(input).to_vec()
     })
 }
 
 /// X9.63 KDF with SHA-512
 pub fn x963_kdf_sha512(shared_secret: &[u8], shared_info: &[u8], key_len: usize) -> Vec<u8> {
     x963_kdf(shared_secret, shared_info, key_len, |input| {
-        use sha2::{Digest, Sha512};
-        let mut hasher = Sha512::new();
-        hasher.update(input);
-        hasher.finalize().to_vec()
+        use hpcrypt_hash::{HashFunction, Sha512};
+        Sha512::hash(input).to_vec()
     })
 }
 
