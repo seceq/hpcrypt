@@ -3,7 +3,7 @@
 //! Compare performance of different hash functions across various input sizes
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use hpcrypt_hash::{blake2b, blake3, sha256, Sha3_256};
+use hpcrypt_hash::{blake2b, blake3, sha256, Sha3_256, Blake3, HashFunction};
 
 fn bench_hashes_small(c: &mut Criterion) {
     let mut group = c.benchmark_group("hash_small_1kb");
