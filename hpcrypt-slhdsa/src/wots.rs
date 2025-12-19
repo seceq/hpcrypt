@@ -7,8 +7,6 @@
 //! - Address update amortization
 //! - Batch hashing for WOTS+ PK computation
 
-#![allow(clippy::manual_div_ceil)] // MSRV 1.70 compatibility - div_ceil stabilized in 1.73
-
 use crate::address::{Address, ADDR_TYPE_WOTS, ADDR_TYPE_WOTS_PK, ADDR_TYPE_WOTS_PRF};
 use crate::hash::traits::HashFunction;
 use crate::params::ParameterSet;
@@ -120,94 +118,21 @@ pub fn wots_pk_gen<P: ParameterSet, H: HashFunction>(
     // Buffer to hold all WOTS+ public key elements
     let mut wots_pk = vec![0u8; P::WOTS_LEN * P::N];
 
-    // Generate each chain
+    // Process all chains sequentially (non-SIMD version)
     for i in 0..P::WOTS_LEN {
         addr.set_chain(i as u32);
         addr.set_hash(0);
 
-        // OPTIMIZATION: Stack allocation based on P::N (30-35% faster than heap)
-        match P::N {
-            16 => {
-                let mut sk_element = [0u8; 16];
-                let mut pk_element = [0u8; 16];
+        let mut sk_element = vec![0u8; P::N];
+        let mut pk_element = vec![0u8; P::N];
 
-                addr.set_type(ADDR_TYPE_WOTS_PRF);
-                let prf_addr = addr.to_bytes();
-                hash.prf(sk_seed, &prf_addr, &mut sk_element);
-                addr.set_type(ADDR_TYPE_WOTS);
+        addr.set_type(ADDR_TYPE_WOTS_PRF);
+        let prf_addr = addr.to_bytes();
+        hash.prf(pk_seed, sk_seed, &prf_addr, &mut sk_element);
+        addr.set_type(ADDR_TYPE_WOTS);
 
-                wots_chain::<H>(
-                    &sk_element,
-                    0,
-                    P::W - 1,
-                    pk_seed,
-                    addr,
-                    hash,
-                    &mut pk_element,
-                );
-                wots_pk[i * 16..(i + 1) * 16].copy_from_slice(&pk_element);
-            }
-            24 => {
-                let mut sk_element = [0u8; 24];
-                let mut pk_element = [0u8; 24];
-
-                addr.set_type(ADDR_TYPE_WOTS_PRF);
-                let prf_addr = addr.to_bytes();
-                hash.prf(sk_seed, &prf_addr, &mut sk_element);
-                addr.set_type(ADDR_TYPE_WOTS);
-
-                wots_chain::<H>(
-                    &sk_element,
-                    0,
-                    P::W - 1,
-                    pk_seed,
-                    addr,
-                    hash,
-                    &mut pk_element,
-                );
-                wots_pk[i * 24..(i + 1) * 24].copy_from_slice(&pk_element);
-            }
-            32 => {
-                let mut sk_element = [0u8; 32];
-                let mut pk_element = [0u8; 32];
-
-                addr.set_type(ADDR_TYPE_WOTS_PRF);
-                let prf_addr = addr.to_bytes();
-                hash.prf(sk_seed, &prf_addr, &mut sk_element);
-                addr.set_type(ADDR_TYPE_WOTS);
-
-                wots_chain::<H>(
-                    &sk_element,
-                    0,
-                    P::W - 1,
-                    pk_seed,
-                    addr,
-                    hash,
-                    &mut pk_element,
-                );
-                wots_pk[i * 32..(i + 1) * 32].copy_from_slice(&pk_element);
-            }
-            _ => {
-                let mut sk_element = vec![0u8; P::N];
-                let mut pk_element = vec![0u8; P::N];
-
-                addr.set_type(ADDR_TYPE_WOTS_PRF);
-                let prf_addr = addr.to_bytes();
-                hash.prf(sk_seed, &prf_addr, &mut sk_element);
-                addr.set_type(ADDR_TYPE_WOTS);
-
-                wots_chain::<H>(
-                    &sk_element,
-                    0,
-                    P::W - 1,
-                    pk_seed,
-                    addr,
-                    hash,
-                    &mut pk_element,
-                );
-                wots_pk[i * P::N..(i + 1) * P::N].copy_from_slice(&pk_element);
-            }
-        }
+        wots_chain::<H>(&sk_element, 0, P::W - 1, pk_seed, addr, hash, &mut pk_element);
+        wots_pk[i * P::N..(i + 1) * P::N].copy_from_slice(&pk_element);
     }
 
     // Hash all elements together to produce public key
@@ -264,7 +189,7 @@ pub fn wots_sign<P: ParameterSet, H: HashFunction>(
     // NOTE: msg_base_w uses Vec allocation (tested stack allocation but caused 8% regression)
     // The heap allocation is small (35-67 usize = 280-536 bytes) and allocator is efficient
     let mut msg_base_w = vec![0usize; P::WOTS_LEN];
-    let len1 = (8 * P::N + P::LOG2_W - 1) / P::LOG2_W;
+    let len1 = (8 * P::N).div_ceil(P::LOG2_W);
     let len2 = P::WOTS_LEN - len1;
     base_w_with_checksum(msg, P::W, len1, len2, &mut msg_base_w);
 
@@ -282,19 +207,11 @@ pub fn wots_sign<P: ParameterSet, H: HashFunction>(
                 addr.set_type(ADDR_TYPE_WOTS_PRF);
                 let prf_addr = addr.to_bytes();
                 let mut sk_element = [0u8; 16];
-                hash.prf(sk_seed, &prf_addr, &mut sk_element);
+                hash.prf(pk_seed, sk_seed, &prf_addr, &mut sk_element);
                 addr.set_type(ADDR_TYPE_WOTS);
 
                 let steps = msg_base_w[i];
-                wots_chain::<H>(
-                    &sk_element,
-                    0,
-                    steps,
-                    pk_seed,
-                    addr,
-                    hash,
-                    &mut signature[i * 16..(i + 1) * 16],
-                );
+                wots_chain::<H>(&sk_element, 0, steps, pk_seed, addr, hash, &mut signature[i * 16..(i + 1) * 16]);
             }
         }
         24 => {
@@ -305,19 +222,11 @@ pub fn wots_sign<P: ParameterSet, H: HashFunction>(
                 addr.set_type(ADDR_TYPE_WOTS_PRF);
                 let prf_addr = addr.to_bytes();
                 let mut sk_element = [0u8; 24];
-                hash.prf(sk_seed, &prf_addr, &mut sk_element);
+                hash.prf(pk_seed, sk_seed, &prf_addr, &mut sk_element);
                 addr.set_type(ADDR_TYPE_WOTS);
 
                 let steps = msg_base_w[i];
-                wots_chain::<H>(
-                    &sk_element,
-                    0,
-                    steps,
-                    pk_seed,
-                    addr,
-                    hash,
-                    &mut signature[i * 24..(i + 1) * 24],
-                );
+                wots_chain::<H>(&sk_element, 0, steps, pk_seed, addr, hash, &mut signature[i * 24..(i + 1) * 24]);
             }
         }
         32 => {
@@ -328,19 +237,11 @@ pub fn wots_sign<P: ParameterSet, H: HashFunction>(
                 addr.set_type(ADDR_TYPE_WOTS_PRF);
                 let prf_addr = addr.to_bytes();
                 let mut sk_element = [0u8; 32];
-                hash.prf(sk_seed, &prf_addr, &mut sk_element);
+                hash.prf(pk_seed, sk_seed, &prf_addr, &mut sk_element);
                 addr.set_type(ADDR_TYPE_WOTS);
 
                 let steps = msg_base_w[i];
-                wots_chain::<H>(
-                    &sk_element,
-                    0,
-                    steps,
-                    pk_seed,
-                    addr,
-                    hash,
-                    &mut signature[i * 32..(i + 1) * 32],
-                );
+                wots_chain::<H>(&sk_element, 0, steps, pk_seed, addr, hash, &mut signature[i * 32..(i + 1) * 32]);
             }
         }
         _ => {
@@ -351,19 +252,11 @@ pub fn wots_sign<P: ParameterSet, H: HashFunction>(
                 addr.set_type(ADDR_TYPE_WOTS_PRF);
                 let prf_addr = addr.to_bytes();
                 let mut sk_element = vec![0u8; P::N];
-                hash.prf(sk_seed, &prf_addr, &mut sk_element);
+                hash.prf(pk_seed, sk_seed, &prf_addr, &mut sk_element);
                 addr.set_type(ADDR_TYPE_WOTS);
 
                 let steps = msg_base_w[i];
-                wots_chain::<H>(
-                    &sk_element,
-                    0,
-                    steps,
-                    pk_seed,
-                    addr,
-                    hash,
-                    &mut signature[i * P::N..(i + 1) * P::N],
-                );
+                wots_chain::<H>(&sk_element, 0, steps, pk_seed, addr, hash, &mut signature[i * P::N..(i + 1) * P::N]);
             }
         }
     }
@@ -395,7 +288,7 @@ pub fn wots_pk_from_sig<P: ParameterSet, H: HashFunction>(
     // NOTE: msg_base_w uses Vec allocation (tested stack allocation but caused 8% regression)
     // The heap allocation is small (35-67 usize = 280-536 bytes) and allocator is efficient
     let mut msg_base_w = vec![0usize; P::WOTS_LEN];
-    let len1 = (8 * P::N + P::LOG2_W - 1) / P::LOG2_W;
+    let len1 = (8 * P::N).div_ceil(P::LOG2_W);
     let len2 = P::WOTS_LEN - len1;
     base_w_with_checksum(msg, P::W, len1, len2, &mut msg_base_w);
 

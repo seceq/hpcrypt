@@ -1,10 +1,10 @@
 //! SHAKE256 based hash functions for SLH-DSA.
 //!
-//! This implementation uses hpcrypt-hash with optimizations for state
+//! This implementation uses the sha3 crate with optimizations for state
 //! cloning and variable-length output.
 
 use crate::hash::traits::{HashFunction, HashFunctionContext};
-use hpcrypt_hash::Shake256;
+use hpcrypt_hash::{Shake256, XofFunction};
 
 /// SHAKE256 hash function implementation for SLH-DSA.
 #[derive(Clone)]
@@ -39,15 +39,17 @@ impl<const N: usize> HashFunction for ShakeHashFunction<N> {
     const N: usize = N;
 
     #[inline]
-    fn prf(&self, key: &[u8], addr: &[u8; 32], out: &mut [u8]) {
-        debug_assert_eq!(key.len(), N);
+    fn prf(&self, pk_seed: &[u8], sk_seed: &[u8], addr: &[u8; 32], out: &mut [u8]) {
+        debug_assert_eq!(pk_seed.len(), N);
+        debug_assert_eq!(sk_seed.len(), N);
         debug_assert_eq!(out.len(), N);
 
-        // PRF: SHAKE256(toByte(0, 32) || key || addr)
+        // PRF: SHAKE256(PK.seed || ADRS || SK.seed)
+        // Per FIPS 205 Section 10.1 (no padding for SHAKE PRF)
         let mut hasher = Shake256::new();
-        hasher.update(&[0u8; 32]);
-        hasher.update(&key[..N]);
+        hasher.update(&pk_seed[..N]);
         hasher.update(addr);
+        hasher.update(&sk_seed[..N]);
         let mut reader = hasher.finalize_xof();
         reader.read(&mut out[..N]);
     }
@@ -58,9 +60,9 @@ impl<const N: usize> HashFunction for ShakeHashFunction<N> {
         debug_assert_eq!(opt_rand.len(), N);
         debug_assert_eq!(out.len(), N);
 
-        // PRF_msg: SHAKE256(toByte(2, 32) || sk_prf || opt_rand || msg)
+        // PRF_msg: SHAKE256(sk_prf || opt_rand || msg)
+        // Per FIPS 205 Section 10.1, SHAKE PRF_msg has NO domain separator prefix
         let mut hasher = Shake256::new();
-        hasher.update(&[2u8; 32]);
         hasher.update(&sk_prf[..N]);
         hasher.update(opt_rand);
         hasher.update(msg);
@@ -69,14 +71,40 @@ impl<const N: usize> HashFunction for ShakeHashFunction<N> {
     }
 
     #[inline]
-    fn h_msg(&self, r: &[u8], pk_seed: &[u8], pk_root: &[u8], msg: &[u8], out: &mut [u8]) {
+    fn h_msg(&self, r: &[u8], pk_seed: &[u8], pk_root: &[u8], ctx: &[u8], msg: &[u8], out: &mut [u8]) {
+        debug_assert_eq!(r.len(), N);
+        debug_assert_eq!(pk_seed.len(), N);
+        debug_assert_eq!(pk_root.len(), N);
+        debug_assert!(ctx.len() <= 255, "Context must be at most 255 bytes");
+
+        // Per FIPS 205 Section 10.1 (SHAKE variant):
+        // H_msg: SHAKE256(R || PK.seed || PK.root || M')
+        // where M' = toByte(0, 1) || toByte(|ctx|, 1) || ctx || M for external interface
+        //
+        // CRITICAL: Unlike SHA2, SHAKE does NOT use any additional domain separator prefix
+        // The hash is simply: SHAKE256(R || PK.seed || PK.root || 0x00 || ctx_len || ctx || msg)
+        let mut hasher = Shake256::new();
+        hasher.update(r);
+        hasher.update(&pk_seed[..N]);
+        hasher.update(&pk_root[..N]);
+        hasher.update(&[0u8]); // toByte(0, 1) for pure mode
+        hasher.update(&[ctx.len() as u8]); // toByte(|ctx|, 1)
+        hasher.update(ctx);
+        hasher.update(msg);
+        let mut reader = hasher.finalize_xof();
+        reader.read(out);
+    }
+
+    #[inline]
+    fn h_msg_internal(&self, r: &[u8], pk_seed: &[u8], pk_root: &[u8], msg: &[u8], out: &mut [u8]) {
         debug_assert_eq!(r.len(), N);
         debug_assert_eq!(pk_seed.len(), N);
         debug_assert_eq!(pk_root.len(), N);
 
-        // H_msg: SHAKE256(toByte(3, 32) || r || pk_seed || pk_root || msg)
+        // Internal interface: M used directly without any domain separators
+        // H_msg: SHAKE256(r || pk_seed || pk_root || M)
+        // Per FIPS 205, SHAKE has NO prefix for internal interface
         let mut hasher = Shake256::new();
-        hasher.update(&[3u8; 32]);
         hasher.update(r);
         hasher.update(&pk_seed[..N]);
         hasher.update(&pk_root[..N]);
@@ -91,9 +119,9 @@ impl<const N: usize> HashFunction for ShakeHashFunction<N> {
         debug_assert_eq!(leaf.len(), N);
         debug_assert_eq!(out.len(), N);
 
-        // T_l: SHAKE256(toByte(0, 32) || pk_seed || addr || leaf)
+        // T_l: SHAKE256(pk_seed || addr || leaf)
+        // Per FIPS 205 Section 10.1, SHAKE T_l has NO domain separator prefix
         let mut hasher = Shake256::new();
-        hasher.update(&[0u8; 32]);
         hasher.update(&pk_seed[..N]);
         hasher.update(addr);
         hasher.update(&leaf[..N]);
@@ -108,9 +136,9 @@ impl<const N: usize> HashFunction for ShakeHashFunction<N> {
         debug_assert_eq!(right.len(), N);
         debug_assert_eq!(out.len(), N);
 
-        // T_k: SHAKE256(toByte(1, 32) || pk_seed || addr || left || right)
+        // T_k (also known as H): SHAKE256(pk_seed || addr || left || right)
+        // Per FIPS 205 Section 10.1, SHAKE H/T_k has NO domain separator prefix
         let mut hasher = Shake256::new();
-        hasher.update(&[1u8; 32]);
         hasher.update(&pk_seed[..N]);
         hasher.update(addr);
         hasher.update(&left[..N]);
@@ -135,8 +163,8 @@ impl<const N: usize> HashFunction for ShakeHashFunction<N> {
         debug_assert_eq!(out.len(), N);
 
         // Batch hash: T_l(pk_seed, addr, input[0] || input[1] || ... || input[n-1])
+        // Per FIPS 205 Section 10.1, SHAKE T_l has NO domain separator prefix
         let mut hasher = Shake256::new();
-        hasher.update(&[0u8; 32]); // T_l padding
         hasher.update(&pk_seed[..N]);
         hasher.update(addr);
 
@@ -173,32 +201,18 @@ impl<const N: usize> HashFunctionContext for ShakeHashFunction<N> {
         }
     }
 
-    fn prf_with_context(
-        &self,
-        ctx: &mut Self::Context,
-        key: &[u8],
-        addr: &[u8; 32],
-        out: &mut [u8],
-    ) {
+    fn prf_with_context(&self, ctx: &mut Self::Context, pk_seed: &[u8], sk_seed: &[u8], addr: &[u8; 32], out: &mut [u8]) {
         // Reset and reuse context
         ctx.hasher = Shake256::new();
-        ctx.hasher.update(&[0u8; 32]);
-        ctx.hasher.update(&key[..N]);
+        ctx.hasher.update(&pk_seed[..N]);
         ctx.hasher.update(addr);
+        ctx.hasher.update(&sk_seed[..N]);
         let mut reader = ctx.hasher.clone().finalize_xof();
         reader.read(&mut out[..N]);
     }
 
-    fn f_with_context(
-        &self,
-        ctx: &mut Self::Context,
-        pk_seed: &[u8],
-        addr: &[u8; 32],
-        input: &[u8],
-        out: &mut [u8],
-    ) {
+    fn f_with_context(&self, ctx: &mut Self::Context, pk_seed: &[u8], addr: &[u8; 32], input: &[u8], out: &mut [u8]) {
         ctx.hasher = Shake256::new();
-        ctx.hasher.update(&[0u8; 32]);
         ctx.hasher.update(&pk_seed[..N]);
         ctx.hasher.update(addr);
         ctx.hasher.update(&input[..N]);
@@ -214,21 +228,22 @@ mod tests {
     #[test]
     fn test_prf_basic() {
         let hash_fn = ShakeHashFunction::<16>::new();
-        let key = [0u8; 16];
+        let pk_seed = [0u8; 16];
+        let sk_seed = [1u8; 16];
         let addr = [0u8; 32];
         let mut out = [0u8; 16];
 
-        hash_fn.prf(&key, &addr, &mut out);
+        hash_fn.prf(&pk_seed, &sk_seed, &addr, &mut out);
 
         // Output should be deterministic
         let mut out2 = [0u8; 16];
-        hash_fn.prf(&key, &addr, &mut out2);
+        hash_fn.prf(&pk_seed, &sk_seed, &addr, &mut out2);
         assert_eq!(out, out2);
 
         // Different address should give different output
         let addr2 = [1u8; 32];
         let mut out3 = [0u8; 16];
-        hash_fn.prf(&key, &addr2, &mut out3);
+        hash_fn.prf(&pk_seed, &sk_seed, &addr2, &mut out3);
         assert_ne!(out, out3);
     }
 
@@ -272,16 +287,17 @@ mod tests {
         let hash_fn = ShakeHashFunction::<16>::new();
         let mut ctx = hash_fn.new_context();
 
-        let key = [0u8; 16];
+        let pk_seed = [0u8; 16];
+        let sk_seed = [1u8; 16];
         let addr = [0u8; 32];
         let mut out1 = [0u8; 16];
         let mut out2 = [0u8; 16];
 
         // Using context
-        hash_fn.prf_with_context(&mut ctx, &key, &addr, &mut out1);
+        hash_fn.prf_with_context(&mut ctx, &pk_seed, &sk_seed, &addr, &mut out1);
 
         // Without context
-        hash_fn.prf(&key, &addr, &mut out2);
+        hash_fn.prf(&pk_seed, &sk_seed, &addr, &mut out2);
 
         assert_eq!(out1, out2);
     }
@@ -308,10 +324,11 @@ mod tests {
         let r = [0x11u8; 32];
         let pk_seed = [0x22u8; 32];
         let pk_root = [0x33u8; 32];
+        let ctx = b"test context";
         let msg = b"test message for h_msg";
         let mut out = vec![0u8; 64]; // Variable length
 
-        hash_fn.h_msg(&r, &pk_seed, &pk_root, msg, &mut out);
+        hash_fn.h_msg(&r, &pk_seed, &pk_root, ctx, msg, &mut out);
 
         // Should produce non-zero output
         assert_ne!(&out[..], &[0u8; 64]);

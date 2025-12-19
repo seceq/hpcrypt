@@ -1,7 +1,12 @@
-//! ADRS (Address) structure for SLH-DSA - BASELINE VERSION (NO CACHING).
+//! ADRS (Address) structure for SLH-DSA.
 //!
-//! The address is a 32-byte structure that is input to every hash function call.
-//! This implementation uses a u32 array for efficient manipulation.
+//! Per FIPS 205 Figure 13, addresses use a word-aligned format:
+//! - Word 0: layer address
+//! - Words 1-3: tree address (96 bits, but only 64 bits used for most cases)
+//! - Word 4: type
+//! - Word 5: key pair address
+//! - Word 6: chain address / tree height
+//! - Word 7: hash address / tree index
 
 /// Address types as defined in FIPS 205:
 ///
@@ -20,211 +25,209 @@ pub const ADDR_TYPE_WOTS_PRF: u32 = 5;
 /// FORS pseudorandom function address type
 pub const ADDR_TYPE_FORS_PRF: u32 = 6;
 
-/// Optimized address structure stored as u32 array.
-///
-/// Layout (8 words, 32 bytes total):
-/// - words\[0\]: layer address
-/// - words\[1\]: tree address (high 32 bits)
-/// - words\[2\]: tree address (low 32 bits)
-/// - words\[3\]: type (WOTS, FORS, etc.)
-/// - words\[4-7\]: type-specific fields (keypair, chain, hash, tree height, tree index)
+/// Word offsets for the address structure
+const WORD_LAYER: usize = 0;
+const WORD_TREE_HI: usize = 1;   // tree[95:64] - usually 0 for 64-bit tree
+const WORD_TREE_MID: usize = 2;  // tree[63:32]
+const WORD_TREE_LO: usize = 3;   // tree[31:0]
+const WORD_TYPE: usize = 4;
+const WORD_KEYPAIR: usize = 5;
+const WORD_CHAIN: usize = 6;     // Also used for tree height
+const WORD_HASH: usize = 7;      // Also used for tree index
+
+/// Address structure using word-aligned format per FIPS 205.
+/// Each field is a 32-bit word stored in big-endian byte order.
 #[derive(Clone, Copy, Debug)]
 pub struct Address {
-    words: [u32; 8],
+    /// 8 words × 4 bytes = 32 bytes total
+    bytes: [u8; 32],
 }
 
 impl Address {
     /// Create a new zeroed address.
     #[inline(always)]
     pub const fn new() -> Self {
-        Self { words: [0u32; 8] }
+        Self {
+            bytes: [0u8; 32],
+        }
     }
 
-    /// Set the layer address (word 0).
+    /// Helper to set a word (4 bytes) at the given word index in big-endian.
+    #[inline(always)]
+    fn set_word(&mut self, word: usize, value: u32) {
+        let offset = word * 4;
+        self.bytes[offset..offset + 4].copy_from_slice(&value.to_be_bytes());
+    }
+
+    /// Helper to get a word (4 bytes) from the given word index.
+    #[inline(always)]
+    fn get_word(&self, word: usize) -> u32 {
+        let offset = word * 4;
+        u32::from_be_bytes(self.bytes[offset..offset + 4].try_into().unwrap())
+    }
+
+    /// Set the layer address.
     #[inline(always)]
     pub fn set_layer(&mut self, layer: u32) {
-        self.words[0] = layer;
+        self.set_word(WORD_LAYER, layer);
     }
 
     /// Get the layer address.
     #[inline(always)]
     pub fn layer(&self) -> u32 {
-        self.words[0]
+        self.get_word(WORD_LAYER)
     }
 
-    /// Set the tree address (64-bit value split across words 1-2).
+    /// Set the tree address (64-bit value stored in words 2-3).
     #[inline(always)]
     pub fn set_tree(&mut self, tree: u64) {
-        self.words[1] = (tree >> 32) as u32;
-        self.words[2] = tree as u32;
+        // Word 1 is always 0 for 64-bit tree
+        self.set_word(WORD_TREE_HI, 0);
+        // Words 2-3 hold the 64-bit tree value in big-endian
+        self.set_word(WORD_TREE_MID, (tree >> 32) as u32);
+        self.set_word(WORD_TREE_LO, tree as u32);
     }
 
     /// Get the tree address.
     #[inline(always)]
     pub fn tree(&self) -> u64 {
-        ((self.words[1] as u64) << 32) | (self.words[2] as u64)
+        let high = self.get_word(WORD_TREE_MID) as u64;
+        let low = self.get_word(WORD_TREE_LO) as u64;
+        (high << 32) | low
     }
 
     /// Set the address type.
     #[inline(always)]
     pub fn set_type(&mut self, addr_type: u32) {
-        self.words[3] = addr_type;
+        self.set_word(WORD_TYPE, addr_type);
+    }
+
+    /// Set the address type and clear all subsequent fields to zero.
+    #[inline(always)]
+    pub fn set_type_and_clear(&mut self, addr_type: u32) {
+        self.set_word(WORD_TYPE, addr_type);
+        // Clear words 5-7
+        self.set_word(WORD_KEYPAIR, 0);
+        self.set_word(WORD_CHAIN, 0);
+        self.set_word(WORD_HASH, 0);
     }
 
     /// Get the address type.
     #[inline(always)]
     pub fn addr_type(&self) -> u32 {
-        self.words[3]
+        self.get_word(WORD_TYPE)
     }
 
-    // WOTS-specific fields (when type is WOTS or WOTS_PK)
+    // WOTS-specific fields
 
-    /// Set the keypair address (WOTS).
+    /// Set the keypair address.
     #[inline(always)]
     pub fn set_keypair(&mut self, keypair: u32) {
-        self.words[4] = keypair;
+        self.set_word(WORD_KEYPAIR, keypair);
     }
 
     /// Get the keypair address.
     #[inline(always)]
     pub fn keypair(&self) -> u32 {
-        self.words[4]
+        self.get_word(WORD_KEYPAIR)
     }
 
-    /// Set the chain address (WOTS).
+    /// Set the chain address.
     #[inline(always)]
     pub fn set_chain(&mut self, chain: u32) {
-        self.words[5] = chain;
+        self.set_word(WORD_CHAIN, chain);
     }
 
     /// Get the chain address.
     #[inline(always)]
     pub fn chain(&self) -> u32 {
-        self.words[5]
+        self.get_word(WORD_CHAIN)
     }
 
-    /// Set the hash address (WOTS chain position).
+    /// Set the hash address.
     #[inline(always)]
     pub fn set_hash(&mut self, hash: u32) {
-        self.words[6] = hash;
+        self.set_word(WORD_HASH, hash);
     }
 
     /// Get the hash address.
     #[inline(always)]
     pub fn hash(&self) -> u32 {
-        self.words[6]
+        self.get_word(WORD_HASH)
     }
 
-    // Tree-specific fields (when type is TREE or FORS_TREE)
+    // Tree-specific fields (shares some words with WOTS fields)
 
-    /// Set the tree height.
+    /// Set the tree height (shares word with chain address).
     #[inline(always)]
     pub fn set_tree_height(&mut self, height: u32) {
-        self.words[5] = height;
+        self.set_word(WORD_CHAIN, height);
     }
 
     /// Get the tree height.
     #[inline(always)]
     pub fn tree_height(&self) -> u32 {
-        self.words[5]
+        self.get_word(WORD_CHAIN)
     }
 
-    /// Set the tree index.
+    /// Set the tree index (shares word with hash address).
     #[inline(always)]
     pub fn set_tree_index(&mut self, index: u32) {
-        self.words[6] = index;
+        self.set_word(WORD_HASH, index);
     }
 
     /// Get the tree index.
     #[inline(always)]
     pub fn tree_index(&self) -> u32 {
-        self.words[6]
+        self.get_word(WORD_HASH)
     }
 
-    /// Copy address, used when we need to preserve the original.
+    /// Copy layer and tree address from another address.
     #[inline(always)]
     pub fn copy_subtree_addr(&mut self, other: &Address) {
-        self.words[0] = other.words[0]; // layer
-        self.words[1] = other.words[1]; // tree (high)
-        self.words[2] = other.words[2]; // tree (low)
+        // Copy words 0-3 (layer + tree)
+        self.bytes[0..16].copy_from_slice(&other.bytes[0..16]);
     }
 
-    /// Convert to bytes for hashing (big-endian encoding).
-    ///
-    /// OPTIMIZED VERSION: Uses macro unrolling for better hot-loop performance.
-    /// Benchmarked at 35-37% faster in hot loops compared to baseline.
+    /// Convert to bytes for hashing.
     #[inline(always)]
-    pub fn to_bytes(&mut self) -> [u8; 32] {
-        let mut bytes = [0u8; 32];
-
-        // Rolling macro for unrolled loop (readable and organized)
-        // This generates optimized assembly that the compiler can vectorize
-        macro_rules! unroll_to_be {
-            ($($idx:expr),*) => {
-                $(
-                    {
-                        let be_bytes = self.words[$idx].to_be_bytes();
-                        bytes[$idx * 4] = be_bytes[0];
-                        bytes[$idx * 4 + 1] = be_bytes[1];
-                        bytes[$idx * 4 + 2] = be_bytes[2];
-                        bytes[$idx * 4 + 3] = be_bytes[3];
-                    }
-                )*
-            };
-        }
-
-        unroll_to_be!(0, 1, 2, 3, 4, 5, 6, 7);
-
-        bytes
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.bytes
     }
 
-    /// Update hash field directly in serialized bytes (optimization for WOTS chains).
-    ///
-    /// This avoids full re-serialization when only the hash field changes in a loop.
-    /// The hash field is at word 6, which corresponds to bytes 24-27.
+    /// Update hash field directly in serialized bytes.
     #[inline(always)]
     pub fn update_hash_in_bytes(hash: u32, bytes: &mut [u8; 32]) {
-        bytes[24..28].copy_from_slice(&hash.to_be_bytes());
+        let offset = WORD_HASH * 4;
+        bytes[offset..offset + 4].copy_from_slice(&hash.to_be_bytes());
     }
 
-    /// Update tree height field directly in serialized bytes (optimization for treehash).
-    ///
-    /// This avoids full re-serialization when only the tree height changes.
-    /// The tree height field is at word 5, which corresponds to bytes 20-23.
+    /// Update tree height field directly in serialized bytes.
     #[inline(always)]
     pub fn update_tree_height_in_bytes(height: u32, bytes: &mut [u8; 32]) {
-        bytes[20..24].copy_from_slice(&height.to_be_bytes());
+        let offset = WORD_CHAIN * 4;
+        bytes[offset..offset + 4].copy_from_slice(&height.to_be_bytes());
     }
 
-    /// Update tree index field directly in serialized bytes (optimization for treehash).
-    ///
-    /// This avoids full re-serialization when only the tree index changes.
-    /// The tree index field is at word 6, which corresponds to bytes 24-27.
+    /// Update tree index field directly in serialized bytes.
     #[inline(always)]
     pub fn update_tree_index_in_bytes(index: u32, bytes: &mut [u8; 32]) {
-        bytes[24..28].copy_from_slice(&index.to_be_bytes());
+        let offset = WORD_HASH * 4;
+        bytes[offset..offset + 4].copy_from_slice(&index.to_be_bytes());
     }
 
-    /// Update both tree height and index in serialized bytes (common pattern in treehash).
+    /// Update both tree height and index in serialized bytes.
     #[inline(always)]
     pub fn update_tree_fields_in_bytes(height: u32, index: u32, bytes: &mut [u8; 32]) {
-        bytes[20..24].copy_from_slice(&height.to_be_bytes());
-        bytes[24..28].copy_from_slice(&index.to_be_bytes());
+        let chain_offset = WORD_CHAIN * 4;
+        let hash_offset = WORD_HASH * 4;
+        bytes[chain_offset..chain_offset + 4].copy_from_slice(&height.to_be_bytes());
+        bytes[hash_offset..hash_offset + 4].copy_from_slice(&index.to_be_bytes());
     }
 
-    /// Create from bytes (for testing/deserialization).
+    /// Create from bytes.
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        let words = [
-            u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]),
-            u32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]),
-            u32::from_be_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]),
-            u32::from_be_bytes([bytes[12], bytes[13], bytes[14], bytes[15]]),
-            u32::from_be_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]),
-            u32::from_be_bytes([bytes[20], bytes[21], bytes[22], bytes[23]]),
-            u32::from_be_bytes([bytes[24], bytes[25], bytes[26], bytes[27]]),
-            u32::from_be_bytes([bytes[28], bytes[29], bytes[30], bytes[31]]),
-        ];
-        Self { words }
+        Self { bytes: *bytes }
     }
 }
 
@@ -236,7 +239,7 @@ impl Default for Address {
 
 impl PartialEq for Address {
     fn eq(&self, other: &Self) -> bool {
-        self.words == other.words
+        self.bytes == other.bytes
     }
 }
 
@@ -249,7 +252,7 @@ mod tests {
     #[test]
     fn test_address_basic() {
         let mut addr = Address::new();
-        assert_eq!(addr.words, [0u32; 8]);
+        assert_eq!(addr.bytes, [0u8; 32]);
 
         addr.set_layer(5);
         assert_eq!(addr.layer(), 5);
@@ -315,7 +318,37 @@ mod tests {
 
     #[test]
     fn test_size() {
-        // Baseline version: just 32 bytes (8 u32 words)
         assert_eq!(core::mem::size_of::<Address>(), 32);
+    }
+
+    #[test]
+    fn test_word_aligned_layout() {
+        // Verify the word-aligned byte layout matches FIPS 205 Figure 13
+        let mut addr = Address::new();
+        addr.set_layer(21);
+        addr.set_tree(0x123456789ABCDEF0);
+        addr.set_type(5);  // WOTS_PRF
+        addr.set_keypair(1);
+        addr.set_chain(2);
+        addr.set_hash(3);
+
+        let bytes = addr.to_bytes();
+
+        // Word 0: layer = 21 (big-endian)
+        assert_eq!(&bytes[0..4], &21u32.to_be_bytes());
+        // Word 1: tree high = 0 (only 64-bit tree used)
+        assert_eq!(&bytes[4..8], &0u32.to_be_bytes());
+        // Word 2: tree mid = 0x12345678
+        assert_eq!(&bytes[8..12], &0x12345678u32.to_be_bytes());
+        // Word 3: tree low = 0x9ABCDEF0
+        assert_eq!(&bytes[12..16], &0x9ABCDEF0u32.to_be_bytes());
+        // Word 4: type = 5
+        assert_eq!(&bytes[16..20], &5u32.to_be_bytes());
+        // Word 5: keypair = 1
+        assert_eq!(&bytes[20..24], &1u32.to_be_bytes());
+        // Word 6: chain = 2
+        assert_eq!(&bytes[24..28], &2u32.to_be_bytes());
+        // Word 7: hash = 3
+        assert_eq!(&bytes[28..32], &3u32.to_be_bytes());
     }
 }

@@ -18,9 +18,12 @@
 //!
 //! ```no_run
 //! use hpcrypt_slhdsa::{Sha2_128f, KeyPair, sign, verify};
+//! use hpcrypt_rng::OsRng;
+//!
+//! let mut rng = OsRng;
 //!
 //! // Generate a key pair
-//! let keypair = KeyPair::<Sha2_128f>::generate();
+//! let keypair = KeyPair::<Sha2_128f>::generate(&mut rng);
 //!
 //! // Sign a message
 //! let message = b"Hello, world!";
@@ -33,11 +36,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(unsafe_code)]
 #![warn(missing_docs, rust_2018_idioms)]
-// Allow some clippy lints for this module
-#![allow(dead_code)]
-#![allow(clippy::needless_range_loop)]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::manual_range_contains)]
 
 #[cfg(feature = "std")]
 extern crate std;
@@ -50,29 +48,30 @@ use alloc::{vec, vec::Vec};
 
 // Core modules
 pub mod address;
-pub mod fors;
 pub mod hash;
-pub mod hypertree;
+pub mod params;
+pub mod utils;
+pub mod wots;
 pub mod merkle;
 pub mod merkle_cache;
-pub mod params;
+pub mod fors;
+pub mod hypertree;
 pub mod slhdsa;
-pub mod utils;
-pub mod vectorized;
-pub mod wots;
+pub mod prehash;
+
+// Test API (for CAVP testing)
+#[cfg(feature = "cavp")]
+pub mod test_api;
 
 // Re-exports
 pub use params::{
-    HashType, ParameterSet, Sha2_128f, Sha2_128s, Sha2_192f, Sha2_192s, Sha2_256f, Sha2_256s,
-    Shake128f, Shake128s, Shake192f, Shake192s, Shake256f, Shake256s,
+    ParameterSet, HashType,
+    Sha2_128s, Sha2_128f, Sha2_192s, Sha2_192f, Sha2_256s, Sha2_256f,
+    Shake128s, Shake128f, Shake192s, Shake192f, Shake256s, Shake256f,
 };
 
-pub use slhdsa::{sign, verify, KeyPair, PublicKey, SecretKey};
-
-/// CAVP/ACVP test API
-/// (Only available with cavp feature for validation testing)
-#[cfg(feature = "cavp")]
-pub mod test_api;
+pub use slhdsa::{KeyPair, SecretKey, PublicKey, sign, sign_ctx, sign_internal, sign_prehash, verify, verify_ctx, verify_internal};
+pub use utils::SignatureError;
 
 #[cfg(test)]
 mod tests {

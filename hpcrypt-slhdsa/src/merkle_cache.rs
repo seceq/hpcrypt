@@ -20,7 +20,7 @@
 
 use crate::address::Address;
 use crate::hash::traits::HashFunction;
-use crate::merkle::compute_auth_path;
+use crate::merkle::xmss_auth_path;
 use crate::params::ParameterSet;
 use core::marker::PhantomData;
 
@@ -29,6 +29,7 @@ use core::marker::PhantomData;
 /// Stores pre-computed authentication paths for the top `cache_depth` layers
 /// of the hypertree, significantly reducing signature generation time at the
 /// cost of memory.
+#[derive(Clone)]
 pub struct MerkleCache<P: ParameterSet> {
     /// Number of cached layers (from top)
     cache_depth: usize,
@@ -81,17 +82,18 @@ impl<P: ParameterSet> MerkleCache<P> {
             let layer = (P::D - cache_depth + layer_offset) as u32;
             let mut layer_cache = Vec::with_capacity(1 << P::TREE_HEIGHT);
 
-            // For each possible tree index in this layer
-            for tree_idx in 0..(1 << P::TREE_HEIGHT) {
+            // For each possible leaf index within the tree at this layer
+            // (tree address is implicitly 0 for top layers)
+            for leaf_idx in 0..(1 << P::TREE_HEIGHT) {
                 let mut addr = Address::new();
                 addr.set_layer(layer);
-                addr.set_tree(tree_idx as u64);
+                addr.set_tree(0);  // Top layers use tree address 0
 
-                // Compute auth path for this tree
-                let auth_path = compute_auth_path::<P, H>(
+                // Compute XMSS auth path for this leaf position (WOTS+ PK leaves)
+                let auth_path = xmss_auth_path::<P, H>(
                     sk_seed,
                     pk_seed,
-                    tree_idx,
+                    leaf_idx,  // This is the leaf index, not tree index
                     P::TREE_HEIGHT,
                     &mut addr,
                     hash,

@@ -3,8 +3,6 @@
 //! This module provides all 12 parameter sets using const generics for
 //! compile-time specialization and zero-cost abstractions.
 
-#![allow(clippy::manual_div_ceil)] // MSRV 1.70 compatibility - div_ceil stabilized in 1.73
-
 /// Cold path for unsupported Winternitz parameter error.
 ///
 /// Marked cold to keep error handling out of hot paths, improving
@@ -52,7 +50,7 @@ pub trait ParameterSet: 'static + Copy + Clone {
     /// Number of chain elements in WOTS+
     const WOTS_LEN: usize = {
         // len1: number of chains for message encoding
-        let len1 = (8 * Self::N + Self::LOG2_W - 1) / Self::LOG2_W;
+        let len1 = (8 * Self::N).div_ceil(Self::LOG2_W);
 
         // len2: number of chains for checksum
         // len2 = floor(log_w(len1 * (w-1))) + 1 = number of base-w digits for checksum
@@ -77,16 +75,16 @@ pub trait ParameterSet: 'static + Copy + Clone {
     }
 
     /// Log base 2 of W (const version for use in const contexts)
-    const LOG2_W: usize = if Self::W == 16 {
-        4
-    } else if Self::W == 256 {
-        8
-    } else {
-        0
-    };
+    const LOG2_W: usize = if Self::W == 16 { 4 } else if Self::W == 256 { 8 } else { 0 };
 
     /// Length of FORS message in bytes
-    const FORS_MSG_BYTES: usize = (Self::K * Self::A + 7) / 8;
+    const FORS_MSG_BYTES: usize = (Self::K * Self::A).div_ceil(8);
+
+    /// Length of H_msg output in bytes
+    /// Per FIPS 205: m = ⌈ka/8⌉ + ⌈(h-h')/8⌉ + ⌈h'/8⌉
+    const H_MSG_BYTES: usize = Self::FORS_MSG_BYTES
+        + (Self::H - Self::TREE_HEIGHT).div_ceil(8)
+        + Self::TREE_HEIGHT.div_ceil(8);
 
     /// FORS signature bytes
     const FORS_SIG_BYTES: usize = Self::K * (Self::A + 1) * Self::N;
@@ -106,7 +104,8 @@ pub trait ParameterSet: 'static + Copy + Clone {
     const PK_BYTES: usize = 2 * Self::N;
 
     /// Secret key size in bytes
-    const SK_BYTES: usize = 3 * Self::N; // sk_seed + sk_prf + pk_seed
+    /// Per FIPS 205: SK = SK.seed || SK.prf || PK.seed || PK.root
+    const SK_BYTES: usize = 4 * Self::N;  // sk_seed + sk_prf + pk_seed + pk_root
 }
 
 /// Hash function type identifier
@@ -141,12 +140,7 @@ macro_rules! define_param_set {
 // SHA2-256 parameter sets
 define_param_set!(
     Sha2_128s,
-    16,
-    63,
-    7,
-    14,
-    6,
-    16,
+    16, 63, 7, 14, 12, 16,  // FIXED: A=12 (was 6)
     HashType::Sha2,
     false,
     "SLH-DSA-SHA2-128s: 128-bit security, small signature (~7.9 KB)"
@@ -154,12 +148,7 @@ define_param_set!(
 
 define_param_set!(
     Sha2_128f,
-    16,
-    66,
-    22,
-    33,
-    6,
-    16,
+    16, 66, 22, 33, 6, 16,
     HashType::Sha2,
     true,
     "SLH-DSA-SHA2-128f: 128-bit security, fast signing (~17.1 KB)"
@@ -167,12 +156,7 @@ define_param_set!(
 
 define_param_set!(
     Sha2_192s,
-    24,
-    63,
-    7,
-    17,
-    8,
-    16,
+    24, 63, 7, 17, 14, 16,  // FIXED: A=14 (was 8)
     HashType::Sha2,
     false,
     "SLH-DSA-SHA2-192s: 192-bit security, small signature (~16.2 KB)"
@@ -180,12 +164,7 @@ define_param_set!(
 
 define_param_set!(
     Sha2_192f,
-    24,
-    66,
-    22,
-    33,
-    9,
-    16,
+    24, 66, 22, 33, 8, 16,  // Per FIPS 205 Table 1: a=8 (not 9)
     HashType::Sha2,
     true,
     "SLH-DSA-SHA2-192f: 192-bit security, fast signing (~35.7 KB)"
@@ -193,12 +172,7 @@ define_param_set!(
 
 define_param_set!(
     Sha2_256s,
-    32,
-    64,
-    8,
-    22,
-    8,
-    16,
+    32, 64, 8, 22, 14, 16,  // FIXED: A=14 (was 8)
     HashType::Sha2,
     false,
     "SLH-DSA-SHA2-256s: 256-bit security, small signature (~29.8 KB)"
@@ -206,12 +180,7 @@ define_param_set!(
 
 define_param_set!(
     Sha2_256f,
-    32,
-    68,
-    17,
-    35,
-    9,
-    16,
+    32, 68, 17, 35, 9, 16,
     HashType::Sha2,
     true,
     "SLH-DSA-SHA2-256f: 256-bit security, fast signing (~49.9 KB)"
@@ -220,12 +189,7 @@ define_param_set!(
 // SHAKE256 parameter sets
 define_param_set!(
     Shake128s,
-    16,
-    63,
-    7,
-    14,
-    6,
-    16,
+    16, 63, 7, 14, 12, 16,  // FIXED: A=12 (was 6)
     HashType::Shake,
     false,
     "SLH-DSA-SHAKE-128s: 128-bit security, small signature (~7.9 KB)"
@@ -233,12 +197,7 @@ define_param_set!(
 
 define_param_set!(
     Shake128f,
-    16,
-    66,
-    22,
-    33,
-    6,
-    16,
+    16, 66, 22, 33, 6, 16,
     HashType::Shake,
     true,
     "SLH-DSA-SHAKE-128f: 128-bit security, fast signing (~17.1 KB)"
@@ -246,12 +205,7 @@ define_param_set!(
 
 define_param_set!(
     Shake192s,
-    24,
-    63,
-    7,
-    17,
-    8,
-    16,
+    24, 63, 7, 17, 14, 16,  // FIXED: A=14 (was 8)
     HashType::Shake,
     false,
     "SLH-DSA-SHAKE-192s: 192-bit security, small signature (~16.2 KB)"
@@ -259,12 +213,7 @@ define_param_set!(
 
 define_param_set!(
     Shake192f,
-    24,
-    66,
-    22,
-    33,
-    9,
-    16,
+    24, 66, 22, 33, 8, 16,  // Per FIPS 205 Table 1: a=8 (not 9)
     HashType::Shake,
     true,
     "SLH-DSA-SHAKE-192f: 192-bit security, fast signing (~35.7 KB)"
@@ -272,12 +221,7 @@ define_param_set!(
 
 define_param_set!(
     Shake256s,
-    32,
-    64,
-    8,
-    22,
-    8,
-    16,
+    32, 64, 8, 22, 14, 16,  // FIXED: A=14 (was 8)
     HashType::Shake,
     false,
     "SLH-DSA-SHAKE-256s: 256-bit security, small signature (~29.8 KB)"
@@ -285,12 +229,7 @@ define_param_set!(
 
 define_param_set!(
     Shake256f,
-    32,
-    68,
-    17,
-    35,
-    9,
-    16,
+    32, 68, 17, 35, 9, 16,
     HashType::Shake,
     true,
     "SLH-DSA-SHAKE-256f: 256-bit security, fast signing (~49.9 KB)"
@@ -303,17 +242,17 @@ mod tests {
     #[test]
     fn test_wots_len_calculation() {
         // Verify WOTS_LEN calculation for common parameters
-        assert_eq!(Sha2_128s::WOTS_LEN, 35); // For N=16, W=16
-        assert_eq!(Sha2_256s::WOTS_LEN, 67); // For N=32, W=16
+        assert_eq!(Sha2_128s::WOTS_LEN, 35);  // For N=16, W=16
+        assert_eq!(Sha2_256s::WOTS_LEN, 67);  // For N=32, W=16
     }
 
     #[test]
     fn test_signature_sizes() {
         // Verify signature sizes are reasonable
-        assert!(Sha2_128s::SIG_BYTES < 10000); // ~7.9 KB
-        assert!(Sha2_128f::SIG_BYTES < 20000); // ~17.1 KB
-        assert!(Sha2_256s::SIG_BYTES < 32000); // ~29.8 KB
-        assert!(Sha2_256f::SIG_BYTES < 50000); // ~48.7 KB
+        assert!(Sha2_128s::SIG_BYTES < 10000);   // ~7.9 KB
+        assert!(Sha2_128f::SIG_BYTES < 20000);   // ~17.1 KB
+        assert!(Sha2_256s::SIG_BYTES < 32000);   // ~29.8 KB
+        assert!(Sha2_256f::SIG_BYTES < 50000);   // ~48.7 KB
     }
 
     #[test]

@@ -12,21 +12,32 @@ pub trait HashFunction {
     /// The output size in bytes (N parameter).
     const N: usize;
 
-    /// PRF: Pseudorandom function
+    /// PRF: Pseudorandom function for secret key generation
     ///
-    /// Computes PRF(key, address) where the output length is N bytes.
-    /// This is used extensively for key generation and leaf computation.
-    fn prf(&self, key: &[u8], addr: &[u8; 32], out: &mut [u8]);
+    /// Per FIPS 205 Section 9.3:
+    /// PRF(PK.seed, SK.seed, ADRS) returns a pseudorandom n-byte value.
+    ///
+    /// For SHA2: SHA-256(toByte(0, 64 − n) ∥ PK.seed ∥ ADRS ∥ SK.seed)
+    fn prf(&self, pk_seed: &[u8], sk_seed: &[u8], addr: &[u8; 32], out: &mut [u8]);
 
     /// PRF_msg: Pseudorandom function for message randomization
     ///
     /// Computes PRF_msg(sk_prf, opt_rand, msg) for message hashing.
     fn prf_msg(&self, sk_prf: &[u8], opt_rand: &[u8], msg: &[u8], out: &mut [u8]);
 
-    /// H_msg: Hash function for message compression
+    /// H_msg: Hash function for message compression (external interface with context)
     ///
     /// Hashes the randomized message to produce FORS message and tree index.
-    fn h_msg(&self, r: &[u8], pk_seed: &[u8], pk_root: &[u8], msg: &[u8], out: &mut [u8]);
+    /// Per FIPS 205, incorporates context string for domain separation:
+    /// M' = toByte(domain, 1) || toByte(|ctx|, 1) || ctx || M
+    /// where domain = 0 for pure mode, 1 for prehash mode.
+    fn h_msg(&self, r: &[u8], pk_seed: &[u8], pk_root: &[u8], ctx: &[u8], msg: &[u8], out: &mut [u8]);
+
+    /// H_msg for internal interface (no domain separator)
+    ///
+    /// Uses M directly without the external interface domain separator.
+    /// This is used when calling the internal signing/verification algorithms directly.
+    fn h_msg_internal(&self, r: &[u8], pk_seed: &[u8], pk_root: &[u8], msg: &[u8], out: &mut [u8]);
 
     /// T_l: Hash function for Merkle tree leaf nodes
     ///
@@ -76,23 +87,10 @@ pub trait HashFunctionContext: HashFunction {
     fn new_context(&self) -> Self::Context;
 
     /// PRF with context reuse.
-    fn prf_with_context(
-        &self,
-        ctx: &mut Self::Context,
-        key: &[u8],
-        addr: &[u8; 32],
-        out: &mut [u8],
-    );
+    fn prf_with_context(&self, ctx: &mut Self::Context, pk_seed: &[u8], sk_seed: &[u8], addr: &[u8; 32], out: &mut [u8]);
 
     /// F with context reuse (for WOTS+ chains).
-    fn f_with_context(
-        &self,
-        ctx: &mut Self::Context,
-        pk_seed: &[u8],
-        addr: &[u8; 32],
-        input: &[u8],
-        out: &mut [u8],
-    );
+    fn f_with_context(&self, ctx: &mut Self::Context, pk_seed: &[u8], addr: &[u8; 32], input: &[u8], out: &mut [u8]);
 }
 
 /// Helper trait for computing multiple hashes with a common prefix.

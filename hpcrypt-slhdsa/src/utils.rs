@@ -1,5 +1,29 @@
 //! Utility functions for SLH-DSA including base-w encoding and buffer management.
 
+/// Errors that can occur during SLH-DSA operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SignatureError {
+    /// Invalid secret key format or length
+    InvalidSecretKey,
+    /// Invalid public key format or length
+    InvalidPublicKey,
+    /// Invalid signature format or length
+    InvalidSignature,
+}
+
+impl core::fmt::Display for SignatureError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            SignatureError::InvalidSecretKey => write!(f, "Invalid secret key"),
+            SignatureError::InvalidPublicKey => write!(f, "Invalid public key"),
+            SignatureError::InvalidSignature => write!(f, "Invalid signature"),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for SignatureError {}
+
 /// Cold path for unsupported Winternitz parameter error.
 ///
 /// Marked cold to keep error handling out of hot paths, improving
@@ -50,7 +74,13 @@ pub fn base16_encode(input: &[u8], output: &mut [u8]) {
 ///
 /// Encodes the message in base-w and appends a checksum to detect errors.
 /// For W=16, uses optimized nibble extraction.
-pub fn base_w_with_checksum(msg: &[u8], w: usize, len1: usize, len2: usize, output: &mut [usize]) {
+pub fn base_w_with_checksum(
+    msg: &[u8],
+    w: usize,
+    len1: usize,
+    len2: usize,
+    output: &mut [usize],
+) {
     debug_assert_eq!(output.len(), len1 + len2);
 
     match w {
@@ -82,10 +112,8 @@ pub fn base_w_with_checksum(msg: &[u8], w: usize, len1: usize, len2: usize, outp
             }
 
             // Encode checksum in base-16
-            // Shift checksum left to align it properly
-            let shift_bits = (8 - ((len2 * 4) % 8)) % 8;
-            csum <<= shift_bits;
-
+            // Extract nibbles directly from checksum value (MSB first)
+            // Note: FIPS 205 shifts for toByte conversion, but we extract directly
             for i in 0..len2 {
                 output[len1 + i] = (csum >> ((len2 - 1 - i) * 4)) & 0x0F;
             }
