@@ -1,16 +1,29 @@
 //! BLAKE3 cryptographic hash function
 //!
-//! High-performance implementation of BLAKE3, a fast and secure hash function.
-//! BLAKE3 is designed for maximum parallelism and achieves exceptional performance
-//! through a tree structure and optimized permutation function.
+//! High-performance implementation of BLAKE3, a fast and secure hash function
+//! based on a tree structure and optimized permutation function.
 //!
-//! Target performance: 3 GB/s single-thread, 15.8 GB/s with multi-threading
+//! # Features
 //!
-//! Key features:
 //! - Single-pass Merkle tree construction
 //! - Unlimited output length (XOF mode)
 //! - Keyed hash and key derivation modes
 //! - Highly parallelizable
+//!
+//! # Examples
+//!
+//! ```
+//! use hpcrypt_hash::blake3::{Blake3, blake3};
+//!
+//! // One-shot hashing
+//! let hash = blake3(b"hello world");
+//!
+//! // Incremental hashing
+//! let mut hasher = Blake3::new();
+//! hasher.update(b"hello ");
+//! hasher.update(b"world");
+//! let hash = hasher.finalize();
+//! ```
 
 extern crate alloc;
 use alloc::vec;
@@ -30,7 +43,47 @@ pub const BLOCK_LEN: usize = 64;
 /// BLAKE3 chunk size in bytes
 pub const CHUNK_LEN: usize = 1024;
 
-/// BLAKE3 initialization vector (first 8 words of SHA-256 IV)
+/// Optimal buffer size for streaming operations (16 KiB)
+///
+/// This size provides high throughput with efficient chunk batching
+/// and good CPU cache utilization.
+///
+/// # Example
+///
+/// ```no_run
+/// use hpcrypt_hash::blake3::{Blake3, OPTIMAL_BUF_SIZE};
+/// use std::fs::File;
+/// use std::io::{BufReader, Read};
+///
+/// fn hash_file(path: &str) -> std::io::Result<[u8; 32]> {
+///     let file = File::open(path)?;
+///     let mut reader = BufReader::with_capacity(OPTIMAL_BUF_SIZE, file);
+///     let mut hasher = Blake3::new();
+///     let mut buffer = vec![0u8; OPTIMAL_BUF_SIZE];
+///
+///     loop {
+///         let n = reader.read(&mut buffer)?;
+///         if n == 0 { break; }
+///         hasher.update(&buffer[..n]);
+///     }
+///
+///     Ok(hasher.finalize())
+/// }
+/// ```
+pub const OPTIMAL_BUF_SIZE: usize = 16 * 1024;
+
+/// Minimum recommended buffer size for streaming operations (4 KiB)
+///
+/// Suitable when memory is constrained but reasonable performance is still desired.
+pub const MIN_BUF_SIZE: usize = 4 * 1024;
+
+/// Maximum useful buffer size for single-threaded hashing (64 KiB)
+///
+/// Buffers larger than this provide no additional performance benefit
+/// for single-threaded operations.
+pub const MAX_USEFUL_BUF_SIZE: usize = 64 * 1024;
+
+/// BLAKE3 initialization vector
 const IV: [u32; 8] = [
     0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19,
 ];
@@ -44,7 +97,7 @@ const KEYED_HASH: u8 = 1 << 4;
 const DERIVE_KEY_CONTEXT: u8 = 1 << 5;
 const DERIVE_KEY_MATERIAL: u8 = 1 << 6;
 
-/// Message schedule permutation for BLAKE3
+/// Message schedule permutation
 const MSG_SCHEDULE: [[usize; 16]; 7] = [
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9, 14, 15, 8],
@@ -55,8 +108,128 @@ const MSG_SCHEDULE: [[usize; 16]; 7] = [
     [11, 15, 5, 0, 1, 9, 8, 6, 14, 10, 2, 12, 3, 4, 7, 13],
 ];
 
+/// Perform one BLAKE3 round (column step + diagonal step)
+macro_rules! blake3_round {
+    ($v:expr, $m0:expr, $m1:expr, $m2:expr, $m3:expr, $m4:expr, $m5:expr, $m6:expr, $m7:expr,
+             $m8:expr, $m9:expr, $m10:expr, $m11:expr, $m12:expr, $m13:expr, $m14:expr, $m15:expr) => {
+        // Column step
+        Output::g(&mut $v, 0, 4, 8, 12, $m0, $m1);
+        Output::g(&mut $v, 1, 5, 9, 13, $m2, $m3);
+        Output::g(&mut $v, 2, 6, 10, 14, $m4, $m5);
+        Output::g(&mut $v, 3, 7, 11, 15, $m6, $m7);
+
+        // Diagonal step
+        Output::g(&mut $v, 0, 5, 10, 15, $m8, $m9);
+        Output::g(&mut $v, 1, 6, 11, 12, $m10, $m11);
+        Output::g(&mut $v, 2, 7, 8, 13, $m12, $m13);
+        Output::g(&mut $v, 3, 4, 9, 14, $m14, $m15);
+    };
+}
+
+/// Convert 16 u32 words from byte slice
+macro_rules! words_from_bytes {
+    ($block:expr) => {{
+        [
+            read_u32_le(&$block[0..4]),
+            read_u32_le(&$block[4..8]),
+            read_u32_le(&$block[8..12]),
+            read_u32_le(&$block[12..16]),
+            read_u32_le(&$block[16..20]),
+            read_u32_le(&$block[20..24]),
+            read_u32_le(&$block[24..28]),
+            read_u32_le(&$block[28..32]),
+            read_u32_le(&$block[32..36]),
+            read_u32_le(&$block[36..40]),
+            read_u32_le(&$block[40..44]),
+            read_u32_le(&$block[44..48]),
+            read_u32_le(&$block[48..52]),
+            read_u32_le(&$block[52..56]),
+            read_u32_le(&$block[56..60]),
+            read_u32_le(&$block[60..64]),
+        ]
+    }};
+}
+
+/// Convert 16 u32 words to bytes
+macro_rules! words_to_bytes {
+    ($words:expr, $block:expr) => {{
+        write_u32_le(&mut $block[0..4], $words[0]);
+        write_u32_le(&mut $block[4..8], $words[1]);
+        write_u32_le(&mut $block[8..12], $words[2]);
+        write_u32_le(&mut $block[12..16], $words[3]);
+        write_u32_le(&mut $block[16..20], $words[4]);
+        write_u32_le(&mut $block[20..24], $words[5]);
+        write_u32_le(&mut $block[24..28], $words[6]);
+        write_u32_le(&mut $block[28..32], $words[7]);
+        write_u32_le(&mut $block[32..36], $words[8]);
+        write_u32_le(&mut $block[36..40], $words[9]);
+        write_u32_le(&mut $block[40..44], $words[10]);
+        write_u32_le(&mut $block[44..48], $words[11]);
+        write_u32_le(&mut $block[48..52], $words[12]);
+        write_u32_le(&mut $block[52..56], $words[13]);
+        write_u32_le(&mut $block[56..60], $words[14]);
+        write_u32_le(&mut $block[60..64], $words[15]);
+    }};
+}
+
+/// Write first 32 bytes (8 words) directly to output
+macro_rules! write_first_32_bytes {
+    ($words:expr, $out:expr) => {{
+        write_u32_le(&mut $out[0..4], $words[0]);
+        write_u32_le(&mut $out[4..8], $words[1]);
+        write_u32_le(&mut $out[8..12], $words[2]);
+        write_u32_le(&mut $out[12..16], $words[3]);
+        write_u32_le(&mut $out[16..20], $words[4]);
+        write_u32_le(&mut $out[20..24], $words[5]);
+        write_u32_le(&mut $out[24..28], $words[6]);
+        write_u32_le(&mut $out[28..32], $words[7]);
+    }};
+}
+
+/// Construct parent block words from two chaining values
+macro_rules! parent_block_words {
+    ($left:expr, $right:expr) => {
+        [
+            $left[0], $left[1], $left[2], $left[3],
+            $left[4], $left[5], $left[6], $left[7],
+            $right[0], $right[1], $right[2], $right[3],
+            $right[4], $right[5], $right[6], $right[7],
+        ]
+    };
+}
+
+/// Merge with one parent from stack
+macro_rules! merge_parent {
+    ($self:expr, $cv:expr) => {{
+        $self.cv_stack_len -= 1;
+        $self.parent_output(
+            $self.cv_stack[$self.cv_stack_len],
+            $cv
+        ).chaining_value()
+    }};
+}
+
+/// Push chaining value to stack
+macro_rules! push_cv {
+    ($self:expr, $cv:expr) => {{
+        $self.cv_stack[$self.cv_stack_len] = $cv;
+        $self.cv_stack_len += 1;
+    }};
+}
+
+#[inline(always)]
+const fn counter_low(counter: u64) -> u32 {
+    counter as u32
+}
+
+#[inline(always)]
+const fn counter_high(counter: u64) -> u32 {
+    (counter >> 32) as u32
+}
+
 /// BLAKE3 compression function output
 #[derive(Clone, Copy)]
+#[repr(C)]
 struct Output {
     input_chaining_value: [u32; 8],
     block_words: [u32; 16],
@@ -66,230 +239,237 @@ struct Output {
 }
 
 impl Output {
-    /// Generate chaining value (first 8 words of output)
+    #[inline(always)]
+    const fn flags_as_u32(&self) -> u32 {
+        self.flags as u32
+    }
+
+    #[inline(always)]
+    const fn flags_with_root(&self) -> u32 {
+        (self.flags | ROOT) as u32
+    }
+
+    #[inline(always)]
+    fn select_counter(&self, output_block_counter: u64) -> u64 {
+        let is_root = ((self.flags & ROOT) != 0) as u64;
+        let mask = is_root.wrapping_neg();
+        (output_block_counter & mask) | (self.counter & !mask)
+    }
+
+    #[inline(always)]
+    fn xor_finalize_chaining(state: &[u32; 16], out: &mut [u32; 8]) {
+        out[0] = state[0] ^ state[8];
+        out[1] = state[1] ^ state[9];
+        out[2] = state[2] ^ state[10];
+        out[3] = state[3] ^ state[11];
+        out[4] = state[4] ^ state[12];
+        out[5] = state[5] ^ state[13];
+        out[6] = state[6] ^ state[14];
+        out[7] = state[7] ^ state[15];
+    }
+
+    #[inline(always)]
+    fn xor_finalize_full(state: &mut [u32; 16], input_cv: &[u32; 8]) {
+        state[0] ^= state[8];
+        state[1] ^= state[9];
+        state[2] ^= state[10];
+        state[3] ^= state[11];
+        state[4] ^= state[12];
+        state[5] ^= state[13];
+        state[6] ^= state[14];
+        state[7] ^= state[15];
+
+        state[8] ^= input_cv[0];
+        state[9] ^= input_cv[1];
+        state[10] ^= input_cv[2];
+        state[11] ^= input_cv[3];
+        state[12] ^= input_cv[4];
+        state[13] ^= input_cv[5];
+        state[14] ^= input_cv[6];
+        state[15] ^= input_cv[7];
+    }
+
+    #[inline(always)]
     fn chaining_value(&self) -> [u32; 8] {
         let mut cv = self.input_chaining_value;
         self.compress(&mut cv);
-        [cv[0], cv[1], cv[2], cv[3], cv[4], cv[5], cv[6], cv[7]]
+        cv
     }
 
-    /// Generate root output bytes
+    #[inline]
     fn root_output_bytes(&self, out: &mut [u8]) {
+        let len = out.len();
+
+        match len {
+            32 => {
+                let words = self.compress_full(0);
+                write_first_32_bytes!(words, out);
+            }
+            64 => {
+                let words = self.compress_full(0);
+                words_to_bytes!(words, out);
+            }
+            128 => {
+                let words1 = self.compress_full(0);
+                words_to_bytes!(words1, out[0..64]);
+                let words2 = self.compress_full(1);
+                words_to_bytes!(words2, out[64..128]);
+            }
+            256 => {
+                let words1 = self.compress_full(0);
+                words_to_bytes!(words1, out[0..64]);
+                let words2 = self.compress_full(1);
+                words_to_bytes!(words2, out[64..128]);
+                let words3 = self.compress_full(2);
+                words_to_bytes!(words3, out[128..192]);
+                let words4 = self.compress_full(3);
+                words_to_bytes!(words4, out[192..256]);
+            }
+            _ => {
+                self.root_output_bytes_general(out);
+            }
+        }
+    }
+
+    #[inline(never)]
+    fn root_output_bytes_general(&self, out: &mut [u8]) {
+        let len = out.len();
         let mut offset = 0;
         let mut output_block_counter = 0u64;
 
-        while offset < out.len() {
+        while offset + 64 <= len {
             let words = self.compress_full(output_block_counter);
-
-            // Convert 16 words to bytes
-            let mut block = [0u8; 64];
-            for i in 0..16 {
-                write_u32_le(&mut block[i * 4..(i + 1) * 4], words[i]);
-            }
-
-            let take = (out.len() - offset).min(64);
-            out[offset..offset + take].copy_from_slice(&block[..take]);
-            offset += take;
+            words_to_bytes!(words, out[offset..offset + 64]);
+            offset += 64;
             output_block_counter += 1;
+        }
+
+        if offset < len {
+            let words = self.compress_full(output_block_counter);
+            let mut block = [0u8; 64];
+            words_to_bytes!(words, block);
+            let remaining = len - offset;
+            out[offset..].copy_from_slice(&block[..remaining]);
         }
     }
 
-    /// Perform full compression returning all 16 words
     fn compress_full(&self, counter: u64) -> [u32; 16] {
-        // Initialize state
-        let mut v = [0u32; 16];
-        v[0..8].copy_from_slice(&self.input_chaining_value);
-        v[8..16].copy_from_slice(&IV);
-        v[12] = counter as u32;
-        v[13] = (counter >> 32) as u32;
-        v[14] = self.block_len;
-        let flags_with_root = self.flags | ROOT;
-        v[15] = flags_with_root as u32;
+        let cv = &self.input_chaining_value;
+        let mut v = [
+            cv[0], cv[1], cv[2], cv[3], cv[4], cv[5], cv[6], cv[7],
+            IV[0], IV[1], IV[2], IV[3],
+            counter_low(counter),
+            counter_high(counter),
+            self.block_len,
+            self.flags_with_root(),
+        ];
 
-        // 7 rounds of mixing with in-place block permutation
-        // Python reference permutes the message block IN-PLACE between rounds
-        let mut block = self.block_words;
+        let m = self.block_words;
 
-        for _round in 0..7 {
-            // Column step
-            Self::g(&mut v, 0, 4, 8, 12, block[0], block[1]);
-            Self::g(&mut v, 1, 5, 9, 13, block[2], block[3]);
-            Self::g(&mut v, 2, 6, 10, 14, block[4], block[5]);
-            Self::g(&mut v, 3, 7, 11, 15, block[6], block[7]);
+        blake3_round!(v, m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7],
+                         m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
 
-            // Diagonal step
-            Self::g(&mut v, 0, 5, 10, 15, block[8], block[9]);
-            Self::g(&mut v, 1, 6, 11, 12, block[10], block[11]);
-            Self::g(&mut v, 2, 7, 8, 13, block[12], block[13]);
-            Self::g(&mut v, 3, 4, 9, 14, block[14], block[15]);
+        blake3_round!(v, m[2], m[6], m[3], m[10], m[7], m[0], m[4], m[13],
+                         m[1], m[11], m[12], m[5], m[9], m[14], m[15], m[8]);
 
-            // Permute block for next round (MSG_PERMUTATION = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9, 14, 15, 8])
-            let original = block;
-            block = [
-                original[2],
-                original[6],
-                original[3],
-                original[10],
-                original[7],
-                original[0],
-                original[4],
-                original[13],
-                original[1],
-                original[11],
-                original[12],
-                original[5],
-                original[9],
-                original[14],
-                original[15],
-                original[8],
-            ];
-        }
+        blake3_round!(v, m[3], m[4], m[10], m[12], m[13], m[2], m[7], m[14],
+                         m[6], m[5], m[9], m[0], m[11], m[15], m[8], m[1]);
 
-        // XOR the two halves for full output
-        // Need to save v[8..16] before modifying for correct XOR
-        let v_high = [v[8], v[9], v[10], v[11], v[12], v[13], v[14], v[15]];
+        blake3_round!(v, m[10], m[7], m[12], m[9], m[14], m[3], m[13], m[15],
+                         m[4], m[0], m[11], m[2], m[5], m[8], m[1], m[6]);
 
-        for i in 0..8 {
-            v[i] ^= v_high[i];
-            v[i + 8] = v_high[i] ^ self.input_chaining_value[i];
-        }
+        blake3_round!(v, m[12], m[13], m[9], m[11], m[15], m[10], m[14], m[8],
+                         m[7], m[2], m[5], m[3], m[0], m[1], m[6], m[4]);
+
+        blake3_round!(v, m[9], m[14], m[11], m[5], m[8], m[12], m[15], m[1],
+                         m[13], m[3], m[0], m[10], m[2], m[6], m[4], m[7]);
+
+        blake3_round!(v, m[11], m[15], m[5], m[0], m[1], m[9], m[8], m[6],
+                         m[14], m[10], m[2], m[12], m[3], m[4], m[7], m[13]);
+
+        Self::xor_finalize_full(&mut v, &self.input_chaining_value);
 
         v
     }
 
-    /// Perform BLAKE3 compression
     #[inline(always)]
     fn compress(&self, state: &mut [u32; 8]) {
         self.compress_with_counter(state, 0);
     }
 
-    /// Perform BLAKE3 compression with output block counter
     fn compress_with_counter(&self, state: &mut [u32; 8], output_block_counter: u64) {
-        let counter = if self.flags & ROOT != 0 {
-            output_block_counter
-        } else {
-            self.counter
-        };
+        let counter = self.select_counter(output_block_counter);
 
-        // Initialize state
-        let mut v = [0u32; 16];
-        v[0..8].copy_from_slice(state);
-        v[8..16].copy_from_slice(&IV);
-        v[12] = counter as u32;
-        v[13] = (counter >> 32) as u32;
-        v[14] = self.block_len;
-        v[15] = self.flags as u32;
+        let mut v = [
+            state[0], state[1], state[2], state[3], state[4], state[5], state[6], state[7],
+            IV[0], IV[1], IV[2], IV[3],
+            counter_low(counter),
+            counter_high(counter),
+            self.block_len,
+            self.flags_as_u32(),
+        ];
 
-        // 7 rounds of mixing
-        for schedule in &MSG_SCHEDULE[0..7] {
-            // Column step
-            Self::g(
-                &mut v,
-                0,
-                4,
-                8,
-                12,
-                self.block_words[schedule[0]],
-                self.block_words[schedule[1]],
-            );
-            Self::g(
-                &mut v,
-                1,
-                5,
-                9,
-                13,
-                self.block_words[schedule[2]],
-                self.block_words[schedule[3]],
-            );
-            Self::g(
-                &mut v,
-                2,
-                6,
-                10,
-                14,
-                self.block_words[schedule[4]],
-                self.block_words[schedule[5]],
-            );
-            Self::g(
-                &mut v,
-                3,
-                7,
-                11,
-                15,
-                self.block_words[schedule[6]],
-                self.block_words[schedule[7]],
-            );
+        let m = self.block_words;
 
-            // Diagonal step
-            Self::g(
-                &mut v,
-                0,
-                5,
-                10,
-                15,
-                self.block_words[schedule[8]],
-                self.block_words[schedule[9]],
-            );
-            Self::g(
-                &mut v,
-                1,
-                6,
-                11,
-                12,
-                self.block_words[schedule[10]],
-                self.block_words[schedule[11]],
-            );
-            Self::g(
-                &mut v,
-                2,
-                7,
-                8,
-                13,
-                self.block_words[schedule[12]],
-                self.block_words[schedule[13]],
-            );
-            Self::g(
-                &mut v,
-                3,
-                4,
-                9,
-                14,
-                self.block_words[schedule[14]],
-                self.block_words[schedule[15]],
-            );
-        }
+        blake3_round!(v, m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7],
+                         m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
 
-        // XOR state with compressed output (first 8 words only for chaining_value)
-        for i in 0..8 {
-            state[i] = v[i] ^ v[i + 8];
-            // Note: we don't need v[i+8] ^ input_cv[i] for chaining_value(),
-            // only for full 16-word output in compress_full()
-        }
+        blake3_round!(v, m[2], m[6], m[3], m[10], m[7], m[0], m[4], m[13],
+                         m[1], m[11], m[12], m[5], m[9], m[14], m[15], m[8]);
+
+        blake3_round!(v, m[3], m[4], m[10], m[12], m[13], m[2], m[7], m[14],
+                         m[6], m[5], m[9], m[0], m[11], m[15], m[8], m[1]);
+
+        blake3_round!(v, m[10], m[7], m[12], m[9], m[14], m[3], m[13], m[15],
+                         m[4], m[0], m[11], m[2], m[5], m[8], m[1], m[6]);
+
+        blake3_round!(v, m[12], m[13], m[9], m[11], m[15], m[10], m[14], m[8],
+                         m[7], m[2], m[5], m[3], m[0], m[1], m[6], m[4]);
+
+        blake3_round!(v, m[9], m[14], m[11], m[5], m[8], m[12], m[15], m[1],
+                         m[13], m[3], m[0], m[10], m[2], m[6], m[4], m[7]);
+
+        blake3_round!(v, m[11], m[15], m[5], m[0], m[1], m[9], m[8], m[6],
+                         m[14], m[10], m[2], m[12], m[3], m[4], m[7], m[13]);
+
+        Self::xor_finalize_chaining(&v, state);
     }
 
     /// BLAKE3 mixing function G
     #[inline(always)]
     fn g(v: &mut [u32; 16], a: usize, b: usize, c: usize, d: usize, mx: u32, my: u32) {
-        v[a] = v[a].wrapping_add(v[b]).wrapping_add(mx);
-        v[d] = (v[d] ^ v[a]).rotate_right(16);
-        v[c] = v[c].wrapping_add(v[d]);
-        v[b] = (v[b] ^ v[c]).rotate_right(12);
-        v[a] = v[a].wrapping_add(v[b]).wrapping_add(my);
-        v[d] = (v[d] ^ v[a]).rotate_right(8);
-        v[c] = v[c].wrapping_add(v[d]);
-        v[b] = (v[b] ^ v[c]).rotate_right(7);
+        let mut va = v[a];
+        let mut vb = v[b];
+        let mut vc = v[c];
+        let mut vd = v[d];
+
+        va = va.wrapping_add(vb).wrapping_add(mx);
+        vd = (vd ^ va).rotate_right(16);
+        vc = vc.wrapping_add(vd);
+        vb = (vb ^ vc).rotate_right(12);
+
+        va = va.wrapping_add(vb).wrapping_add(my);
+        vd = (vd ^ va).rotate_right(8);
+        vc = vc.wrapping_add(vd);
+        vb = (vb ^ vc).rotate_right(7);
+
+        v[a] = va;
+        v[b] = vb;
+        v[c] = vc;
+        v[d] = vd;
     }
 }
 
 /// BLAKE3 chunk state
 #[derive(Clone)]
+#[repr(C)]
 struct ChunkState {
     chaining_value: [u32; 8],
     chunk_counter: u64,
-    block: [u8; BLOCK_LEN],
     block_len: u8,
     blocks_compressed: u8,
     flags: u8,
+    block: [u8; BLOCK_LEN],
 }
 
 impl ChunkState {
@@ -297,11 +477,20 @@ impl ChunkState {
         Self {
             chaining_value: *key,
             chunk_counter,
-            block: [0; BLOCK_LEN],
             block_len: 0,
             blocks_compressed: 0,
             flags,
+            block: [0; BLOCK_LEN],
         }
+    }
+
+    #[inline(always)]
+    fn reset(&mut self, key: &[u32; 8], chunk_counter: u64, flags: u8) {
+        self.chaining_value = *key;
+        self.chunk_counter = chunk_counter;
+        self.block_len = 0;
+        self.blocks_compressed = 0;
+        self.flags = flags;
     }
 
     fn len(&self) -> usize {
@@ -316,14 +505,11 @@ impl ChunkState {
         }
     }
 
+    #[inline]
     fn update(&mut self, mut input: &[u8]) {
         while !input.is_empty() {
             if self.block_len as usize == BLOCK_LEN {
-                let mut block_words = [0u32; 16];
-                #[allow(clippy::needless_range_loop)]
-                for i in 0..16 {
-                    block_words[i] = read_u32_le(&self.block[i * 4..(i + 1) * 4]);
-                }
+                let block_words = words_from_bytes!(self.block);
 
                 let output = Output {
                     input_chaining_value: self.chaining_value,
@@ -335,13 +521,14 @@ impl ChunkState {
 
                 self.chaining_value = output.chaining_value();
                 self.blocks_compressed += 1;
-                self.block = [0; BLOCK_LEN];
                 self.block_len = 0;
             }
 
-            let want = BLOCK_LEN - self.block_len as usize;
+            let block_offset = self.block_len as usize;
+            let want = BLOCK_LEN - block_offset;
             let take = want.min(input.len());
-            self.block[self.block_len as usize..self.block_len as usize + take]
+
+            self.block[block_offset..block_offset + take]
                 .copy_from_slice(&input[..take]);
             self.block_len += take as u8;
             input = &input[take..];
@@ -350,20 +537,27 @@ impl ChunkState {
 
     fn output(&self) -> Output {
         let mut block_words = [0u32; 16];
-        for i in 0..16 {
-            if i * 4 < self.block_len as usize {
-                let end = ((i + 1) * 4).min(self.block_len as usize);
-                let mut word_bytes = [0u8; 4];
-                word_bytes[..end - i * 4].copy_from_slice(&self.block[i * 4..end]);
-                block_words[i] = read_u32_le(&word_bytes);
-            }
+        let block_len = self.block_len as usize;
+
+        let full_words = block_len / 4;
+
+        for i in 0..full_words {
+            block_words[i] = read_u32_le(&self.block[i * 4..(i + 1) * 4]);
+        }
+
+        if block_len % 4 != 0 {
+            let mut word_bytes = [0u8; 4];
+            let start = full_words * 4;
+            let remaining = block_len - start;
+            word_bytes[..remaining].copy_from_slice(&self.block[start..block_len]);
+            block_words[full_words] = read_u32_le(&word_bytes);
         }
 
         Output {
             input_chaining_value: self.chaining_value,
             block_words,
             counter: self.chunk_counter,
-            block_len: self.block_len as u32,
+            block_len: block_len as u32,
             flags: self.flags | self.start_flag() | CHUNK_END,
         }
     }
@@ -371,27 +565,28 @@ impl ChunkState {
 
 /// BLAKE3 hasher state
 #[derive(Clone)]
+#[repr(C)]
 pub struct Blake3 {
-    chunk_state: ChunkState,
-    key: [u32; 8],
-    cv_stack: [[u32; 8]; 54], // log2(2^64 / 1024) = 54 max depth
     cv_stack_len: usize,
     flags: u8,
+    chunk_state: ChunkState,
+    key: [u32; 8],
+    cv_stack: [[u32; 8]; 54],
 }
 
 impl Blake3 {
-    /// Create a new BLAKE3 hasher
-    pub fn new() -> Self {
+    /// Internal method: create a new BLAKE3 hasher
+    fn new_internal() -> Self {
         Self {
+            cv_stack_len: 0,
+            flags: 0,
             chunk_state: ChunkState::new(&IV, 0, 0),
             key: IV,
             cv_stack: [[0u32; 8]; 54],
-            cv_stack_len: 0,
-            flags: 0,
         }
     }
 
-    /// Create a new BLAKE3 hasher with a key (for MAC)
+    /// Create a new BLAKE3 hasher with a key for MAC mode
     pub fn new_keyed(key: &[u8; KEY_LEN]) -> Self {
         let mut key_words = [0u32; 8];
         for i in 0..8 {
@@ -399,43 +594,44 @@ impl Blake3 {
         }
 
         Self {
+            cv_stack_len: 0,
+            flags: KEYED_HASH,
             chunk_state: ChunkState::new(&key_words, 0, KEYED_HASH),
             key: key_words,
             cv_stack: [[0u32; 8]; 54],
-            cv_stack_len: 0,
-            flags: KEYED_HASH,
         }
     }
 
     /// Create a new BLAKE3 key derivation context
     pub fn new_derive_key(context: &str) -> Self {
         let mut context_hasher = Self {
+            cv_stack_len: 0,
+            flags: DERIVE_KEY_CONTEXT,
             chunk_state: ChunkState::new(&IV, 0, DERIVE_KEY_CONTEXT),
             key: IV,
             cv_stack: [[0u32; 8]; 54],
-            cv_stack_len: 0,
-            flags: DERIVE_KEY_CONTEXT,
         };
-        context_hasher.update(context.as_bytes());
+        context_hasher.update_internal(context.as_bytes());
         let context_key = context_hasher.finalize_words();
 
         Self {
+            cv_stack_len: 0,
+            flags: DERIVE_KEY_MATERIAL,
             chunk_state: ChunkState::new(&context_key, 0, DERIVE_KEY_MATERIAL),
             key: context_key,
             cv_stack: [[0u32; 8]; 54],
-            cv_stack_len: 0,
-            flags: DERIVE_KEY_MATERIAL,
         }
     }
 
-    /// Update the hasher with input data
-    pub fn update(&mut self, mut input: &[u8]) {
+    /// Internal method: update the hasher with input data
+    #[inline]
+    fn update_internal(&mut self, mut input: &[u8]) {
         while !input.is_empty() {
             if self.chunk_state.len() == CHUNK_LEN {
                 let chunk_cv = self.chunk_state.output().chaining_value();
                 let total_chunks = self.chunk_state.chunk_counter + 1;
                 self.add_chunk_chaining_value(chunk_cv, total_chunks);
-                self.chunk_state = ChunkState::new(&self.key, total_chunks, self.flags);
+                self.chunk_state.reset(&self.key, total_chunks, self.flags);
             }
 
             let want = CHUNK_LEN - self.chunk_state.len();
@@ -445,69 +641,89 @@ impl Blake3 {
         }
     }
 
-    /// Add a chunk chaining value to the tree
+    #[inline(always)]
     fn add_chunk_chaining_value(&mut self, cv: [u32; 8], total_chunks: u64) {
-        // Merge subtrees from the stack
-        let mut new_cv = cv;
-        let mut total = total_chunks;
+        let merge_count = total_chunks.trailing_zeros() as usize;
 
-        while total & 1 == 0 {
-            self.cv_stack_len -= 1;
-            new_cv = self.parent_cv(self.cv_stack[self.cv_stack_len], new_cv);
-            total >>= 1;
+        match merge_count {
+            0 => {
+                push_cv!(self, cv);
+            }
+            1 => {
+                let merged = merge_parent!(self, cv);
+                push_cv!(self, merged);
+            }
+            2 => {
+                self.cv_stack_len -= 1;
+                let merged1 = self.parent_output(
+                    self.cv_stack[self.cv_stack_len],
+                    cv
+                ).chaining_value();
+                self.cv_stack_len -= 1;
+                let merged2 = self.parent_output(
+                    self.cv_stack[self.cv_stack_len],
+                    merged1
+                ).chaining_value();
+                push_cv!(self, merged2);
+            }
+            _ => {
+                let mut new_cv = cv;
+                for _ in 0..merge_count {
+                    new_cv = merge_parent!(self, new_cv);
+                }
+                push_cv!(self, new_cv);
+            }
         }
-
-        self.cv_stack[self.cv_stack_len] = new_cv;
-        self.cv_stack_len += 1;
     }
 
-    /// Compute parent chaining value
     fn parent_cv(&self, left: [u32; 8], right: [u32; 8]) -> [u32; 8] {
         self.parent_output(left, right).chaining_value()
     }
 
-    /// Create parent output node
+    #[inline]
     fn parent_output(&self, left: [u32; 8], right: [u32; 8]) -> Output {
-        let mut block_words = [0u32; 16];
-        block_words[0..8].copy_from_slice(&left);
-        block_words[8..16].copy_from_slice(&right);
-
         Output {
             input_chaining_value: self.key,
-            block_words,
+            block_words: parent_block_words!(left, right),
             counter: 0,
             block_len: BLOCK_LEN as u32,
             flags: self.flags | PARENT,
         }
     }
 
-    /// Finalize and return the hash as words
-    fn finalize_words(&self) -> [u32; 8] {
-        let mut cv = self.chunk_state.output().chaining_value();
+    #[inline]
+    fn finalize_to_output(&self) -> Output {
+        let mut output = self.chunk_state.output();
 
-        // Merge remaining stack from right to left
-        for i in (0..self.cv_stack_len).rev() {
-            cv = self.parent_cv(self.cv_stack[i], cv);
+        match self.cv_stack_len {
+            0 => {
+                output
+            }
+            1 => {
+                self.parent_output(self.cv_stack[0], output.chaining_value())
+            }
+            2 => {
+                output = self.parent_output(self.cv_stack[0], output.chaining_value());
+                self.parent_output(self.cv_stack[1], output.chaining_value())
+            }
+            _ => {
+                for i in (0..self.cv_stack_len).rev() {
+                    output = self.parent_output(self.cv_stack[i], output.chaining_value());
+                }
+                output
+            }
         }
-
-        cv
     }
 
-    /// Finalize and return the hash
-    pub fn finalize(self) -> [u8; OUT_LEN] {
-        // Starting with the Output from the current chunk, compute all the
-        // parent outputs along the right edge of the tree, until we have the root Output.
-        let mut output = self.chunk_state.output();
-        let mut parent_nodes_remaining = self.cv_stack_len;
+    #[inline]
+    fn finalize_words(&self) -> [u32; 8] {
+        self.finalize_to_output().chaining_value()
+    }
 
-        while parent_nodes_remaining > 0 {
-            parent_nodes_remaining -= 1;
-            output = self.parent_output(
-                self.cv_stack[parent_nodes_remaining],
-                output.chaining_value(),
-            );
-        }
-
+    /// Internal method: finalize and return the hash
+    #[inline]
+    fn finalize_internal(self) -> [u8; OUT_LEN] {
+        let output = self.finalize_to_output();
         let mut out = [0u8; OUT_LEN];
         output.root_output_bytes(&mut out);
         out
@@ -515,18 +731,7 @@ impl Blake3 {
 
     /// Finalize and return arbitrary-length output (XOF mode)
     pub fn finalize_xof(self, length: usize) -> Vec<u8> {
-        // Same tree-merging logic as finalize()
-        let mut output = self.chunk_state.output();
-        let mut parent_nodes_remaining = self.cv_stack_len;
-
-        while parent_nodes_remaining > 0 {
-            parent_nodes_remaining -= 1;
-            output = self.parent_output(
-                self.cv_stack[parent_nodes_remaining],
-                output.chaining_value(),
-            );
-        }
-
+        let output = self.finalize_to_output();
         let mut out = vec![0u8; length];
         output.root_output_bytes(&mut out);
         out
@@ -535,28 +740,55 @@ impl Blake3 {
 
 impl Default for Blake3 {
     fn default() -> Self {
-        Self::new()
+        Self::new_internal()
+    }
+}
+
+impl crate::traits::HashFunction for Blake3 {
+    type Output = [u8; OUT_LEN];
+    const OUTPUT_SIZE: usize = OUT_LEN;
+    const BLOCK_SIZE: usize = BLOCK_LEN;
+
+    #[inline]
+    fn new() -> Self {
+        Self::new_internal()
+    }
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        self.update_internal(data)
+    }
+
+    #[inline]
+    fn finalize(self) -> Self::Output {
+        self.finalize_internal()
+    }
+
+    #[inline]
+    fn finalize_reset(&mut self) -> Self::Output {
+        let clone = self.clone();
+        *self = Self::new();
+        clone.finalize_internal()
     }
 }
 
 /// One-shot BLAKE3 hash
 pub fn blake3(data: &[u8]) -> [u8; OUT_LEN] {
-    let mut hasher = Blake3::new();
-    hasher.update(data);
-    hasher.finalize()
+    use crate::traits::HashFunction;
+    Blake3::hash(data)
 }
 
 /// One-shot BLAKE3 keyed hash
 pub fn blake3_keyed(key: &[u8; KEY_LEN], data: &[u8]) -> [u8; OUT_LEN] {
     let mut hasher = Blake3::new_keyed(key);
-    hasher.update(data);
-    hasher.finalize()
+    hasher.update_internal(data);
+    hasher.finalize_internal()
 }
 
 /// One-shot BLAKE3 key derivation
 pub fn blake3_derive_key(context: &str, key_material: &[u8], output_len: usize) -> Vec<u8> {
     let mut hasher = Blake3::new_derive_key(context);
-    hasher.update(key_material);
+    hasher.update_internal(key_material);
     hasher.finalize_xof(output_len)
 }
 
@@ -582,12 +814,11 @@ mod tests {
 
     #[test]
     fn test_blake3_incremental() {
+        use crate::traits::HashFunction;
         let data = b"The quick brown fox jumps over the lazy dog";
 
-        // One-shot
         let hash1 = blake3(data);
 
-        // Incremental
         let mut hasher = Blake3::new();
         hasher.update(&data[..20]);
         hasher.update(&data[20..]);
@@ -598,6 +829,7 @@ mod tests {
 
     #[test]
     fn test_blake3_xof() {
+        use crate::traits::HashFunction;
         let data = b"test";
         let mut hasher = Blake3::new();
         hasher.update(data);
@@ -605,7 +837,6 @@ mod tests {
         let xof_64 = hasher.clone().finalize_xof(64);
         let xof_32 = hasher.finalize_xof(32);
 
-        // First 32 bytes should match
         assert_eq!(&xof_64[..32], &xof_32[..]);
     }
 
@@ -616,29 +847,24 @@ mod tests {
 
         let hash = blake3_keyed(&key, data);
 
-        // Should differ from unkeyed hash
         let unkeyed = blake3(data);
         assert_ne!(hash, unkeyed);
     }
 
     #[test]
     fn test_blake3_multi_chunk_2k() {
-        // Test with 2KB input (2 chunks)
+        use crate::traits::HashFunction;
         let data = vec![0xABu8; 2048];
 
-        // One-shot
         let hash1 = blake3(&data);
 
-        // Incremental
         let mut hasher = Blake3::new();
         hasher.update(&data[..1024]);
         hasher.update(&data[1024..]);
         let hash2 = hasher.finalize();
 
-        // One-shot and incremental should match
         assert_eq!(hash1, hash2);
 
-        // Expected hash for 2KB of 0xAB bytes (verified against official BLAKE3)
         let expected =
             hex_literal::hex!("5ce2bb471d0c7dddfa641ef980c1bb11dfda024dd5a5e647cf9eb150f9684f5c");
         assert_eq!(hash1, expected);
@@ -646,12 +872,10 @@ mod tests {
 
     #[test]
     fn test_blake3_multi_chunk_5k() {
-        // Test with 5KB input (5 chunks) - creates deeper tree
         let data = vec![0x42u8; 5120];
 
         let hash = blake3(&data);
 
-        // Expected hash for 5KB of 0x42 bytes (verified against official BLAKE3)
         let expected =
             hex_literal::hex!("0633d9f3a4a212819dd3bd6b257241e141362101838e1d83a88bdafee45c1f0f");
         assert_eq!(hash, expected);
@@ -659,13 +883,11 @@ mod tests {
 
     #[test]
     fn test_blake3_multi_chunk_incremental() {
-        // Test incremental hashing with varying chunk boundaries
+        use crate::traits::HashFunction;
         let data = vec![0x55u8; 3000];
 
-        // One-shot
         let hash1 = blake3(&data);
 
-        // Incremental with different boundaries
         let mut hasher = Blake3::new();
         hasher.update(&data[..500]);
         hasher.update(&data[500..1500]);
@@ -677,7 +899,7 @@ mod tests {
 
     #[test]
     fn test_blake3_multi_chunk_xof() {
-        // Test XOF mode with multi-chunk input
+        use crate::traits::HashFunction;
         let data = vec![0x77u8; 2048];
 
         let mut hasher = Blake3::new();
@@ -686,7 +908,6 @@ mod tests {
         let xof_128 = hasher.clone().finalize_xof(128);
         let xof_64 = hasher.finalize_xof(64);
 
-        // First 64 bytes should match
         assert_eq!(&xof_128[..64], &xof_64[..]);
         assert_eq!(xof_128.len(), 128);
         assert_eq!(xof_64.len(), 64);
@@ -694,7 +915,7 @@ mod tests {
 
     #[test]
     fn test_blake3_exact_chunk_boundary() {
-        // Test exactly 1024 bytes (boundary case)
+        use crate::traits::HashFunction;
         let data = vec![0x99u8; 1024];
 
         let hash1 = blake3(&data);
@@ -708,13 +929,11 @@ mod tests {
 
     #[test]
     fn test_blake3_multi_chunk_keyed() {
-        // Test keyed hash with multi-chunk input
         let key = [0xCDu8; KEY_LEN];
-        let data = vec![0xEFu8; 3072]; // 3 chunks
+        let data = vec![0xEFu8; 3072];
 
         let hash = blake3_keyed(&key, &data);
 
-        // Should differ from unkeyed
         let unkeyed = blake3(&data);
         assert_ne!(hash, unkeyed);
     }

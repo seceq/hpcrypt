@@ -1,28 +1,44 @@
 //! BLAKE2b cryptographic hash function
 //!
 //! BLAKE2b is a cryptographic hash function optimized for 64-bit platforms.
-//! It's faster than MD5, SHA-1, SHA-2, and SHA-3, yet is at least as secure as SHA-3.
+//! It provides high performance while maintaining security comparable to SHA-3.
 //!
-//! Key features:
-//! - Output size: 1 to 64 bytes (configurable)
-//! - Keyed hashing (MAC mode)
-//! - Personalization and salt support
-//! - Tree hashing mode
+//! # Features
+//!
+//! - Variable output length (1-64 bytes)
+//! - Optional keyed hashing for MAC functionality
+//! - Optimized for modern 64-bit processors
+//! - No padding requirements for arbitrary-length inputs
+//!
+//! # Security
+//!
+//! BLAKE2b provides security equivalent to SHA-3, with performance exceeding
+//! SHA-2 and SHA-3 implementations. It is suitable for general-purpose
+//! cryptographic hashing, message authentication, and key derivation.
+//!
+//! # Example
+//!
+//! ```
+//! use hpcrypt_hash::blake2b;
+//!
+//! let hash = blake2b(b"hello world");
+//! assert_eq!(hash.len(), 64);
+//! ```
 
 extern crate alloc;
 use alloc::vec::Vec;
 use core::cmp::min;
 
-/// BLAKE2b output size in bytes (512 bits)
+/// Maximum output length in bytes (512 bits)
 pub const OUT_LEN: usize = 64;
 
-/// BLAKE2b key size in bytes (512 bits max)
+/// Maximum key length in bytes (512 bits)
 pub const KEY_LEN: usize = 64;
 
-/// BLAKE2b block size in bytes
+/// Block size in bytes (1024 bits)
 pub const BLOCK_LEN: usize = 128;
 
-/// BLAKE2b initialization vectors
+/// Initialization vector constants
 const IV: [u64; 8] = [
     0x6a09e667f3bcc908,
     0xbb67ae8584caa73b,
@@ -34,7 +50,7 @@ const IV: [u64; 8] = [
     0x5be0cd19137e2179,
 ];
 
-/// BLAKE2b sigma permutation table
+/// Message word permutations for rounds 0-11
 const SIGMA: [[usize; 16]; 12] = [
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     [14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
@@ -50,77 +66,133 @@ const SIGMA: [[usize; 16]; 12] = [
     [14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
 ];
 
-/// BLAKE2b mixing function G
+/// Core mixing function
 #[inline(always)]
-fn g(v: &mut [u64; 16], a: usize, b: usize, c: usize, d: usize, x: u64, y: u64) {
-    v[a] = v[a].wrapping_add(v[b]).wrapping_add(x);
-    v[d] = (v[d] ^ v[a]).rotate_right(32);
-    v[c] = v[c].wrapping_add(v[d]);
-    v[b] = (v[b] ^ v[c]).rotate_right(24);
-    v[a] = v[a].wrapping_add(v[b]).wrapping_add(y);
-    v[d] = (v[d] ^ v[a]).rotate_right(16);
-    v[c] = v[c].wrapping_add(v[d]);
-    v[b] = (v[b] ^ v[c]).rotate_right(63);
+fn g<const A: usize, const B: usize, const C: usize, const D: usize>(
+    v: &mut [u64; 16],
+    x: u64,
+    y: u64,
+) {
+    v[A] = v[A].wrapping_add(v[B]).wrapping_add(x);
+    v[D] = (v[D] ^ v[A]).rotate_right(32);
+    v[C] = v[C].wrapping_add(v[D]);
+    v[B] = (v[B] ^ v[C]).rotate_right(24);
+    v[A] = v[A].wrapping_add(v[B]).wrapping_add(y);
+    v[D] = (v[D] ^ v[A]).rotate_right(16);
+    v[C] = v[C].wrapping_add(v[D]);
+    v[B] = (v[B] ^ v[C]).rotate_right(63);
 }
 
-/// BLAKE2b compression function
-fn compress(h: &mut [u64; 8], m: &[u64; 16], t: u64, f: bool) {
+/// Single compression round
+macro_rules! round {
+    ($v:expr, $m:expr, $round:expr) => {{
+        let s = &SIGMA[$round];
+        let m0 = $m[s[0]];
+        let m1 = $m[s[1]];
+        let m2 = $m[s[2]];
+        let m3 = $m[s[3]];
+        let m4 = $m[s[4]];
+        let m5 = $m[s[5]];
+        let m6 = $m[s[6]];
+        let m7 = $m[s[7]];
+        let m8 = $m[s[8]];
+        let m9 = $m[s[9]];
+        let m10 = $m[s[10]];
+        let m11 = $m[s[11]];
+        let m12 = $m[s[12]];
+        let m13 = $m[s[13]];
+        let m14 = $m[s[14]];
+        let m15 = $m[s[15]];
+
+        g::<0, 4, 8, 12>($v, m0, m1);
+        g::<1, 5, 9, 13>($v, m2, m3);
+        g::<2, 6, 10, 14>($v, m4, m5);
+        g::<3, 7, 11, 15>($v, m6, m7);
+        g::<0, 5, 10, 15>($v, m8, m9);
+        g::<1, 6, 11, 12>($v, m10, m11);
+        g::<2, 7, 8, 13>($v, m12, m13);
+        g::<3, 4, 9, 14>($v, m14, m15);
+    }};
+}
+
+/// Complete 12-round compression
+macro_rules! rounds_12 {
+    ($v:expr, $m:expr) => {{
+        round!($v, $m, 0);
+        round!($v, $m, 1);
+        round!($v, $m, 2);
+        round!($v, $m, 3);
+        round!($v, $m, 4);
+        round!($v, $m, 5);
+        round!($v, $m, 6);
+        round!($v, $m, 7);
+        round!($v, $m, 8);
+        round!($v, $m, 9);
+        round!($v, $m, 10);
+        round!($v, $m, 11);
+    }};
+}
+
+/// Load message words from block
+#[inline(always)]
+fn load_message_words(buf: &[u8; BLOCK_LEN]) -> [u64; 16] {
+    [
+        u64::from_le_bytes([buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]]),
+        u64::from_le_bytes([buf[8], buf[9], buf[10], buf[11], buf[12], buf[13], buf[14], buf[15]]),
+        u64::from_le_bytes([buf[16], buf[17], buf[18], buf[19], buf[20], buf[21], buf[22], buf[23]]),
+        u64::from_le_bytes([buf[24], buf[25], buf[26], buf[27], buf[28], buf[29], buf[30], buf[31]]),
+        u64::from_le_bytes([buf[32], buf[33], buf[34], buf[35], buf[36], buf[37], buf[38], buf[39]]),
+        u64::from_le_bytes([buf[40], buf[41], buf[42], buf[43], buf[44], buf[45], buf[46], buf[47]]),
+        u64::from_le_bytes([buf[48], buf[49], buf[50], buf[51], buf[52], buf[53], buf[54], buf[55]]),
+        u64::from_le_bytes([buf[56], buf[57], buf[58], buf[59], buf[60], buf[61], buf[62], buf[63]]),
+        u64::from_le_bytes([buf[64], buf[65], buf[66], buf[67], buf[68], buf[69], buf[70], buf[71]]),
+        u64::from_le_bytes([buf[72], buf[73], buf[74], buf[75], buf[76], buf[77], buf[78], buf[79]]),
+        u64::from_le_bytes([buf[80], buf[81], buf[82], buf[83], buf[84], buf[85], buf[86], buf[87]]),
+        u64::from_le_bytes([buf[88], buf[89], buf[90], buf[91], buf[92], buf[93], buf[94], buf[95]]),
+        u64::from_le_bytes([buf[96], buf[97], buf[98], buf[99], buf[100], buf[101], buf[102], buf[103]]),
+        u64::from_le_bytes([buf[104], buf[105], buf[106], buf[107], buf[108], buf[109], buf[110], buf[111]]),
+        u64::from_le_bytes([buf[112], buf[113], buf[114], buf[115], buf[116], buf[117], buf[118], buf[119]]),
+        u64::from_le_bytes([buf[120], buf[121], buf[122], buf[123], buf[124], buf[125], buf[126], buf[127]]),
+    ]
+}
+
+/// Block compression function
+#[inline(always)]
+fn compress(h: &mut [u64; 8], m: &[u64; 16], t: [u64; 2], f: bool) {
     let mut v = [0u64; 16];
     v[..8].copy_from_slice(h);
     v[8..].copy_from_slice(&IV);
 
-    v[12] ^= t;
-    v[13] ^= 0; // High word of counter (for >2^64 bytes)
+    v[12] ^= t[0];
+    v[13] ^= t[1];
 
     if f {
-        v[14] = !v[14]; // Last block flag
+        v[14] = !v[14];
     }
 
-    // 12 rounds
-    for s in &SIGMA[0..12] {
-        // Column step
-        g(&mut v, 0, 4, 8, 12, m[s[0]], m[s[1]]);
-        g(&mut v, 1, 5, 9, 13, m[s[2]], m[s[3]]);
-        g(&mut v, 2, 6, 10, 14, m[s[4]], m[s[5]]);
-        g(&mut v, 3, 7, 11, 15, m[s[6]], m[s[7]]);
-
-        // Diagonal step
-        g(&mut v, 0, 5, 10, 15, m[s[8]], m[s[9]]);
-        g(&mut v, 1, 6, 11, 12, m[s[10]], m[s[11]]);
-        g(&mut v, 2, 7, 8, 13, m[s[12]], m[s[13]]);
-        g(&mut v, 3, 4, 9, 14, m[s[14]], m[s[15]]);
-    }
+    rounds_12!(&mut v, m);
 
     for i in 0..8 {
         h[i] ^= v[i] ^ v[i + 8];
     }
 }
 
-/// Convert bytes to u64 (little-endian)
-#[inline]
-fn bytes_to_u64(bytes: &[u8]) -> u64 {
-    let mut buf = [0u8; 8];
-    buf[..bytes.len()].copy_from_slice(bytes);
-    u64::from_le_bytes(buf)
-}
-
-/// BLAKE2b hasher state
+/// BLAKE2b hash state
 #[derive(Clone)]
 pub struct Blake2b {
     h: [u64; 8],
-    t: u64,
+    t: [u64; 2],
     buf: [u8; BLOCK_LEN],
     buf_len: usize,
     out_len: usize,
 }
 
 impl Blake2b {
-    /// Create a new BLAKE2b hasher with default 64-byte output
-    pub fn new() -> Self {
-        Self::new_with_output_len(OUT_LEN)
-    }
-
-    /// Create a new BLAKE2b hasher with specified output length (1-64 bytes)
+    /// Creates a hasher with specified output length
+    ///
+    /// # Panics
+    ///
+    /// Panics if `out_len` is zero or greater than 64
     pub fn new_with_output_len(out_len: usize) -> Self {
         assert!(out_len > 0 && out_len <= OUT_LEN, "Invalid output length");
 
@@ -129,14 +201,18 @@ impl Blake2b {
 
         Self {
             h,
-            t: 0,
+            t: [0, 0],
             buf: [0u8; BLOCK_LEN],
             buf_len: 0,
             out_len,
         }
     }
 
-    /// Create a new BLAKE2b hasher with a key (MAC mode)
+    /// Creates a keyed hasher for MAC generation
+    ///
+    /// # Panics
+    ///
+    /// Panics if key length exceeds 64 bytes or output length is invalid
     pub fn new_keyed(key: &[u8], out_len: usize) -> Self {
         assert!(key.len() <= KEY_LEN, "Key too long");
         assert!(out_len > 0 && out_len <= OUT_LEN, "Invalid output length");
@@ -146,31 +222,36 @@ impl Blake2b {
 
         let mut hasher = Self {
             h,
-            t: 0,
+            t: [0, 0],
             buf: [0u8; BLOCK_LEN],
             buf_len: 0,
             out_len,
         };
 
-        // Process key as first block
         if !key.is_empty() {
             hasher.buf[..key.len()].copy_from_slice(key);
-            hasher.buf_len = BLOCK_LEN; // Pad to full block
+            hasher.buf_len = BLOCK_LEN;
         }
 
         hasher
     }
 
-    /// Update the hasher with input data
-    pub fn update(&mut self, mut input: &[u8]) {
+    /// Increments the byte counter
+    #[inline(always)]
+    fn increment_counter(&mut self, inc: usize) {
+        let inc_u64 = inc as u64;
+        self.t[0] = self.t[0].wrapping_add(inc_u64);
+        if self.t[0] < inc_u64 {
+            self.t[1] = self.t[1].wrapping_add(1);
+        }
+    }
+
+    /// Internal method: processes input data
+    fn update_internal(&mut self, mut input: &[u8]) {
         while !input.is_empty() {
             if self.buf_len == BLOCK_LEN {
-                self.t += BLOCK_LEN as u64;
-                let mut m = [0u64; 16];
-                #[allow(clippy::needless_range_loop)]
-                for i in 0..16 {
-                    m[i] = bytes_to_u64(&self.buf[i * 8..(i + 1) * 8]);
-                }
+                self.increment_counter(BLOCK_LEN);
+                let m = load_message_words(&self.buf);
                 compress(&mut self.h, &m, self.t, false);
                 self.buf_len = 0;
             }
@@ -182,19 +263,12 @@ impl Blake2b {
         }
     }
 
-    /// Finalize and return the hash
-    pub fn finalize(mut self) -> Vec<u8> {
-        self.t += self.buf_len as u64;
-
-        // Pad remaining buffer with zeros
+    /// Internal method: completes hashing and returns variable-length digest
+    fn finalize_internal(mut self) -> Vec<u8> {
+        self.increment_counter(self.buf_len);
         self.buf[self.buf_len..].fill(0);
 
-        let mut m = [0u64; 16];
-        #[allow(clippy::needless_range_loop)]
-        for i in 0..16 {
-            m[i] = bytes_to_u64(&self.buf[i * 8..min((i + 1) * 8, BLOCK_LEN)]);
-        }
-
+        let m = load_message_words(&self.buf);
         compress(&mut self.h, &m, self.t, true);
 
         let mut out = Vec::with_capacity(self.out_len);
@@ -208,19 +282,12 @@ impl Blake2b {
         out
     }
 
-    /// Finalize and return exactly 64 bytes
-    pub fn finalize_fixed(mut self) -> [u8; OUT_LEN] {
-        self.t += self.buf_len as u64;
-
-        // Pad remaining buffer with zeros
+    /// Internal method: completes hashing and returns a 64-byte digest
+    fn finalize_fixed_internal(mut self) -> [u8; OUT_LEN] {
+        self.increment_counter(self.buf_len);
         self.buf[self.buf_len..].fill(0);
 
-        let mut m = [0u64; 16];
-        #[allow(clippy::needless_range_loop)]
-        for i in 0..16 {
-            m[i] = bytes_to_u64(&self.buf[i * 8..min((i + 1) * 8, BLOCK_LEN)]);
-        }
-
+        let m = load_message_words(&self.buf);
         compress(&mut self.h, &m, self.t, true);
 
         let mut out = [0u8; OUT_LEN];
@@ -233,29 +300,56 @@ impl Blake2b {
 
 impl Default for Blake2b {
     fn default() -> Self {
-        Self::new()
+        Self::new_with_output_len(OUT_LEN)
     }
 }
 
-/// One-shot BLAKE2b hash
-pub fn blake2b(data: &[u8]) -> [u8; OUT_LEN] {
-    let mut hasher = Blake2b::new();
-    hasher.update(data);
-    hasher.finalize_fixed()
+impl crate::traits::HashFunction for Blake2b {
+    type Output = [u8; OUT_LEN];
+    const OUTPUT_SIZE: usize = OUT_LEN;
+    const BLOCK_SIZE: usize = BLOCK_LEN;
+
+    #[inline]
+    fn new() -> Self {
+        Self::new_with_output_len(OUT_LEN)
+    }
+
+    #[inline]
+    fn update(&mut self, input: &[u8]) {
+        self.update_internal(input)
+    }
+
+    #[inline]
+    fn finalize(self) -> Self::Output {
+        self.finalize_fixed_internal()
+    }
+
+    #[inline]
+    fn finalize_reset(&mut self) -> Self::Output {
+        let clone = self.clone();
+        *self = Self::new();
+        clone.finalize_fixed_internal()
+    }
 }
 
-/// One-shot BLAKE2b hash with custom output length
+/// Computes BLAKE2b hash of data
+pub fn blake2b(data: &[u8]) -> [u8; OUT_LEN] {
+    use crate::traits::HashFunction;
+    Blake2b::hash(data)
+}
+
+/// Computes BLAKE2b hash with custom length
 pub fn blake2b_variable(data: &[u8], out_len: usize) -> Vec<u8> {
     let mut hasher = Blake2b::new_with_output_len(out_len);
-    hasher.update(data);
-    hasher.finalize()
+    hasher.update_internal(data);
+    hasher.finalize_internal()
 }
 
-/// One-shot BLAKE2b keyed hash (MAC)
+/// Computes keyed BLAKE2b for MAC generation
 pub fn blake2b_mac(key: &[u8], data: &[u8]) -> [u8; OUT_LEN] {
     let mut hasher = Blake2b::new_keyed(key, OUT_LEN);
-    hasher.update(data);
-    let result = hasher.finalize();
+    hasher.update_internal(data);
+    let result = hasher.finalize_internal();
     let mut out = [0u8; OUT_LEN];
     out.copy_from_slice(&result);
     out
@@ -296,16 +390,15 @@ mod tests {
 
     #[test]
     fn test_blake2b_incremental() {
+        use crate::traits::HashFunction;
         let data = b"The quick brown fox jumps over the lazy dog";
 
-        // One-shot
         let hash1 = blake2b(data);
 
-        // Incremental
         let mut hasher = Blake2b::new();
         hasher.update(&data[..20]);
         hasher.update(&data[20..]);
-        let hash2 = hasher.finalize_fixed();
+        let hash2 = hasher.finalize();
 
         assert_eq!(hash1, hash2);
     }
@@ -316,8 +409,6 @@ mod tests {
         let data = b"message";
 
         let mac = blake2b_mac(key, data);
-
-        // Should differ from unkeyed hash
         let unkeyed = blake2b(data);
         assert_ne!(mac, unkeyed);
     }
