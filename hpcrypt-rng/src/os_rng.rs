@@ -3,6 +3,51 @@
 //! Uses the OS's cryptographically secure RNG via the `getrandom` crate.
 
 use crate::{Result, RngError};
+use rand_core::{CryptoRng, RngCore};
+
+/// OS-based cryptographically secure RNG compatible with rand_core
+///
+/// This is a zero-sized type that implements `RngCore` and `CryptoRng` traits
+/// from the `rand_core` crate, making it compatible with the broader Rust
+/// cryptography ecosystem.
+///
+/// # Examples
+///
+/// ```
+/// use hpcrypt_rng::OsRng;
+/// use rand_core::RngCore;
+///
+/// let mut rng = OsRng;
+/// let mut key = [0u8; 32];
+/// rng.fill_bytes(&mut key);
+/// ```
+#[derive(Debug, Clone, Copy, Default)]
+pub struct OsRng;
+
+impl RngCore for OsRng {
+    fn next_u32(&mut self) -> u32 {
+        let mut bytes = [0u8; 4];
+        self.fill_bytes(&mut bytes);
+        u32::from_le_bytes(bytes)
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        let mut bytes = [0u8; 8];
+        self.fill_bytes(&mut bytes);
+        u64::from_le_bytes(bytes)
+    }
+
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        fill_random(dest).expect("OS RNG failed - this should never happen in normal operation");
+    }
+
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> core::result::Result<(), rand_core::Error> {
+        fill_random(dest).map_err(|_| rand_core::Error::from(core::num::NonZeroU32::new(1).unwrap()))
+    }
+}
+
+// Mark as cryptographically secure
+impl CryptoRng for OsRng {}
 
 /// Fill buffer with random bytes from OS RNG
 ///
