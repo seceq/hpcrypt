@@ -288,7 +288,7 @@ fn is_scalar_valid(s: &Scalar) -> bool {
 fn shake256_114(input: &[u8], output: &mut [u8; 114]) {
     // We'll use the SHAKE256 from hpcrypt-hash
     // For now, use a placeholder - will integrate with hpcrypt-hash
-    use hpcrypt_hash::Shake256;
+    use hpcrypt_hash::{Shake256, XofFunction};
 
     let mut shake = Shake256::new();
     shake.update(input);
@@ -303,7 +303,7 @@ fn shake256_114(input: &[u8], output: &mut [u8; 114]) {
 ///
 /// For Ed448 (not Ed448ph), F = 0 and C = empty string.
 fn shake256_with_prefix(prefix: &[u8], message: &[u8], output: &mut [u8; 114]) {
-    use hpcrypt_hash::Shake256;
+    use hpcrypt_hash::{Shake256, XofFunction};
 
     let mut shake = Shake256::new();
 
@@ -326,7 +326,7 @@ fn shake256_with_prefix(prefix: &[u8], message: &[u8], output: &mut [u8; 114]) {
 ///
 /// For Ed448 (not Ed448ph), F = 0 and C = empty string.
 fn shake256_dom4(r: &[u8], a: &[u8], message: &[u8], output: &mut [u8; 114]) {
-    use hpcrypt_hash::Shake256;
+    use hpcrypt_hash::{Shake256, XofFunction};
 
     let mut shake = Shake256::new();
 

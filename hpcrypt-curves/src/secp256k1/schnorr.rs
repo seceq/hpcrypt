@@ -24,6 +24,7 @@ use alloc::vec::Vec;
 
 use super::point::Point;
 use super::scalar::Scalar;
+use hpcrypt_hash::HashFunction;
 use hpcrypt_hash::sha256::Sha256;
 
 /// Schnorr signature (64 bytes: 32-byte R || 32-byte s)

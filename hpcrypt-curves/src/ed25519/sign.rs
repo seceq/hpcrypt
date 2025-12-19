@@ -8,7 +8,7 @@
 
 use super::point::{scalar_mul_base_fast, EdwardsPoint};
 use super::scalar::Scalar;
-use hpcrypt_hash::Sha512;
+use hpcrypt_hash::{HashFunction, Sha512};
 
 #[cfg(feature = "std")]
 extern crate std;
