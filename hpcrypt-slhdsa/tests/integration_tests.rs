@@ -10,27 +10,29 @@ use hpcrypt_slhdsa::{
     sign, verify, KeyPair, ParameterSet, PublicKey, SecretKey, Sha2_128f, Sha2_128s, Sha2_192f,
     Sha2_192s, Sha2_256f, Sha2_256s,
 };
+use rand::rngs::OsRng;
 
 #[test]
 fn test_keygen_sha2_128s() {
-    let _keypair = KeyPair::<Sha2_128s>::generate();
+    let _keypair = KeyPair::<Sha2_128s>::generate(&mut OsRng);
     // Key generation should complete without panicking
 }
 
 #[test]
 fn test_keygen_all_parameter_sets() {
     // All parameter sets should generate keys successfully
-    let _kp_128s = KeyPair::<Sha2_128s>::generate();
-    let _kp_128f = KeyPair::<Sha2_128f>::generate();
-    let _kp_192s = KeyPair::<Sha2_192s>::generate();
-    let _kp_192f = KeyPair::<Sha2_192f>::generate();
-    let _kp_256s = KeyPair::<Sha2_256s>::generate();
-    let _kp_256f = KeyPair::<Sha2_256f>::generate();
+    let _kp_128s = KeyPair::<Sha2_128s>::generate(&mut OsRng);
+    let _kp_128f = KeyPair::<Sha2_128f>::generate(&mut OsRng);
+    let _kp_192s = KeyPair::<Sha2_192s>::generate(&mut OsRng);
+    let _kp_192f = KeyPair::<Sha2_192f>::generate(&mut OsRng);
+    let _kp_256s = KeyPair::<Sha2_256s>::generate(&mut OsRng);
+    let _kp_256f = KeyPair::<Sha2_256f>::generate(&mut OsRng);
 }
 
 #[test]
 fn test_signing_works() {
-    let keypair = KeyPair::<Sha2_128s>::generate();
+    
+    let keypair = KeyPair::<Sha2_128s>::generate(&mut OsRng);
     let message = b"Integration test message";
 
     // Signing should complete without panicking
@@ -39,7 +41,8 @@ fn test_signing_works() {
 
 #[test]
 fn test_verification_works() {
-    let keypair = KeyPair::<Sha2_128s>::generate();
+    
+    let keypair = KeyPair::<Sha2_128s>::generate(&mut OsRng);
     let message = b"Integration test message";
     let signature = sign(&keypair.secret_key, message);
 
@@ -49,7 +52,8 @@ fn test_verification_works() {
 
 #[test]
 fn test_key_serialization() {
-    let keypair = KeyPair::<Sha2_128s>::generate();
+    
+    let keypair = KeyPair::<Sha2_128s>::generate(&mut OsRng);
 
     // Serialization should work
     let sk_bytes = keypair.secret_key.to_bytes();
@@ -66,7 +70,8 @@ fn test_key_serialization() {
 
 #[test]
 fn test_sign_with_reconstructed_key() {
-    let keypair = KeyPair::<Sha2_128s>::generate();
+    
+    let keypair = KeyPair::<Sha2_128s>::generate(&mut OsRng);
 
     let sk_bytes = keypair.secret_key.to_bytes();
     let reconstructed_sk = SecretKey::<Sha2_128s>::from_bytes(&sk_bytes).unwrap();
@@ -78,7 +83,8 @@ fn test_sign_with_reconstructed_key() {
 
 #[test]
 fn test_empty_message() {
-    let keypair = KeyPair::<Sha2_128s>::generate();
+    
+    let keypair = KeyPair::<Sha2_128s>::generate(&mut OsRng);
 
     // Should handle empty messages without panicking
     let empty_msg = b"";
@@ -87,7 +93,8 @@ fn test_empty_message() {
 
 #[test]
 fn test_large_message() {
-    let keypair = KeyPair::<Sha2_128s>::generate();
+    
+    let keypair = KeyPair::<Sha2_128s>::generate(&mut OsRng);
 
     // Should handle large messages (10KB) without panicking
     let large_msg = vec![0x42u8; 10240];
@@ -96,7 +103,8 @@ fn test_large_message() {
 
 #[test]
 fn test_multiple_signatures() {
-    let keypair = KeyPair::<Sha2_128s>::generate();
+    
+    let keypair = KeyPair::<Sha2_128s>::generate(&mut OsRng);
 
     // Should be able to sign multiple messages
     let _sig1 = sign(&keypair.secret_key, b"Message 1");
@@ -130,10 +138,11 @@ fn test_parameter_set_constants() {
 
 #[test]
 fn test_type_safety_compile_time() {
+    
     // This test verifies that type safety works
     // (The actual compile-time check happens when you try to mix types)
-    let _kp_128s = KeyPair::<Sha2_128s>::generate();
-    let _kp_128f = KeyPair::<Sha2_128f>::generate();
+    let _kp_128s = KeyPair::<Sha2_128s>::generate(&mut OsRng);
+    let _kp_128f = KeyPair::<Sha2_128f>::generate(&mut OsRng);
 
     // The following would not compile due to type safety:
     // let sig = sign(&_kp_128s.secret_key, b"test");
