@@ -6,6 +6,7 @@
 //! 12-round Keccak-p[1600,12] permutation, providing approximately 2x speedup
 //! compared to SHAKE128/256 while maintaining the same security levels.
 
+use hpcrypt_hash::XofFunction;
 use rfc_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 
@@ -83,7 +84,7 @@ fn test_turboshake_rfc9861() {
                 hasher.update(&input);
 
                 let mut output = vec![0u8; test.output_length];
-                hasher.finalize(&mut output);
+                hasher.clone().finalize(&mut output);
 
                 if &output[..] == &expected_hash[..] {
                     println!("  TurboSHAKE128 hash matches");
@@ -115,7 +116,7 @@ fn test_turboshake_rfc9861() {
                 hasher.update(&input);
 
                 let mut output = vec![0u8; test.output_length];
-                hasher.finalize(&mut output);
+                hasher.clone().finalize(&mut output);
 
                 if &output[..] == &expected_hash[..] {
                     println!("  TurboSHAKE256 hash matches");
@@ -166,7 +167,7 @@ fn test_turboshake128_basic() {
     println!("  Testing empty input...");
     let mut hasher = TurboShake128::new();
     let mut output = [0u8; 32];
-    hasher.finalize(&mut output);
+    hasher.clone().finalize(&mut output);
     println!("    Empty input hash: {} bytes", output.len());
 
     // Test simple message
@@ -174,7 +175,7 @@ fn test_turboshake128_basic() {
     let mut hasher = TurboShake128::new();
     hasher.update(b"hello world");
     let mut output = [0u8; 32];
-    hasher.finalize(&mut output);
+    hasher.clone().finalize(&mut output);
     println!("    Message hash produced");
 
     // Test incremental updates
@@ -207,7 +208,7 @@ fn test_turboshake256_basic() {
     println!("  Testing empty input...");
     let mut hasher = TurboShake256::new();
     let mut output = [0u8; 64];
-    hasher.finalize(&mut output);
+    hasher.clone().finalize(&mut output);
     println!("    Empty input hash: {} bytes", output.len());
 
     // Test simple message
@@ -215,7 +216,7 @@ fn test_turboshake256_basic() {
     let mut hasher = TurboShake256::new();
     hasher.update(b"hello world");
     let mut output = [0u8; 64];
-    hasher.finalize(&mut output);
+    hasher.clone().finalize(&mut output);
     println!("    Message hash produced");
 
     // Test incremental updates
@@ -252,7 +253,7 @@ fn test_turboshake_variable_output() {
         let mut hasher = TurboShake128::new();
         hasher.update(message);
         let mut output = vec![0u8; len];
-        hasher.finalize(&mut output);
+        hasher.clone().finalize(&mut output);
         assert_eq!(output.len(), len, "Output length should match requested");
         println!("    {}-byte output produced", len);
     }
@@ -263,7 +264,7 @@ fn test_turboshake_variable_output() {
         let mut hasher = TurboShake256::new();
         hasher.update(message);
         let mut output = vec![0u8; len];
-        hasher.finalize(&mut output);
+        hasher.clone().finalize(&mut output);
         assert_eq!(output.len(), len, "Output length should match requested");
         println!("    {}-byte output produced", len);
     }
@@ -362,7 +363,7 @@ fn test_turboshake_various_inputs() {
         let mut hasher = TurboShake128::new();
         hasher.update(input);
         let mut output = [0u8; 32];
-        hasher.finalize(&mut output);
+        hasher.clone().finalize(&mut output);
         println!("    {}: hash produced", description);
     }
 
@@ -372,7 +373,7 @@ fn test_turboshake_various_inputs() {
         let mut hasher = TurboShake256::new();
         hasher.update(input);
         let mut output = [0u8; 64];
-        hasher.finalize(&mut output);
+        hasher.clone().finalize(&mut output);
         println!("    {}: hash produced", description);
     }
 
