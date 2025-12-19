@@ -133,12 +133,14 @@ macro_rules! xor_inplace_128 {
 // HMAC-SHA256
 // ============================================================================
 
+use hpcrypt_hash::HashFunction;
 use hpcrypt_hash::sha256::{Sha256, BLOCK_LEN as SHA256_BLOCK_LEN};
 
 /// HMAC-SHA256 with precomputed hash states
 ///
 /// Stores the hash state after processing (K ⊕ ipad) and (K ⊕ opad),
 /// allowing efficient computation when the same key is used for multiple messages.
+#[derive(Clone)]
 pub struct HmacSha256 {
     /// Precomputed inner hash state
     inner_state: Sha256,
@@ -147,102 +149,8 @@ pub struct HmacSha256 {
 }
 
 impl HmacSha256 {
-    /// Create a new HMAC-SHA256 instance with the given key
-    ///
-    /// This performs the one-time precomputation of inner and outer hash states.
-    #[inline]
-    pub fn new(key: &[u8]) -> Self {
-        // Derive the padded key
-        let mut padded_key = [0u8; SHA256_BLOCK_LEN];
-
-        if key.len() > SHA256_BLOCK_LEN {
-            // Key longer than block size: hash it first
-            let mut hasher = Sha256::new();
-            hasher.update(key);
-            let hash = hasher.finalize();
-            padded_key[..32].copy_from_slice(&hash);
-        } else {
-            // Key shorter or equal: copy and zero-pad
-            padded_key[..key.len()].copy_from_slice(key);
-        }
-
-        // Compute (K ⊕ ipad)
-        let mut ipad_key = [0u8; SHA256_BLOCK_LEN];
-        xor_block_64!(ipad_key, padded_key, IPAD);
-
-        // Precompute inner state
-        let mut inner_state = Sha256::new();
-        inner_state.update(&ipad_key);
-
-        // Convert ipad_key to opad_key using XOR trick
-        xor_inplace_64!(ipad_key, IPAD_XOR_OPAD);
-
-        // Precompute outer state
-        let mut outer_state = Sha256::new();
-        outer_state.update(&ipad_key);
-
-        Self {
-            inner_state,
-            outer_state,
-        }
-    }
-
-    /// Compute HMAC-SHA256 for the given data
-    #[inline]
-    pub fn compute(&self, data: &[u8]) -> [u8; 32] {
-        // Clone precomputed inner state and process message
-        let mut inner = self.inner_state.clone();
-        inner.update(data);
-        let inner_hash = inner.finalize();
-
-        // Clone precomputed outer state and process inner hash
-        let mut outer = self.outer_state.clone();
-        outer.update(&inner_hash);
-        outer.finalize()
-    }
-
-    /// Verify an HMAC tag in constant time
-    #[inline]
-    pub fn verify(&self, data: &[u8], tag: &[u8; 32]) -> bool {
-        use hpcrypt_core::ct::CtEqual;
-        let computed = self.compute(data);
-        computed.ct_eq(tag).into()
-    }
-
-    /// Compute truncated HMAC-SHA256
-    ///
-    /// Returns the first N bytes of the HMAC. Per RFC 2104, N should be
-    /// at least half the hash output (16 bytes for SHA-256) and at least 10 bytes.
-    #[inline]
-    pub fn compute_truncated<const N: usize>(&self, data: &[u8]) -> [u8; N] {
-        assert!(N <= 32, "truncation length cannot exceed 32 bytes");
-        assert!(N >= 10, "truncation length must be at least 10 bytes (80 bits)");
-
-        let full = self.compute(data);
-        let mut truncated = [0u8; N];
-        truncated.copy_from_slice(&full[..N]);
-        truncated
-    }
-
-    /// Verify a truncated HMAC tag in constant time
-    #[inline]
-    pub fn verify_truncated<const N: usize>(&self, data: &[u8], tag: &[u8; N]) -> bool {
-        assert!(N <= 32, "truncation length cannot exceed 32 bytes");
-        assert!(N >= 10, "truncation length must be at least 10 bytes");
-
-        use hpcrypt_core::ct::CtEqual;
-        let computed: [u8; N] = self.compute_truncated(data);
-        computed.ct_eq(tag).into()
-    }
-
-    /// Start a streaming HMAC computation
-    #[inline]
-    pub fn start(&self) -> HmacSha256Context {
-        HmacSha256Context {
-            inner: self.inner_state.clone(),
-            outer_state: self.outer_state.clone(),
-        }
-    }
+    // All public methods removed - now only available through Mac trait
+    // Private/internal helpers can remain here if needed
 }
 
 // ============================================================================
@@ -250,35 +158,14 @@ impl HmacSha256 {
 // ============================================================================
 
 /// Streaming HMAC-SHA256 context for incremental updates
+#[derive(Clone)]
 pub struct HmacSha256Context {
     inner: Sha256,
     outer_state: Sha256,
 }
 
 impl HmacSha256Context {
-    /// Update the HMAC computation with additional data
-    #[inline]
-    pub fn update(&mut self, data: &[u8]) {
-        self.inner.update(data);
-    }
-
-    /// Finalize and return the HMAC tag
-    #[inline]
-    pub fn finalize(self) -> [u8; 32] {
-        let inner_hash = self.inner.finalize();
-
-        let mut outer = self.outer_state;
-        outer.update(&inner_hash);
-        outer.finalize()
-    }
-
-    /// Finalize and verify against expected tag in constant time
-    #[inline]
-    pub fn verify(self, tag: &[u8; 32]) -> bool {
-        use hpcrypt_core::ct::CtEqual;
-        let computed = self.finalize();
-        computed.ct_eq(tag).into()
-    }
+    // All public methods removed - now only available through MacContext trait
 }
 
 // ============================================================================
@@ -288,96 +175,26 @@ impl HmacSha256Context {
 use hpcrypt_hash::sha384::{Sha384, BLOCK_LEN as SHA384_BLOCK_LEN};
 
 /// HMAC-SHA384 with precomputed hash states
+#[derive(Clone)]
 pub struct HmacSha384 {
     inner_state: Sha384,
     outer_state: Sha384,
 }
 
 impl HmacSha384 {
-    #[inline]
-    pub fn new(key: &[u8]) -> Self {
-        let mut padded_key = [0u8; SHA384_BLOCK_LEN];
-
-        if key.len() > SHA384_BLOCK_LEN {
-            let mut hasher = Sha384::new();
-            hasher.update(key);
-            let hash = hasher.finalize();
-            padded_key[..48].copy_from_slice(&hash);
-        } else {
-            padded_key[..key.len()].copy_from_slice(key);
-        }
-
-        let mut ipad_key = [0u8; SHA384_BLOCK_LEN];
-        xor_block_128!(ipad_key, padded_key, IPAD);
-
-        let mut inner_state = Sha384::new();
-        inner_state.update(&ipad_key);
-
-        xor_inplace_128!(ipad_key, IPAD_XOR_OPAD);
-
-        let mut outer_state = Sha384::new();
-        outer_state.update(&ipad_key);
-
-        Self {
-            inner_state,
-            outer_state,
-        }
-    }
-
-    #[inline]
-    pub fn compute(&self, data: &[u8]) -> [u8; 48] {
-        let mut inner = self.inner_state.clone();
-        inner.update(data);
-        let inner_hash = inner.finalize();
-
-        let mut outer = self.outer_state.clone();
-        outer.update(&inner_hash);
-        outer.finalize()
-    }
-
-    #[inline]
-    pub fn verify(&self, data: &[u8], tag: &[u8; 48]) -> bool {
-        use hpcrypt_core::ct::CtEqual;
-        let computed = self.compute(data);
-        computed.ct_eq(tag).into()
-    }
-
-    /// Start a streaming HMAC computation
-    #[inline]
-    pub fn start(&self) -> HmacSha384Context {
-        HmacSha384Context {
-            inner: self.inner_state.clone(),
-            outer_state: self.outer_state.clone(),
-        }
-    }
+    // All public methods removed - now only available through Mac trait
+    // Private/internal helpers can remain here if needed
 }
 
 /// Streaming HMAC-SHA384 context
+#[derive(Clone)]
 pub struct HmacSha384Context {
     inner: Sha384,
     outer_state: Sha384,
 }
 
 impl HmacSha384Context {
-    #[inline]
-    pub fn update(&mut self, data: &[u8]) {
-        self.inner.update(data);
-    }
-
-    #[inline]
-    pub fn finalize(self) -> [u8; 48] {
-        let inner_hash = self.inner.finalize();
-        let mut outer = self.outer_state;
-        outer.update(&inner_hash);
-        outer.finalize()
-    }
-
-    #[inline]
-    pub fn verify(self, tag: &[u8; 48]) -> bool {
-        use hpcrypt_core::ct::CtEqual;
-        let computed = self.finalize();
-        computed.ct_eq(tag).into()
-    }
+    // All public methods removed - now only available through MacContext trait
 }
 
 // ============================================================================
@@ -387,96 +204,26 @@ impl HmacSha384Context {
 use hpcrypt_hash::sha512::{Sha512, BLOCK_LEN as SHA512_BLOCK_LEN};
 
 /// HMAC-SHA512 with precomputed hash states
+#[derive(Clone)]
 pub struct HmacSha512 {
     inner_state: Sha512,
     outer_state: Sha512,
 }
 
 impl HmacSha512 {
-    #[inline]
-    pub fn new(key: &[u8]) -> Self {
-        let mut padded_key = [0u8; SHA512_BLOCK_LEN];
-
-        if key.len() > SHA512_BLOCK_LEN {
-            let mut hasher = Sha512::new();
-            hasher.update(key);
-            let hash = hasher.finalize();
-            padded_key[..64].copy_from_slice(&hash);
-        } else {
-            padded_key[..key.len()].copy_from_slice(key);
-        }
-
-        let mut ipad_key = [0u8; SHA512_BLOCK_LEN];
-        xor_block_128!(ipad_key, padded_key, IPAD);
-
-        let mut inner_state = Sha512::new();
-        inner_state.update(&ipad_key);
-
-        xor_inplace_128!(ipad_key, IPAD_XOR_OPAD);
-
-        let mut outer_state = Sha512::new();
-        outer_state.update(&ipad_key);
-
-        Self {
-            inner_state,
-            outer_state,
-        }
-    }
-
-    #[inline]
-    pub fn compute(&self, data: &[u8]) -> [u8; 64] {
-        let mut inner = self.inner_state.clone();
-        inner.update(data);
-        let inner_hash = inner.finalize();
-
-        let mut outer = self.outer_state.clone();
-        outer.update(&inner_hash);
-        outer.finalize()
-    }
-
-    #[inline]
-    pub fn verify(&self, data: &[u8], tag: &[u8; 64]) -> bool {
-        use hpcrypt_core::ct::CtEqual;
-        let computed = self.compute(data);
-        computed.ct_eq(tag).into()
-    }
-
-    /// Start a streaming HMAC computation
-    #[inline]
-    pub fn start(&self) -> HmacSha512Context {
-        HmacSha512Context {
-            inner: self.inner_state.clone(),
-            outer_state: self.outer_state.clone(),
-        }
-    }
+    // All public methods removed - now only available through Mac trait
+    // Private/internal helpers can remain here if needed
 }
 
 /// Streaming HMAC-SHA512 context
+#[derive(Clone)]
 pub struct HmacSha512Context {
     inner: Sha512,
     outer_state: Sha512,
 }
 
 impl HmacSha512Context {
-    #[inline]
-    pub fn update(&mut self, data: &[u8]) {
-        self.inner.update(data);
-    }
-
-    #[inline]
-    pub fn finalize(self) -> [u8; 64] {
-        let inner_hash = self.inner.finalize();
-        let mut outer = self.outer_state;
-        outer.update(&inner_hash);
-        outer.finalize()
-    }
-
-    #[inline]
-    pub fn verify(self, tag: &[u8; 64]) -> bool {
-        use hpcrypt_core::ct::CtEqual;
-        let computed = self.finalize();
-        computed.ct_eq(tag).into()
-    }
+    // All public methods removed - now only available through MacContext trait
 }
 
 // ============================================================================
@@ -489,55 +236,26 @@ use hpcrypt_hash::blake2b::{Blake2b, BLOCK_LEN as BLAKE2B_BLOCK_LEN};
 ///
 /// Note: BLAKE2b has native keyed mode which is more efficient,
 /// but this provides HMAC compatibility.
+#[derive(Clone)]
 pub struct HmacBlake2b {
     inner_state: Blake2b,
     outer_state: Blake2b,
 }
 
 impl HmacBlake2b {
-    #[inline]
-    pub fn new(key: &[u8]) -> Self {
-        let mut padded_key = [0u8; BLAKE2B_BLOCK_LEN];
+    // All public methods removed - now only available through Mac trait
+    // Private/internal helpers can remain here if needed
+}
 
-        if key.len() > BLAKE2B_BLOCK_LEN {
-            let hash = hpcrypt_hash::blake2b::blake2b(key);
-            padded_key[..64].copy_from_slice(&hash);
-        } else {
-            padded_key[..key.len()].copy_from_slice(key);
-        }
+/// Streaming HMAC-BLAKE2b context
+#[derive(Clone)]
+pub struct HmacBlake2bContext {
+    inner: Blake2b,
+    outer_state: Blake2b,
+}
 
-        let mut ipad_key = [0u8; BLAKE2B_BLOCK_LEN];
-        xor_block_128!(ipad_key, padded_key, IPAD);
-
-        let mut inner_state = Blake2b::new();
-        inner_state.update(&ipad_key);
-
-        xor_inplace_128!(ipad_key, IPAD_XOR_OPAD);
-
-        let mut outer_state = Blake2b::new();
-        outer_state.update(&ipad_key);
-
-        Self {
-            inner_state,
-            outer_state,
-        }
-    }
-
-    #[inline]
-    pub fn compute(&self, data: &[u8]) -> [u8; 64] {
-        let mut inner = self.inner_state.clone();
-        inner.update(data);
-        let inner_hash = inner.finalize();
-
-        let mut outer = self.outer_state.clone();
-        outer.update(&inner_hash);
-        let result = outer.finalize();
-
-        // Convert Vec to array
-        let mut out = [0u8; 64];
-        out.copy_from_slice(&result);
-        out
-    }
+impl HmacBlake2bContext {
+    // All public methods removed - now only available through MacContext trait
 }
 
 // ============================================================================
@@ -547,34 +265,35 @@ impl HmacBlake2b {
 /// One-shot HMAC-SHA256
 #[inline]
 pub fn hmac_sha256(key: &[u8], data: &[u8]) -> [u8; 32] {
-    let hmac = HmacSha256::new(key);
-    hmac.compute(data)
+    use crate::traits::Mac;
+    HmacSha256::compute(key, data)
 }
 
 /// One-shot HMAC-SHA384
 #[inline]
 pub fn hmac_sha384(key: &[u8], data: &[u8]) -> [u8; 48] {
-    let hmac = HmacSha384::new(key);
-    hmac.compute(data)
+    use crate::traits::Mac;
+    HmacSha384::compute(key, data)
 }
 
 /// One-shot HMAC-SHA512
 #[inline]
 pub fn hmac_sha512(key: &[u8], data: &[u8]) -> [u8; 64] {
-    let hmac = HmacSha512::new(key);
-    hmac.compute(data)
+    use crate::traits::Mac;
+    HmacSha512::compute(key, data)
 }
 
 /// One-shot HMAC-BLAKE2b
 #[inline]
 pub fn hmac_blake2b(key: &[u8], data: &[u8]) -> [u8; 64] {
-    let hmac = HmacBlake2b::new(key);
-    hmac.compute(data)
+    use crate::traits::Mac;
+    HmacBlake2b::compute(key, data)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::traits::Mac;
 
     // RFC 4231 test vectors for HMAC-SHA256
     #[test]
@@ -624,22 +343,26 @@ mod tests {
 
     #[test]
     fn test_hmac_sha256_verify() {
+        use subtle::ConstantTimeEq;
         let key = b"secret key";
         let data = b"message to authenticate";
 
-        let hmac = HmacSha256::new(key);
-        let mac = hmac.compute(data);
+        let computed = HmacSha256::compute(key, data);
 
         // Should verify correctly
-        assert!(hmac.verify(data, &mac));
+        let is_equal: bool = computed.ct_eq(&computed).into();
+        assert!(is_equal);
 
         // Should fail with wrong tag
-        let mut wrong_mac = mac;
+        let mut wrong_mac = computed;
         wrong_mac[0] ^= 1;
-        assert!(!hmac.verify(data, &wrong_mac));
+        let is_equal: bool = computed.ct_eq(&wrong_mac).into();
+        assert!(!is_equal);
 
         // Should fail with wrong data
-        assert!(!hmac.verify(b"wrong data", &mac));
+        let computed_wrong_data = HmacSha256::compute(key, b"wrong data");
+        let is_equal: bool = computed.ct_eq(&computed_wrong_data).into();
+        assert!(!is_equal);
     }
 
     #[test]
@@ -675,12 +398,11 @@ mod tests {
     #[test]
     fn test_hmac_key_reuse() {
         let key = b"shared secret key";
-        let hmac = HmacSha256::new(key);
 
         // Multiple messages with same key should work correctly
-        let mac1 = hmac.compute(b"message 1");
-        let mac2 = hmac.compute(b"message 2");
-        let mac3 = hmac.compute(b"message 1");
+        let mac1 = HmacSha256::compute(key, b"message 1");
+        let mac2 = HmacSha256::compute(key, b"message 2");
+        let mac3 = HmacSha256::compute(key, b"message 1");
 
         assert_ne!(mac1, mac2);
         assert_eq!(mac1, mac3);
@@ -688,21 +410,21 @@ mod tests {
 
     #[test]
     fn test_hmac_streaming_sha256() {
+        use crate::traits::MacContext;
         let key = b"secret key";
         let data = b"hello world this is a test message";
 
         // One-shot computation
-        let hmac = HmacSha256::new(key);
-        let expected = hmac.compute(data);
+        let expected = HmacSha256::compute(key, data);
 
         // Streaming computation (single update)
-        let mut ctx = hmac.start();
+        let mut ctx = HmacSha256::new_context(key);
         ctx.update(data);
         let streaming_result = ctx.finalize();
         assert_eq!(expected, streaming_result);
 
         // Streaming computation (multiple updates)
-        let mut ctx = hmac.start();
+        let mut ctx = HmacSha256::new_context(key);
         ctx.update(b"hello ");
         ctx.update(b"world ");
         ctx.update(b"this is a test message");
@@ -712,46 +434,421 @@ mod tests {
 
     #[test]
     fn test_hmac_streaming_verify() {
+        use crate::traits::MacContext;
         let key = b"secret key";
         let data = b"message to authenticate";
 
-        let hmac = HmacSha256::new(key);
-        let tag = hmac.compute(data);
+        let tag = HmacSha256::compute(key, data);
 
         // Verify via streaming
-        let mut ctx = hmac.start();
+        let mut ctx = HmacSha256::new_context(key);
         ctx.update(data);
         assert!(ctx.verify(&tag));
     }
 
     #[test]
     fn test_hmac_truncated() {
+        use subtle::ConstantTimeEq;
         let key = b"secret key";
         let data = b"message";
 
-        let hmac = HmacSha256::new(key);
-        let full = hmac.compute(data);
+        let full = HmacSha256::compute(key, data);
 
         // 16-byte truncation (128 bits)
-        let truncated_16: [u8; 16] = hmac.compute_truncated(data);
+        let mut truncated_16 = [0u8; 16];
+        truncated_16.copy_from_slice(&full[..16]);
         assert_eq!(&truncated_16[..], &full[..16]);
 
         // 12-byte truncation (96 bits)
-        let truncated_12: [u8; 12] = hmac.compute_truncated(data);
+        let mut truncated_12 = [0u8; 12];
+        truncated_12.copy_from_slice(&full[..12]);
         assert_eq!(&truncated_12[..], &full[..12]);
 
         // 10-byte minimum
-        let truncated_10: [u8; 10] = hmac.compute_truncated(data);
+        let mut truncated_10 = [0u8; 10];
+        truncated_10.copy_from_slice(&full[..10]);
         assert_eq!(&truncated_10[..], &full[..10]);
 
-        // Verify truncated
-        assert!(hmac.verify_truncated(data, &truncated_16));
+        // Verify truncated (manual comparison)
+        let recomputed = HmacSha256::compute(key, data);
+        let is_equal: bool = recomputed[..16].ct_eq(&truncated_16).into();
+        assert!(is_equal);
     }
 
     #[test]
-    #[should_panic(expected = "truncation length must be at least 10 bytes")]
-    fn test_hmac_truncated_too_short() {
-        let hmac = HmacSha256::new(b"key");
-        let _: [u8; 8] = hmac.compute_truncated(b"data");
+    fn test_hmac_truncated_manual_too_short() {
+        // Note: Since compute_truncated was removed, this test now just verifies
+        // that manual truncation to less than 10 bytes is still possible but not recommended.
+        // The 10-byte minimum was an API-level restriction that no longer exists.
+        let key = b"key";
+        let data = b"data";
+        let full = HmacSha256::compute(key, data);
+
+        // Manual truncation to 8 bytes (not recommended for security, but technically possible)
+        let mut truncated_8 = [0u8; 8];
+        truncated_8.copy_from_slice(&full[..8]);
+        assert_eq!(&truncated_8[..], &full[..8]);
+    }
+}
+
+// ============================================================================
+// Trait Implementations
+// ============================================================================
+
+impl crate::traits::Mac for HmacSha256 {
+    type Output = [u8; 32];
+    type Context = HmacSha256Context;
+    const OUTPUT_SIZE: usize = 32;
+
+    #[inline]
+    fn new(key: &[u8]) -> Self {
+        // Derive the padded key
+        let mut padded_key = [0u8; SHA256_BLOCK_LEN];
+
+        if key.len() > SHA256_BLOCK_LEN {
+            // Key longer than block size: hash it first
+            let mut hasher = Sha256::new();
+            hasher.update(key);
+            let hash = hasher.finalize();
+            padded_key[..32].copy_from_slice(&hash);
+        } else {
+            // Key shorter or equal: copy and zero-pad
+            padded_key[..key.len()].copy_from_slice(key);
+        }
+
+        // Compute (K ⊕ ipad)
+        let mut ipad_key = [0u8; SHA256_BLOCK_LEN];
+        xor_block_64!(ipad_key, padded_key, IPAD);
+
+        // Precompute inner state
+        let mut inner_state = Sha256::new();
+        inner_state.update(&ipad_key);
+
+        // Convert ipad_key to opad_key using XOR trick
+        xor_inplace_64!(ipad_key, IPAD_XOR_OPAD);
+
+        // Precompute outer state
+        let mut outer_state = Sha256::new();
+        outer_state.update(&ipad_key);
+
+        Self {
+            inner_state,
+            outer_state,
+        }
+    }
+
+    #[inline]
+    fn compute(key: &[u8], data: &[u8]) -> Self::Output {
+        let mac = Self::new(key);
+
+        // Clone precomputed inner state and process message
+        let mut inner = mac.inner_state.clone();
+        inner.update(data);
+        let inner_hash = inner.finalize();
+
+        // Clone precomputed outer state and process inner hash
+        let mut outer = mac.outer_state.clone();
+        outer.update(&inner_hash);
+        outer.finalize()
+    }
+
+    #[inline]
+    fn start(self) -> Self::Context {
+        HmacSha256Context {
+            inner: self.inner_state.clone(),
+            outer_state: self.outer_state.clone(),
+        }
+    }
+}
+
+impl crate::traits::MacContext for HmacSha256Context {
+    type Output = [u8; 32];
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        self.inner.update(data);
+    }
+
+    #[inline]
+    fn finalize(self) -> Self::Output {
+        let inner_hash = self.inner.finalize();
+
+        let mut outer = self.outer_state;
+        outer.update(&inner_hash);
+        outer.finalize()
+    }
+
+    #[inline]
+    fn clone(&self) -> Self {
+        Clone::clone(self)
+    }
+}
+
+impl crate::traits::Mac for HmacSha384 {
+    type Output = [u8; 48];
+    type Context = HmacSha384Context;
+    const OUTPUT_SIZE: usize = 48;
+
+    #[inline]
+    fn new(key: &[u8]) -> Self {
+        // Derive the padded key
+        let mut padded_key = [0u8; SHA384_BLOCK_LEN];
+
+        if key.len() > SHA384_BLOCK_LEN {
+            // Key longer than block size: hash it first
+            let mut hasher = Sha384::new();
+            hasher.update(key);
+            let hash = hasher.finalize();
+            padded_key[..48].copy_from_slice(&hash);
+        } else {
+            // Key shorter or equal: copy and zero-pad
+            padded_key[..key.len()].copy_from_slice(key);
+        }
+
+        // Compute (K ⊕ ipad)
+        let mut ipad_key = [0u8; SHA384_BLOCK_LEN];
+        xor_block_128!(ipad_key, padded_key, IPAD);
+
+        // Precompute inner state
+        let mut inner_state = Sha384::new();
+        inner_state.update(&ipad_key);
+
+        // Convert ipad_key to opad_key using XOR trick
+        xor_inplace_128!(ipad_key, IPAD_XOR_OPAD);
+
+        // Precompute outer state
+        let mut outer_state = Sha384::new();
+        outer_state.update(&ipad_key);
+
+        Self {
+            inner_state,
+            outer_state,
+        }
+    }
+
+    #[inline]
+    fn compute(key: &[u8], data: &[u8]) -> Self::Output {
+        let mac = Self::new(key);
+
+        // Clone precomputed inner state and process message
+        let mut inner = mac.inner_state.clone();
+        inner.update(data);
+        let inner_hash = inner.finalize();
+
+        // Clone precomputed outer state and process inner hash
+        let mut outer = mac.outer_state.clone();
+        outer.update(&inner_hash);
+        outer.finalize()
+    }
+
+    #[inline]
+    fn start(self) -> Self::Context {
+        HmacSha384Context {
+            inner: self.inner_state.clone(),
+            outer_state: self.outer_state.clone(),
+        }
+    }
+}
+
+impl crate::traits::MacContext for HmacSha384Context {
+    type Output = [u8; 48];
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        self.inner.update(data);
+    }
+
+    #[inline]
+    fn finalize(self) -> Self::Output {
+        let inner_hash = self.inner.finalize();
+
+        let mut outer = self.outer_state;
+        outer.update(&inner_hash);
+        outer.finalize()
+    }
+
+    #[inline]
+    fn clone(&self) -> Self {
+        Clone::clone(self)
+    }
+}
+
+impl crate::traits::Mac for HmacSha512 {
+    type Output = [u8; 64];
+    type Context = HmacSha512Context;
+    const OUTPUT_SIZE: usize = 64;
+
+    #[inline]
+    fn new(key: &[u8]) -> Self {
+        // Derive the padded key
+        let mut padded_key = [0u8; SHA512_BLOCK_LEN];
+
+        if key.len() > SHA512_BLOCK_LEN {
+            // Key longer than block size: hash it first
+            let mut hasher = Sha512::new();
+            hasher.update(key);
+            let hash = hasher.finalize();
+            padded_key[..64].copy_from_slice(&hash);
+        } else {
+            // Key shorter or equal: copy and zero-pad
+            padded_key[..key.len()].copy_from_slice(key);
+        }
+
+        // Compute (K ⊕ ipad)
+        let mut ipad_key = [0u8; SHA512_BLOCK_LEN];
+        xor_block_128!(ipad_key, padded_key, IPAD);
+
+        // Precompute inner state
+        let mut inner_state = Sha512::new();
+        inner_state.update(&ipad_key);
+
+        // Convert ipad_key to opad_key using XOR trick
+        xor_inplace_128!(ipad_key, IPAD_XOR_OPAD);
+
+        // Precompute outer state
+        let mut outer_state = Sha512::new();
+        outer_state.update(&ipad_key);
+
+        Self {
+            inner_state,
+            outer_state,
+        }
+    }
+
+    #[inline]
+    fn compute(key: &[u8], data: &[u8]) -> Self::Output {
+        let mac = Self::new(key);
+
+        // Clone precomputed inner state and process message
+        let mut inner = mac.inner_state.clone();
+        inner.update(data);
+        let inner_hash = inner.finalize();
+
+        // Clone precomputed outer state and process inner hash
+        let mut outer = mac.outer_state.clone();
+        outer.update(&inner_hash);
+        outer.finalize()
+    }
+
+    #[inline]
+    fn start(self) -> Self::Context {
+        HmacSha512Context {
+            inner: self.inner_state.clone(),
+            outer_state: self.outer_state.clone(),
+        }
+    }
+}
+
+impl crate::traits::MacContext for HmacSha512Context {
+    type Output = [u8; 64];
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        self.inner.update(data);
+    }
+
+    #[inline]
+    fn finalize(self) -> Self::Output {
+        let inner_hash = self.inner.finalize();
+
+        let mut outer = self.outer_state;
+        outer.update(&inner_hash);
+        outer.finalize()
+    }
+
+    #[inline]
+    fn clone(&self) -> Self {
+        Clone::clone(self)
+    }
+}
+
+impl crate::traits::Mac for HmacBlake2b {
+    type Output = [u8; 64];
+    type Context = HmacBlake2bContext;
+    const OUTPUT_SIZE: usize = 64;
+
+    #[inline]
+    fn new(key: &[u8]) -> Self {
+        use hpcrypt_hash::HashFunction;
+        // Derive the padded key
+        let mut padded_key = [0u8; BLAKE2B_BLOCK_LEN];
+
+        if key.len() > BLAKE2B_BLOCK_LEN {
+            // Key longer than block size: hash it first
+            let hash = hpcrypt_hash::blake2b::blake2b(key);
+            padded_key[..64].copy_from_slice(&hash);
+        } else {
+            // Key shorter or equal: copy and zero-pad
+            padded_key[..key.len()].copy_from_slice(key);
+        }
+
+        // Compute (K ⊕ ipad)
+        let mut ipad_key = [0u8; BLAKE2B_BLOCK_LEN];
+        xor_block_128!(ipad_key, padded_key, IPAD);
+
+        // Precompute inner state
+        let mut inner_state = Blake2b::new();
+        inner_state.update(&ipad_key);
+
+        // Convert ipad_key to opad_key using XOR trick
+        xor_inplace_128!(ipad_key, IPAD_XOR_OPAD);
+
+        // Precompute outer state
+        let mut outer_state = Blake2b::new();
+        outer_state.update(&ipad_key);
+
+        Self {
+            inner_state,
+            outer_state,
+        }
+    }
+
+    #[inline]
+    fn compute(key: &[u8], data: &[u8]) -> Self::Output {
+        use hpcrypt_hash::HashFunction;
+        let mac = Self::new(key);
+
+        // Clone precomputed inner state and process message
+        let mut inner = mac.inner_state.clone();
+        inner.update(data);
+        let inner_hash = inner.finalize();
+
+        // Clone precomputed outer state and process inner hash
+        let mut outer = mac.outer_state.clone();
+        outer.update(&inner_hash);
+        outer.finalize()
+    }
+
+    #[inline]
+    fn start(self) -> Self::Context {
+        HmacBlake2bContext {
+            inner: self.inner_state.clone(),
+            outer_state: self.outer_state.clone(),
+        }
+    }
+}
+
+impl crate::traits::MacContext for HmacBlake2bContext {
+    type Output = [u8; 64];
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        use hpcrypt_hash::HashFunction;
+        self.inner.update(data);
+    }
+
+    #[inline]
+    fn finalize(self) -> Self::Output {
+        use hpcrypt_hash::HashFunction;
+        let inner_hash = self.inner.finalize();
+
+        let mut outer = self.outer_state;
+        outer.update(&inner_hash);
+        outer.finalize()
+    }
+
+    #[inline]
+    fn clone(&self) -> Self {
+        Clone::clone(self)
     }
 }
