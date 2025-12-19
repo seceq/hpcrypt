@@ -10,7 +10,7 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-use hpcrypt_hash::{xof_reader::XofReader, Sha3_256, Sha3_512, Shake128, Shake256};
+use hpcrypt_hash::{xof_reader::XofReader, HashFunction, XofFunction, Sha3_256, Sha3_512, Shake128, Shake256};
 
 /// Extendable Output Function (XOF)
 ///
@@ -82,9 +82,8 @@ pub fn prf(s: &[u8], b: u8, output: &mut [u8]) {
 /// # Returns
 /// 32-byte hash output
 pub fn h(input: &[u8]) -> [u8; 32] {
-    let mut hasher = Sha3_256::new();
-    hasher.update(input);
-    hasher.finalize()
+    use hpcrypt_hash::HashFunction;
+    Sha3_256::hash(input)
 }
 
 /// Hash function G
@@ -99,9 +98,8 @@ pub fn h(input: &[u8]) -> [u8; 32] {
 /// # Returns
 /// 64-byte hash output
 pub fn g(input: &[u8]) -> [u8; 64] {
-    let mut hasher = Sha3_512::new();
-    hasher.update(input);
-    hasher.finalize()
+    use hpcrypt_hash::HashFunction;
+    Sha3_512::hash(input)
 }
 
 /// Key Derivation Function (KDF)
