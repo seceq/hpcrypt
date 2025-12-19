@@ -4,7 +4,7 @@
 //! using the SLH-DSA-SHA2-128f parameter set.
 
 use hpcrypt_slhdsa::{sign, verify, KeyPair, Sha2_128f};
-use rand::rngs::OsRng;
+use hpcrypt_rng::OsRng;
 
 fn main() {
     println!("SLH-DSA (SPHINCS+) Basic Usage Example");
