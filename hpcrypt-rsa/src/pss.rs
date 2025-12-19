@@ -323,10 +323,8 @@ impl PssHash for Sha256 {
     }
 
     fn hash(input: &[u8]) -> Vec<u8> {
-        use sha2::{Digest, Sha256 as Sha256Hash};
-        let mut hasher = Sha256Hash::new();
-        hasher.update(input);
-        hasher.finalize().to_vec()
+        use hpcrypt_hash::{HashFunction, Sha256 as Sha256Hash};
+        Sha256Hash::hash(input).to_vec()
     }
 }
 
@@ -341,10 +339,8 @@ impl PssHash for Sha384 {
     }
 
     fn hash(input: &[u8]) -> Vec<u8> {
-        use sha2::{Digest, Sha384 as Sha384Hash};
-        let mut hasher = Sha384Hash::new();
-        hasher.update(input);
-        hasher.finalize().to_vec()
+        use hpcrypt_hash::{HashFunction, Sha384 as Sha384Hash};
+        Sha384Hash::hash(input).to_vec()
     }
 }
 
@@ -359,10 +355,8 @@ impl PssHash for Sha512 {
     }
 
     fn hash(input: &[u8]) -> Vec<u8> {
-        use sha2::{Digest, Sha512 as Sha512Hash};
-        let mut hasher = Sha512Hash::new();
-        hasher.update(input);
-        hasher.finalize().to_vec()
+        use hpcrypt_hash::{HashFunction, Sha512 as Sha512Hash};
+        Sha512Hash::hash(input).to_vec()
     }
 }
 
