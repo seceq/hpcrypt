@@ -6,7 +6,7 @@
 use crate::error::{HpkeError, Result};
 use alloc::vec::Vec;
 use hpcrypt_hash::{sha256, sha512, Sha384};
-use hpcrypt_mac::hmac::{HmacSha256, HmacSha384, HmacSha512};
+use hpcrypt_mac::{HmacSha256, HmacSha384, HmacSha512, Mac};
 
 /// HKDF Extract as specified in RFC 5869
 /// PRK = HMAC-Hash(salt, IKM)
@@ -17,39 +17,39 @@ fn hkdf_extract(salt: &[u8], ikm: &[u8], hash_fn: fn(&[u8]) -> Vec<u8>) -> Vec<u
     match hash_len {
         32 => {
             // SHA-256
-            let hmac = if salt.is_empty() {
-                HmacSha256::new(&[0u8; 32])
+            let salt_key = if salt.is_empty() {
+                &[0u8; 32][..]
             } else {
-                HmacSha256::new(salt)
+                salt
             };
-            hmac.compute(ikm).to_vec()
+            HmacSha256::compute(salt_key, ikm).to_vec()
         }
         48 => {
             // SHA-384
-            let hmac = if salt.is_empty() {
-                HmacSha384::new(&[0u8; 48])
+            let salt_key = if salt.is_empty() {
+                &[0u8; 48][..]
             } else {
-                HmacSha384::new(salt)
+                salt
             };
-            hmac.compute(ikm).to_vec()
+            HmacSha384::compute(salt_key, ikm).to_vec()
         }
         64 => {
             // SHA-512
-            let hmac = if salt.is_empty() {
-                HmacSha512::new(&[0u8; 64])
+            let salt_key = if salt.is_empty() {
+                &[0u8; 64][..]
             } else {
-                HmacSha512::new(salt)
+                salt
             };
-            hmac.compute(ikm).to_vec()
+            HmacSha512::compute(salt_key, ikm).to_vec()
         }
         _ => {
             // Fallback (shouldn't happen with standard HPKE suites)
-            let hmac = if salt.is_empty() {
-                HmacSha256::new(&[0u8; 32])
+            let salt_key = if salt.is_empty() {
+                &[0u8; 32][..]
             } else {
-                HmacSha256::new(salt)
+                salt
             };
-            hmac.compute(ikm).to_vec()
+            HmacSha256::compute(salt_key, ikm).to_vec()
         }
     }
 }
@@ -73,20 +73,16 @@ fn hkdf_expand(prk: &[u8], info: &[u8], length: usize, hash_fn: fn(&[u8]) -> Vec
         // Use HMAC with PRK as key
         t = match hash_len {
             32 => {
-                let hmac = HmacSha256::new(prk);
-                hmac.compute(&input).to_vec()
+                HmacSha256::compute(prk, &input).to_vec()
             }
             48 => {
-                let hmac = HmacSha384::new(prk);
-                hmac.compute(&input).to_vec()
+                HmacSha384::compute(prk, &input).to_vec()
             }
             64 => {
-                let hmac = HmacSha512::new(prk);
-                hmac.compute(&input).to_vec()
+                HmacSha512::compute(prk, &input).to_vec()
             }
             _ => {
-                let hmac = HmacSha256::new(prk);
-                hmac.compute(&input).to_vec()
+                HmacSha256::compute(prk, &input).to_vec()
             }
         };
         output.extend_from_slice(&t);
