@@ -582,6 +582,7 @@ impl Shake256x4 {
 mod tests {
     use super::*;
     use crate::sha3::{Shake128, Shake256};
+    use crate::traits::XofFunction;
 
     #[test]
     fn test_shake128x4_matches_sequential() {
@@ -665,6 +666,34 @@ mod tests {
             let mut expected = [0u8; 64];
             hasher.finalize(&mut expected);
             assert_eq!(outputs[i], expected);
+        }
+    }
+
+    #[test]
+    fn test_batched_hash_x4() {
+        // Test hash_x4 convenience method for Shake128x4
+        let inputs: [&[u8]; 4] = [b"a", b"b", b"c", b"d"];
+        let outputs: [[u8; 32]; 4] = Shake128x4::hash_x4(&inputs);
+
+        // Verify against sequential SHAKE128
+        for (i, input) in inputs.iter().enumerate() {
+            let mut hasher = Shake128::new();
+            hasher.update(input);
+            let mut expected = [0u8; 32];
+            hasher.finalize(&mut expected);
+            assert_eq!(outputs[i], expected);
+        }
+
+        // Test hash_x4 convenience method for Shake256x4
+        let outputs256: [[u8; 64]; 4] = Shake256x4::hash_x4(&inputs);
+
+        // Verify against sequential SHAKE256
+        for (i, input) in inputs.iter().enumerate() {
+            let mut hasher = Shake256::new();
+            hasher.update(input);
+            let mut expected = [0u8; 64];
+            hasher.finalize(&mut expected);
+            assert_eq!(outputs256[i], expected);
         }
     }
 }

@@ -282,111 +282,18 @@ pub struct Sha3_256 {
 
 impl Default for Sha3_256 {
     fn default() -> Self {
+        use crate::traits::HashFunction;
         Self::new()
     }
 }
 
 impl Sha3_256 {
-    /// Create a new SHA3-256 hasher
-    pub fn new() -> Self {
-        #[cfg(not(feature = "lane-complement"))]
-        let state = [0u64; STATE_SIZE];
-
-        #[cfg(feature = "lane-complement")]
-        let state = {
-            let mut s = [0u64; STATE_SIZE];
-            // Initialize complemented lanes to all 1s (~0)
-            const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false, false, false, false, true, false, false, false,
-                true, false, false, false, false, true, false, false, true, false, false, false,
-                false,
-            ];
-            for i in 0..STATE_SIZE {
-                if COMPLEMENTED[i] {
-                    s[i] = !0u64;
-                }
-            }
-            s
-        };
-
-        Self {
-            state,
-            buffer: [0u8; 136],
-            buffer_len: 0,
-            rate: 136, // 1600 - 2*256 = 1088 bits = 136 bytes
-        }
-    }
-
-    /// Update the hasher with input data
-    pub fn update(&mut self, data: &[u8]) {
-        let mut offset = 0;
-
-        // Fill buffer if partial
-        if self.buffer_len > 0 {
-            let to_copy = core::cmp::min(self.rate - self.buffer_len, data.len());
-            self.buffer[self.buffer_len..self.buffer_len + to_copy]
-                .copy_from_slice(&data[..to_copy]);
-            self.buffer_len += to_copy;
-            offset += to_copy;
-
-            if self.buffer_len == self.rate {
-                let rate = self.rate;
-                let buffer = self.buffer;
-                self.absorb_block(&buffer[..rate]);
-                self.buffer_len = 0;
-            }
-        }
-
-        // Process complete blocks
-        while offset + self.rate <= data.len() {
-            self.absorb_block(&data[offset..offset + self.rate]);
-            offset += self.rate;
-        }
-
-        // Buffer remaining data
-        if offset < data.len() {
-            let remaining = data.len() - offset;
-            self.buffer[..remaining].copy_from_slice(&data[offset..]);
-            self.buffer_len = remaining;
-        }
-    }
-
-    /// Finalize and return the digest
-    pub fn finalize(mut self) -> [u8; SHA3_256_OUTPUT_SIZE] {
-        // SHA-3 padding: append 0x06, pad with zeros, final byte is 0x80
-        self.buffer[self.buffer_len] = 0x06;
-        self.buffer[self.buffer_len + 1..self.rate].fill(0);
-        self.buffer[self.rate - 1] |= 0x80;
-
-        let rate = self.rate;
-        let buffer = self.buffer;
-        self.absorb_block(&buffer[..rate]);
-
-        // Squeeze
-        let mut output = [0u8; SHA3_256_OUTPUT_SIZE];
-
-        #[cfg(not(feature = "lane-complement"))]
-        {
-            for i in 0..4 {
-                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
-            }
-        }
-
-        #[cfg(feature = "lane-complement")]
-        {
-            // Lanes 1 and 2 are stored complemented, need to un-complement when reading
-            const COMPLEMENTED: [bool; 4] = [false, true, true, false];
-            for i in 0..4 {
-                let lane = if COMPLEMENTED[i] {
-                    !self.state[i]
-                } else {
-                    self.state[i]
-                };
-                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
-            }
-        }
-
-        output
+    /// Compute SHA3-256 of data in one call
+    pub fn digest(data: &[u8]) -> [u8; SHA3_256_OUTPUT_SIZE] {
+        use crate::traits::HashFunction;
+        let mut hasher = Self::new();
+        hasher.update(data);
+        hasher.finalize()
     }
 
     /// Absorb a block into the state
@@ -428,13 +335,6 @@ impl Sha3_256 {
         // Apply Keccak-f permutation
         keccak_f(&mut self.state);
     }
-
-    /// Compute SHA3-256 of data in one call
-    pub fn digest(data: &[u8]) -> [u8; SHA3_256_OUTPUT_SIZE] {
-        let mut hasher = Self::new();
-        hasher.update(data);
-        hasher.finalize()
-    }
 }
 
 /// SHA3-512 hasher
@@ -448,106 +348,18 @@ pub struct Sha3_512 {
 
 impl Default for Sha3_512 {
     fn default() -> Self {
+        use crate::traits::HashFunction;
         Self::new()
     }
 }
 
 impl Sha3_512 {
-    /// Create a new SHA3-512 hasher
-    pub fn new() -> Self {
-        #[cfg(not(feature = "lane-complement"))]
-        let state = [0u64; STATE_SIZE];
-
-        #[cfg(feature = "lane-complement")]
-        let state = {
-            let mut s = [0u64; STATE_SIZE];
-            // Initialize complemented lanes to all 1s (~0)
-            const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false, false, false, false, true, false, false, false,
-                true, false, false, false, false, true, false, false, true, false, false, false,
-                false,
-            ];
-            for i in 0..STATE_SIZE {
-                if COMPLEMENTED[i] {
-                    s[i] = !0u64;
-                }
-            }
-            s
-        };
-
-        Self {
-            state,
-            buffer: [0u8; 72],
-            buffer_len: 0,
-            rate: 72, // 1600 - 2*512 = 576 bits = 72 bytes
-        }
-    }
-
-    /// Update the hasher with input data
-    pub fn update(&mut self, data: &[u8]) {
-        let mut offset = 0;
-
-        if self.buffer_len > 0 {
-            let to_copy = core::cmp::min(self.rate - self.buffer_len, data.len());
-            self.buffer[self.buffer_len..self.buffer_len + to_copy]
-                .copy_from_slice(&data[..to_copy]);
-            self.buffer_len += to_copy;
-            offset += to_copy;
-
-            if self.buffer_len == self.rate {
-                let rate = self.rate;
-                let buffer = self.buffer;
-                self.absorb_block(&buffer[..rate]);
-                self.buffer_len = 0;
-            }
-        }
-
-        while offset + self.rate <= data.len() {
-            self.absorb_block(&data[offset..offset + self.rate]);
-            offset += self.rate;
-        }
-
-        if offset < data.len() {
-            let remaining = data.len() - offset;
-            self.buffer[..remaining].copy_from_slice(&data[offset..]);
-            self.buffer_len = remaining;
-        }
-    }
-
-    /// Finalize and return the digest
-    pub fn finalize(mut self) -> [u8; SHA3_512_OUTPUT_SIZE] {
-        self.buffer[self.buffer_len] = 0x06;
-        self.buffer[self.buffer_len + 1..self.rate].fill(0);
-        self.buffer[self.rate - 1] |= 0x80;
-
-        let rate = self.rate;
-        let buffer = self.buffer;
-        self.absorb_block(&buffer[..rate]);
-
-        let mut output = [0u8; SHA3_512_OUTPUT_SIZE];
-
-        #[cfg(not(feature = "lane-complement"))]
-        {
-            for i in 0..8 {
-                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
-            }
-        }
-
-        #[cfg(feature = "lane-complement")]
-        {
-            // Lanes 1 and 2 are stored complemented
-            const COMPLEMENTED: [bool; 8] = [false, true, true, false, false, false, false, false];
-            for i in 0..8 {
-                let lane = if COMPLEMENTED[i] {
-                    !self.state[i]
-                } else {
-                    self.state[i]
-                };
-                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
-            }
-        }
-
-        output
+    /// Compute SHA3-512 of data in one call
+    pub fn digest(data: &[u8]) -> [u8; SHA3_512_OUTPUT_SIZE] {
+        use crate::traits::HashFunction;
+        let mut hasher = Self::new();
+        hasher.update(data);
+        hasher.finalize()
     }
 
     /// Absorb a block into the state
@@ -582,13 +394,6 @@ impl Sha3_512 {
         }
 
         keccak_f(&mut self.state);
-    }
-
-    /// Compute SHA3-512 of data in one call
-    pub fn digest(data: &[u8]) -> [u8; SHA3_512_OUTPUT_SIZE] {
-        let mut hasher = Self::new();
-        hasher.update(data);
-        hasher.finalize()
     }
 }
 
@@ -603,106 +408,18 @@ pub struct Sha3_224 {
 
 impl Default for Sha3_224 {
     fn default() -> Self {
+        use crate::traits::HashFunction;
         Self::new()
     }
 }
 
 impl Sha3_224 {
-    /// Create a new SHA3-224 hasher
-    pub fn new() -> Self {
-        #[cfg(not(feature = "lane-complement"))]
-        let state = [0u64; STATE_SIZE];
-
-        #[cfg(feature = "lane-complement")]
-        let state = {
-            let mut s = [0u64; STATE_SIZE];
-            // Initialize complemented lanes to all 1s (~0)
-            const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false, false, false, false, true, false, false, false,
-                true, false, false, false, false, true, false, false, true, false, false, false,
-                false,
-            ];
-            for i in 0..STATE_SIZE {
-                if COMPLEMENTED[i] {
-                    s[i] = !0u64;
-                }
-            }
-            s
-        };
-
-        Self {
-            state,
-            buffer: [0u8; 144],
-            buffer_len: 0,
-            rate: 144, // 1600 - 2*224 = 1152 bits = 144 bytes
-        }
-    }
-
-    /// Update the hasher with input data
-    pub fn update(&mut self, data: &[u8]) {
-        let mut offset = 0;
-        if self.buffer_len > 0 {
-            let to_copy = core::cmp::min(self.rate - self.buffer_len, data.len());
-            self.buffer[self.buffer_len..self.buffer_len + to_copy]
-                .copy_from_slice(&data[..to_copy]);
-            self.buffer_len += to_copy;
-            offset += to_copy;
-            if self.buffer_len == self.rate {
-                let rate = self.rate;
-                let buffer = self.buffer;
-                self.absorb_block(&buffer[..rate]);
-                self.buffer_len = 0;
-            }
-        }
-        while offset + self.rate <= data.len() {
-            self.absorb_block(&data[offset..offset + self.rate]);
-            offset += self.rate;
-        }
-        if offset < data.len() {
-            let remaining = data.len() - offset;
-            self.buffer[..remaining].copy_from_slice(&data[offset..]);
-            self.buffer_len = remaining;
-        }
-    }
-
-    /// Finalize and return the digest
-    pub fn finalize(mut self) -> [u8; SHA3_224_OUTPUT_SIZE] {
-        self.buffer[self.buffer_len] = 0x06;
-        self.buffer[self.buffer_len + 1..self.rate].fill(0);
-        self.buffer[self.rate - 1] |= 0x80;
-        let rate = self.rate;
-        let buffer = self.buffer;
-        self.absorb_block(&buffer[..rate]);
-        let mut output = [0u8; SHA3_224_OUTPUT_SIZE];
-
-        #[cfg(not(feature = "lane-complement"))]
-        {
-            for i in 0..3 {
-                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
-            }
-            output[24..28].copy_from_slice(&self.state[3].to_le_bytes()[..4]);
-        }
-
-        #[cfg(feature = "lane-complement")]
-        {
-            const COMPLEMENTED: [bool; 4] = [false, true, true, false];
-            for i in 0..3 {
-                let lane = if COMPLEMENTED[i] {
-                    !self.state[i]
-                } else {
-                    self.state[i]
-                };
-                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
-            }
-            let lane3 = if COMPLEMENTED[3] {
-                !self.state[3]
-            } else {
-                self.state[3]
-            };
-            output[24..28].copy_from_slice(&lane3.to_le_bytes()[..4]);
-        }
-
-        output
+    /// Compute SHA3-224 of data in one call
+    pub fn digest(data: &[u8]) -> [u8; SHA3_224_OUTPUT_SIZE] {
+        use crate::traits::HashFunction;
+        let mut hasher = Self::new();
+        hasher.update(data);
+        hasher.finalize()
     }
 
     /// Absorb a block into the state
@@ -737,13 +454,6 @@ impl Sha3_224 {
         }
 
         keccak_f(&mut self.state);
-    }
-
-    /// Compute SHA3-224 of data in one call
-    pub fn digest(data: &[u8]) -> [u8; SHA3_224_OUTPUT_SIZE] {
-        let mut hasher = Self::new();
-        hasher.update(data);
-        hasher.finalize()
     }
 }
 
@@ -758,99 +468,18 @@ pub struct Sha3_384 {
 
 impl Default for Sha3_384 {
     fn default() -> Self {
+        use crate::traits::HashFunction;
         Self::new()
     }
 }
 
 impl Sha3_384 {
-    /// Create a new SHA3-384 hasher
-    pub fn new() -> Self {
-        #[cfg(not(feature = "lane-complement"))]
-        let state = [0u64; STATE_SIZE];
-
-        #[cfg(feature = "lane-complement")]
-        let state = {
-            let mut s = [0u64; STATE_SIZE];
-            // Initialize complemented lanes to all 1s (~0)
-            const COMPLEMENTED: [bool; 25] = [
-                false, true, true, false, false, false, false, false, true, false, false, false,
-                true, false, false, false, false, true, false, false, true, false, false, false,
-                false,
-            ];
-            for i in 0..STATE_SIZE {
-                if COMPLEMENTED[i] {
-                    s[i] = !0u64;
-                }
-            }
-            s
-        };
-
-        Self {
-            state,
-            buffer: [0u8; 104],
-            buffer_len: 0,
-            rate: 104, // 1600 - 2*384 = 832 bits = 104 bytes
-        }
-    }
-
-    /// Update the hasher with input data
-    pub fn update(&mut self, data: &[u8]) {
-        let mut offset = 0;
-        if self.buffer_len > 0 {
-            let to_copy = core::cmp::min(self.rate - self.buffer_len, data.len());
-            self.buffer[self.buffer_len..self.buffer_len + to_copy]
-                .copy_from_slice(&data[..to_copy]);
-            self.buffer_len += to_copy;
-            offset += to_copy;
-            if self.buffer_len == self.rate {
-                let rate = self.rate;
-                let buffer = self.buffer;
-                self.absorb_block(&buffer[..rate]);
-                self.buffer_len = 0;
-            }
-        }
-        while offset + self.rate <= data.len() {
-            self.absorb_block(&data[offset..offset + self.rate]);
-            offset += self.rate;
-        }
-        if offset < data.len() {
-            let remaining = data.len() - offset;
-            self.buffer[..remaining].copy_from_slice(&data[offset..]);
-            self.buffer_len = remaining;
-        }
-    }
-
-    /// Finalize and return the digest
-    pub fn finalize(mut self) -> [u8; SHA3_384_OUTPUT_SIZE] {
-        self.buffer[self.buffer_len] = 0x06;
-        self.buffer[self.buffer_len + 1..self.rate].fill(0);
-        self.buffer[self.rate - 1] |= 0x80;
-        let rate = self.rate;
-        let buffer = self.buffer;
-        self.absorb_block(&buffer[..rate]);
-        let mut output = [0u8; SHA3_384_OUTPUT_SIZE];
-
-        #[cfg(not(feature = "lane-complement"))]
-        {
-            for i in 0..6 {
-                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
-            }
-        }
-
-        #[cfg(feature = "lane-complement")]
-        {
-            const COMPLEMENTED: [bool; 6] = [false, true, true, false, false, false];
-            for i in 0..6 {
-                let lane = if COMPLEMENTED[i] {
-                    !self.state[i]
-                } else {
-                    self.state[i]
-                };
-                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
-            }
-        }
-
-        output
+    /// Compute SHA3-384 of data in one call
+    pub fn digest(data: &[u8]) -> [u8; SHA3_384_OUTPUT_SIZE] {
+        use crate::traits::HashFunction;
+        let mut hasher = Self::new();
+        hasher.update(data);
+        hasher.finalize()
     }
 
     /// Absorb a block into the state
@@ -885,13 +514,6 @@ impl Sha3_384 {
         }
 
         keccak_f(&mut self.state);
-    }
-
-    /// Compute SHA3-384 of data in one call
-    pub fn digest(data: &[u8]) -> [u8; SHA3_384_OUTPUT_SIZE] {
-        let mut hasher = Self::new();
-        hasher.update(data);
-        hasher.finalize()
     }
 }
 
@@ -1148,113 +770,51 @@ pub type TurboShake256 = ShakeCore<136, 12>;
 
 impl Default for Shake128 {
     fn default() -> Self {
-        Self::new()
+        Self::new_with_domain_sep(0x1F)
     }
 }
 
 impl Default for Shake256 {
     fn default() -> Self {
-        Self::new()
+        Self::new_with_domain_sep(0x1F)
     }
 }
 
 impl Default for TurboShake128 {
     fn default() -> Self {
-        Self::new()
+        Self::new_with_domain_sep(0x1F)
     }
 }
 
 impl Default for TurboShake256 {
     fn default() -> Self {
-        Self::new()
+        Self::new_with_domain_sep(0x1F)
     }
 }
 
 // ===== API Methods =====
 
+// Shake128 and Shake256 API methods are now only available through the XofFunction trait
+
 impl Shake128 {
-    /// Create a new SHAKE128 XOF
-    pub fn new() -> Self {
-        Self::new_with_domain_sep(0x1F)
-    }
-
-    /// Finalize and squeeze output of arbitrary length
-    pub fn finalize(mut self, output: &mut [u8]) {
-        self.finalize_internal(output);
-    }
-
-    /// Finalize and return an XOF reader for incremental squeezing
-    ///
-    /// This allows reading arbitrary amounts of output data without re-finalization.
-    ///
-    /// # Example
-    /// ```
-    /// use hpcrypt_hash::Shake128;
-    ///
-    /// let mut shake = Shake128::new();
-    /// shake.update(b"input data");
-    /// let mut reader = shake.finalize_xof();
-    ///
-    /// // Read output incrementally
-    /// let mut buf1 = [0u8; 32];
-    /// reader.read(&mut buf1);
-    ///
-    /// let mut buf2 = [0u8; 64];
-    /// reader.read(&mut buf2);
-    /// ```
-    pub fn finalize_xof(self) -> crate::xof_reader::XofReader<168, 24> {
-        crate::xof_reader::XofReader::new(self)
-    }
+    // No public methods - use XofFunction trait methods instead
 }
 
 impl Shake256 {
-    /// Create a new SHAKE256 XOF
-    pub fn new() -> Self {
-        Self::new_with_domain_sep(0x1F)
-    }
-
-    /// Finalize and squeeze output of arbitrary length
-    pub fn finalize(mut self, output: &mut [u8]) {
-        self.finalize_internal(output);
-    }
-
-    /// Finalize and return an XOF reader for incremental squeezing
-    pub fn finalize_xof(self) -> crate::xof_reader::XofReader<136, 24> {
-        crate::xof_reader::XofReader::new(self)
-    }
+    // No public methods - use XofFunction trait methods instead
 }
 
 impl TurboShake128 {
-    /// Create a new TurboSHAKE128 XOF with default domain separation (0x1F)
-    pub fn new() -> Self {
-        Self::with_domain_sep(0x1F)
-    }
-
     /// Create a new TurboSHAKE128 XOF with custom domain separation byte (0x01-0x7F)
     pub fn with_domain_sep(domain_sep: u8) -> Self {
         Self::new_with_domain_sep(domain_sep)
     }
-
-    /// Finalize and produce output
-    pub fn finalize(&mut self, output: &mut [u8]) {
-        self.finalize_internal(output);
-    }
 }
 
 impl TurboShake256 {
-    /// Create a new TurboSHAKE256 XOF with default domain separation (0x1F)
-    pub fn new() -> Self {
-        Self::with_domain_sep(0x1F)
-    }
-
     /// Create a new TurboSHAKE256 XOF with custom domain separation byte (0x01-0x7F)
     pub fn with_domain_sep(domain_sep: u8) -> Self {
         Self::new_with_domain_sep(domain_sep)
-    }
-
-    /// Finalize and produce output
-    pub fn finalize(&mut self, output: &mut [u8]) {
-        self.finalize_internal(output);
     }
 }
 
@@ -1486,6 +1046,7 @@ fn keccak_f(state: &mut [u64; 25]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::traits::{HashFunction, XofFunction};
 
     #[test]
     fn test_sha3_256_empty() {
@@ -1589,11 +1150,12 @@ mod tests {
 
     #[test]
     fn test_turboshake128() {
+        use crate::traits::XofFunction;
         // Test vector from RFC 9861 (empty message, 32-byte output)
         let mut hasher = TurboShake128::new();
         hasher.update(b"");
         let mut output = [0u8; 32];
-        hasher.finalize(&mut output);
+        hasher.clone().finalize(&mut output);
 
         // RFC 9861 test vector: TurboSHAKE128(M=empty, 32-byte output, D=0x1F)
         // 1E 41 5F 1C 59 83 AF F2 16 92 17 27 7D 17 BB 53
@@ -1607,15 +1169,554 @@ mod tests {
 
     #[test]
     fn test_turboshake256() {
+        use crate::traits::XofFunction;
         // Test vector from RFC 9861
         let mut hasher = TurboShake256::new();
         hasher.update(b"");
         let mut output = [0u8; 64];
-        hasher.finalize(&mut output);
+        hasher.clone().finalize(&mut output);
 
         let expected =
             hex_literal::hex!("367a329dafea871c7802ec67f905ae13c57695dc2c6663c61035f59a18f8e7db");
         // Note: Checking first 32 bytes of 64-byte output
         assert_eq!(&output[..32], &expected[..]);
+    }
+}
+
+// ===== HashFunction Trait Implementations =====
+
+impl crate::traits::HashFunction for Sha3_256 {
+    type Output = [u8; SHA3_256_OUTPUT_SIZE];
+    const OUTPUT_SIZE: usize = SHA3_256_OUTPUT_SIZE;
+    const BLOCK_SIZE: usize = 136; // rate in bytes
+
+    #[inline]
+    fn new() -> Self {
+        #[cfg(not(feature = "lane-complement"))]
+        let state = [0u64; STATE_SIZE];
+
+        #[cfg(feature = "lane-complement")]
+        let state = {
+            let mut s = [0u64; STATE_SIZE];
+            // Initialize complemented lanes to all 1s (~0)
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false, false, false, false, true, false, false, false,
+                true, false, false, false, false, true, false, false, true, false, false, false,
+                false,
+            ];
+            for i in 0..STATE_SIZE {
+                if COMPLEMENTED[i] {
+                    s[i] = !0u64;
+                }
+            }
+            s
+        };
+
+        Self {
+            state,
+            buffer: [0u8; 136],
+            buffer_len: 0,
+            rate: 136, // 1600 - 2*256 = 1088 bits = 136 bytes
+        }
+    }
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        let mut offset = 0;
+
+        // Fill buffer if partial
+        if self.buffer_len > 0 {
+            let to_copy = core::cmp::min(self.rate - self.buffer_len, data.len());
+            self.buffer[self.buffer_len..self.buffer_len + to_copy]
+                .copy_from_slice(&data[..to_copy]);
+            self.buffer_len += to_copy;
+            offset += to_copy;
+
+            if self.buffer_len == self.rate {
+                let rate = self.rate;
+                let buffer = self.buffer;
+                self.absorb_block(&buffer[..rate]);
+                self.buffer_len = 0;
+            }
+        }
+
+        // Process complete blocks
+        while offset + self.rate <= data.len() {
+            self.absorb_block(&data[offset..offset + self.rate]);
+            offset += self.rate;
+        }
+
+        // Buffer remaining data
+        if offset < data.len() {
+            let remaining = data.len() - offset;
+            self.buffer[..remaining].copy_from_slice(&data[offset..]);
+            self.buffer_len = remaining;
+        }
+    }
+
+    #[inline]
+    fn finalize(mut self) -> Self::Output {
+        // SHA-3 padding: append 0x06, pad with zeros, final byte is 0x80
+        self.buffer[self.buffer_len] = 0x06;
+        self.buffer[self.buffer_len + 1..self.rate].fill(0);
+        self.buffer[self.rate - 1] |= 0x80;
+
+        let rate = self.rate;
+        let buffer = self.buffer;
+        self.absorb_block(&buffer[..rate]);
+
+        // Squeeze
+        let mut output = [0u8; SHA3_256_OUTPUT_SIZE];
+
+        #[cfg(not(feature = "lane-complement"))]
+        {
+            for i in 0..4 {
+                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
+            }
+        }
+
+        #[cfg(feature = "lane-complement")]
+        {
+            // Lanes 1 and 2 are stored complemented, need to un-complement when reading
+            const COMPLEMENTED: [bool; 4] = [false, true, true, false];
+            for i in 0..4 {
+                let lane = if COMPLEMENTED[i] {
+                    !self.state[i]
+                } else {
+                    self.state[i]
+                };
+                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
+            }
+        }
+
+        output
+    }
+
+    #[inline]
+    fn finalize_reset(&mut self) -> Self::Output {
+        let clone = self.clone();
+        *self = Self::new();
+        clone.finalize()
+    }
+}
+
+impl crate::traits::HashFunction for Sha3_384 {
+    type Output = [u8; SHA3_384_OUTPUT_SIZE];
+    const OUTPUT_SIZE: usize = SHA3_384_OUTPUT_SIZE;
+    const BLOCK_SIZE: usize = 104; // rate in bytes
+
+    #[inline]
+    fn new() -> Self {
+        #[cfg(not(feature = "lane-complement"))]
+        let state = [0u64; STATE_SIZE];
+
+        #[cfg(feature = "lane-complement")]
+        let state = {
+            let mut s = [0u64; STATE_SIZE];
+            // Initialize complemented lanes to all 1s (~0)
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false, false, false, false, true, false, false, false,
+                true, false, false, false, false, true, false, false, true, false, false, false,
+                false,
+            ];
+            for i in 0..STATE_SIZE {
+                if COMPLEMENTED[i] {
+                    s[i] = !0u64;
+                }
+            }
+            s
+        };
+
+        Self {
+            state,
+            buffer: [0u8; 104],
+            buffer_len: 0,
+            rate: 104, // 1600 - 2*384 = 832 bits = 104 bytes
+        }
+    }
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        let mut offset = 0;
+        if self.buffer_len > 0 {
+            let to_copy = core::cmp::min(self.rate - self.buffer_len, data.len());
+            self.buffer[self.buffer_len..self.buffer_len + to_copy]
+                .copy_from_slice(&data[..to_copy]);
+            self.buffer_len += to_copy;
+            offset += to_copy;
+            if self.buffer_len == self.rate {
+                let rate = self.rate;
+                let buffer = self.buffer;
+                self.absorb_block(&buffer[..rate]);
+                self.buffer_len = 0;
+            }
+        }
+        while offset + self.rate <= data.len() {
+            self.absorb_block(&data[offset..offset + self.rate]);
+            offset += self.rate;
+        }
+        if offset < data.len() {
+            let remaining = data.len() - offset;
+            self.buffer[..remaining].copy_from_slice(&data[offset..]);
+            self.buffer_len = remaining;
+        }
+    }
+
+    #[inline]
+    fn finalize(mut self) -> Self::Output {
+        self.buffer[self.buffer_len] = 0x06;
+        self.buffer[self.buffer_len + 1..self.rate].fill(0);
+        self.buffer[self.rate - 1] |= 0x80;
+        let rate = self.rate;
+        let buffer = self.buffer;
+        self.absorb_block(&buffer[..rate]);
+        let mut output = [0u8; SHA3_384_OUTPUT_SIZE];
+
+        #[cfg(not(feature = "lane-complement"))]
+        {
+            for i in 0..6 {
+                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
+            }
+        }
+
+        #[cfg(feature = "lane-complement")]
+        {
+            const COMPLEMENTED: [bool; 6] = [false, true, true, false, false, false];
+            for i in 0..6 {
+                let lane = if COMPLEMENTED[i] {
+                    !self.state[i]
+                } else {
+                    self.state[i]
+                };
+                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
+            }
+        }
+
+        output
+    }
+
+    #[inline]
+    fn finalize_reset(&mut self) -> Self::Output {
+        let clone = self.clone();
+        *self = Self::new();
+        clone.finalize()
+    }
+}
+
+impl crate::traits::HashFunction for Sha3_224 {
+    type Output = [u8; SHA3_224_OUTPUT_SIZE];
+    const OUTPUT_SIZE: usize = SHA3_224_OUTPUT_SIZE;
+    const BLOCK_SIZE: usize = 144; // rate in bytes
+
+    #[inline]
+    fn new() -> Self {
+        #[cfg(not(feature = "lane-complement"))]
+        let state = [0u64; STATE_SIZE];
+
+        #[cfg(feature = "lane-complement")]
+        let state = {
+            let mut s = [0u64; STATE_SIZE];
+            // Initialize complemented lanes to all 1s (~0)
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false, false, false, false, true, false, false, false,
+                true, false, false, false, false, true, false, false, true, false, false, false,
+                false,
+            ];
+            for i in 0..STATE_SIZE {
+                if COMPLEMENTED[i] {
+                    s[i] = !0u64;
+                }
+            }
+            s
+        };
+
+        Self {
+            state,
+            buffer: [0u8; 144],
+            buffer_len: 0,
+            rate: 144, // 1600 - 2*224 = 1152 bits = 144 bytes
+        }
+    }
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        let mut offset = 0;
+        if self.buffer_len > 0 {
+            let to_copy = core::cmp::min(self.rate - self.buffer_len, data.len());
+            self.buffer[self.buffer_len..self.buffer_len + to_copy]
+                .copy_from_slice(&data[..to_copy]);
+            self.buffer_len += to_copy;
+            offset += to_copy;
+            if self.buffer_len == self.rate {
+                let rate = self.rate;
+                let buffer = self.buffer;
+                self.absorb_block(&buffer[..rate]);
+                self.buffer_len = 0;
+            }
+        }
+        while offset + self.rate <= data.len() {
+            self.absorb_block(&data[offset..offset + self.rate]);
+            offset += self.rate;
+        }
+        if offset < data.len() {
+            let remaining = data.len() - offset;
+            self.buffer[..remaining].copy_from_slice(&data[offset..]);
+            self.buffer_len = remaining;
+        }
+    }
+
+    #[inline]
+    fn finalize(mut self) -> Self::Output {
+        self.buffer[self.buffer_len] = 0x06;
+        self.buffer[self.buffer_len + 1..self.rate].fill(0);
+        self.buffer[self.rate - 1] |= 0x80;
+        let rate = self.rate;
+        let buffer = self.buffer;
+        self.absorb_block(&buffer[..rate]);
+        let mut output = [0u8; SHA3_224_OUTPUT_SIZE];
+
+        #[cfg(not(feature = "lane-complement"))]
+        {
+            for i in 0..3 {
+                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
+            }
+            output[24..28].copy_from_slice(&self.state[3].to_le_bytes()[..4]);
+        }
+
+        #[cfg(feature = "lane-complement")]
+        {
+            const COMPLEMENTED: [bool; 4] = [false, true, true, false];
+            for i in 0..3 {
+                let lane = if COMPLEMENTED[i] {
+                    !self.state[i]
+                } else {
+                    self.state[i]
+                };
+                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
+            }
+            let lane3 = if COMPLEMENTED[3] {
+                !self.state[3]
+            } else {
+                self.state[3]
+            };
+            output[24..28].copy_from_slice(&lane3.to_le_bytes()[..4]);
+        }
+
+        output
+    }
+
+    #[inline]
+    fn finalize_reset(&mut self) -> Self::Output {
+        let clone = self.clone();
+        *self = Self::new();
+        clone.finalize()
+    }
+}
+
+impl crate::traits::HashFunction for Sha3_512 {
+    type Output = [u8; SHA3_512_OUTPUT_SIZE];
+    const OUTPUT_SIZE: usize = SHA3_512_OUTPUT_SIZE;
+    const BLOCK_SIZE: usize = 72; // rate in bytes
+
+    #[inline]
+    fn new() -> Self {
+        #[cfg(not(feature = "lane-complement"))]
+        let state = [0u64; STATE_SIZE];
+
+        #[cfg(feature = "lane-complement")]
+        let state = {
+            let mut s = [0u64; STATE_SIZE];
+            // Initialize complemented lanes to all 1s (~0)
+            const COMPLEMENTED: [bool; 25] = [
+                false, true, true, false, false, false, false, false, true, false, false, false,
+                true, false, false, false, false, true, false, false, true, false, false, false,
+                false,
+            ];
+            for i in 0..STATE_SIZE {
+                if COMPLEMENTED[i] {
+                    s[i] = !0u64;
+                }
+            }
+            s
+        };
+
+        Self {
+            state,
+            buffer: [0u8; 72],
+            buffer_len: 0,
+            rate: 72, // 1600 - 2*512 = 576 bits = 72 bytes
+        }
+    }
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        let mut offset = 0;
+
+        if self.buffer_len > 0 {
+            let to_copy = core::cmp::min(self.rate - self.buffer_len, data.len());
+            self.buffer[self.buffer_len..self.buffer_len + to_copy]
+                .copy_from_slice(&data[..to_copy]);
+            self.buffer_len += to_copy;
+            offset += to_copy;
+
+            if self.buffer_len == self.rate {
+                let rate = self.rate;
+                let buffer = self.buffer;
+                self.absorb_block(&buffer[..rate]);
+                self.buffer_len = 0;
+            }
+        }
+
+        while offset + self.rate <= data.len() {
+            self.absorb_block(&data[offset..offset + self.rate]);
+            offset += self.rate;
+        }
+
+        if offset < data.len() {
+            let remaining = data.len() - offset;
+            self.buffer[..remaining].copy_from_slice(&data[offset..]);
+            self.buffer_len = remaining;
+        }
+    }
+
+    #[inline]
+    fn finalize(mut self) -> Self::Output {
+        self.buffer[self.buffer_len] = 0x06;
+        self.buffer[self.buffer_len + 1..self.rate].fill(0);
+        self.buffer[self.rate - 1] |= 0x80;
+
+        let rate = self.rate;
+        let buffer = self.buffer;
+        self.absorb_block(&buffer[..rate]);
+
+        let mut output = [0u8; SHA3_512_OUTPUT_SIZE];
+
+        #[cfg(not(feature = "lane-complement"))]
+        {
+            for i in 0..8 {
+                output[i * 8..(i + 1) * 8].copy_from_slice(&self.state[i].to_le_bytes());
+            }
+        }
+
+        #[cfg(feature = "lane-complement")]
+        {
+            // Lanes 1 and 2 are stored complemented
+            const COMPLEMENTED: [bool; 8] = [false, true, true, false, false, false, false, false];
+            for i in 0..8 {
+                let lane = if COMPLEMENTED[i] {
+                    !self.state[i]
+                } else {
+                    self.state[i]
+                };
+                output[i * 8..(i + 1) * 8].copy_from_slice(&lane.to_le_bytes());
+            }
+        }
+
+        output
+    }
+
+    #[inline]
+    fn finalize_reset(&mut self) -> Self::Output {
+        let clone = self.clone();
+        *self = Self::new();
+        clone.finalize()
+    }
+}
+
+// ===== XofFunction Trait Implementations =====
+
+impl crate::traits::XofFunction for Shake128 {
+    type Reader = crate::xof_reader::XofReader<168, 24>;
+
+    #[inline]
+    fn new() -> Self {
+        Self::new_with_domain_sep(0x1F)
+    }
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        ShakeCore::update(self, data)
+    }
+
+    #[inline]
+    fn finalize(mut self, output: &mut [u8]) {
+        self.finalize_internal(output);
+    }
+
+    #[inline]
+    fn finalize_xof(self) -> Self::Reader {
+        crate::xof_reader::XofReader::new(self)
+    }
+}
+
+impl crate::traits::XofFunction for Shake256 {
+    type Reader = crate::xof_reader::XofReader<136, 24>;
+
+    #[inline]
+    fn new() -> Self {
+        Self::new_with_domain_sep(0x1F)
+    }
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        ShakeCore::update(self, data)
+    }
+
+    #[inline]
+    fn finalize(mut self, output: &mut [u8]) {
+        self.finalize_internal(output);
+    }
+
+    #[inline]
+    fn finalize_xof(self) -> Self::Reader {
+        crate::xof_reader::XofReader::new(self)
+    }
+}
+
+impl crate::traits::XofFunction for TurboShake128 {
+    type Reader = crate::xof_reader::XofReader<168, 12>;
+
+    #[inline]
+    fn new() -> Self {
+        TurboShake128::new_with_domain_sep(0x1F)
+    }
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        ShakeCore::update(self, data)
+    }
+
+    #[inline]
+    fn finalize(mut self, output: &mut [u8]) {
+        self.finalize_internal(output);
+    }
+
+    #[inline]
+    fn finalize_xof(self) -> Self::Reader {
+        crate::xof_reader::XofReader::new(self)
+    }
+}
+
+impl crate::traits::XofFunction for TurboShake256 {
+    type Reader = crate::xof_reader::XofReader<136, 12>;
+
+    #[inline]
+    fn new() -> Self {
+        TurboShake256::new_with_domain_sep(0x1F)
+    }
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        ShakeCore::update(self, data)
+    }
+
+    #[inline]
+    fn finalize(mut self, output: &mut [u8]) {
+        self.finalize_internal(output);
+    }
+
+    #[inline]
+    fn finalize_xof(self) -> Self::Reader {
+        crate::xof_reader::XofReader::new(self)
     }
 }

@@ -213,6 +213,7 @@ impl<const RATE: usize, const ROUNDS: usize> std::io::Read for XofReader<RATE, R
 #[cfg(test)]
 mod tests {
     use crate::sha3::Shake128;
+    use crate::traits::XofFunction;
 
     #[cfg(feature = "alloc")]
     extern crate alloc;
