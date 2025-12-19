@@ -12,8 +12,10 @@ categories = ["cryptography", "no-std"]
 # HPCrypt dependencies
 hpcrypt-rng = { path = "../hpcrypt-rng", default-features = false }
 hpcrypt-hash = { path = "../hpcrypt-hash", default-features = false }
+hpcrypt-mac = { path = "../hpcrypt-mac", default-features = false }
 
-# Constant-time operations and zeroization
+# RNG and constant-time operations
+rand_core = { version = "0.6", default-features = false }
 subtle = { version = "2.5", default-features = false }
 zeroize = { version = "1.7", default-features = false, features = ["derive"] }
 
@@ -29,7 +31,7 @@ rand = "0.8"
 
 [features]
 default = ["std", "hpcrypt-rng/os-rng"]
-std = ["hpcrypt-hash/std", "hpcrypt-rng/std", "subtle/std", "zeroize/std"]
+std = ["hpcrypt-hash/std", "hpcrypt-rng/std", "hpcrypt-mac/std", "subtle/std", "zeroize/std"]
 cavp = []  # Enable CAVP/ACVP test API
 
 [profile.release]
