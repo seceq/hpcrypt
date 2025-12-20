@@ -74,6 +74,7 @@ path = "tests/hmac.rs"
 [[test]]
 name = "ecdh"
 path = "tests/ecdh.rs"
+required-features = ["hpcrypt-curves"]
 
 [[test]]
 name = "x25519"
