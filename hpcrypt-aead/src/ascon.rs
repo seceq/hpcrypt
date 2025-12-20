@@ -29,6 +29,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
+use hpcrypt_core::ascon::{ascon_permutation, AsconState};
 use zeroize::Zeroize;
 
 /// Ascon-128 AEAD cipher
@@ -96,14 +97,6 @@ const ASCON_128A_IV: u64 = 0x80800c0800000000;
 // AEAD128: VARIANT=1, PA=12, PB=8, TAG=16*8=128, RATE=16 -> 0x00001000808c0001
 // Note: NIST AEAD128 is the former Ascon-128a (rate=128 bits), not Ascon-128 (rate=64 bits)
 const ASCON_NIST_AEAD128_IV: u64 = 0x00001000808c0001;
-
-// Round constants for Ascon permutation
-const ROUND_CONSTANTS: [u64; 12] = [
-    0xf0, 0xe1, 0xd2, 0xc3, 0xb4, 0xa5, 0x96, 0x87, 0x78, 0x69, 0x5a, 0x4b,
-];
-
-/// Ascon state: 5 x 64-bit words = 320 bits
-type AsconState = [u64; 5];
 
 impl Ascon128 {
     /// Number of initialization/finalization rounds
@@ -704,68 +697,8 @@ fn ascon_finalize(state: &mut AsconState, key: &[u8; 16], rate: usize, rounds: u
 }
 
 /// Ascon permutation
-fn ascon_permutation(state: &mut AsconState, rounds: usize) {
-    let start_round = 12 - rounds;
-
-    #[allow(clippy::needless_range_loop)]
-    for i in start_round..12 {
-        state[2] ^= ROUND_CONSTANTS[i];
-
-        ascon_sbox(state);
-
-        ascon_linear(state);
-    }
-}
-
-/// Ascon S-box (substitution layer)
-///
-/// Implements the Ascon S-box as specified in the Ascon v1.2 specification:
-/// 1. Pre-mixing (affine layer before chi)
-/// 2. Chi layer (non-linear transformation)
-/// 3. Post-mixing (affine layer after chi)
-#[inline(always)]
-fn ascon_sbox(state: &mut AsconState) {
-    // Pre-mixing (affine layer before chi)
-    state[0] ^= state[4];
-    state[4] ^= state[3];
-    state[2] ^= state[1];
-
-    // Save values for chi layer
-    let x0 = state[0];
-    let x1 = state[1];
-    let x2 = state[2];
-    let x3 = state[3];
-    let x4 = state[4];
-
-    // Chi layer (Keccak-style non-linear transformation)
-    state[0] = x0 ^ (!x1 & x2);
-    state[1] = x1 ^ (!x2 & x3);
-    state[2] = x2 ^ (!x3 & x4);
-    state[3] = x3 ^ (!x4 & x0);
-    state[4] = x4 ^ (!x0 & x1);
-
-    // Post-mixing (affine layer after chi)
-    state[1] ^= state[0];
-    state[0] ^= state[4];
-    state[3] ^= state[2];
-    state[2] = !state[2];
-}
-
-/// Ascon linear diffusion layer
-#[inline(always)]
-fn ascon_linear(state: &mut AsconState) {
-    let x0 = state[0];
-    let x1 = state[1];
-    let x2 = state[2];
-    let x3 = state[3];
-    let x4 = state[4];
-
-    state[0] = x0 ^ x0.rotate_right(19) ^ x0.rotate_right(28);
-    state[1] = x1 ^ x1.rotate_right(61) ^ x1.rotate_right(39);
-    state[2] = x2 ^ x2.rotate_right(1) ^ x2.rotate_right(6);
-    state[3] = x3 ^ x3.rotate_right(10) ^ x3.rotate_right(17);
-    state[4] = x4 ^ x4.rotate_right(7) ^ x4.rotate_right(41);
-}
+// Ascon permutation functions are now provided by hpcrypt-core::ascon
+// This eliminates code duplication between hpcrypt-aead and hpcrypt-hash
 
 /// Constant-time equality comparison for AEAD tag verification
 ///
@@ -886,6 +819,66 @@ impl Ascon128Nist {
             Self::ROUNDS_A,
             Self::ROUNDS_B,
         )
+    }
+
+    /// Encrypt plaintext with nonce masking (NIST SP 800-232)
+    ///
+    /// Uses a second key to mask the nonce for enhanced robustness.
+    /// The masked nonce is computed as: nonce_masked = nonce XOR second_key
+    ///
+    /// # Parameters
+    /// - `key`: Primary 16-byte key (K1)
+    /// - `second_key`: Secondary 16-byte key (K2) for nonce masking
+    /// - `nonce`: 16-byte nonce
+    /// - `plaintext`: Data to encrypt
+    /// - `associated_data`: Additional authenticated data
+    ///
+    /// Returns ciphertext || tag (16-byte tag appended)
+    pub fn encrypt_with_nonce_masking(
+        key: &[u8; 16],
+        second_key: &[u8; 16],
+        nonce: &[u8; 16],
+        plaintext: &[u8],
+        associated_data: &[u8],
+    ) -> Vec<u8> {
+        // Compute masked nonce: N_masked = N XOR K2
+        let mut masked_nonce = [0u8; 16];
+        for i in 0..16 {
+            masked_nonce[i] = nonce[i] ^ second_key[i];
+        }
+
+        // Use standard encryption with masked nonce
+        Self::encrypt(key, &masked_nonce, plaintext, associated_data)
+    }
+
+    /// Decrypt ciphertext with nonce masking (NIST SP 800-232)
+    ///
+    /// Uses a second key to mask the nonce for enhanced robustness.
+    /// The masked nonce is computed as: nonce_masked = nonce XOR second_key
+    ///
+    /// # Parameters
+    /// - `key`: Primary 16-byte key (K1)
+    /// - `second_key`: Secondary 16-byte key (K2) for nonce masking
+    /// - `nonce`: 16-byte nonce
+    /// - `ciphertext_with_tag`: Ciphertext || tag to decrypt
+    /// - `associated_data`: Additional authenticated data
+    ///
+    /// Returns Some(plaintext) if authentication succeeds, None otherwise
+    pub fn decrypt_with_nonce_masking(
+        key: &[u8; 16],
+        second_key: &[u8; 16],
+        nonce: &[u8; 16],
+        ciphertext_with_tag: &[u8],
+        associated_data: &[u8],
+    ) -> Option<Vec<u8>> {
+        // Compute masked nonce: N_masked = N XOR K2
+        let mut masked_nonce = [0u8; 16];
+        for i in 0..16 {
+            masked_nonce[i] = nonce[i] ^ second_key[i];
+        }
+
+        // Use standard decryption with masked nonce
+        Self::decrypt(key, &masked_nonce, ciphertext_with_tag, associated_data)
     }
 }
 
@@ -1071,9 +1064,8 @@ fn ascon_encrypt_blocks_nist(
     let mut ciphertext = Vec::with_capacity(plaintext.len());
 
     let chunks = plaintext.chunks(rate);
-    let num_chunks = chunks.len();
 
-    for (i, chunk) in chunks.enumerate() {
+    for chunk in chunks {
         if chunk.len() == rate {
             if rate == 8 {
                 let block = u64::from_le_bytes([
@@ -1095,9 +1087,8 @@ fn ascon_encrypt_blocks_nist(
                 ciphertext.extend_from_slice(&state[1].to_le_bytes());
             }
 
-            if i < num_chunks - 1 {
-                ascon_permutation(state, rounds);
-            }
+            // Always permute after processing a full block
+            ascon_permutation(state, rounds);
         } else {
             // Partial block (NIST SP 800-232 uses 0x01 padding)
             let remaining = chunk.len();
@@ -1128,8 +1119,9 @@ fn ascon_encrypt_blocks_nist(
         }
     }
 
-    // Handle empty plaintext (NIST SP 800-232 uses 0x01 padding)
-    if plaintext.is_empty() {
+    // Apply padding (NIST SP 800-232 uses 0x01)
+    // - If plaintext is empty or an exact multiple of rate, apply padding
+    if plaintext.is_empty() || plaintext.len() % rate == 0 {
         state[0] ^= 0x01;
     }
 
@@ -1146,9 +1138,8 @@ fn ascon_decrypt_blocks_nist(
     let mut plaintext = Vec::with_capacity(ciphertext.len());
 
     let chunks = ciphertext.chunks(rate);
-    let num_chunks = chunks.len();
 
-    for (i, chunk) in chunks.enumerate() {
+    for chunk in chunks {
         if chunk.len() == rate {
             if rate == 8 {
                 let c = u64::from_le_bytes([
@@ -1173,9 +1164,8 @@ fn ascon_decrypt_blocks_nist(
                 plaintext.extend_from_slice(&p1.to_le_bytes());
             }
 
-            if i < num_chunks - 1 {
-                ascon_permutation(state, rounds);
-            }
+            // Always permute after processing a full block
+            ascon_permutation(state, rounds);
         } else {
             // Partial block (NIST SP 800-232 uses 0x01 padding)
             let remaining = chunk.len();
@@ -1224,8 +1214,9 @@ fn ascon_decrypt_blocks_nist(
         }
     }
 
-    // Handle empty ciphertext (NIST SP 800-232 uses 0x01 padding)
-    if ciphertext.is_empty() {
+    // Apply padding (NIST SP 800-232 uses 0x01)
+    // - If ciphertext is empty or an exact multiple of rate, apply padding
+    if ciphertext.is_empty() || ciphertext.len() % rate == 0 {
         state[0] ^= 0x01;
     }
 
