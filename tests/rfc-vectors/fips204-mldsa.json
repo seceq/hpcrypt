@@ -1,0 +1,181 @@
+[
+  {
+    "test_id": 1,
+    "source": "FIPS 204 Reference",
+    "description": "ML-DSA-44 basic test - NIST Level 2 security",
+    "parameter_set": "ML-DSA-44",
+    "security_level": "Level 2",
+    "nist_category": 2,
+    "public_key_size": 1312,
+    "secret_key_size": 2560,
+    "signature_size": 2420,
+    "test_type": "keygen_sign_verify",
+    "note": "NIST Level 2 (128-bit quantum security)"
+  },
+  {
+    "test_id": 2,
+    "source": "FIPS 204 Reference",
+    "description": "ML-DSA-65 basic test - NIST Level 3 security",
+    "parameter_set": "ML-DSA-65",
+    "security_level": "Level 3",
+    "nist_category": 3,
+    "public_key_size": 1952,
+    "secret_key_size": 4032,
+    "signature_size": 3309,
+    "test_type": "keygen_sign_verify",
+    "note": "NIST Level 3 (192-bit quantum security)"
+  },
+  {
+    "test_id": 3,
+    "source": "FIPS 204 Reference",
+    "description": "ML-DSA-87 basic test - NIST Level 5 security",
+    "parameter_set": "ML-DSA-87",
+    "security_level": "Level 5",
+    "nist_category": 5,
+    "public_key_size": 2592,
+    "secret_key_size": 4896,
+    "signature_size": 4627,
+    "test_type": "keygen_sign_verify",
+    "note": "NIST Level 5 (256-bit quantum security)"
+  },
+  {
+    "test_id": 4,
+    "source": "FIPS 204 Edge Case",
+    "description": "Empty message signing - ML-DSA-44",
+    "parameter_set": "ML-DSA-44",
+    "security_level": "Level 2",
+    "test_type": "sign_verify_empty_msg",
+    "note": "Test edge case: signing and verifying empty message"
+  },
+  {
+    "test_id": 5,
+    "source": "FIPS 204 Edge Case",
+    "description": "Single byte message signing - ML-DSA-44",
+    "parameter_set": "ML-DSA-44",
+    "security_level": "Level 2",
+    "test_type": "sign_verify_single_byte",
+    "note": "Test edge case: signing and verifying single byte message"
+  },
+  {
+    "test_id": 6,
+    "source": "FIPS 204 Edge Case",
+    "description": "Large message signing - ML-DSA-44",
+    "parameter_set": "ML-DSA-44",
+    "security_level": "Level 2",
+    "test_type": "sign_verify_large_msg",
+    "note": "Test with large message (10KB)"
+  },
+  {
+    "test_id": 7,
+    "source": "FIPS 204 Property Test",
+    "description": "Deterministic verification - ML-DSA-44",
+    "parameter_set": "ML-DSA-44",
+    "security_level": "Level 2",
+    "test_type": "determinism",
+    "note": "Same message and key should produce verifiable signature"
+  },
+  {
+    "test_id": 8,
+    "source": "FIPS 204 Property Test",
+    "description": "Invalid signature rejection - ML-DSA-44",
+    "parameter_set": "ML-DSA-44",
+    "security_level": "Level 2",
+    "test_type": "invalid_sig_rejection",
+    "note": "Modified signature should fail verification"
+  },
+  {
+    "test_id": 9,
+    "source": "FIPS 204 Property Test",
+    "description": "Wrong public key rejection - ML-DSA-44",
+    "parameter_set": "ML-DSA-44",
+    "security_level": "Level 2",
+    "test_type": "wrong_pk_rejection",
+    "note": "Signature should fail with different public key"
+  },
+  {
+    "test_id": 10,
+    "source": "FIPS 204 Property Test",
+    "description": "Message tampering detection - ML-DSA-44",
+    "parameter_set": "ML-DSA-44",
+    "security_level": "Level 2",
+    "test_type": "message_tampering",
+    "note": "Modified message should fail verification"
+  },
+  {
+    "test_id": 11,
+    "source": "FIPS 204 Context Test",
+    "description": "Context string support - ML-DSA-44",
+    "parameter_set": "ML-DSA-44",
+    "security_level": "Level 2",
+    "test_type": "context_string",
+    "note": "Test signing with context string per FIPS 204"
+  },
+  {
+    "test_id": 12,
+    "source": "FIPS 204 Prehash Test",
+    "description": "Prehash mode - ML-DSA-44 with SHA-256",
+    "parameter_set": "ML-DSA-44",
+    "security_level": "Level 2",
+    "test_type": "prehash_sha256",
+    "prehash_alg": "SHA-256",
+    "note": "Test prehash signature mode per FIPS 204"
+  },
+  {
+    "test_id": 13,
+    "source": "FIPS 204 Prehash Test",
+    "description": "Prehash mode - ML-DSA-44 with SHA-512",
+    "parameter_set": "ML-DSA-44",
+    "security_level": "Level 2",
+    "test_type": "prehash_sha512",
+    "prehash_alg": "SHA-512",
+    "note": "Test prehash signature mode with SHA-512"
+  },
+  {
+    "test_id": 14,
+    "source": "FIPS 204 Cross-validation",
+    "description": "Security level comparison - signature sizes",
+    "parameter_set_1": "ML-DSA-44",
+    "parameter_set_2": "ML-DSA-65",
+    "parameter_set_3": "ML-DSA-87",
+    "test_type": "signature_size_comparison",
+    "note": "Higher security levels should have larger signatures"
+  },
+  {
+    "test_id": 15,
+    "source": "FIPS 204 Cross-validation",
+    "description": "Security level comparison - key sizes",
+    "parameter_set_1": "ML-DSA-44",
+    "parameter_set_2": "ML-DSA-65",
+    "parameter_set_3": "ML-DSA-87",
+    "test_type": "key_size_comparison",
+    "note": "Higher security levels should have larger keys"
+  },
+  {
+    "test_id": 16,
+    "source": "FIPS 204 Batch Test",
+    "description": "Batch signing and verification - ML-DSA-44",
+    "parameter_set": "ML-DSA-44",
+    "security_level": "Level 2",
+    "test_type": "batch_sign_verify",
+    "batch_size": 10,
+    "note": "Test batch signing API with 10 messages"
+  },
+  {
+    "test_id": 17,
+    "source": "FIPS 204 Randomness Test",
+    "description": "Signature randomness - ML-DSA-44",
+    "parameter_set": "ML-DSA-44",
+    "security_level": "Level 2",
+    "test_type": "signature_randomness",
+    "note": "Same message signed twice should produce different signatures"
+  },
+  {
+    "test_id": 18,
+    "source": "FIPS 204 API Test",
+    "description": "Serialization round-trip - ML-DSA-44",
+    "parameter_set": "ML-DSA-44",
+    "security_level": "Level 2",
+    "test_type": "serialization_roundtrip",
+    "note": "Keys should serialize and deserialize correctly"
+  }
+]
