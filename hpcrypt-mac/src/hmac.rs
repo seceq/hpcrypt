@@ -227,6 +227,90 @@ impl HmacSha512Context {
 }
 
 // ============================================================================
+// HMAC-SHA224
+// ============================================================================
+
+use hpcrypt_hash::sha224::{Sha224, BLOCK_LEN as SHA224_BLOCK_LEN};
+
+/// HMAC-SHA224 with precomputed hash states
+#[derive(Clone)]
+pub struct HmacSha224 {
+    inner_state: Sha224,
+    outer_state: Sha224,
+}
+
+impl HmacSha224 {
+    // All public methods removed - now only available through Mac trait
+}
+
+/// Streaming HMAC-SHA224 context
+#[derive(Clone)]
+pub struct HmacSha224Context {
+    inner: Sha224,
+    outer_state: Sha224,
+}
+
+impl HmacSha224Context {
+    // All public methods removed - now only available through MacContext trait
+}
+
+// ============================================================================
+// HMAC-SHA512/224
+// ============================================================================
+
+use hpcrypt_hash::sha512_224::{Sha512_224, BLOCK_LEN as SHA512_224_BLOCK_LEN};
+
+/// HMAC-SHA512/224 with precomputed hash states
+#[derive(Clone)]
+pub struct HmacSha512_224 {
+    inner_state: Sha512_224,
+    outer_state: Sha512_224,
+}
+
+impl HmacSha512_224 {
+    // All public methods removed - now only available through Mac trait
+}
+
+/// Streaming HMAC-SHA512/224 context
+#[derive(Clone)]
+pub struct HmacSha512_224Context {
+    inner: Sha512_224,
+    outer_state: Sha512_224,
+}
+
+impl HmacSha512_224Context {
+    // All public methods removed - now only available through MacContext trait
+}
+
+// ============================================================================
+// HMAC-SHA512/256
+// ============================================================================
+
+use hpcrypt_hash::sha512_256::{Sha512_256, BLOCK_LEN as SHA512_256_BLOCK_LEN};
+
+/// HMAC-SHA512/256 with precomputed hash states
+#[derive(Clone)]
+pub struct HmacSha512_256 {
+    inner_state: Sha512_256,
+    outer_state: Sha512_256,
+}
+
+impl HmacSha512_256 {
+    // All public methods removed - now only available through Mac trait
+}
+
+/// Streaming HMAC-SHA512/256 context
+#[derive(Clone)]
+pub struct HmacSha512_256Context {
+    inner: Sha512_256,
+    outer_state: Sha512_256,
+}
+
+impl HmacSha512_256Context {
+    // All public methods removed - now only available through MacContext trait
+}
+
+// ============================================================================
 // HMAC-BLAKE2b
 // ============================================================================
 
@@ -281,6 +365,27 @@ pub fn hmac_sha384(key: &[u8], data: &[u8]) -> [u8; 48] {
 pub fn hmac_sha512(key: &[u8], data: &[u8]) -> [u8; 64] {
     use crate::traits::Mac;
     HmacSha512::compute(key, data)
+}
+
+/// One-shot HMAC-SHA224
+#[inline]
+pub fn hmac_sha224(key: &[u8], data: &[u8]) -> [u8; 28] {
+    use crate::traits::Mac;
+    HmacSha224::compute(key, data)
+}
+
+/// One-shot HMAC-SHA512/224
+#[inline]
+pub fn hmac_sha512_224(key: &[u8], data: &[u8]) -> [u8; 28] {
+    use crate::traits::Mac;
+    HmacSha512_224::compute(key, data)
+}
+
+/// One-shot HMAC-SHA512/256
+#[inline]
+pub fn hmac_sha512_256(key: &[u8], data: &[u8]) -> [u8; 32] {
+    use crate::traits::Mac;
+    HmacSha512_256::compute(key, data)
 }
 
 /// One-shot HMAC-BLAKE2b
@@ -741,6 +846,273 @@ impl crate::traits::Mac for HmacSha512 {
 
 impl crate::traits::MacContext for HmacSha512Context {
     type Output = [u8; 64];
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        self.inner.update(data);
+    }
+
+    #[inline]
+    fn finalize(self) -> Self::Output {
+        let inner_hash = self.inner.finalize();
+
+        let mut outer = self.outer_state;
+        outer.update(&inner_hash);
+        outer.finalize()
+    }
+
+    #[inline]
+    fn clone(&self) -> Self {
+        Clone::clone(self)
+    }
+}
+
+impl crate::traits::Mac for HmacSha224 {
+    type Output = [u8; 28];
+    type Context = HmacSha224Context;
+    const OUTPUT_SIZE: usize = 28;
+
+    #[inline]
+    fn new(key: &[u8]) -> Self {
+        // Derive the padded key
+        let mut padded_key = [0u8; SHA224_BLOCK_LEN];
+
+        if key.len() > SHA224_BLOCK_LEN {
+            // Key longer than block size: hash it first
+            let mut hasher = Sha224::new();
+            hasher.update(key);
+            let hash = hasher.finalize();
+            padded_key[..28].copy_from_slice(&hash);
+        } else {
+            // Key shorter or equal: copy and zero-pad
+            padded_key[..key.len()].copy_from_slice(key);
+        }
+
+        // Compute (K ⊕ ipad)
+        let mut ipad_key = [0u8; SHA224_BLOCK_LEN];
+        xor_block_64!(ipad_key, padded_key, IPAD);
+
+        // Precompute inner state
+        let mut inner_state = Sha224::new();
+        inner_state.update(&ipad_key);
+
+        // Convert ipad_key to opad_key using XOR trick
+        xor_inplace_64!(ipad_key, IPAD_XOR_OPAD);
+
+        // Precompute outer state
+        let mut outer_state = Sha224::new();
+        outer_state.update(&ipad_key);
+
+        Self {
+            inner_state,
+            outer_state,
+        }
+    }
+
+    #[inline]
+    fn compute(key: &[u8], data: &[u8]) -> Self::Output {
+        let mac = Self::new(key);
+
+        // Clone precomputed inner state and process message
+        let mut inner = mac.inner_state.clone();
+        inner.update(data);
+        let inner_hash = inner.finalize();
+
+        // Clone precomputed outer state and process inner hash
+        let mut outer = mac.outer_state.clone();
+        outer.update(&inner_hash);
+        outer.finalize()
+    }
+
+    #[inline]
+    fn start(self) -> Self::Context {
+        HmacSha224Context {
+            inner: self.inner_state.clone(),
+            outer_state: self.outer_state.clone(),
+        }
+    }
+}
+
+impl crate::traits::MacContext for HmacSha224Context {
+    type Output = [u8; 28];
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        self.inner.update(data);
+    }
+
+    #[inline]
+    fn finalize(self) -> Self::Output {
+        let inner_hash = self.inner.finalize();
+
+        let mut outer = self.outer_state;
+        outer.update(&inner_hash);
+        outer.finalize()
+    }
+
+    #[inline]
+    fn clone(&self) -> Self {
+        Clone::clone(self)
+    }
+}
+
+impl crate::traits::Mac for HmacSha512_224 {
+    type Output = [u8; 28];
+    type Context = HmacSha512_224Context;
+    const OUTPUT_SIZE: usize = 28;
+
+    #[inline]
+    fn new(key: &[u8]) -> Self {
+        // Derive the padded key
+        let mut padded_key = [0u8; SHA512_224_BLOCK_LEN];
+
+        if key.len() > SHA512_224_BLOCK_LEN {
+            // Key longer than block size: hash it first
+            let mut hasher = Sha512_224::new();
+            hasher.update(key);
+            let hash = hasher.finalize();
+            padded_key[..28].copy_from_slice(&hash);
+        } else {
+            // Key shorter or equal: copy and zero-pad
+            padded_key[..key.len()].copy_from_slice(key);
+        }
+
+        // Compute (K ⊕ ipad)
+        let mut ipad_key = [0u8; SHA512_224_BLOCK_LEN];
+        xor_block_128!(ipad_key, padded_key, IPAD);
+
+        // Precompute inner state
+        let mut inner_state = Sha512_224::new();
+        inner_state.update(&ipad_key);
+
+        // Convert ipad_key to opad_key using XOR trick
+        xor_inplace_128!(ipad_key, IPAD_XOR_OPAD);
+
+        // Precompute outer state
+        let mut outer_state = Sha512_224::new();
+        outer_state.update(&ipad_key);
+
+        Self {
+            inner_state,
+            outer_state,
+        }
+    }
+
+    #[inline]
+    fn compute(key: &[u8], data: &[u8]) -> Self::Output {
+        let mac = Self::new(key);
+
+        // Clone precomputed inner state and process message
+        let mut inner = mac.inner_state.clone();
+        inner.update(data);
+        let inner_hash = inner.finalize();
+
+        // Clone precomputed outer state and process inner hash
+        let mut outer = mac.outer_state.clone();
+        outer.update(&inner_hash);
+        outer.finalize()
+    }
+
+    #[inline]
+    fn start(self) -> Self::Context {
+        HmacSha512_224Context {
+            inner: self.inner_state.clone(),
+            outer_state: self.outer_state.clone(),
+        }
+    }
+}
+
+impl crate::traits::MacContext for HmacSha512_224Context {
+    type Output = [u8; 28];
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        self.inner.update(data);
+    }
+
+    #[inline]
+    fn finalize(self) -> Self::Output {
+        let inner_hash = self.inner.finalize();
+
+        let mut outer = self.outer_state;
+        outer.update(&inner_hash);
+        outer.finalize()
+    }
+
+    #[inline]
+    fn clone(&self) -> Self {
+        Clone::clone(self)
+    }
+}
+
+impl crate::traits::Mac for HmacSha512_256 {
+    type Output = [u8; 32];
+    type Context = HmacSha512_256Context;
+    const OUTPUT_SIZE: usize = 32;
+
+    #[inline]
+    fn new(key: &[u8]) -> Self {
+        // Derive the padded key
+        let mut padded_key = [0u8; SHA512_256_BLOCK_LEN];
+
+        if key.len() > SHA512_256_BLOCK_LEN {
+            // Key longer than block size: hash it first
+            let mut hasher = Sha512_256::new();
+            hasher.update(key);
+            let hash = hasher.finalize();
+            padded_key[..32].copy_from_slice(&hash);
+        } else {
+            // Key shorter or equal: copy and zero-pad
+            padded_key[..key.len()].copy_from_slice(key);
+        }
+
+        // Compute (K ⊕ ipad)
+        let mut ipad_key = [0u8; SHA512_256_BLOCK_LEN];
+        xor_block_128!(ipad_key, padded_key, IPAD);
+
+        // Precompute inner state
+        let mut inner_state = Sha512_256::new();
+        inner_state.update(&ipad_key);
+
+        // Convert ipad_key to opad_key using XOR trick
+        xor_inplace_128!(ipad_key, IPAD_XOR_OPAD);
+
+        // Precompute outer state
+        let mut outer_state = Sha512_256::new();
+        outer_state.update(&ipad_key);
+
+        Self {
+            inner_state,
+            outer_state,
+        }
+    }
+
+    #[inline]
+    fn compute(key: &[u8], data: &[u8]) -> Self::Output {
+        let mac = Self::new(key);
+
+        // Clone precomputed inner state and process message
+        let mut inner = mac.inner_state.clone();
+        inner.update(data);
+        let inner_hash = inner.finalize();
+
+        // Clone precomputed outer state and process inner hash
+        let mut outer = mac.outer_state.clone();
+        outer.update(&inner_hash);
+        outer.finalize()
+    }
+
+    #[inline]
+    fn start(self) -> Self::Context {
+        HmacSha512_256Context {
+            inner: self.inner_state.clone(),
+            outer_state: self.outer_state.clone(),
+        }
+    }
+}
+
+impl crate::traits::MacContext for HmacSha512_256Context {
+    type Output = [u8; 32];
 
     #[inline]
     fn update(&mut self, data: &[u8]) {
