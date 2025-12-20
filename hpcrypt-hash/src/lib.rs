@@ -12,10 +12,13 @@ pub mod blake2b;
 pub mod blake2s;
 pub mod blake3;
 pub mod sha1;
+pub mod sha224;
 pub mod sha256;
 pub mod sha3;
 pub mod sha384;
 pub mod sha512;
+pub mod sha512_224;
+pub mod sha512_256;
 pub mod shake_batched;
 pub mod xof_reader;
 
@@ -24,12 +27,15 @@ pub use blake2b::{blake2b, blake2b_mac, blake2b_variable, Blake2b};
 pub use blake2s::{blake2s, blake2s_mac, blake2s_variable, Blake2s};
 pub use blake3::{blake3, blake3_derive_key, blake3_keyed, Blake3};
 pub use sha1::{sha1, Sha1};
+pub use sha224::{sha224, Sha224};
 pub use sha256::{sha256, Sha256};
 pub use sha3::{
     Sha3_224, Sha3_256, Sha3_384, Sha3_512, Shake128, Shake256, TurboShake128, TurboShake256,
 };
 pub use sha384::{sha384, Sha384};
 pub use sha512::{sha512, Sha512};
+pub use sha512_224::{sha512_224, Sha512_224};
+pub use sha512_256::{sha512_256, Sha512_256};
 pub use shake_batched::{Shake128x4, Shake256x4};
 
 // Re-export traits
