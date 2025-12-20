@@ -26,9 +26,9 @@ fn test_siv_rfc5297_test1() {
 
     // Check if they match
     if encrypted == expected_ct {
-        println!("✓ PASS");
+        println!("PASS");
     } else {
-        println!("✗ FAIL");
+        println!("FAIL");
         println!("  IV (first 16 bytes):");
         println!("    Expected: {}", hex::encode(&expected_ct[..16]));
         println!("    Got:      {}", hex::encode(&encrypted[..16]));
