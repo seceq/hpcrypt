@@ -8,8 +8,8 @@
 //!
 //! ### Fixed Issues
 //! Fixed by improving carry propagation in `add_unreduced`/`sub_unreduced`:
-//! - Test 48: Edge case public key ✓
-//! - Test 106: Special case public key ✓
+//! - Test 48: Edge case public key *
+//! - Test 106: Special case public key *
 //!
 //! Additional fixes applied:
 //! - Fixed carry propagation in weak_reduce (nested carry loop)
@@ -31,8 +31,8 @@
 //! - Test 51: u with specific high bit pattern
 //! - Test 52: u with specific high bit pattern
 //!
-//! - RFC 7748 test vectors pass ✓
-//! - Basic X448 functionality works correctly ✓
+//! - RFC 7748 test vectors pass *
+//! - Basic X448 functionality works correctly *
 //! - Current success rate: 98.4% (502/510 tests pass)
 //!
 //! The outputs from failing tests are completely different from expected (not just off by
@@ -41,9 +41,9 @@
 //!
 //! ### Root Cause Investigation
 //! Through extensive testing, the bug has been isolated to the Montgomery ladder itself:
-//! - Field arithmetic for 2^192 works correctly (add, multiply, invert all pass) ✓
-//! - Simple scalar × basepoint works ✓
-//! - Test 46 scalar × basepoint works ✓
+//! - Field arithmetic for 2^192 works correctly (add, multiply, invert all pass) *
+//! - Simple scalar × basepoint works *
+//! - Test 46 scalar × basepoint works *
 //! - Simple scalar × 2^192 public key FAILS ✗
 //!
 //! This proves the bug is in the Montgomery ladder when processing public keys with

@@ -21,7 +21,7 @@
 //!
 //! ## Test Coverage
 //!
-//! - ✅ All hash modes without prediction resistance (165 vectors)
+//! - * All hash modes without prediction resistance (165 vectors)
 //! - ⊘ Prediction resistance mode (165 vectors - not implemented)
 //! - ⊘ MCT (Monte Carlo Tests - skipped for performance)
 
@@ -571,7 +571,7 @@ fn run_hash_drbg_tests() {
              stats.passed, stats.failed, stats.skipped);
 
     if stats.failed == 0 && stats.passed > 0 {
-        println!("✓ Successfully tested {} vectors with NIST SP 800-90A API", stats.passed);
+        println!("* Successfully tested {} vectors with NIST SP 800-90A API", stats.passed);
     }
     if stats.skipped > 0 {
         println!("⊘ Skipped {} vectors (prediction_resistance or MCT)", stats.skipped);

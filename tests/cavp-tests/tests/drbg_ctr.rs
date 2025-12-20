@@ -531,7 +531,7 @@ fn run_ctr_drbg_tests() {
              stats.passed, stats.failed, stats.skipped);
 
     if stats.failed == 0 && stats.passed > 0 {
-        println!("✓ Successfully tested {} vectors with NIST SP 800-90A API", stats.passed);
+        println!("* Successfully tested {} vectors with NIST SP 800-90A API", stats.passed);
     }
     if stats.skipped > 0 {
         println!("⊘ Skipped {} vectors (prediction_resistance, derivation_function, TDES)", stats.skipped);

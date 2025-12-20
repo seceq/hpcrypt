@@ -507,7 +507,7 @@ fn run_hmac_drbg_tests() {
              stats.passed, stats.failed, stats.skipped);
 
     if stats.failed == 0 && stats.passed > 0 {
-        println!("✓ Successfully tested {} vectors with NIST SP 800-90A API", stats.passed);
+        println!("* Successfully tested {} vectors with NIST SP 800-90A API", stats.passed);
     }
     if stats.skipped > 0 {
         println!("⊘ Skipped {} vectors (prediction_resistance, SHA-512/224, SHA-512/256)", stats.skipped);
