@@ -612,7 +612,13 @@ impl Blake3 {
             cv_stack: [[0u32; 8]; 54],
         };
         context_hasher.update_internal(context.as_bytes());
-        let context_key = context_hasher.finalize_words();
+
+        // Get the root hash output (32 bytes) and convert to words
+        let context_hash = context_hasher.finalize_internal();
+        let mut context_key = [0u32; 8];
+        for i in 0..8 {
+            context_key[i] = read_u32_le(&context_hash[i * 4..(i + 1) * 4]);
+        }
 
         Self {
             cv_stack_len: 0,
@@ -703,8 +709,9 @@ impl Blake3 {
                 self.parent_output(self.cv_stack[0], output.chaining_value())
             }
             2 => {
-                output = self.parent_output(self.cv_stack[0], output.chaining_value());
-                self.parent_output(self.cv_stack[1], output.chaining_value())
+                // Two parent merges (unrolled) - process in reverse order
+                output = self.parent_output(self.cv_stack[1], output.chaining_value());
+                self.parent_output(self.cv_stack[0], output.chaining_value())
             }
             _ => {
                 for i in (0..self.cv_stack_len).rev() {
