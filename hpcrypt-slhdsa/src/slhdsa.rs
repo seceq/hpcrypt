@@ -784,6 +784,119 @@ pub fn verify_ctx<P: ParameterSet>(public_key: &PublicKey<P>, context: &[u8], me
     }
 }
 
+/// Verify a prehashed signature using SLH-DSA with context.
+///
+/// This function implements the prehash mode per FIPS 205 Section 5.3.
+/// The message is first hashed using the specified hash algorithm, then the
+/// OID || PH(M) is verified.
+///
+/// # Parameters
+/// - `public_key`: The public key to verify with
+/// - `context`: Application-specific context string (max 255 bytes)
+/// - `hash_alg`: Name of the hash algorithm (e.g., "SHA2-256", "SHAKE-128")
+/// - `message`: The original message (will be hashed)
+/// - `signature`: The signature to verify
+///
+/// # Returns
+/// `true` if the signature is valid, `false` otherwise
+pub fn verify_prehash<P: ParameterSet>(
+    public_key: &PublicKey<P>,
+    context: &[u8],
+    hash_alg: &str,
+    message: &[u8],
+    signature: &[u8],
+) -> bool {
+    use crate::prehash::build_prehash_message;
+
+    if context.len() > 255 {
+        return false;
+    }
+
+    // Per FIPS 205, signature must be exactly SIG_BYTES
+    if signature.len() != P::SIG_BYTES {
+        return false;
+    }
+
+    // Build OID || PH(M) per FIPS 205 Section 5.3
+    let prehash_msg = match build_prehash_message(hash_alg, message) {
+        Ok(msg) => msg,
+        Err(_) => return false,
+    };
+
+    // Build M' = toByte(1, 1) || toByte(|ctx|, 1) || ctx || OID || PH(M)
+    // Note: domain separator is 0x01 for prehash mode (vs 0x00 for pure mode)
+    let mut m_prime = Vec::with_capacity(2 + context.len() + prehash_msg.len());
+    m_prime.push(1u8); // toByte(1, 1) for prehash mode
+    m_prime.push(context.len() as u8); // toByte(|ctx|, 1)
+    m_prime.extend_from_slice(context);
+    m_prime.extend_from_slice(&prehash_msg);
+
+    let mut addr = Address::new();
+
+    // Extract signature components
+    let opt_rand = &signature[..P::N];
+    let fors_sig = &signature[P::N..P::N + P::FORS_SIG_BYTES];
+    let ht_sig = &signature[P::N + P::FORS_SIG_BYTES..];
+
+    // OPTIMIZATION: Stack-allocate temporary buffers based on parameter set
+    macro_rules! verify_prehash_with_stack_buffers {
+        ($n:expr, $digest_size:expr) => {{
+            let mut digest_buf = [0u8; $digest_size];
+            let mut fors_pk_buf = [0u8; $n];
+
+            let digest = &mut digest_buf[..P::H_MSG_BYTES];
+            let fors_pk = &mut fors_pk_buf[..P::N];
+
+            with_hash!(P::N, P::HASH_TYPE, hash, {
+                // Hash using M' (which already has domain separator 0x01)
+                hash.h_msg_internal(opt_rand, public_key.pk_seed(), public_key.pk_root(), &m_prime, digest);
+
+                // Extract FORS message and indices from digest per FIPS 205
+                let fors_msg = &digest[..P::FORS_MSG_BYTES];
+                let (idx_tree, idx_leaf) = extract_indices::<P>(digest);
+
+                // Set tree and keypair address for FORS verification
+                addr.set_tree(idx_tree);
+                addr.set_keypair(idx_leaf as u32);
+
+                // Verify FORS signature
+                fors_pk_from_sig::<P, _>(fors_sig, fors_msg, public_key.pk_seed(), &mut addr, &hash, fors_pk);
+
+                // Verify hypertree signature
+                ht_verify::<P, _>(fors_pk, ht_sig, public_key.pk_seed(), idx_tree, idx_leaf, public_key.pk_root(), &mut addr, &hash)
+            })
+        }};
+    }
+
+    // Match on N to select appropriate stack buffer sizes
+    match P::N {
+        16 => verify_prehash_with_stack_buffers!(16, 64),
+        24 => verify_prehash_with_stack_buffers!(24, 64),
+        32 => verify_prehash_with_stack_buffers!(32, 256),
+        _ => {
+            // Fallback to heap allocation for unsupported sizes
+            let mut digest = vec![0u8; P::H_MSG_BYTES];
+            let mut fors_pk = vec![0u8; P::N];
+            with_hash!(P::N, P::HASH_TYPE, hash, {
+                hash.h_msg_internal(opt_rand, public_key.pk_seed(), public_key.pk_root(), &m_prime, &mut digest);
+
+                // Extract FORS message and indices from digest per FIPS 205
+                let fors_msg = &digest[..P::FORS_MSG_BYTES];
+                let (idx_tree, idx_leaf) = extract_indices::<P>(&digest);
+
+                // Set tree and keypair address for FORS verification
+                addr.set_tree(idx_tree);
+                addr.set_keypair(idx_leaf as u32);
+
+                fors_pk_from_sig::<P, _>(fors_sig, fors_msg, public_key.pk_seed(), &mut addr, &hash, &mut fors_pk);
+
+                // Verify hypertree signature
+                ht_verify::<P, _>(&fors_pk, ht_sig, public_key.pk_seed(), idx_tree, idx_leaf, public_key.pk_root(), &mut addr, &hash)
+            })
+        }
+    }
+}
+
 /// Verify a signature using SLH-DSA (without context).
 ///
 /// This is a convenience wrapper that calls `verify_ctx` with an empty context.
