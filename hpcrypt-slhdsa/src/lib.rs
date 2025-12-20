@@ -70,7 +70,7 @@ pub use params::{
     Shake128s, Shake128f, Shake192s, Shake192f, Shake256s, Shake256f,
 };
 
-pub use slhdsa::{KeyPair, SecretKey, PublicKey, sign, sign_ctx, sign_internal, sign_prehash, verify, verify_ctx, verify_internal};
+pub use slhdsa::{KeyPair, SecretKey, PublicKey, sign, sign_ctx, sign_internal, sign_prehash, verify, verify_ctx, verify_internal, verify_prehash};
 pub use utils::SignatureError;
 
 #[cfg(test)]
