@@ -1,11 +1,11 @@
 //! FIPS 180-4 - Secure Hash Standard (SHS)
 //!
-//! Tests for SHA-1, SHA-256, SHA-384, and SHA-512 using official FIPS 180-4 test vectors.
-//!
-//! Note: SHA-224, SHA-512/224, and SHA-512/256 are not currently implemented.
+//! Tests for SHA-1, SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224, and SHA-512/256
+//! using official FIPS 180-4 test vectors.
 
 use rfc_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
+use hpcrypt_hash::HashFunction;
 
 #[derive(Debug, Deserialize)]
 struct ShaTestVector {
@@ -61,8 +61,21 @@ fn test_sha_fips180_4() {
                 }
             }
             "SHA-224" => {
-                println!("  Skipping: SHA-224 not implemented");
-                stats.skipped += 1;
+                use hpcrypt_hash::Sha224;
+
+                let mut hasher = Sha224::new();
+                hasher.update(&input);
+                let output = hasher.finalize();
+
+                if output.as_slice() == expected_hash.as_slice() {
+                    println!("  SHA-224 hash matches");
+                    stats.passed += 1;
+                } else {
+                    println!("  SHA-224 hash mismatch");
+                    println!("    Expected: {}", hex::encode(&expected_hash));
+                    println!("    Got:      {}", hex::encode(&output));
+                    stats.failed += 1;
+                }
             }
             "SHA-256" => {
                 use hpcrypt_hash::Sha256;
@@ -115,9 +128,39 @@ fn test_sha_fips180_4() {
                     stats.failed += 1;
                 }
             }
-            "SHA-512/224" | "SHA-512/256" => {
-                println!("  Skipping: {} not implemented", test.algorithm);
-                stats.skipped += 1;
+            "SHA-512/224" => {
+                use hpcrypt_hash::Sha512_224;
+
+                let mut hasher = Sha512_224::new();
+                hasher.update(&input);
+                let output = hasher.finalize();
+
+                if output.as_slice() == expected_hash.as_slice() {
+                    println!("  SHA-512/224 hash matches");
+                    stats.passed += 1;
+                } else {
+                    println!("  SHA-512/224 hash mismatch");
+                    println!("    Expected: {}", hex::encode(&expected_hash));
+                    println!("    Got:      {}", hex::encode(&output));
+                    stats.failed += 1;
+                }
+            }
+            "SHA-512/256" => {
+                use hpcrypt_hash::Sha512_256;
+
+                let mut hasher = Sha512_256::new();
+                hasher.update(&input);
+                let output = hasher.finalize();
+
+                if output.as_slice() == expected_hash.as_slice() {
+                    println!("  SHA-512/256 hash matches");
+                    stats.passed += 1;
+                } else {
+                    println!("  SHA-512/256 hash mismatch");
+                    println!("    Expected: {}", hex::encode(&expected_hash));
+                    println!("    Got:      {}", hex::encode(&output));
+                    stats.failed += 1;
+                }
             }
             _ => {
                 println!("  Unknown algorithm: {}", test.algorithm);
