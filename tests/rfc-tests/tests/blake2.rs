@@ -101,7 +101,7 @@ fn test_blake2_rfc7693() {
                     hasher.finalize()
                 };
 
-                if output == expected_hash {
+                if output.as_slice() == expected_hash.as_slice() {
                     println!("  BLAKE2b hash matches");
                     stats.passed += 1;
                 } else {
@@ -140,7 +140,7 @@ fn test_blake2_rfc7693() {
                     hasher.finalize()
                 };
 
-                if output == expected_hash {
+                if output.as_slice() == expected_hash.as_slice() {
                     println!("  BLAKE2s hash matches");
                     stats.passed += 1;
                 } else {
