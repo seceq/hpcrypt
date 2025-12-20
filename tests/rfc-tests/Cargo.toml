@@ -25,6 +25,10 @@ hpcrypt-cipher = { workspace = true, features = ["std"], optional = true }
 hpcrypt-mac = { workspace = true, features = ["std", "alloc"], optional = true }
 hpcrypt-signatures = { workspace = true, features = ["std"], optional = true }
 hpcrypt-curves = { workspace = true, features = ["std"], optional = true }
+hpcrypt-slhdsa = { workspace = true, features = ["std"], optional = true }
+hpcrypt-mldsa = { workspace = true, features = ["std"], optional = true }
+hpcrypt-mlkem = { workspace = true, features = ["std"], optional = true }
+hpcrypt-rng = { workspace = true, optional = true }
 
 [features]
 default = []
@@ -39,6 +43,7 @@ enable-srp-tests = ["hpcrypt-srp"]
 enable-hash-tests = ["hpcrypt-hash"]
 enable-ecies-tests = ["hpcrypt-ecies"]
 enable-shamir-tests = ["hpcrypt-threshold"]
+enable-pqc-tests = ["hpcrypt-slhdsa", "hpcrypt-mldsa", "hpcrypt-mlkem", "hpcrypt-rng"]
 
 # Enable all RFC implementation tests
 enable-all-tests = [
@@ -53,6 +58,7 @@ enable-all-tests = [
     "enable-cipher-tests",
     "enable-mac-tests",
     "enable-signature-tests",
+    "enable-pqc-tests",
 ]
 
 [lib]
@@ -145,6 +151,61 @@ path = "tests/ecdsa_p521.rs"
 required-features = ["enable-signature-tests"]
 
 [[test]]
+name = "tls13_kdf"
+path = "tests/tls13_kdf.rs"
+required-features = ["enable-kdf-tests"]
+
+[[test]]
+name = "hkdf_sha"
+path = "tests/hkdf_sha.rs"
+required-features = ["enable-kdf-tests"]
+
+[[test]]
 name = "hkdf_blake2b"
 path = "tests/hkdf_blake2b.rs"
+required-features = ["enable-kdf-tests"]
+
+[[test]]
+name = "poly1305"
+path = "tests/poly1305.rs"
+required-features = ["enable-mac-tests"]
+
+[[test]]
+name = "cmac"
+path = "tests/cmac.rs"
+required-features = ["enable-mac-tests"]
+
+[[test]]
+name = "slhdsa"
+path = "tests/slhdsa.rs"
+required-features = ["enable-pqc-tests"]
+
+[[test]]
+name = "mldsa"
+path = "tests/mldsa.rs"
+required-features = ["enable-pqc-tests"]
+
+[[test]]
+name = "mlkem"
+path = "tests/mlkem.rs"
+required-features = ["enable-pqc-tests"]
+
+[[test]]
+name = "blake2_comprehensive"
+path = "tests/blake2_comprehensive.rs"
+required-features = ["enable-hash-tests"]
+
+[[test]]
+name = "blake3_comprehensive"
+path = "tests/blake3_comprehensive.rs"
+required-features = ["enable-hash-tests"]
+
+[[test]]
+name = "argon2_comprehensive"
+path = "tests/argon2_comprehensive.rs"
+required-features = ["enable-kdf-tests"]
+
+[[test]]
+name = "scrypt_comprehensive"
+path = "tests/scrypt_comprehensive.rs"
 required-features = ["enable-kdf-tests"]
