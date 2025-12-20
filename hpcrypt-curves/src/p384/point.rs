@@ -6,6 +6,7 @@
 use super::constants::{P384_B, P384_GX, P384_GY};
 use super::field::FieldElement;
 use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
+use hpcrypt_core::error::CurveError;
 
 // Common field element constants used in point arithmetic
 const FE_TWO: FieldElement = FieldElement::from_u64(2);
@@ -67,6 +68,66 @@ pub struct AffinePoint {
 
     /// Y coordinate
     pub y: FieldElement,
+}
+
+impl AffinePoint {
+    /// Create a new AffinePoint from coordinates
+    pub fn from_coordinates(x: FieldElement, y: FieldElement) -> Option<Self> {
+        let point = AffinePoint { x, y };
+        if point.is_on_curve() {
+            Some(point)
+        } else {
+            None
+        }
+    }
+
+    /// Check if point is on the P-384 curve: y² = x³ - 3x + b
+    pub fn is_on_curve(&self) -> bool {
+        let y_squared = self.y.square();
+        let x_squared = self.x.square();
+        let x_cubed = x_squared.mul(&self.x);
+
+        // P-384 has a = -3, so we compute: x³ - 3x + b
+        let three_x = self.x.add(&self.x).add(&self.x);
+        let b = FieldElement::from_limbs(P384_B);
+        let rhs = x_cubed.sub(&three_x).add(&b);
+
+        y_squared == rhs
+    }
+
+    /// Decode from public key bytes (uncompressed format only)
+    ///
+    /// Currently only supports uncompressed format: 97 bytes (0x04 || X || Y)
+    ///
+    /// Note: Compressed point support requires square root computation which is not yet
+    /// implemented for P-384.
+    ///
+    /// # Errors
+    ///
+    /// Returns `CurveError::InvalidEncoding` if the byte length is invalid or prefix is wrong.
+    /// Returns `CurveError::NotOnCurve` if the decoded point is not on the curve.
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, CurveError> {
+        match bytes.len() {
+            97 if bytes[0] == 0x04 => {
+                // Uncompressed: 0x04 || X || Y
+                let x_bytes: [u8; 48] = bytes[1..49].try_into().map_err(|_| CurveError::NotOnCurve)?;
+                let y_bytes: [u8; 48] = bytes[49..97].try_into().map_err(|_| CurveError::NotOnCurve)?;
+
+                let x = FieldElement::from_bytes(&x_bytes).ok_or(CurveError::NotOnCurve)?;
+                let y = FieldElement::from_bytes(&y_bytes).ok_or(CurveError::NotOnCurve)?;
+
+                Self::from_coordinates(x, y).ok_or(CurveError::NotOnCurve)
+            }
+            97 => Err(CurveError::InvalidEncoding {
+                expected: "valid prefix: 0x04 for uncompressed",
+                actual: bytes.len(),
+            }),
+            _ => Err(CurveError::InvalidEncoding {
+                expected: "97 bytes (uncompressed)",
+                actual: bytes.len(),
+            }),
+        }
+    }
 }
 
 impl Point {

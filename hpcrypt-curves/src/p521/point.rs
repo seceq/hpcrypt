@@ -7,6 +7,7 @@ use super::constants::{P521_B, P521_GX, P521_GY};
 use super::field::FieldElement;
 use super::scalar::Scalar;
 use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
+use hpcrypt_core::error::CurveError;
 
 /// P-521 elliptic curve point in affine coordinates (x, y)
 ///
@@ -18,6 +19,66 @@ pub struct AffinePoint {
 
     /// Y coordinate
     pub y: FieldElement,
+}
+
+impl AffinePoint {
+    /// Create a new AffinePoint from coordinates
+    pub fn from_coordinates(x: FieldElement, y: FieldElement) -> Option<Self> {
+        let point = AffinePoint { x, y };
+        if point.is_on_curve() {
+            Some(point)
+        } else {
+            None
+        }
+    }
+
+    /// Check if point is on the P-521 curve: y² = x³ - 3x + b
+    pub fn is_on_curve(&self) -> bool {
+        let y_squared = self.y.square();
+        let x_squared = self.x.square();
+        let x_cubed = x_squared.mul(&self.x);
+
+        // P-521 has a = -3, so we compute: x³ - 3x + b
+        let three_x = self.x.add(&self.x).add(&self.x);
+        let b = FieldElement::from_limbs(P521_B);
+        let rhs = x_cubed.sub(&three_x).add(&b);
+
+        y_squared == rhs
+    }
+
+    /// Decode from public key bytes (uncompressed format only)
+    ///
+    /// Currently only supports uncompressed format: 133 bytes (0x04 || X || Y)
+    ///
+    /// Note: Compressed point support requires square root computation which is not yet
+    /// implemented for P-521.
+    ///
+    /// # Errors
+    ///
+    /// Returns `CurveError::InvalidEncoding` if the byte length is invalid or prefix is wrong.
+    /// Returns `CurveError::NotOnCurve` if the decoded point is not on the curve.
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, CurveError> {
+        match bytes.len() {
+            133 if bytes[0] == 0x04 => {
+                // Uncompressed: 0x04 || X || Y
+                let x_bytes: [u8; 66] = bytes[1..67].try_into().map_err(|_| CurveError::NotOnCurve)?;
+                let y_bytes: [u8; 66] = bytes[67..133].try_into().map_err(|_| CurveError::NotOnCurve)?;
+
+                let x = FieldElement::from_bytes(&x_bytes).ok_or(CurveError::NotOnCurve)?;
+                let y = FieldElement::from_bytes(&y_bytes).ok_or(CurveError::NotOnCurve)?;
+
+                Self::from_coordinates(x, y).ok_or(CurveError::NotOnCurve)
+            }
+            133 => Err(CurveError::InvalidEncoding {
+                expected: "valid prefix: 0x04 for uncompressed",
+                actual: bytes.len(),
+            }),
+            _ => Err(CurveError::InvalidEncoding {
+                expected: "133 bytes (uncompressed)",
+                actual: bytes.len(),
+            }),
+        }
+    }
 }
 
 /// P-521 elliptic curve point in Jacobian coordinates (X : Y : Z)

@@ -6,6 +6,7 @@
 use super::constants::{P256_B, P256_GX, P256_GY};
 use super::field::FieldElement;
 use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
+use hpcrypt_core::error::CurveError;
 
 // Common field element constants used in point arithmetic
 const FE_TWO: FieldElement = FieldElement::from_u64(2);
@@ -74,6 +75,92 @@ pub struct AffinePoint {
 
     /// Y coordinate
     pub y: FieldElement,
+}
+
+impl AffinePoint {
+    /// Create a new AffinePoint from coordinates
+    pub fn from_coordinates(x: FieldElement, y: FieldElement) -> Option<Self> {
+        let point = AffinePoint { x, y };
+        if point.is_on_curve() {
+            Some(point)
+        } else {
+            None
+        }
+    }
+
+    /// Check if point is on the P-256 curve: y² = x³ - 3x + b
+    pub fn is_on_curve(&self) -> bool {
+        let y_squared = self.y.square();
+        let x_squared = self.x.square();
+        let x_cubed = x_squared.mul(&self.x);
+
+        // P-256 has a = -3, so we compute: x³ - 3x + b
+        let three_x = self.x.add(&self.x).add(&self.x);
+        let b = FieldElement::from_limbs(P256_B);
+        let rhs = x_cubed.sub(&three_x).add(&b);
+
+        y_squared == rhs
+    }
+
+    /// Decode from public key bytes (auto-detects compressed or uncompressed format)
+    ///
+    /// Supports both:
+    /// - Compressed: 33 bytes (0x02/0x03 || X)
+    /// - Uncompressed: 65 bytes (0x04 || X || Y)
+    ///
+    /// # Errors
+    ///
+    /// Returns `CurveError::InvalidEncoding` if the byte length is invalid or prefix is wrong.
+    /// Returns `CurveError::NotOnCurve` if the decoded point is not on the curve.
+    /// Returns `CurveError::DecompressionFailed` if decompression fails (invalid X coordinate).
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, CurveError> {
+        match bytes.len() {
+            65 if bytes[0] == 0x04 => {
+                // Uncompressed: 0x04 || X || Y
+                let x_bytes: [u8; 32] = bytes[1..33].try_into().map_err(|_| CurveError::NotOnCurve)?;
+                let y_bytes: [u8; 32] = bytes[33..65].try_into().map_err(|_| CurveError::NotOnCurve)?;
+
+                let x = FieldElement::from_bytes(&x_bytes).ok_or(CurveError::NotOnCurve)?;
+                let y = FieldElement::from_bytes(&y_bytes).ok_or(CurveError::NotOnCurve)?;
+
+                Self::from_coordinates(x, y).ok_or(CurveError::NotOnCurve)
+            }
+            33 if bytes[0] == 0x02 || bytes[0] == 0x03 => {
+                // Compressed: 0x02/0x03 || X
+                let prefix = bytes[0];
+                let x_bytes: [u8; 32] = bytes[1..33].try_into().map_err(|_| CurveError::DecompressionFailed)?;
+                let x = FieldElement::from_bytes(&x_bytes).ok_or(CurveError::DecompressionFailed)?;
+
+                // Compute y² = x³ - 3x + b
+                let x_squared = x.square();
+                let x_cubed = x_squared.mul(&x);
+                let three_x = x.add(&x).add(&x);
+                let b = FieldElement::from_limbs(P256_B);
+                let y_squared = x_cubed.sub(&three_x).add(&b);
+
+                // Compute y = sqrt(y²)
+                let y = y_squared.sqrt().ok_or(CurveError::DecompressionFailed)?;
+
+                // Check if y matches the parity indicated by the prefix
+                let y_bytes = y.to_bytes();
+                let y_is_odd = y_bytes[31] & 1 == 1;
+                let expected_odd = prefix == 0x03;
+
+                // If parity doesn't match, negate y
+                let y_final = if y_is_odd == expected_odd { y } else { y.neg() };
+
+                Self::from_coordinates(x, y_final).ok_or(CurveError::DecompressionFailed)
+            }
+            33 | 65 => Err(CurveError::InvalidEncoding {
+                expected: "valid prefix: 0x02/0x03 for compressed, 0x04 for uncompressed",
+                actual: bytes.len(),
+            }),
+            _ => Err(CurveError::InvalidEncoding {
+                expected: "33 bytes (compressed) or 65 bytes (uncompressed)",
+                actual: bytes.len(),
+            }),
+        }
+    }
 }
 
 /// P-256 point in Jacobian coordinates with Montgomery-form field elements

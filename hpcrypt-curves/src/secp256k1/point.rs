@@ -13,6 +13,7 @@
 use super::constants::{SECP256K1_B, SECP256K1_GX, SECP256K1_GY};
 use super::field_ops::FieldElement;
 use crate::ct_utils::{Choice, ConditionallySelectable, ConstantTimeEq};
+use hpcrypt_core::error::CurveError;
 
 /// A point on the secp256k1 elliptic curve in Jacobian coordinates
 ///
@@ -702,65 +703,77 @@ impl AffinePoint {
         bytes
     }
 
-    /// Decode from uncompressed public key (65 bytes: 0x04 || X || Y)
-    pub fn from_uncompressed_bytes(bytes: &[u8; 65]) -> Option<Self> {
-        if bytes[0] != 0x04 {
-            return None;
-        }
-
-        let x_bytes: [u8; 32] = bytes[1..33].try_into().ok()?;
-        let y_bytes: [u8; 32] = bytes[33..65].try_into().ok()?;
-
-        let x = FieldElement::from_bytes(&x_bytes);
-        let y = FieldElement::from_bytes(&y_bytes);
-
-        let point = AffinePoint { x, y };
-
-        // Verify point is on curve
-        if !point.is_on_curve() {
-            return None;
-        }
-
-        Some(point)
-    }
-
-    /// Decode from compressed public key (33 bytes: 0x02/0x03 || X)
+    /// Decode from public key bytes (auto-detects compressed or uncompressed format)
     ///
-    /// Recovers Y coordinate from X using the curve equation y² = x³ + 7
-    pub fn from_compressed_bytes(bytes: &[u8; 33]) -> Option<Self> {
-        let prefix = bytes[0];
-        if prefix != 0x02 && prefix != 0x03 {
-            return None;
+    /// Supports both:
+    /// - Compressed: 33 bytes (0x02/0x03 || X)
+    /// - Uncompressed: 65 bytes (0x04 || X || Y)
+    ///
+    /// # Errors
+    ///
+    /// Returns `CurveError::InvalidEncoding` if the byte length is invalid or prefix is wrong.
+    /// Returns `CurveError::NotOnCurve` if the decoded point is not on the curve.
+    /// Returns `CurveError::DecompressionFailed` if decompression fails (invalid X coordinate).
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, CurveError> {
+        match bytes.len() {
+            65 if bytes[0] == 0x04 => {
+                // Uncompressed: 0x04 || X || Y
+                let x_bytes: [u8; 32] = bytes[1..33].try_into().map_err(|_| CurveError::NotOnCurve)?;
+                let y_bytes: [u8; 32] = bytes[33..65].try_into().map_err(|_| CurveError::NotOnCurve)?;
+
+                let x = FieldElement::from_bytes(&x_bytes);
+                let y = FieldElement::from_bytes(&y_bytes);
+
+                let point = AffinePoint { x, y };
+
+                // Verify point is on curve
+                if !point.is_on_curve() {
+                    return Err(CurveError::NotOnCurve);
+                }
+
+                Ok(point)
+            }
+            33 if bytes[0] == 0x02 || bytes[0] == 0x03 => {
+                // Compressed: 0x02/0x03 || X
+                let prefix = bytes[0];
+                let x_bytes: [u8; 32] = bytes[1..33].try_into().map_err(|_| CurveError::DecompressionFailed)?;
+                let x = FieldElement::from_bytes(&x_bytes);
+
+                // Compute y² = x³ + 7
+                let x_squared = x.square();
+                let x_cubed = x_squared.mul(&x);
+                let b = FieldElement::from_limbs(SECP256K1_B);
+                let y_squared = x_cubed.add(&b);
+
+                // Compute y = sqrt(y²)
+                let y = y_squared.sqrt().ok_or(CurveError::DecompressionFailed)?;
+
+                // Check if y matches the parity indicated by the prefix
+                let y_bytes = y.to_bytes();
+                let y_is_odd = y_bytes[31] & 1 == 1;
+                let expected_odd = prefix == 0x03;
+
+                // If parity doesn't match, negate y
+                let y_final = if y_is_odd == expected_odd { y } else { y.neg() };
+
+                let point = AffinePoint { x, y: y_final };
+
+                // Verify point is on curve (should always be true if sqrt succeeded)
+                if !point.is_on_curve() {
+                    return Err(CurveError::NotOnCurve);
+                }
+
+                Ok(point)
+            }
+            33 | 65 => Err(CurveError::InvalidEncoding {
+                expected: "valid prefix: 0x02/0x03 for compressed, 0x04 for uncompressed",
+                actual: bytes.len(),
+            }),
+            _ => Err(CurveError::InvalidEncoding {
+                expected: "33 bytes (compressed) or 65 bytes (uncompressed)",
+                actual: bytes.len(),
+            }),
         }
-
-        let x_bytes: [u8; 32] = bytes[1..33].try_into().ok()?;
-        let x = FieldElement::from_bytes(&x_bytes);
-
-        // Compute y² = x³ + 7
-        let x_squared = x.square();
-        let x_cubed = x_squared.mul(&x);
-        let b = FieldElement::from_limbs(SECP256K1_B);
-        let y_squared = x_cubed.add(&b);
-
-        // Compute y = sqrt(y²)
-        let y = y_squared.sqrt()?;
-
-        // Check if y matches the parity indicated by the prefix
-        let y_bytes = y.to_bytes();
-        let y_is_odd = y_bytes[31] & 1 == 1;
-        let expected_odd = prefix == 0x03;
-
-        // If parity doesn't match, negate y
-        let y_final = if y_is_odd == expected_odd { y } else { y.neg() };
-
-        let point = AffinePoint { x, y: y_final };
-
-        // Verify point is on curve (should always be true if sqrt succeeded)
-        if !point.is_on_curve() {
-            return None;
-        }
-
-        Some(point)
     }
 }
 
@@ -1136,7 +1149,7 @@ mod tests {
         assert_eq!(uncompressed[0], 0x04); // Uncompressed prefix
 
         // Decode back
-        let decoded = AffinePoint::from_uncompressed_bytes(&uncompressed)
+        let decoded = AffinePoint::from_bytes(&uncompressed)
             .expect("Should decode valid uncompressed point");
 
         // Check roundtrip
@@ -1158,7 +1171,7 @@ mod tests {
         assert!(compressed[0] == 0x02 || compressed[0] == 0x03);
 
         // Decode back
-        let decoded = AffinePoint::from_compressed_bytes(&compressed)
+        let decoded = AffinePoint::from_bytes(&compressed)
             .expect("Should decode valid compressed point");
 
         // Check roundtrip (X must match, Y must match)
@@ -1200,7 +1213,7 @@ mod tests {
 
         // Compress then decompress
         let compressed = original.to_compressed_bytes();
-        let recovered = AffinePoint::from_compressed_bytes(&compressed)
+        let recovered = AffinePoint::from_bytes(&compressed)
             .expect("Should decompress successfully");
 
         // Y coordinates must match exactly
@@ -1222,13 +1235,13 @@ mod tests {
         invalid[1..].copy_from_slice(&[0x01; 32]);
 
         assert!(
-            AffinePoint::from_compressed_bytes(&invalid).is_none(),
+            AffinePoint::from_bytes(&invalid).is_err(),
             "Should reject compressed point with 0x04 prefix"
         );
 
         invalid[0] = 0x01; // Also invalid
         assert!(
-            AffinePoint::from_compressed_bytes(&invalid).is_none(),
+            AffinePoint::from_bytes(&invalid).is_err(),
             "Should reject compressed point with 0x01 prefix"
         );
     }
@@ -1240,13 +1253,13 @@ mod tests {
         invalid[0] = 0x02; // Invalid for uncompressed format
 
         assert!(
-            AffinePoint::from_uncompressed_bytes(&invalid).is_none(),
+            AffinePoint::from_bytes(&invalid).is_err(),
             "Should reject uncompressed point with 0x02 prefix"
         );
 
         invalid[0] = 0x03;
         assert!(
-            AffinePoint::from_uncompressed_bytes(&invalid).is_none(),
+            AffinePoint::from_bytes(&invalid).is_err(),
             "Should reject uncompressed point with 0x03 prefix"
         );
     }
@@ -1287,7 +1300,7 @@ mod tests {
         );
 
         // Verify decompression works
-        let decoded = AffinePoint::from_compressed_bytes(&expected_compressed)
+        let decoded = AffinePoint::from_bytes(&expected_compressed)
             .expect("Should decode known compressed generator");
 
         assert_eq!(decoded.x.to_bytes(), g_affine.x.to_bytes());
