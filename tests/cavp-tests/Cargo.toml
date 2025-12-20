@@ -150,6 +150,11 @@ path = "tests/aes_gcm_siv.rs"
 required-features = ["enable-aead-tests"]
 
 [[test]]
+name = "ascon_aead"
+path = "tests/ascon_aead.rs"
+required-features = ["enable-aead-tests"]
+
+[[test]]
 name = "aes_ofb"
 path = "tests/aes_ofb.rs"
 required-features = ["enable-cipher-tests"]
