@@ -75,15 +75,6 @@ name = "opaque"
 path = "tests/opaque.rs"
 required-features = ["enable-opaque-tests"]
 
-[[test]]
-name = "argon2"
-path = "tests/argon2.rs"
-required-features = ["enable-kdf-tests"]
-
-[[test]]
-name = "scrypt"
-path = "tests/scrypt.rs"
-required-features = ["enable-kdf-tests"]
 
 [[test]]
 name = "srp"
@@ -91,13 +82,13 @@ path = "tests/srp.rs"
 required-features = ["enable-srp-tests"]
 
 [[test]]
-name = "blake2"
-path = "tests/blake2.rs"
+name = "blake2_kat"
+path = "tests/blake2_kat.rs"
 required-features = ["enable-hash-tests"]
 
 [[test]]
-name = "blake3"
-path = "tests/blake3.rs"
+name = "blake3_kat"
+path = "tests/blake3_kat.rs"
 required-features = ["enable-hash-tests"]
 
 [[test]]
@@ -191,21 +182,21 @@ path = "tests/mlkem.rs"
 required-features = ["enable-pqc-tests"]
 
 [[test]]
-name = "blake2_comprehensive"
-path = "tests/blake2_comprehensive.rs"
+name = "blake2"
+path = "tests/blake2.rs"
 required-features = ["enable-hash-tests"]
 
 [[test]]
-name = "blake3_comprehensive"
-path = "tests/blake3_comprehensive.rs"
+name = "blake3_official"
+path = "tests/blake3_official.rs"
 required-features = ["enable-hash-tests"]
 
 [[test]]
-name = "argon2_comprehensive"
-path = "tests/argon2_comprehensive.rs"
+name = "argon2"
+path = "tests/argon2.rs"
 required-features = ["enable-kdf-tests"]
 
 [[test]]
-name = "scrypt_comprehensive"
-path = "tests/scrypt_comprehensive.rs"
+name = "scrypt"
+path = "tests/scrypt.rs"
 required-features = ["enable-kdf-tests"]
