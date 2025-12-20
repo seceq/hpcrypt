@@ -5,20 +5,17 @@
 //! separator 0x01 and includes the hash function OID.
 
 use hpcrypt_hash::{HashFunction, XofFunction};
-use hpcrypt_hash::{Sha256, Sha384, Sha512, Sha3_224, Sha3_256, Sha3_384, Sha3_512, Shake128, Shake256};
+use hpcrypt_hash::{Sha224, Sha256, Sha384, Sha512, Sha512_224, Sha512_256, Sha3_224, Sha3_256, Sha3_384, Sha3_512, Shake128, Shake256};
 
 /// Hash algorithm OIDs per NIST SP 800-208 and FIPS 205 Appendix C
-///
-/// Note: SHA2-224, SHA2-512/224, and SHA2-512/256 are not currently supported
-/// by hpcrypt-hash and are commented out. These are rarely used in practice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HashOid {
-    // Sha2_224,  // Not available in hpcrypt-hash
+    Sha2_224,
     Sha2_256,
     Sha2_384,
     Sha2_512,
-    // Sha2_512_224,  // Not available in hpcrypt-hash
-    // Sha2_512_256,  // Not available in hpcrypt-hash
+    Sha2_512_224,
+    Sha2_512_256,
     Sha3_224,
     Sha3_256,
     Sha3_384,
@@ -31,12 +28,12 @@ impl HashOid {
     /// Parse hash algorithm name to OID
     pub fn from_name(name: &str) -> Option<Self> {
         match name {
-            // "SHA2-224" => Some(HashOid::Sha2_224),  // Not available
+            "SHA2-224" => Some(HashOid::Sha2_224),
             "SHA2-256" => Some(HashOid::Sha2_256),
             "SHA2-384" => Some(HashOid::Sha2_384),
             "SHA2-512" => Some(HashOid::Sha2_512),
-            // "SHA2-512/224" => Some(HashOid::Sha2_512_224),  // Not available
-            // "SHA2-512/256" => Some(HashOid::Sha2_512_256),  // Not available
+            "SHA2-512/224" => Some(HashOid::Sha2_512_224),
+            "SHA2-512/256" => Some(HashOid::Sha2_512_256),
             "SHA3-224" => Some(HashOid::Sha3_224),
             "SHA3-256" => Some(HashOid::Sha3_256),
             "SHA3-384" => Some(HashOid::Sha3_384),
@@ -52,9 +49,12 @@ impl HashOid {
     pub fn der_encoding(&self) -> &'static [u8] {
         match self {
             // SHA-2 family (NIST FIPS 180-4)
+            HashOid::Sha2_224 => &[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x04],
             HashOid::Sha2_256 => &[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01],
             HashOid::Sha2_384 => &[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02],
             HashOid::Sha2_512 => &[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03],
+            HashOid::Sha2_512_224 => &[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x05],
+            HashOid::Sha2_512_256 => &[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x06],
 
             // SHA-3 family (NIST FIPS 202)
             HashOid::Sha3_224 => &[0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x07],
@@ -72,8 +72,9 @@ impl HashOid {
     /// For XOFs (SHAKE), returns 256 bits (32 bytes) as specified in FIPS 205
     pub fn output_len(&self) -> usize {
         match self {
-            HashOid::Sha3_224 => 28,
-            HashOid::Sha2_256 | HashOid::Sha3_256 | HashOid::Shake128 | HashOid::Shake256 => 32,
+            HashOid::Sha2_224 | HashOid::Sha2_512_224 | HashOid::Sha3_224 => 28,
+            HashOid::Sha2_256 | HashOid::Sha2_512_256 | HashOid::Sha3_256 |
+            HashOid::Shake128 | HashOid::Shake256 => 32,
             HashOid::Sha2_384 | HashOid::Sha3_384 => 48,
             HashOid::Sha2_512 | HashOid::Sha3_512 => 64,
         }
@@ -92,6 +93,11 @@ pub fn compute_prehash(hash_alg: &str, message: &[u8]) -> Result<Vec<u8>, &'stat
     let oid = HashOid::from_name(hash_alg).ok_or("Unknown hash algorithm")?;
 
     let digest = match oid {
+        HashOid::Sha2_224 => {
+            let mut hasher = Sha224::new();
+            hasher.update(message);
+            hasher.finalize().to_vec()
+        }
         HashOid::Sha2_256 => {
             let mut hasher = Sha256::new();
             hasher.update(message);
@@ -104,6 +110,16 @@ pub fn compute_prehash(hash_alg: &str, message: &[u8]) -> Result<Vec<u8>, &'stat
         }
         HashOid::Sha2_512 => {
             let mut hasher = Sha512::new();
+            hasher.update(message);
+            hasher.finalize().to_vec()
+        }
+        HashOid::Sha2_512_224 => {
+            let mut hasher = Sha512_224::new();
+            hasher.update(message);
+            hasher.finalize().to_vec()
+        }
+        HashOid::Sha2_512_256 => {
+            let mut hasher = Sha512_256::new();
             hasher.update(message);
             hasher.finalize().to_vec()
         }
