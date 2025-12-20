@@ -74,6 +74,31 @@ impl Aes128Eax {
     }
 }
 
+/// AES-192-EAX
+#[derive(Debug)]
+pub struct Aes192Eax;
+
+impl Aes192Eax {
+    /// Encrypt and authenticate data
+    #[cfg(feature = "alloc")]
+    pub fn encrypt(key: &[u8; 24], nonce: &[u8], plaintext: &[u8], aad: &[u8]) -> Vec<u8> {
+        let cipher = Aes::new_192(key);
+        eax_encrypt(&cipher, nonce, plaintext, aad)
+    }
+
+    /// Decrypt and verify authenticated data
+    #[cfg(feature = "alloc")]
+    pub fn decrypt(
+        key: &[u8; 24],
+        nonce: &[u8],
+        ciphertext_and_tag: &[u8],
+        aad: &[u8],
+    ) -> Result<Vec<u8>, AeadError> {
+        let cipher = Aes::new_192(key);
+        eax_decrypt(&cipher, nonce, ciphertext_and_tag, aad)
+    }
+}
+
 /// AES-256-EAX
 #[derive(Debug)]
 pub struct Aes256Eax;
@@ -161,48 +186,79 @@ fn eax_decrypt(
 
 /// OMAC (One-Key MAC) with tag encoding
 /// OMAC_K(t, M) = CMAC_K([t]_n || M)
+/// where [t]_n is a block with t in the last byte position
+#[cfg(feature = "alloc")]
 fn omac(cipher: &Aes, t: u8, message: &[u8]) -> [u8; TAG_SIZE] {
-    // Generate subkeys for CMAC
+    // Create CMAC instance from the cipher
+    // We need to extract the key, but since we have the cipher, we'll use CMAC directly
+    // Note: This is a workaround; ideally we'd pass the key or CMAC instance
+
+    // Prepare tagged message: [t]_n || M
+    // [t]_n is a block of 15 zero bytes followed by byte t
+    let mut tagged_message = Vec::with_capacity(BLOCK_SIZE + message.len());
+    tagged_message.extend_from_slice(&[0u8; BLOCK_SIZE - 1]);
+    tagged_message.push(t);
+    tagged_message.extend_from_slice(message);
+
+    // Compute CMAC manually using the cipher
+    cmac_with_cipher(cipher, &tagged_message)
+}
+
+/// Compute CMAC using an existing AES cipher instance
+fn cmac_with_cipher(cipher: &Aes, message: &[u8]) -> [u8; BLOCK_SIZE] {
+    // Generate subkeys
     let l = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
     let k1 = left_shift_one_bit(&l);
     let k2 = left_shift_one_bit(&k1);
 
-    // Prepare tagged message: [t]_n || M
-    let tag_block = [t; BLOCK_SIZE];
+    let n = if message.is_empty() {
+        0
+    } else if message.len() % BLOCK_SIZE == 0 {
+        message.len() / BLOCK_SIZE
+    } else {
+        message.len() / BLOCK_SIZE + 1
+    };
 
-    // CMAC computation with tag prefix
-    let mut state = [0u8; BLOCK_SIZE];
+    let mut c = [0u8; BLOCK_SIZE];
 
-    // Process tag block
-    xor_block(&mut state, &tag_block);
-    state = cipher.encrypt_block(&state);
+    if n == 0 {
+        // Empty message
+        let mut last_block = [0u8; BLOCK_SIZE];
+        last_block[0] = 0x80;
+        xor_block(&mut last_block, &k2);
+        return cipher.encrypt_block(&last_block);
+    }
 
-    // Process message blocks
-    let full_blocks = message.len() / BLOCK_SIZE;
-
-    for i in 0..full_blocks {
+    // Process all blocks except the last
+    for i in 0..(n - 1) {
         let block = &message[i * BLOCK_SIZE..(i + 1) * BLOCK_SIZE];
         for j in 0..BLOCK_SIZE {
-            state[j] ^= block[j];
+            c[j] ^= block[j];
         }
-        state = cipher.encrypt_block(&state);
+        c = cipher.encrypt_block(&c);
     }
 
     // Handle last block
-    let remaining = message.len() - full_blocks * BLOCK_SIZE;
-    if remaining > 0 {
-        // Incomplete block: pad and XOR with K2
+    let last_block_start = (n - 1) * BLOCK_SIZE;
+    let remaining = message.len() - last_block_start;
+
+    if remaining == BLOCK_SIZE {
+        // Complete last block
+        let block = &message[last_block_start..];
+        for j in 0..BLOCK_SIZE {
+            c[j] ^= block[j];
+        }
+        xor_block(&mut c, &k1);
+    } else {
+        // Incomplete last block - pad with 10*
         let mut last_block = [0u8; BLOCK_SIZE];
-        last_block[..remaining].copy_from_slice(&message[full_blocks * BLOCK_SIZE..]);
-        last_block[remaining] = 0x80; // Padding
-        xor_block(&mut last_block, &k2);
-        xor_block(&mut state, &last_block);
-    } else if full_blocks > 0 || message.is_empty() {
-        // Complete last block or empty: XOR with K1
-        xor_block(&mut state, &k1);
+        last_block[..remaining].copy_from_slice(&message[last_block_start..]);
+        last_block[remaining] = 0x80;
+        xor_block(&mut c, &last_block);
+        xor_block(&mut c, &k2);
     }
 
-    cipher.encrypt_block(&state)
+    cipher.encrypt_block(&c)
 }
 
 /// CTR mode encryption/decryption

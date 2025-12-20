@@ -13,7 +13,7 @@
 #[cfg(feature = "enable-aead-tests")]
 use hpcrypt_aead::{
     aes_ccm::{Aes128Ccm, Aes256Ccm},
-    aes_eax::{Aes128Eax, Aes256Eax},
+    aes_eax::{Aes128Eax, Aes192Eax, Aes256Eax},
     aes_gcm::{Aes128Gcm, Aes192Gcm, Aes256Gcm},
     aes_gcm_siv::Aes128GcmSiv,
     aes_siv::{Aes128Siv, Aes256Siv},
@@ -854,6 +854,10 @@ fn test_aes_eax_wycheproof() {
                     16 => {
                         let key_arr: [u8; 16] = key.clone().try_into().unwrap();
                         Aes128Eax::decrypt(&key_arr, &nonce, &ct_with_tag, &aad)
+                    }
+                    24 => {
+                        let key_arr: [u8; 24] = key.clone().try_into().unwrap();
+                        Aes192Eax::decrypt(&key_arr, &nonce, &ct_with_tag, &aad)
                     }
                     32 => {
                         let key_arr: [u8; 32] = key.clone().try_into().unwrap();

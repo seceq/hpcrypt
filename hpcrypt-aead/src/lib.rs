@@ -47,7 +47,7 @@ pub mod ascon;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use aes_ccm::{Aes128Ccm, Aes256Ccm, CcmError};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use aes_eax::{Aes128Eax, Aes256Eax};
+pub use aes_eax::{Aes128Eax, Aes192Eax, Aes256Eax};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use aes_gcm::{Aes128Gcm, Aes192Gcm, Aes256Gcm, NONCE_SIZE, TAG_SIZE};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
