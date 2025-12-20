@@ -1,12 +1,15 @@
 //! Wycheproof tests for HMAC
 //!
 //! Tests for:
+//! - HMAC-SHA-224
 //! - HMAC-SHA-256
 //! - HMAC-SHA-384
 //! - HMAC-SHA-512
+//! - HMAC-SHA-512/224
+//! - HMAC-SHA-512/256
 
 #[cfg(feature = "enable-mac-tests")]
-use hpcrypt_mac::{HmacSha256, HmacSha384, HmacSha512, Mac};
+use hpcrypt_mac::{HmacSha224, HmacSha256, HmacSha384, HmacSha512, HmacSha512_224, HmacSha512_256, Mac};
 use serde::Deserialize;
 use wycheproof_tests::{decode_hex, TestResult, TestStats};
 
@@ -42,6 +45,11 @@ struct HmacTestFile {
 }
 
 #[test]
+fn test_hmac_sha224_wycheproof() {
+    test_hmac_file("hmac_sha224_test.json", "HMAC-SHA-224", 224);
+}
+
+#[test]
 fn test_hmac_sha256_wycheproof() {
     test_hmac_file("hmac_sha256_test.json", "HMAC-SHA-256", 256);
 }
@@ -54,6 +62,16 @@ fn test_hmac_sha384_wycheproof() {
 #[test]
 fn test_hmac_sha512_wycheproof() {
     test_hmac_file("hmac_sha512_test.json", "HMAC-SHA-512", 512);
+}
+
+#[test]
+fn test_hmac_sha512_224_wycheproof() {
+    test_hmac_file("hmac_sha512_224_test.json", "HMAC-SHA-512/224", 512224);
+}
+
+#[test]
+fn test_hmac_sha512_256_wycheproof() {
+    test_hmac_file("hmac_sha512_256_test.json", "HMAC-SHA-512/256", 512256);
 }
 
 #[cfg(feature = "enable-mac-tests")]
@@ -75,6 +93,9 @@ fn test_hmac_file(filename: &str, algorithm_name: &str, hash_bits: usize) {
 
             // Compute HMAC based on hash variant
             let computed_tag: Vec<u8> = match hash_bits {
+                224 => {
+                    HmacSha224::compute(&key, &message).to_vec()
+                }
                 256 => {
                     HmacSha256::compute(&key, &message).to_vec()
                 }
@@ -84,7 +105,13 @@ fn test_hmac_file(filename: &str, algorithm_name: &str, hash_bits: usize) {
                 512 => {
                     HmacSha512::compute(&key, &message).to_vec()
                 }
-                _ => panic!("Unsupported hash size"),
+                512224 => {
+                    HmacSha512_224::compute(&key, &message).to_vec()
+                }
+                512256 => {
+                    HmacSha512_256::compute(&key, &message).to_vec()
+                }
+                _ => panic!("Unsupported hash size: {}", hash_bits),
             };
 
             // Truncate to expected tag size
