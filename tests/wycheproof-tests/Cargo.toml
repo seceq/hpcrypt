@@ -92,6 +92,14 @@ name = "kdf"
 path = "tests/kdf.rs"
 
 [[test]]
+name = "pbkdf2"
+path = "tests/pbkdf2.rs"
+
+[[test]]
+name = "kmac"
+path = "tests/kmac.rs"
+
+[[test]]
 name = "cipher"
 path = "tests/cipher.rs"
 
