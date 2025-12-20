@@ -171,11 +171,10 @@ fn verify_batch_optimized<P: DsaParams>(
     messages: &[&[u8]],
     signatures: &[&Signature<P>],
 ) -> Vec<bool> {
-    use crate::sampling::{expand_matrix_a, sample_in_ball};
+    use crate::sampling::sample_in_ball;
     use crate::symmetric::{h, h_var};
-    
     use crate::hints::{use_hint_poly, poly_hint_count};
-    use crate::ntt::poly_mul_ntt;
+    use crate::ntt::{ntt, ntt_multiply, inv_ntt, reduce32};
     use crate::poly::Poly;
     use crate::constant_time::ct_compare;
     use crate::params::N;
@@ -224,72 +223,89 @@ fn verify_batch_optimized<P: DsaParams>(
         mus.push(h(&mu_input));
     }
 
-    // Step 3: Expand matrix A once (shared across all verifications)
-    let matrix_a = expand_matrix_a::<P>(&pk.rho);
-
-    // Step 4: Sample all challenge polynomials
-    let mut challenges = Vec::with_capacity(batch_size);
+    // Step 3: Convert all z vectors to NTT domain (do this once per signature)
+    let mut z_ntts: Vec<Vec<Poly>> = Vec::with_capacity(batch_size);
     for (idx, sig) in signatures.iter().enumerate() {
         if !results[idx] {
-            challenges.push(Poly::new()); // Placeholder
+            z_ntts.push(Vec::new()); // Placeholder
             continue;
         }
-        challenges.push(sample_in_ball(&sig.c_tilde, P::TAU));
+        let z_ntt: Vec<Poly> = sig.z.iter().map(|p| ntt(p)).collect();
+        z_ntts.push(z_ntt);
     }
 
-    // Step 5: BATCH OPTIMIZATION - Compute A·Z as matrix-matrix multiplication
-    // Instead of computing A·z_i for each i separately, we compute all at once
-    // This reduces redundant polynomial multiplications
-    let mut w_primes = vec![vec![Poly::new(); P::K]; batch_size];
-
-    for row in 0..P::K {
-        for col in 0..P::L {
-            // For this (row, col) element of A, multiply with all z vectors at once
-            let a_element = &matrix_a[row][col];
-
-            for (idx, sig) in signatures.iter().enumerate() {
-                if !results[idx] {
-                    continue;
-                }
-
-                // Compute a[row][col] * z[idx][col]
-                let prod = poly_mul_ntt(a_element, &sig.z[col]);
-                w_primes[idx][row] = w_primes[idx][row].add(&prod);
-            }
-        }
-    }
-
-    // Step 6: Complete verification for each signature
-    // OPTIMIZATION: Pre-allocate t1_scaled outside the loops to avoid repeated zero-initialization
-    let mut t1_scaled = Poly::new();
-
+    // Step 4: Sample and convert all challenge polynomials to NTT domain
+    let mut challenges_ntt = Vec::with_capacity(batch_size);
     for (idx, sig) in signatures.iter().enumerate() {
+        if !results[idx] {
+            challenges_ntt.push(Poly::new()); // Placeholder
+            continue;
+        }
+        let c = sample_in_ball(&sig.c_tilde, P::TAU);
+        challenges_ntt.push(ntt(&c));
+    }
+
+    // Step 5 & 6: Compute w' = A·z - c·(t1·2^d) for each signature
+    let mut w_primes = Vec::with_capacity(batch_size);
+
+    for idx in 0..batch_size {
+        if !results[idx] {
+            w_primes.push(Vec::new()); // Placeholder
+            continue;
+        }
+
+        let c_ntt = &challenges_ntt[idx];
+        let z_ntt = &z_ntts[idx];
+
+        let mut w_prime_vec = Vec::with_capacity(P::K);
+
+        for i in 0..P::K {
+            // Compute A[i]·z in NTT domain (like individual verify does)
+            let mut acc_ntt = ntt_multiply(&pk.cached_a_ntt[i][0], &z_ntt[0]);
+            for j in 1..P::L {
+                let prod_ntt = ntt_multiply(&pk.cached_a_ntt[i][j], &z_ntt[j]);
+                // Accumulate in NTT domain
+                for k in 0..N {
+                    acc_ntt.coeffs[k] += prod_ntt.coeffs[k];
+                }
+            }
+
+            // Subtract c·(t1·2^d) in NTT domain
+            let c_t1_ntt = ntt_multiply(c_ntt, &pk.t1_scaled_ntt[i]);
+            for k in 0..N {
+                acc_ntt.coeffs[k] -= c_t1_ntt.coeffs[k];
+            }
+
+            // Reduce before inverse NTT (like individual verify does)
+            for k in 0..N {
+                acc_ntt.coeffs[k] = reduce32(acc_ntt.coeffs[k]);
+            }
+
+            // Transform back to coefficient domain
+            let mut w_prime_i = inv_ntt(&acc_ntt);
+
+            // Normalize coefficients to [0, Q) for hint operations (like individual verify does)
+            w_prime_i.reduce();
+
+            w_prime_vec.push(w_prime_i);
+        }
+
+        w_primes.push(w_prime_vec);
+    }
+
+    // Step 7: Complete verification for each signature
+    for idx in 0..batch_size {
         if !results[idx] {
             continue; // Already failed pre-checks
         }
 
-        let c = &challenges[idx];
         let mu = &mus[idx];
-
-        // Subtract c·(t1·2^d)
-        for i in 0..P::K {
-            // t1·2^d (shift left by D bits) - reuse pre-allocated polynomial
-            for j in 0..N {
-                t1_scaled.coeffs[j] = pk.t1[i].coeffs[j] << P::D;
-            }
-
-            // c·(t1·2^d)
-            let c_t1_scaled = poly_mul_ntt(c, &t1_scaled);
-
-            // w' = w' - c·(t1·2^d)
-            w_primes[idx][i] = w_primes[idx][i].sub(&c_t1_scaled);
-            w_primes[idx][i].reduce();
-        }
+        let w_prime = &w_primes[idx];
 
         // Apply hints to recover high bits w'₁
         let mut w1_prime = Vec::with_capacity(P::K);
         for i in 0..P::K {
-            let w1_prime_i = use_hint_poly(&sig.h[i], &w_primes[idx][i], 2 * P::GAMMA2);
+            let w1_prime_i = use_hint_poly(&signatures[idx].h[i], &w_prime[i], 2 * P::GAMMA2);
             w1_prime.push(w1_prime_i);
         }
 
@@ -302,7 +318,7 @@ fn verify_batch_optimized<P: DsaParams>(
         let c_prime_tilde = h_var(&c_prime_input, P::CTILDEBYTES);
 
         // Compare challenges using constant-time comparison
-        let comparison_result = ct_compare(&c_prime_tilde, &sig.c_tilde);
+        let comparison_result = ct_compare(&c_prime_tilde, &signatures[idx].c_tilde);
         results[idx] = comparison_result == 1;
     }
 
