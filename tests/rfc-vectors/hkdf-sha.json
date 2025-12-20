@@ -1,0 +1,122 @@
+[
+  {
+    "test_id": 1,
+    "algorithm": "HKDF-SHA256",
+    "source": "RFC 5869 Appendix A - Test Case 1",
+    "description": "Basic test case with typical inputs",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "length": 42,
+    "prk": "077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5",
+    "okm": "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865"
+  },
+  {
+    "test_id": 2,
+    "algorithm": "HKDF-SHA256",
+    "source": "RFC 5869 Appendix A - Test Case 2",
+    "description": "Test with longer inputs/outputs",
+    "ikm": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f",
+    "salt": "606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
+    "info": "b0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+    "length": 82,
+    "prk": "06a6b88c5853361a06104c9ceb35b45cef760014904671014a193f40c15fc244",
+    "okm": "b11e398dc80327a1c8e7f78c596a49344f012eda2d4efad8a050cc4c19afa97c59045a99cac7827271cb41c65e590e09da3275600c2f09b8367793a9aca3db71cc30c58179ec3e87c14c01d5c1f3434f1d87"
+  },
+  {
+    "test_id": 3,
+    "algorithm": "HKDF-SHA256",
+    "source": "RFC 5869 Appendix A - Test Case 3",
+    "description": "Test with zero-length salt and info",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "",
+    "info": "",
+    "length": 42,
+    "prk": "19ef24a32c717b167f33a91d6f648bdf96596776afdb6377ac434c1c293ccb04",
+    "okm": "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d9d201395faa4b61a96c8"
+  },
+  {
+    "test_id": 4,
+    "algorithm": "HKDF-SHA512",
+    "source": "Botan cryptography library",
+    "description": "Basic SHA-512 test case",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "length": 42,
+    "prk": "665799823737ded04a88e47e54a5890bb2c3d247c7a4254a8e61350723590a26c36238127d8661b88cf80ef802d57e2f7cebcf1e00e083848be19929c61b4237",
+    "okm": "832390086cda71fb47625bb5ceb168e4c8e26a1a16ed34d9fc7fe92c1481579338da362cb8d9f925d7cb"
+  },
+  {
+    "test_id": 5,
+    "algorithm": "HKDF-SHA512",
+    "source": "Derived from RFC 5869 pattern",
+    "description": "Zero-length salt and info with SHA-512",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "",
+    "info": "",
+    "length": 64,
+    "prk": "fd200c4987ac491313bd4a2a13287121247239e11c9ef82802044b66ef357e5b194498d0682611382348572a7b1611de54764094286320578a863f36562b0df6",
+    "okm": "f5fa02b18298a72a8c23898a8703472c6eb179dc204c03425c970e3b164bf90fff22d04836d0e2343bacc4e7cb6045faaa698e0e3b3eb91331306def1db8319e"
+  },
+  {
+    "test_id": 6,
+    "algorithm": "HKDF-SHA384",
+    "source": "Derived from RFC 5869 pattern",
+    "description": "Basic SHA-384 test case",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "length": 42,
+    "prk": "704b39990779ce1dc548052c7dc39f303570dd13fb39f7acc564680bef80e8dec70ee9a7e1f3e293ef68eceb072a5ade",
+    "okm": "9b5097a86038b805309076a44b3a9f38063e25b516dcbf369f394cfab43685f748b6457763e4f0204fc5"
+  },
+  {
+    "test_id": 7,
+    "algorithm": "HKDF-SHA384",
+    "source": "Derived from RFC 5869 pattern",
+    "description": "Zero-length salt and info with SHA-384",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "",
+    "info": "",
+    "length": 48,
+    "prk": "10e40cf072a4c5626e43dd22c1cf727d4bb140975c9ad0cbc8e45b40068f8f0ba57cdb598af9dfa6963a96899af047e5",
+    "okm": "c8c96e710f89b0d7990bca68bcdec8cf854062e54c73a7abc743fade9b242daacc1cea5670415b52849c97c4e787c1f2"
+  },
+  {
+    "test_id": 8,
+    "algorithm": "HKDF-SHA256",
+    "source": "Generated",
+    "description": "Test with single byte IKM",
+    "ikm": "42",
+    "salt": "73616c74",
+    "info": "636f6e74657874",
+    "length": 32,
+    "prk": "b928dd662a9399c8b264d82eaaa025cdde7b32e4d8c2de0a92242ed43a559e83",
+    "okm": "6f1431cd26fbaa29f0e75c20da5b28965b155e2c7c836c104c10faa3e339e5a5"
+  },
+  {
+    "test_id": 9,
+    "algorithm": "HKDF-SHA512",
+    "source": "Generated",
+    "description": "Test with long output (255 bytes)",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "length": 255,
+    "prk": "665799823737ded04a88e47e54a5890bb2c3d247c7a4254a8e61350723590a26c36238127d8661b88cf80ef802d57e2f7cebcf1e00e083848be19929c61b4237",
+    "okm": "832390086cda71fb47625bb5ceb168e4c8e26a1a16ed34d9fc7fe92c1481579338da362cb8d9f925d7cbcce0dff7098769cf15959867d571c1715450cb530137be3fb62f3cf32b84feba8f1eb1b563e20d9749b8640b8264c4b69b14ad5199115e1d609c83c6940ce5b4214a0c79946983547a35cdcc17e0daf31b647dec0d0e6142b1deaa036b348422068ca66631c0ca5586485a276a4336e1cde0e83159b53f017201c7ccfe4ef0d5b543e6715821462a0e876aec3e7ff562173a205240fb1fa67a81bfa3e26700519b4f9c3605f84709fbac7db6250be9d699d956cb6bcad0aa2fc807f682bc03d6681ef78a445d325ac4f0dfa6ee38a07edae71558a8"
+  },
+  {
+    "test_id": 10,
+    "algorithm": "HKDF-SHA384",
+    "source": "Generated",
+    "description": "Test with multiple expand blocks",
+    "ikm": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "salt": "000102030405060708090a0b0c",
+    "info": "f0f1f2f3f4f5f6f7f8f9",
+    "length": 100,
+    "prk": "704b39990779ce1dc548052c7dc39f303570dd13fb39f7acc564680bef80e8dec70ee9a7e1f3e293ef68eceb072a5ade",
+    "okm": "9b5097a86038b805309076a44b3a9f38063e25b516dcbf369f394cfab43685f748b6457763e4f0204fc5d95d1da3e62587b22eb8943d0fab6bb631a2fe9df1a68c6ce5d56116a52005b3f122b88b39b7251fcd6c44d3ef25f20ed96802bf1b2c1d98bf74"
+  }
+]
