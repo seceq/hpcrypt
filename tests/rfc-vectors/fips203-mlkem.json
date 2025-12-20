@@ -1,0 +1,156 @@
+[
+  {
+    "test_id": 1,
+    "source": "FIPS 203 Reference",
+    "description": "ML-KEM-512 basic test - NIST Level 1 security",
+    "parameter_set": "ML-KEM-512",
+    "security_level": "Level 1",
+    "nist_category": 1,
+    "public_key_size": 800,
+    "secret_key_size": 1632,
+    "ciphertext_size": 768,
+    "shared_secret_size": 32,
+    "test_type": "keygen_encaps_decaps",
+    "note": "NIST Level 1 (128-bit quantum security)"
+  },
+  {
+    "test_id": 2,
+    "source": "FIPS 203 Reference",
+    "description": "ML-KEM-768 basic test - NIST Level 3 security",
+    "parameter_set": "ML-KEM-768",
+    "security_level": "Level 3",
+    "nist_category": 3,
+    "public_key_size": 1184,
+    "secret_key_size": 2400,
+    "ciphertext_size": 1088,
+    "shared_secret_size": 32,
+    "test_type": "keygen_encaps_decaps",
+    "note": "NIST Level 3 (192-bit quantum security)"
+  },
+  {
+    "test_id": 3,
+    "source": "FIPS 203 Reference",
+    "description": "ML-KEM-1024 basic test - NIST Level 5 security",
+    "parameter_set": "ML-KEM-1024",
+    "security_level": "Level 5",
+    "nist_category": 5,
+    "public_key_size": 1568,
+    "secret_key_size": 3168,
+    "ciphertext_size": 1568,
+    "shared_secret_size": 32,
+    "test_type": "keygen_encaps_decaps",
+    "note": "NIST Level 5 (256-bit quantum security)"
+  },
+  {
+    "test_id": 4,
+    "source": "FIPS 203 Property Test",
+    "description": "Shared secret consistency - ML-KEM-512",
+    "parameter_set": "ML-KEM-512",
+    "security_level": "Level 1",
+    "test_type": "shared_secret_consistency",
+    "note": "Encapsulation and decapsulation should produce same shared secret"
+  },
+  {
+    "test_id": 5,
+    "source": "FIPS 203 Property Test",
+    "description": "Wrong decapsulation key - ML-KEM-512",
+    "parameter_set": "ML-KEM-512",
+    "security_level": "Level 1",
+    "test_type": "wrong_decaps_key",
+    "note": "Decapsulation with wrong key should produce different shared secret"
+  },
+  {
+    "test_id": 6,
+    "source": "FIPS 203 Property Test",
+    "description": "Ciphertext tampering - ML-KEM-512",
+    "parameter_set": "ML-KEM-512",
+    "security_level": "Level 1",
+    "test_type": "ciphertext_tampering",
+    "note": "Modified ciphertext should produce different shared secret"
+  },
+  {
+    "test_id": 7,
+    "source": "FIPS 203 Property Test",
+    "description": "Deterministic vs randomized encapsulation - ML-KEM-512",
+    "parameter_set": "ML-KEM-512",
+    "security_level": "Level 1",
+    "test_type": "encaps_randomness",
+    "note": "Same public key encapsulated twice should produce different ciphertexts"
+  },
+  {
+    "test_id": 8,
+    "source": "FIPS 203 Property Test",
+    "description": "Multiple encapsulations - ML-KEM-512",
+    "parameter_set": "ML-KEM-512",
+    "security_level": "Level 1",
+    "test_type": "multiple_encaps",
+    "iterations": 10,
+    "note": "Multiple encapsulations should all decapsulate correctly"
+  },
+  {
+    "test_id": 9,
+    "source": "FIPS 203 Cross-validation",
+    "description": "Security level comparison - ciphertext sizes",
+    "parameter_set_1": "ML-KEM-512",
+    "parameter_set_2": "ML-KEM-768",
+    "parameter_set_3": "ML-KEM-1024",
+    "test_type": "ciphertext_size_comparison",
+    "note": "Higher security levels should have larger ciphertexts"
+  },
+  {
+    "test_id": 10,
+    "source": "FIPS 203 Cross-validation",
+    "description": "Security level comparison - key sizes",
+    "parameter_set_1": "ML-KEM-512",
+    "parameter_set_2": "ML-KEM-768",
+    "parameter_set_3": "ML-KEM-1024",
+    "test_type": "key_size_comparison",
+    "note": "Higher security levels should have larger keys"
+  },
+  {
+    "test_id": 11,
+    "source": "FIPS 203 API Test",
+    "description": "Serialization round-trip - ML-KEM-512",
+    "parameter_set": "ML-KEM-512",
+    "security_level": "Level 1",
+    "test_type": "serialization_roundtrip",
+    "note": "Keys should serialize and deserialize correctly"
+  },
+  {
+    "test_id": 12,
+    "source": "FIPS 203 API Test",
+    "description": "Key reuse - ML-KEM-512",
+    "parameter_set": "ML-KEM-512",
+    "security_level": "Level 1",
+    "test_type": "key_reuse",
+    "iterations": 5,
+    "note": "Same public key should support multiple encapsulations"
+  },
+  {
+    "test_id": 13,
+    "source": "FIPS 203 Deterministic Test",
+    "description": "Deterministic encapsulation - ML-KEM-512",
+    "parameter_set": "ML-KEM-512",
+    "security_level": "Level 1",
+    "test_type": "deterministic_encaps",
+    "note": "Same public key and randomness should produce same ciphertext"
+  },
+  {
+    "test_id": 14,
+    "source": "FIPS 203 Edge Case",
+    "description": "Immediate decapsulation - ML-KEM-512",
+    "parameter_set": "ML-KEM-512",
+    "security_level": "Level 1",
+    "test_type": "immediate_decaps",
+    "note": "Decapsulation immediately after encapsulation"
+  },
+  {
+    "test_id": 15,
+    "source": "FIPS 203 Cross-parameter Test",
+    "description": "Parameter set independence - ML-KEM-512 vs ML-KEM-768",
+    "parameter_set_1": "ML-KEM-512",
+    "parameter_set_2": "ML-KEM-768",
+    "test_type": "parameter_independence",
+    "note": "Different parameter sets should not be interoperable"
+  }
+]
