@@ -7,6 +7,7 @@ extern crate std;
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+pub mod ascon;
 pub mod traits;
 pub mod blake2b;
 pub mod blake2s;
@@ -23,6 +24,7 @@ pub mod shake_batched;
 pub mod xof_reader;
 
 // Re-export commonly used types
+pub use ascon::{AsconCxof, AsconHash, AsconXof};
 pub use blake2b::{blake2b, blake2b_mac, blake2b_variable, Blake2b};
 pub use blake2s::{blake2s, blake2s_mac, blake2s_variable, Blake2s};
 pub use blake3::{blake3, blake3_derive_key, blake3_keyed, Blake3};
