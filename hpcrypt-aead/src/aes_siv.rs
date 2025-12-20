@@ -82,6 +82,58 @@ impl Aes128Siv {
 
         siv_decrypt(&k1, &k2, nonce, iv_and_ciphertext, aad)
     }
+
+    /// Encrypt with multiple AAD components
+    ///
+    /// RFC 5297 allows multiple associated data strings: S2V(K, AD1, AD2, ..., ADn, nonce, plaintext)
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - 256-bit key (128-bit MAC key || 128-bit CTR key)
+    /// * `aad_components` - Slice of AAD components (processed in order)
+    /// * `nonce` - Nonce (can be reused without catastrophic failure)
+    /// * `plaintext` - Data to encrypt
+    ///
+    /// # Returns
+    ///
+    /// IV || Ciphertext (IV is the synthetic IV/tag)
+    #[cfg(feature = "alloc")]
+    pub fn encrypt_with_aad_components(
+        key: &[u8; 32],
+        aad_components: &[&[u8]],
+        nonce: &[u8],
+        plaintext: &[u8],
+    ) -> Vec<u8> {
+        let k1: [u8; 16] = key[..16].try_into().unwrap();
+        let k2: [u8; 16] = key[16..].try_into().unwrap();
+
+        siv_encrypt_multi_aad(&k1, &k2, aad_components, nonce, plaintext)
+    }
+
+    /// Decrypt with multiple AAD components
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - 256-bit key (must match encryption key)
+    /// * `aad_components` - Slice of AAD components (must match encryption order)
+    /// * `nonce` - Nonce used for encryption
+    /// * `iv_and_ciphertext` - IV (16 bytes) || ciphertext
+    ///
+    /// # Returns
+    ///
+    /// Decrypted plaintext if authentication succeeds
+    #[cfg(feature = "alloc")]
+    pub fn decrypt_with_aad_components(
+        key: &[u8; 32],
+        aad_components: &[&[u8]],
+        nonce: &[u8],
+        iv_and_ciphertext: &[u8],
+    ) -> Result<Vec<u8>, AeadError> {
+        let k1: [u8; 16] = key[..16].try_into().unwrap();
+        let k2: [u8; 16] = key[16..].try_into().unwrap();
+
+        siv_decrypt_multi_aad(&k1, &k2, aad_components, nonce, iv_and_ciphertext)
+    }
 }
 
 /// AES-256-SIV (uses 512-bit key: 256-bit for MAC + 256-bit for CTR)
@@ -123,7 +175,16 @@ fn siv_encrypt(
     aad: &[u8],
 ) -> Vec<u8> {
     // Step 1: Compute synthetic IV using S2V
-    let iv = s2v(mac_key, &[aad, nonce, plaintext]);
+    // RFC 5297: S2V(K, AD1, ..., ADn, plaintext)
+    // IMPORTANT: Always include AAD in S2V, even if empty
+    // Empty AAD is semantically different from no AAD
+    let iv = if !nonce.is_empty() {
+        // With nonce: S2V(K, AAD, nonce, plaintext)
+        s2v(mac_key, &[aad, nonce, plaintext])
+    } else {
+        // Without nonce: S2V(K, AAD, plaintext)
+        s2v(mac_key, &[aad, plaintext])
+    };
 
     // Step 2: Encrypt plaintext using CTR mode with IV
     let cipher = Aes::new_128(ctr_key);
@@ -160,9 +221,102 @@ fn siv_decrypt(
     let plaintext = ctr_encrypt(&cipher, &iv, ciphertext);
 
     // Step 2: Recompute IV using S2V
-    let expected_iv = s2v(mac_key, &[aad, nonce, &plaintext]);
+    // IMPORTANT: Always include AAD in S2V, even if empty
+    let expected_iv = if !nonce.is_empty() {
+        // With nonce: S2V(K, AAD, nonce, plaintext)
+        s2v(mac_key, &[aad, nonce, &plaintext])
+    } else {
+        // Without nonce: S2V(K, AAD, plaintext)
+        s2v(mac_key, &[aad, &plaintext])
+    };
 
     // Step 3: Verify IV
+    if !constant_time_compare(&iv, &expected_iv) {
+        return Err(AeadError::AuthenticationFailed);
+    }
+
+    Ok(plaintext)
+}
+
+// Core SIV encryption with multiple AAD components for AES-128
+#[cfg(feature = "alloc")]
+fn siv_encrypt_multi_aad(
+    mac_key: &[u8; 16],
+    ctr_key: &[u8; 16],
+    aad_components: &[&[u8]],
+    nonce: &[u8],
+    plaintext: &[u8],
+) -> Vec<u8> {
+    // Build S2V input vector: [AAD1, AAD2, ..., AADn, nonce, plaintext]
+    let mut s2v_inputs = Vec::with_capacity(aad_components.len() + 2);
+
+    // Add all AAD components
+    for &aad in aad_components {
+        s2v_inputs.push(aad);
+    }
+
+    // Add nonce if present
+    if !nonce.is_empty() {
+        s2v_inputs.push(nonce);
+    }
+
+    // Add plaintext (always last)
+    s2v_inputs.push(plaintext);
+
+    // Compute SIV
+    let iv = s2v(mac_key, &s2v_inputs);
+
+    // Encrypt plaintext using CTR mode with IV
+    let cipher = Aes::new_128(ctr_key);
+    let ciphertext = ctr_encrypt(&cipher, &iv, plaintext);
+
+    // Return IV || ciphertext
+    let mut result = Vec::with_capacity(TAG_SIZE + ciphertext.len());
+    result.extend_from_slice(&iv);
+    result.extend_from_slice(&ciphertext);
+    result
+}
+
+// Core SIV decryption with multiple AAD components for AES-128
+#[cfg(feature = "alloc")]
+fn siv_decrypt_multi_aad(
+    mac_key: &[u8; 16],
+    ctr_key: &[u8; 16],
+    aad_components: &[&[u8]],
+    nonce: &[u8],
+    iv_and_ciphertext: &[u8],
+) -> Result<Vec<u8>, AeadError> {
+    if iv_and_ciphertext.len() < TAG_SIZE {
+        return Err(AeadError::InvalidCiphertextLength {
+            minimum: TAG_SIZE,
+            actual: iv_and_ciphertext.len(),
+        });
+    }
+
+    let iv: [u8; TAG_SIZE] = iv_and_ciphertext[..TAG_SIZE].try_into().unwrap();
+    let ciphertext = &iv_and_ciphertext[TAG_SIZE..];
+
+    // Decrypt ciphertext using CTR mode
+    let cipher = Aes::new_128(ctr_key);
+    let plaintext = ctr_encrypt(&cipher, &iv, ciphertext);
+
+    // Build S2V input vector: [AAD1, AAD2, ..., AADn, nonce, plaintext]
+    let mut s2v_inputs = Vec::with_capacity(aad_components.len() + 2);
+
+    for &aad in aad_components {
+        s2v_inputs.push(aad);
+    }
+
+    if !nonce.is_empty() {
+        s2v_inputs.push(nonce);
+    }
+
+    s2v_inputs.push(plaintext.as_slice());
+
+    // Recompute IV
+    let expected_iv = s2v(mac_key, &s2v_inputs);
+
+    // Verify IV
     if !constant_time_compare(&iv, &expected_iv) {
         return Err(AeadError::AuthenticationFailed);
     }
@@ -179,7 +333,14 @@ fn siv_encrypt_256(
     plaintext: &[u8],
     aad: &[u8],
 ) -> Vec<u8> {
-    let iv = s2v_256(mac_key, &[aad, nonce, plaintext]);
+    // IMPORTANT: Always include AAD in S2V, even if empty
+    let iv = if !nonce.is_empty() {
+        // With nonce: S2V(K, AAD, nonce, plaintext)
+        s2v_256(mac_key, &[aad, nonce, plaintext])
+    } else {
+        // Without nonce: S2V(K, AAD, plaintext)
+        s2v_256(mac_key, &[aad, plaintext])
+    };
     let cipher = Aes::new_256(ctr_key);
     let ciphertext = ctr_encrypt(&cipher, &iv, plaintext);
 
@@ -211,7 +372,14 @@ fn siv_decrypt_256(
     let cipher = Aes::new_256(ctr_key);
     let plaintext = ctr_encrypt(&cipher, &iv, ciphertext);
 
-    let expected_iv = s2v_256(mac_key, &[aad, nonce, &plaintext]);
+    // IMPORTANT: Always include AAD in S2V, even if empty
+    let expected_iv = if !nonce.is_empty() {
+        // With nonce: S2V(K, AAD, nonce, plaintext)
+        s2v_256(mac_key, &[aad, nonce, &plaintext])
+    } else {
+        // Without nonce: S2V(K, AAD, plaintext)
+        s2v_256(mac_key, &[aad, &plaintext])
+    };
 
     if !constant_time_compare(&iv, &expected_iv) {
         return Err(AeadError::AuthenticationFailed);
@@ -224,8 +392,8 @@ fn siv_decrypt_256(
 fn s2v(key: &[u8; 16], strings: &[&[u8]]) -> [u8; BLOCK_SIZE] {
     let cipher = Aes::new_128(key);
 
-    // D = AES(K, <zero>)
-    let mut d = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
+    // D = AES-CMAC(K, <zero>)
+    let mut d = cmac(&cipher, &[0u8; BLOCK_SIZE]);
 
     // Process all strings except the last
     for &s in &strings[..strings.len().saturating_sub(1)] {
@@ -267,7 +435,8 @@ fn s2v(key: &[u8; 16], strings: &[&[u8]]) -> [u8; BLOCK_SIZE] {
 fn s2v_256(key: &[u8; 32], strings: &[&[u8]]) -> [u8; BLOCK_SIZE] {
     let cipher = Aes::new_256(key);
 
-    let mut d = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
+    // D = AES-CMAC(K, <zero>)
+    let mut d = cmac(&cipher, &[0u8; BLOCK_SIZE]);
 
     for &s in &strings[..strings.len().saturating_sub(1)] {
         d = dbl(&d);
