@@ -112,6 +112,11 @@ path = "tests/ocb.rs"
 required-features = ["enable-aead-tests"]
 
 [[test]]
+name = "aes_siv"
+path = "tests/aes_siv.rs"
+required-features = ["enable-aead-tests"]
+
+[[test]]
 name = "sha"
 path = "tests/sha.rs"
 required-features = ["enable-hash-tests"]

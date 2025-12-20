@@ -29,6 +29,18 @@ This directory contains test vectors extracted from official IETF RFC specificat
 - **Status:** Official RFC test vectors
 - **Coverage:** 4 test cases with varying parameters (N, r, p)
 
+### RFC 5297 - AES-SIV (Synthetic Initialization Vector)
+- **File:** `rfc5297-aes-siv.json`
+- **Source:** RFC 5297 Appendix A (A.1, A.2) + Wycheproof edge cases
+- **Status:** Official RFC test vectors + validated edge cases
+- **Coverage:**
+  - Deterministic authenticated encryption (A.1)
+  - Nonce-based mode with multiple AAD components (A.2)
+  - AES-128-SIV and AES-256-SIV variants
+  - Empty message and AAD edge cases
+  - Extreme SIV values (all-zero, all-ones)
+  - AAD-only authentication (no plaintext)
+
 ### RFC 5054 - SRP (Secure Remote Password)
 - **File:** `rfc5054-srp.json`
 - **Source:** RFC 5054 Appendix B
@@ -46,6 +58,7 @@ These test vectors are **manually curated** from published RFCs:
   - https://www.rfc-editor.org/errata/rfc9497
   - https://www.rfc-editor.org/errata/rfc9106
   - https://www.rfc-editor.org/errata/rfc7914
+  - https://www.rfc-editor.org/errata/rfc5297
   - https://www.rfc-editor.org/errata/rfc5054
 
 ## Comparison with Other Test Suites
@@ -78,6 +91,7 @@ cargo test --package rfc-tests hpke
 cargo test --package rfc-tests opaque
 cargo test --package rfc-tests argon2
 cargo test --package rfc-tests scrypt
+cargo test --package rfc-tests aes_siv
 cargo test --package rfc-tests srp
 ```
 

@@ -1,0 +1,89 @@
+[
+  {
+    "test_id": 1,
+    "source": "RFC 5297 Appendix A.1",
+    "description": "Deterministic Authenticated Encryption Example",
+    "algorithm": "AES-128-SIV",
+    "key": "fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+    "nonce": "",
+    "aad": "101112131415161718191a1b1c1d1e1f2021222324252627",
+    "plaintext": "112233445566778899aabbccddee",
+    "siv": "85632d07c6e8f37f950acd320a2ecc93",
+    "ciphertext": "40c02b9690c4dc04daef7f6afe5c",
+    "siv_and_ciphertext": "85632d07c6e8f37f950acd320a2ecc9340c02b9690c4dc04daef7f6afe5c",
+    "note": "Deterministic mode (no nonce), single AAD"
+  },
+  {
+    "test_id": 2,
+    "source": "RFC 5297 Appendix A.2",
+    "description": "Nonce-Based Authenticated Encryption Example",
+    "algorithm": "AES-128-SIV",
+    "key": "7f7e7d7c7b7a79787776757473727170404142434445464748494a4b4c4d4e4f",
+    "nonce": "09f911029d74e35bd84156c5635688c0",
+    "aad_components": [
+      "00112233445566778899aabbccddeeffdeaddadadeaddadaffeeddccbbaa99887766554433221100",
+      "102030405060708090a0"
+    ],
+    "plaintext": "7468697320697320736f6d6520706c61696e7465787420746f20656e6372797074207573696e67205349562d414553",
+    "siv": "7bdb6e3b432667eb06f4d14bff2fbd0f",
+    "ciphertext": "cb900f2fddbe404326601965c889bf17dba77ceb094fa663b7a3f748ba8af829ea64ad544a272e9c485b62a3fd5c0d",
+    "siv_and_ciphertext": "7bdb6e3b432667eb06f4d14bff2fbd0fcb900f2fddbe404326601965c889bf17dba77ceb094fa663b7a3f748ba8af829ea64ad544a272e9c485b62a3fd5c0d",
+    "note": "Nonce-based mode with multiple AAD components: S2V(K, AD1, AD2, nonce, plaintext)"
+  },
+  {
+    "test_id": 3,
+    "source": "Wycheproof Test 2 - Empty Inputs",
+    "description": "Empty plaintext and empty AAD",
+    "algorithm": "AES-128-SIV",
+    "key": "2b27e429fb6c02678e589ccc4437c5adfb44b331ab6d21ea321727e6ec03d354",
+    "nonce": "",
+    "aad": "",
+    "plaintext": "",
+    "siv": "b2b2354e3724dcdaa85ecf029b49a90c",
+    "ciphertext": "",
+    "siv_and_ciphertext": "b2b2354e3724dcdaa85ecf029b49a90c",
+    "note": "Minimal case: both plaintext and AAD empty. Result is SIV only (no ciphertext)"
+  },
+  {
+    "test_id": 4,
+    "source": "Wycheproof Test 31 - Edge Case SIV",
+    "description": "All-zero SIV edge case",
+    "algorithm": "AES-128-SIV",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "nonce": "",
+    "aad": "",
+    "plaintext": "1d7f9cc81b316c518efcd7927e8f7b88",
+    "siv": "00000000000000000000000000000000",
+    "ciphertext": "f0dcac3115ddbd3d8ec28822e54088d0",
+    "siv_and_ciphertext": "00000000000000000000000000000000f0dcac3115ddbd3d8ec28822e54088d0",
+    "note": "Edge case producing all-zero SIV"
+  },
+  {
+    "test_id": 5,
+    "source": "Wycheproof Test 33 - Edge Case SIV",
+    "description": "All-ones SIV edge case",
+    "algorithm": "AES-128-SIV",
+    "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "nonce": "",
+    "aad": "",
+    "plaintext": "110d3aa6f558c30977870672804064e0",
+    "siv": "ffffffffffffffffffffffffffffffff",
+    "ciphertext": "01f74b8e43a262001d8357f95489432e",
+    "siv_and_ciphertext": "ffffffffffffffffffffffffffffffff01f74b8e43a262001d8357f95489432e",
+    "note": "Edge case producing all-ones SIV"
+  },
+  {
+    "test_id": 6,
+    "source": "Wycheproof Test 296 - AES-256-SIV",
+    "description": "AES-256-SIV with empty inputs",
+    "algorithm": "AES-256-SIV",
+    "key": "bc7635c1fd566aa8357fd103714bfaee1c9e5b3c578b3980401a981030254a54b1756a8c96e600b7252fd0aab12f39d115d256b3f3e7c2c41a7fece72ba7c3c4",
+    "nonce": "",
+    "aad": "",
+    "plaintext": "",
+    "siv": "44b1c6fe8a8c07dee5377b161f283c31",
+    "ciphertext": "",
+    "siv_and_ciphertext": "44b1c6fe8a8c07dee5377b161f283c31",
+    "note": "AES-256-SIV variant with empty message (64-byte key)"
+  }
+]
