@@ -103,6 +103,11 @@ required-features = ["enable-rsa-tests"]
 
 # Hash Function Tests
 [[test]]
+name = "sha2"
+path = "tests/sha2.rs"
+required-features = ["enable-hash-tests"]
+
+[[test]]
 name = "sha3"
 path = "tests/sha3.rs"
 required-features = ["enable-hash-tests"]
