@@ -1,0 +1,46 @@
+[
+  {
+    "test_id": 1,
+    "source": "RFC 8448 Section 3 - Simple 1-RTT Handshake",
+    "description": "Server handshake traffic secret - key derivation",
+    "algorithm": "HKDF-Expand-Label-SHA256",
+    "secret": "b67b7d690cc16c4e75e54213cb2d37b4e9c912bcded9105d42befd59d391ad38",
+    "label": "key",
+    "context": "",
+    "length": 16,
+    "expected": "3fce516009c21727d0f2e4e86ee403bc"
+  },
+  {
+    "test_id": 2,
+    "source": "RFC 8448 Section 3 - Simple 1-RTT Handshake",
+    "description": "Server handshake traffic secret - IV derivation",
+    "algorithm": "HKDF-Expand-Label-SHA256",
+    "secret": "b67b7d690cc16c4e75e54213cb2d37b4e9c912bcded9105d42befd59d391ad38",
+    "label": "iv",
+    "context": "",
+    "length": 12,
+    "expected": "5d313eb2671276ee13000b30"
+  },
+  {
+    "test_id": 3,
+    "source": "Generated",
+    "description": "Zero secret - key derivation",
+    "algorithm": "HKDF-Expand-Label-SHA256",
+    "secret": "0000000000000000000000000000000000000000000000000000000000000000",
+    "label": "key",
+    "context": "",
+    "length": 16,
+    "expected": "cbee7571c611039ca327a2e879dfcd45"
+  },
+  {
+    "test_id": 4,
+    "source": "Generated",
+    "description": "Zero secret - IV derivation",
+    "algorithm": "HKDF-Expand-Label-SHA256",
+    "secret": "0000000000000000000000000000000000000000000000000000000000000000",
+    "label": "iv",
+    "context": "",
+    "length": 12,
+    "expected": "3f22fbb61c1412e692986d64"
+  }
+]
