@@ -20,6 +20,7 @@ extern crate std;
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+pub mod ascon;
 pub mod ct;
 pub mod ct_utils;
 pub mod error;
