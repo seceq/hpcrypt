@@ -111,14 +111,64 @@ fn ocb_encrypt(cipher: &Aes, nonce: &[u8], plaintext: &[u8], aad: &[u8]) -> Vec<
     let l_star = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
     let l_dollar = double(&l_star);
 
-    // Process nonce
-    let mut nonce_block = [0u8; BLOCK_SIZE];
-    let nonce_len = nonce.len().min(BLOCK_SIZE - 1);
-    nonce_block[BLOCK_SIZE - nonce_len - 1] = ((TAG_SIZE * 8) % 128) as u8;
-    nonce_block[BLOCK_SIZE - nonce_len..].copy_from_slice(&nonce[..nonce_len]);
-    nonce_block[0] = (TAG_SIZE * 8 / 128) as u8;
+    // Process nonce according to RFC 7253 Section 4.2
+    // Nonce = num2str(TAGLEN mod 128, 7) || zeros(120 - bitlen(N)) || 1 || N
+    //
+    // Bit layout (for TAGLEN=128, N=96 bits):
+    // Bits 0-6:   0000000 (TAGLEN mod 128 = 0 for 128-bit tags)
+    // Bits 7-30:  24 zero bits (padding)
+    // Bit 31:     1 (separator)
+    // Bits 32-127: 96-bit nonce
+    //
+    // In bytes (big-endian bit ordering within bytes):
+    // Byte 0:  [bits 0-6: taglen][bit 7: padding]
+    // Bytes 1-3: padding zeros
+    // Byte 4:  [bit 0: '1' separator][bits 1-7: first 7 bits of nonce]
+    // Bytes 5-15: remaining nonce bits
 
+    let mut nonce_block = [0u8; BLOCK_SIZE];
+    let nonce_len = nonce.len().min(15); // Max 15 bytes for nonce
+    let taglen_mod = ((TAG_SIZE * 8) % 128) as u8;
+
+    // First 7 bits encode TAGLEN mod 128
+    // For 128-bit tag: 0, so first byte is 0x00
+    nonce_block[0] = taglen_mod & 0x7F; // Just take low 7 bits
+
+    // Calculate where the '1' separator bit goes
+    // For 96-bit (12-byte) nonce: 120 - 96 = 24 padding bits
+    // So '1' is at bit 31, which is byte 3, bit 7 (MSB)
+    let nonce_bits = nonce_len * 8;
+    let padding_bits = 120 - nonce_bits;
+    let separator_bit_pos = 7 + padding_bits; // Bit position of '1' separator
+    let separator_byte = separator_bit_pos / 8;
+    let separator_bit_in_byte = 7 - (separator_bit_pos % 8); // MSB first
+
+    nonce_block[separator_byte] |= 1 << separator_bit_in_byte;
+
+    // Copy nonce after the separator
+    // The nonce starts at bit (separator_bit_pos + 1)
+    let nonce_start_byte = (separator_bit_pos + 1) / 8;
+    let nonce_start_bit = (separator_bit_pos + 1) % 8;
+
+    if nonce_start_bit == 0 {
+        // Byte-aligned, easy case
+        nonce_block[nonce_start_byte..nonce_start_byte + nonce_len]
+            .copy_from_slice(&nonce[..nonce_len]);
+    } else {
+        // Not byte-aligned, need bit shifting
+        for i in 0..nonce_len {
+            let byte_pos = nonce_start_byte + i;
+            nonce_block[byte_pos] |= nonce[i] >> nonce_start_bit;
+            if byte_pos + 1 < BLOCK_SIZE {
+                nonce_block[byte_pos + 1] |= nonce[i] << (8 - nonce_start_bit);
+            }
+        }
+    }
+
+    // Extract bottom 6 bits for offset computation (from last byte of constructed nonce)
     let bottom = nonce_block[BLOCK_SIZE - 1] & 0x3F;
+
+    // Clear bottom 6 bits for Ktop computation
     nonce_block[BLOCK_SIZE - 1] &= 0xC0;
 
     let ktop = cipher.encrypt_block(&nonce_block);
@@ -143,10 +193,11 @@ fn ocb_encrypt(cipher: &Aes, nonce: &[u8], plaintext: &[u8], aad: &[u8]) -> Vec<
     }
 
     // Process AAD
-    let mut sum = process_aad(cipher, &l_star, aad);
+    let aad_hash = process_aad(cipher, &l_star, aad);
 
     // Process plaintext
     let mut ciphertext = Vec::with_capacity(plaintext.len() + TAG_SIZE);
+    let mut checksum = [0u8; BLOCK_SIZE];
     let full_blocks = plaintext.len() / BLOCK_SIZE;
 
     for i in 0..full_blocks {
@@ -163,7 +214,7 @@ fn ocb_encrypt(cipher: &Aes, nonce: &[u8], plaintext: &[u8], aad: &[u8]) -> Vec<
         let mut c_block = [0u8; BLOCK_SIZE];
         for j in 0..BLOCK_SIZE {
             c_block[j] = encrypted[j] ^ offset[j];
-            sum[j] ^= block[j];
+            checksum[j] ^= block[j];
         }
         ciphertext.extend_from_slice(&c_block);
     }
@@ -177,15 +228,16 @@ fn ocb_encrypt(cipher: &Aes, nonce: &[u8], plaintext: &[u8], aad: &[u8]) -> Vec<
         let final_block = &plaintext[full_blocks * BLOCK_SIZE..];
         for (i, &byte) in final_block.iter().enumerate() {
             ciphertext.push(byte ^ pad[i]);
-            sum[i] ^= byte;
+            checksum[i] ^= byte;
         }
-        sum[remaining] ^= 0x80;
+        checksum[remaining] ^= 0x80;
     }
 
-    // Compute tag
+    // Compute tag: ENCIPHER(checksum XOR offset XOR L_$) XOR HASH(K,A)
     xor_block(&mut offset, &l_dollar);
-    xor_block(&mut sum, &offset);
-    let tag = cipher.encrypt_block(&sum);
+    xor_block(&mut checksum, &offset);
+    let mut tag = cipher.encrypt_block(&checksum);
+    xor_block(&mut tag, &aad_hash);
 
     ciphertext.extend_from_slice(&tag);
     ciphertext
@@ -214,14 +266,44 @@ fn ocb_decrypt(
     let l_star = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
     let l_dollar = double(&l_star);
 
-    // Process nonce (same as encryption)
+    // Process nonce according to RFC 7253 Section 4.2 (same as encryption)
     let mut nonce_block = [0u8; BLOCK_SIZE];
-    let nonce_len = nonce.len().min(BLOCK_SIZE - 1);
-    nonce_block[BLOCK_SIZE - nonce_len - 1] = ((TAG_SIZE * 8) % 128) as u8;
-    nonce_block[BLOCK_SIZE - nonce_len..].copy_from_slice(&nonce[..nonce_len]);
-    nonce_block[0] = (TAG_SIZE * 8 / 128) as u8;
+    let nonce_len = nonce.len().min(15); // Max 15 bytes for nonce
+    let taglen_mod = ((TAG_SIZE * 8) % 128) as u8;
 
+    // First 7 bits encode TAGLEN mod 128
+    nonce_block[0] = taglen_mod & 0x7F;
+
+    // Calculate where the '1' separator bit goes
+    let nonce_bits = nonce_len * 8;
+    let padding_bits = 120 - nonce_bits;
+    let separator_bit_pos = 7 + padding_bits;
+    let separator_byte = separator_bit_pos / 8;
+    let separator_bit_in_byte = 7 - (separator_bit_pos % 8);
+
+    nonce_block[separator_byte] |= 1 << separator_bit_in_byte;
+
+    // Copy nonce after the separator
+    let nonce_start_byte = (separator_bit_pos + 1) / 8;
+    let nonce_start_bit = (separator_bit_pos + 1) % 8;
+
+    if nonce_start_bit == 0 {
+        nonce_block[nonce_start_byte..nonce_start_byte + nonce_len]
+            .copy_from_slice(&nonce[..nonce_len]);
+    } else {
+        for i in 0..nonce_len {
+            let byte_pos = nonce_start_byte + i;
+            nonce_block[byte_pos] |= nonce[i] >> nonce_start_bit;
+            if byte_pos + 1 < BLOCK_SIZE {
+                nonce_block[byte_pos + 1] |= nonce[i] << (8 - nonce_start_bit);
+            }
+        }
+    }
+
+    // Extract bottom 6 bits for offset computation
     let bottom = nonce_block[BLOCK_SIZE - 1] & 0x3F;
+
+    // Clear bottom 6 bits for Ktop computation
     nonce_block[BLOCK_SIZE - 1] &= 0xC0;
 
     let ktop = cipher.encrypt_block(&nonce_block);
@@ -246,10 +328,11 @@ fn ocb_decrypt(
     }
 
     // Process AAD
-    let mut sum = process_aad(cipher, &l_star, aad);
+    let aad_hash = process_aad(cipher, &l_star, aad);
 
     // Process ciphertext
     let mut plaintext = Vec::with_capacity(ciphertext_len);
+    let mut checksum = [0u8; BLOCK_SIZE];
     let full_blocks = ciphertext_len / BLOCK_SIZE;
 
     for i in 0..full_blocks {
@@ -266,7 +349,7 @@ fn ocb_decrypt(
         let mut p_block = [0u8; BLOCK_SIZE];
         for j in 0..BLOCK_SIZE {
             p_block[j] = decrypted[j] ^ offset[j];
-            sum[j] ^= p_block[j];
+            checksum[j] ^= p_block[j];
         }
         plaintext.extend_from_slice(&p_block);
     }
@@ -281,15 +364,16 @@ fn ocb_decrypt(
         for (i, &byte) in final_block.iter().enumerate() {
             let p_byte = byte ^ pad[i];
             plaintext.push(p_byte);
-            sum[i] ^= p_byte;
+            checksum[i] ^= p_byte;
         }
-        sum[remaining] ^= 0x80;
+        checksum[remaining] ^= 0x80;
     }
 
-    // Verify tag
+    // Verify tag: ENCIPHER(checksum XOR offset XOR L_$) XOR HASH(K,A)
     xor_block(&mut offset, &l_dollar);
-    xor_block(&mut sum, &offset);
-    let expected_tag = cipher.encrypt_block(&sum);
+    xor_block(&mut checksum, &offset);
+    let mut expected_tag = cipher.encrypt_block(&checksum);
+    xor_block(&mut expected_tag, &aad_hash);
 
     if !constant_time_compare(&expected_tag, received_tag) {
         return Err(AeadError::AuthenticationFailed);
@@ -337,10 +421,15 @@ fn process_aad(cipher: &Aes, l_star: &[u8; BLOCK_SIZE], aad: &[u8]) -> [u8; BLOC
 }
 
 // Get L_i value for OCB
+// Per RFC 7253 Section 4.1:
+// L_$ = double(L_*), L_0 = double(L_$), L_i = double(L_{i-1})
+// Therefore: L_i = L_* doubled (i + 2) times
+// For index ntz(i), we want L_{ntz(i)} = L_* doubled (ntz(i) + 2) times
 fn get_l(i: usize, l_star: &[u8; BLOCK_SIZE]) -> [u8; BLOCK_SIZE] {
-    let ntz = ntz(i); // Number of trailing zeros
+    let ntz_val = ntz(i); // Number of trailing zeros
     let mut l = *l_star;
-    for _ in 0..ntz {
+    // Double (ntz + 2) times to get L_{ntz(i)}
+    for _ in 0..(ntz_val + 2) {
         l = double(&l);
     }
     l
@@ -359,20 +448,22 @@ fn ntz(mut n: usize) -> usize {
     count
 }
 
-// Double in GF(2^128)
+// Double in GF(2^128) using big-endian byte ordering
+// This implements multiplication by x in GF(2^128) with the polynomial
+// x^128 + x^7 + x^2 + x + 1
 fn double(block: &[u8; BLOCK_SIZE]) -> [u8; BLOCK_SIZE] {
     let mut result = [0u8; BLOCK_SIZE];
     let mut carry = 0u8;
 
-    // Left shift (little-endian for OCB)
-    for i in 0..BLOCK_SIZE {
+    // Left shift (big-endian: process from end to start)
+    for i in (0..BLOCK_SIZE).rev() {
         result[i] = (block[i] << 1) | carry;
         carry = block[i] >> 7;
     }
 
-    // Conditional XOR with 0x87
+    // Conditional XOR with 0x87 at the end (big-endian)
     if carry != 0 {
-        result[0] ^= 0x87;
+        result[BLOCK_SIZE - 1] ^= 0x87;
     }
 
     result
