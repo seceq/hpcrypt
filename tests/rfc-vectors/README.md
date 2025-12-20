@@ -41,6 +41,31 @@ This directory contains test vectors extracted from official IETF RFC specificat
   - Extreme SIV values (all-zero, all-ones)
   - AAD-only authentication (no plaintext)
 
+### NIST SP 800-232 - Ascon (Lightweight Cryptography)
+- **File:** `ascon-aead.json`
+- **Source:** Official KAT vectors from ascon-c repository (NIST LWC)
+- **Status:** Official NIST SP 800-232 test vectors
+- **Coverage:**
+  - Ascon-128 AEAD variant (AEAD128 with 128-bit rate, 128-bit tag)
+  - Empty plaintext and AAD edge cases
+  - Various plaintext lengths (1, 2, 3, 4, 8, 16, 32 bytes)
+  - AAD-only authentication (no plaintext)
+  - Combined plaintext and AAD scenarios
+  - Different keys for verification
+- **Note on CAVP/ACVP vectors:** NIST ACVP test vectors for Ascon are available in `tests/cavp-vectors/` but require bit-level precision (non-byte-aligned payloads/AAD) which is not currently supported by the implementation
+
+### NIST SP 800-38A - AES-OFB (Output Feedback Mode)
+- **File:** `nist-sp800-38a-ofb.json`
+- **Source:** NIST SP 800-38A Appendix F.4
+- **Status:** Official NIST example vectors
+- **Coverage:**
+  - OFB-AES128 encryption and decryption (Section F.4.1-F.4.2)
+  - OFB-AES192 encryption and decryption (Section F.4.3-F.4.4)
+  - OFB-AES256 encryption and decryption (Section F.4.5-F.4.6)
+  - 64-byte (4-block) test vectors
+  - Demonstrates symmetric encryption/decryption property of OFB mode
+- **Note on CAVP vectors:** Comprehensive ACVP test vectors for AES-OFB (~1,764 vectors) are available in `tests/cavp-tests/` and provide extensive coverage
+
 ### RFC 5054 - SRP (Secure Remote Password)
 - **File:** `rfc5054-srp.json`
 - **Source:** RFC 5054 Appendix B
@@ -92,6 +117,8 @@ cargo test --package rfc-tests opaque
 cargo test --package rfc-tests argon2
 cargo test --package rfc-tests scrypt
 cargo test --package rfc-tests aes_siv
+cargo test --package rfc-tests ascon
+cargo test --package rfc-tests aes_ofb
 cargo test --package rfc-tests srp
 ```
 

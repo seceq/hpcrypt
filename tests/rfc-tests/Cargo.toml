@@ -117,6 +117,16 @@ path = "tests/aes_siv.rs"
 required-features = ["enable-aead-tests"]
 
 [[test]]
+name = "ascon"
+path = "tests/ascon.rs"
+required-features = ["enable-aead-tests"]
+
+[[test]]
+name = "aes_ofb"
+path = "tests/aes_ofb.rs"
+required-features = ["enable-cipher-tests"]
+
+[[test]]
 name = "sha"
 path = "tests/sha.rs"
 required-features = ["enable-hash-tests"]
