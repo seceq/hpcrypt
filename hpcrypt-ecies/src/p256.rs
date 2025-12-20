@@ -221,25 +221,8 @@ impl EciesP256 {
 
     /// Decode public key from uncompressed format
     fn decode_public_key(bytes: &[u8]) -> Result<Point> {
-        if bytes.len() != Self::PUBLIC_KEY_SIZE {
-            return Err(EciesError::InvalidPublicKey);
-        }
-
-        if bytes[0] != 0x04 {
-            return Err(EciesError::InvalidPublicKey);
-        }
-
-        let x_bytes: [u8; 32] = bytes[1..33]
-            .try_into()
+        let affine = AffinePoint::from_bytes(bytes)
             .map_err(|_| EciesError::InvalidPublicKey)?;
-        let y_bytes: [u8; 32] = bytes[33..65]
-            .try_into()
-            .map_err(|_| EciesError::InvalidPublicKey)?;
-
-        let x = FieldElement::from_bytes(&x_bytes).ok_or(EciesError::InvalidPublicKey)?;
-        let y = FieldElement::from_bytes(&y_bytes).ok_or(EciesError::InvalidPublicKey)?;
-
-        let affine = AffinePoint { x, y };
         Ok(Point::from_affine(&affine))
     }
 

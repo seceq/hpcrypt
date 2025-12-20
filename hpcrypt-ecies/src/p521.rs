@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 
 use crate::error::{EciesError, Result};
 use hpcrypt_aead::aes_gcm::{Aes256Gcm, NONCE_SIZE, TAG_SIZE};
-use hpcrypt_curves::p521::{FieldElement, Point, Scalar};
+use hpcrypt_curves::p521::{AffinePoint, Point, Scalar};
 use hpcrypt_kdf::x963_kdf_sha512;
 
 /// ECIES implementation for P-521 curve
@@ -145,21 +145,11 @@ impl EciesP521 {
     }
 
     fn decode_public_key(bytes: &[u8]) -> Result<Point> {
-        if bytes.len() != Self::PUBLIC_KEY_SIZE || bytes[0] != 0x04 {
-            return Err(EciesError::InvalidPublicKey);
-        }
-
-        let x_bytes: [u8; 66] = bytes[1..67]
-            .try_into()
+        let affine = AffinePoint::from_bytes(bytes)
             .map_err(|_| EciesError::InvalidPublicKey)?;
-        let y_bytes: [u8; 66] = bytes[67..133]
-            .try_into()
-            .map_err(|_| EciesError::InvalidPublicKey)?;
-
-        let x = FieldElement::from_bytes(&x_bytes).ok_or(EciesError::InvalidPublicKey)?;
-        let y = FieldElement::from_bytes(&y_bytes).ok_or(EciesError::InvalidPublicKey)?;
-
-        Point::from_affine(&x, &y).ok_or(EciesError::InvalidPublicKey)
+        let point = Point::from_affine(&affine.x, &affine.y)
+            .ok_or(EciesError::InvalidPublicKey)?;
+        Ok(point)
     }
 
     fn extract_x_coordinate(point: &Point) -> Result<Vec<u8>> {

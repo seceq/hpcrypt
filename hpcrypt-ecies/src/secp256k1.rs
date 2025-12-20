@@ -378,9 +378,8 @@ impl EciesSecp256k1 {
             return Err(EciesError::InvalidPublicKey);
         }
 
-        let compressed_array: [u8; 33] = bytes.try_into().unwrap();
-        let affine = AffinePoint::from_compressed_bytes(&compressed_array)
-            .ok_or(EciesError::InvalidPublicKey)?;
+        let affine = AffinePoint::from_bytes(bytes)
+            .map_err(|_| EciesError::InvalidPublicKey)?;
 
         let point = Point::from_affine(&affine);
 
@@ -394,11 +393,9 @@ impl EciesSecp256k1 {
 
     /// Decode public key (flexible: compressed or uncompressed)
     fn decode_public_key_flexible(bytes: &[u8]) -> Result<Point> {
-        match bytes.len() {
-            33 => Self::decode_public_key_compressed(bytes),
-            65 => Self::decode_public_key(bytes),
-            _ => Err(EciesError::InvalidPublicKey),
-        }
+        let affine = AffinePoint::from_bytes(bytes)
+            .map_err(|_| EciesError::InvalidPublicKey)?;
+        Ok(Point::from_affine(&affine))
     }
 }
 
