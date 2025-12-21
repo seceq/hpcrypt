@@ -45,7 +45,7 @@ use super::Drbg;
 use crate::{Result, RngError};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use hpcrypt_hash::Sha256;
+use hpcrypt_hash::{HashFunction, Sha256};
 
 /// SHA-256 output length (256 bits)
 const OUTLEN: usize = 32;

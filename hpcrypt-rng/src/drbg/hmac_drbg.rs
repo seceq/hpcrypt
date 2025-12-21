@@ -45,7 +45,7 @@ use super::Drbg;
 use crate::{Result, RngError};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use hpcrypt_mac::HmacSha256;
+use hpcrypt_mac::{HmacSha256, Mac};
 
 /// Output length of HMAC-SHA256 (256 bits)
 const OUTLEN: usize = 32;
