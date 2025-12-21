@@ -9,7 +9,7 @@
 //!   cargo test --test ascon_aead_cavp_tests -- --nocapture
 //!   cargo test --test ascon_aead_cavp_tests -- --ignored --nocapture
 
-use hpcrypt_aead::ascon::Ascon128a;
+use hpcrypt_aead::ascon::Ascon128Nist;
 
 /// Parse hex string to bytes
 fn hex_decode(s: &str) -> Vec<u8> {
@@ -98,7 +98,7 @@ fn test_ascon_aead_basic_vectors() {
 
     for (i, (key, nonce, pt, ad, expected_ct)) in vectors.iter().enumerate() {
         // Test encryption
-        let encrypted = Ascon128a::encrypt(key, nonce, pt, ad);
+        let encrypted = Ascon128Nist::encrypt(key, nonce, pt, ad);
         assert_eq!(
             &encrypted[..],
             &expected_ct[..],
@@ -107,7 +107,7 @@ fn test_ascon_aead_basic_vectors() {
         );
 
         // Test decryption
-        let decrypted = Ascon128a::decrypt(key, nonce, &encrypted, ad);
+        let decrypted = Ascon128Nist::decrypt(key, nonce, &encrypted, ad);
         assert!(
             decrypted.is_some(),
             "Decryption failed for vector {}",
@@ -181,7 +181,7 @@ fn test_ascon_aead_cavp_full() {
         let nonce: [u8; 16] = vector.nonce.as_slice().try_into().unwrap();
 
         // Test encryption
-        let encrypted = Ascon128a::encrypt(&key, &nonce, &vector.pt, &vector.ad);
+        let encrypted = Ascon128Nist::encrypt(&key, &nonce, &vector.pt, &vector.ad);
 
         if encrypted != vector.ct {
             println!(
@@ -203,7 +203,7 @@ fn test_ascon_aead_cavp_full() {
         }
 
         // Test decryption
-        let decrypted = Ascon128a::decrypt(&key, &nonce, &vector.ct, &vector.ad);
+        let decrypted = Ascon128Nist::decrypt(&key, &nonce, &vector.ct, &vector.ad);
 
         if let Some(pt) = decrypted {
             if pt != vector.pt {
