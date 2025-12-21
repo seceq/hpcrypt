@@ -6,7 +6,7 @@ use cavp_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 
 #[cfg(feature = "enable-aead-tests")]
-use hpcrypt_aead::{Aes128Gcm, Aes192Gcm, Aes256Gcm};
+use hpcrypt_aead::{Aes128Gcm, Aes192Gcm, Aes256Gcm, gcm_encrypt_variable, gcm_decrypt_variable};
 
 // ============================================================================
 // Test Data Structures
@@ -95,21 +95,17 @@ fn test_aes_gcm_cavp() {
     for (group, expected_group) in prompt.test_groups.iter().zip(&expected.test_groups) {
         assert_eq!(group.tg_id, expected_group.tg_id);
 
-        // Skip non-standard IV lengths for now (AES-GCM typically uses 96-bit IV)
-        if group.iv_len != 96 {
+        // Validate tag length is supported (NIST SP 800-38D: 32, 64, 96, 104, 112, 120, 128 bits)
+        let tag_len_bytes = group.tag_len / 8;
+        if !matches!(tag_len_bytes, 4 | 8 | 12 | 13 | 14 | 15 | 16) {
             for _ in &group.tests {
                 stats.skipped += 1;
             }
             continue;
         }
 
-        // Skip non-standard tag lengths (test 128-bit tags)
-        if group.tag_len != 128 {
-            for _ in &group.tests {
-                stats.skipped += 1;
-            }
-            continue;
-        }
+        // Use variable API for non-standard IV or tag lengths
+        let use_variable_api = group.iv_len != 96 || group.tag_len != 128;
 
         for (test, expected_test) in group.tests.iter().zip(&expected_group.tests) {
             assert_eq!(test.tc_id, expected_test.tc_id);
@@ -118,31 +114,41 @@ fn test_aes_gcm_cavp() {
             let iv = decode_hex(&test.iv);
             let aad = test.aad.as_ref().map(|a| decode_hex(a)).unwrap_or_default();
 
-            match group.key_len {
-                128 => {
-                    if group.direction == "encrypt" {
-                        test_encrypt::<Aes128Gcm>(&key, &iv, &aad, test, expected_test, &mut stats);
-                    } else {
-                        test_decrypt::<Aes128Gcm>(&key, &iv, &aad, test, expected_test, &mut stats);
-                    }
+            if use_variable_api {
+                // Use variable IV/tag API
+                if group.direction == "encrypt" {
+                    test_encrypt_variable(&key, &iv, &aad, tag_len_bytes, test, expected_test, &mut stats);
+                } else {
+                    test_decrypt_variable(&key, &iv, &aad, tag_len_bytes, test, expected_test, &mut stats);
                 }
-                192 => {
-                    if group.direction == "encrypt" {
-                        test_encrypt::<Aes192Gcm>(&key, &iv, &aad, test, expected_test, &mut stats);
-                    } else {
-                        test_decrypt::<Aes192Gcm>(&key, &iv, &aad, test, expected_test, &mut stats);
+            } else {
+                // Use standard fixed-size API
+                match group.key_len {
+                    128 => {
+                        if group.direction == "encrypt" {
+                            test_encrypt::<Aes128Gcm>(&key, &iv, &aad, test, expected_test, &mut stats);
+                        } else {
+                            test_decrypt::<Aes128Gcm>(&key, &iv, &aad, test, expected_test, &mut stats);
+                        }
                     }
-                }
-                256 => {
-                    if group.direction == "encrypt" {
-                        test_encrypt::<Aes256Gcm>(&key, &iv, &aad, test, expected_test, &mut stats);
-                    } else {
-                        test_decrypt::<Aes256Gcm>(&key, &iv, &aad, test, expected_test, &mut stats);
+                    192 => {
+                        if group.direction == "encrypt" {
+                            test_encrypt::<Aes192Gcm>(&key, &iv, &aad, test, expected_test, &mut stats);
+                        } else {
+                            test_decrypt::<Aes192Gcm>(&key, &iv, &aad, test, expected_test, &mut stats);
+                        }
                     }
-                }
-                _ => {
-                    eprintln!("Unsupported key length: {}", group.key_len);
-                    stats.skipped += 1;
+                    256 => {
+                        if group.direction == "encrypt" {
+                            test_encrypt::<Aes256Gcm>(&key, &iv, &aad, test, expected_test, &mut stats);
+                        } else {
+                            test_decrypt::<Aes256Gcm>(&key, &iv, &aad, test, expected_test, &mut stats);
+                        }
+                    }
+                    _ => {
+                        eprintln!("Unsupported key length: {}", group.key_len);
+                        stats.skipped += 1;
+                    }
                 }
             }
         }
@@ -278,6 +284,102 @@ fn test_decrypt<C: AesGcmCipher>(
     let should_pass = expected.test_passed.unwrap_or(true);
 
     match C::decrypt(key, iv, aad, &ct_with_tag) {
+        Ok(result) => {
+            if should_pass {
+                let expected_pt = expected.pt.as_ref().map(|p| decode_hex(p)).unwrap_or_default();
+                if result == expected_pt {
+                    stats.passed += 1;
+                } else {
+                    eprintln!("Test case {} FAILED: Plaintext mismatch", test.tc_id);
+                    stats.failed += 1;
+                }
+            } else {
+                eprintln!("Test case {} FAILED: Should have failed decryption", test.tc_id);
+                stats.failed += 1;
+            }
+        }
+        Err(_) => {
+            if !should_pass {
+                stats.passed += 1;
+            } else {
+                eprintln!("Test case {} FAILED: Decryption failed when it should pass", test.tc_id);
+                stats.failed += 1;
+            }
+        }
+    }
+}
+
+// ============================================================================
+// Variable IV/Tag Length Test Functions
+// ============================================================================
+
+#[cfg(feature = "enable-aead-tests")]
+fn test_encrypt_variable(
+    key: &[u8],
+    iv: &[u8],
+    aad: &[u8],
+    tag_len: usize,
+    test: &AesGcmTestCase,
+    expected: &AesGcmExpectedCase,
+    stats: &mut TestStats,
+) {
+    let plaintext = test.pt.as_ref().map(|p| decode_hex(p)).unwrap_or_default();
+    let expected_ct = decode_hex(expected.ct.as_ref().unwrap());
+    let expected_tag = decode_hex(expected.tag.as_ref().unwrap());
+
+    match gcm_encrypt_variable(key, iv, &plaintext, aad, tag_len) {
+        Ok(result) => {
+            // Result should be ciphertext || tag
+            if result.len() < tag_len {
+                eprintln!("Test case {} FAILED: Result too short", test.tc_id);
+                stats.failed += 1;
+                return;
+            }
+
+            let ct_len = result.len() - tag_len;
+            let result_ct = &result[..ct_len];
+            let result_tag = &result[ct_len..];
+
+            if result_ct == expected_ct.as_slice() && result_tag == expected_tag.as_slice() {
+                stats.passed += 1;
+            } else {
+                eprintln!("Test case {} FAILED: Ciphertext or tag mismatch", test.tc_id);
+                if result_ct != expected_ct.as_slice() {
+                    eprintln!("  CT: expected {} bytes, got {} bytes", expected_ct.len(), result_ct.len());
+                }
+                if result_tag != expected_tag.as_slice() {
+                    eprintln!("  Tag mismatch: expected {:02x?}, got {:02x?}", expected_tag, result_tag);
+                }
+                stats.failed += 1;
+            }
+        }
+        Err(e) => {
+            eprintln!("Test case {} FAILED: Encryption error: {:?}", test.tc_id, e);
+            stats.failed += 1;
+        }
+    }
+}
+
+#[cfg(feature = "enable-aead-tests")]
+fn test_decrypt_variable(
+    key: &[u8],
+    iv: &[u8],
+    aad: &[u8],
+    tag_len: usize,
+    test: &AesGcmTestCase,
+    expected: &AesGcmExpectedCase,
+    stats: &mut TestStats,
+) {
+    let ciphertext = test.ct.as_ref().map(|c| decode_hex(c)).unwrap_or_default();
+    let tag = test.tag.as_ref().map(|t| decode_hex(t)).unwrap_or_default();
+
+    // Concatenate ciphertext and tag
+    let mut ct_with_tag = ciphertext.clone();
+    ct_with_tag.extend_from_slice(&tag);
+
+    let should_pass = expected.test_passed.unwrap_or(true);
+
+    match gcm_decrypt_variable(key, iv, &ct_with_tag, aad, tag_len) {
         Ok(result) => {
             if should_pass {
                 let expected_pt = expected.pt.as_ref().map(|p| decode_hex(p)).unwrap_or_default();

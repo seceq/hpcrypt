@@ -31,7 +31,7 @@ use cavp_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 
 // Import all hash functions
-use hpcrypt_hash::{Sha1, Sha256, Sha384, Sha512, Sha3_224, Sha3_256, Sha3_384, Sha3_512};
+use hpcrypt_hash::{HashFunction, Sha1, Sha256, Sha384, Sha512, Sha3_224, Sha3_256, Sha3_384, Sha3_512};
 
 // ============================================================================
 // Test-only Generic HASH_DRBG Implementation
@@ -40,18 +40,18 @@ use hpcrypt_hash::{Sha1, Sha256, Sha384, Sha512, Sha3_224, Sha3_256, Sha3_384, S
 /// Trait for hash functions usable with HASH_DRBG
 trait DrbgHash {
     const OUTPUT_LEN: usize;
-    fn new() -> Self;
-    fn update(&mut self, data: &[u8]);
-    fn finalize(self) -> Vec<u8>;
+    fn drbg_new() -> Self;
+    fn drbg_update(&mut self, data: &[u8]);
+    fn drbg_finalize(self) -> Vec<u8>;
 }
 
 macro_rules! impl_drbg_hash {
     ($hash:ty, $output_len:expr) => {
         impl DrbgHash for $hash {
             const OUTPUT_LEN: usize = $output_len;
-            fn new() -> Self { <$hash>::new() }
-            fn update(&mut self, data: &[u8]) { <$hash>::update(self, data); }
-            fn finalize(self) -> Vec<u8> { <$hash>::finalize(self).to_vec() }
+            fn drbg_new() -> Self { <$hash as HashFunction>::new() }
+            fn drbg_update(&mut self, data: &[u8]) { <$hash as HashFunction>::update(self, data); }
+            fn drbg_finalize(self) -> Vec<u8> { <$hash as HashFunction>::finalize(self).to_vec() }
         }
     };
 }
@@ -134,7 +134,7 @@ impl Sha224 {
 impl DrbgHash for Sha224 {
     const OUTPUT_LEN: usize = 28;
 
-    fn new() -> Self {
+    fn drbg_new() -> Self {
         Self {
             h: Self::H0,
             buf: [0; 64],
@@ -143,7 +143,7 @@ impl DrbgHash for Sha224 {
         }
     }
 
-    fn update(&mut self, mut input: &[u8]) {
+    fn drbg_update(&mut self, mut input: &[u8]) {
         self.len = self.len.wrapping_add(input.len() as u64);
         while !input.is_empty() {
             if self.buflen == 64 {
@@ -157,7 +157,7 @@ impl DrbgHash for Sha224 {
         }
     }
 
-    fn finalize(mut self) -> Vec<u8> {
+    fn drbg_finalize(mut self) -> Vec<u8> {
         use hpcrypt_core::utils::write_u32_be;
 
         if self.buflen == 64 {
@@ -198,9 +198,9 @@ struct TestHashDrbg<const SEEDLEN: usize, const OUTLEN: usize> {
 impl<const SEEDLEN: usize, const OUTLEN: usize> TestHashDrbg<SEEDLEN, OUTLEN> {
     /// Hash function that can work with any output length
     fn hash<H: DrbgHash>(data: &[u8]) -> Vec<u8> {
-        let mut h = H::new();
-        h.update(data);
-        h.finalize()
+        let mut h = H::drbg_new();
+        h.drbg_update(data);
+        h.drbg_finalize()
     }
 
     /// Hash_df (Hash Derivation Function) - NIST SP 800-90A Section 10.3.1
@@ -212,11 +212,11 @@ impl<const SEEDLEN: usize, const OUTLEN: usize> TestHashDrbg<SEEDLEN, OUTLEN> {
         let mut counter = 1u8;
 
         while output.len() < requested_bytes {
-            let mut hasher = H::new();
-            hasher.update(&[counter]);
-            hasher.update(&len_bits);
-            hasher.update(input);
-            output.extend_from_slice(&hasher.finalize());
+            let mut hasher = H::drbg_new();
+            hasher.drbg_update(&[counter]);
+            hasher.drbg_update(&len_bits);
+            hasher.drbg_update(input);
+            output.extend_from_slice(&hasher.drbg_finalize());
             counter = counter.wrapping_add(1);
         }
 

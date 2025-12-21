@@ -9,7 +9,7 @@ use cavp_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 
 // Import hash functions for HMAC
-use hpcrypt_hash::{Sha1, Sha256, Sha384, Sha512, Sha3_224, Sha3_256, Sha3_384, Sha3_512};
+use hpcrypt_hash::{HashFunction, Sha1, Sha256, Sha384, Sha512, Sha3_224, Sha3_256, Sha3_384, Sha3_512};
 
 // ============================================================================
 // Test-only Generic HMAC_DRBG Implementation
@@ -19,9 +19,9 @@ use hpcrypt_hash::{Sha1, Sha256, Sha384, Sha512, Sha3_224, Sha3_256, Sha3_384, S
 trait DrbgHash {
     const OUTPUT_LEN: usize;
     const BLOCK_LEN: usize;
-    fn new() -> Self;
-    fn update(&mut self, data: &[u8]);
-    fn finalize(self) -> Vec<u8>;
+    fn drbg_new() -> Self;
+    fn drbg_update(&mut self, data: &[u8]);
+    fn drbg_finalize(self) -> Vec<u8>;
 }
 
 macro_rules! impl_drbg_hash {
@@ -29,9 +29,9 @@ macro_rules! impl_drbg_hash {
         impl DrbgHash for $hash {
             const OUTPUT_LEN: usize = $output_len;
             const BLOCK_LEN: usize = $block_len;
-            fn new() -> Self { <$hash>::new() }
-            fn update(&mut self, data: &[u8]) { <$hash>::update(self, data); }
-            fn finalize(self) -> Vec<u8> { <$hash>::finalize(self).to_vec() }
+            fn drbg_new() -> Self { <$hash as HashFunction>::new() }
+            fn drbg_update(&mut self, data: &[u8]) { <$hash as HashFunction>::update(self, data); }
+            fn drbg_finalize(self) -> Vec<u8> { <$hash as HashFunction>::finalize(self).to_vec() }
         }
     };
 }
@@ -114,7 +114,7 @@ impl DrbgHash for Sha224 {
     const OUTPUT_LEN: usize = 28;
     const BLOCK_LEN: usize = 64;
 
-    fn new() -> Self {
+    fn drbg_new() -> Self {
         Self {
             h: Self::H0,
             buf: [0; 64],
@@ -123,7 +123,7 @@ impl DrbgHash for Sha224 {
         }
     }
 
-    fn update(&mut self, mut input: &[u8]) {
+    fn drbg_update(&mut self, mut input: &[u8]) {
         self.len = self.len.wrapping_add(input.len() as u64);
         while !input.is_empty() {
             if self.buflen == 64 {
@@ -137,7 +137,7 @@ impl DrbgHash for Sha224 {
         }
     }
 
-    fn finalize(mut self) -> Vec<u8> {
+    fn drbg_finalize(mut self) -> Vec<u8> {
         use hpcrypt_core::utils::write_u32_be;
 
         if self.buflen == 64 {
@@ -171,9 +171,9 @@ fn hmac<H: DrbgHash>(key: &[u8], data: &[u8]) -> Vec<u8> {
     // Prepare key
     let mut k = vec![0u8; block_len];
     if key.len() > block_len {
-        let mut h = H::new();
-        h.update(key);
-        let hashed = h.finalize();
+        let mut h = H::drbg_new();
+        h.drbg_update(key);
+        let hashed = h.drbg_finalize();
         k[..hashed.len()].copy_from_slice(&hashed);
     } else {
         k[..key.len()].copy_from_slice(key);
@@ -192,16 +192,16 @@ fn hmac<H: DrbgHash>(key: &[u8], data: &[u8]) -> Vec<u8> {
     }
 
     // Inner hash
-    let mut inner = H::new();
-    inner.update(&ipad);
-    inner.update(data);
-    let inner_hash = inner.finalize();
+    let mut inner = H::drbg_new();
+    inner.drbg_update(&ipad);
+    inner.drbg_update(data);
+    let inner_hash = inner.drbg_finalize();
 
     // Outer hash
-    let mut outer = H::new();
-    outer.update(&opad);
-    outer.update(&inner_hash);
-    outer.finalize()
+    let mut outer = H::drbg_new();
+    outer.drbg_update(&opad);
+    outer.drbg_update(&inner_hash);
+    outer.drbg_finalize()
 }
 
 /// Generic HMAC_DRBG for testing

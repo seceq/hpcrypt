@@ -6,7 +6,7 @@ use cavp_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 
 #[cfg(feature = "enable-kdf-tests")]
-use hpcrypt_kdf::{pbkdf2_hmac_sha256, pbkdf2_hmac_sha512};
+use hpcrypt_kdf::{pbkdf2_hmac_sha224, pbkdf2_hmac_sha256, pbkdf2_hmac_sha384, pbkdf2_hmac_sha512};
 
 // ============================================================================
 // Test Data Structures
@@ -76,14 +76,6 @@ fn test_pbkdf2_cavp() {
     for (group, expected_group) in prompt.test_groups.iter().zip(&expected.test_groups) {
         assert_eq!(group.tg_id, expected_group.tg_id);
 
-        // Only test SHA2-256 and SHA2-512
-        if group.hmac_alg != "SHA2-256" && group.hmac_alg != "SHA2-512" {
-            for _ in &group.tests {
-                stats.skipped += 1;
-            }
-            continue;
-        }
-
         for (test, expected_test) in group.tests.iter().zip(&expected_group.tests) {
             assert_eq!(test.tc_id, expected_test.tc_id);
 
@@ -95,8 +87,30 @@ fn test_pbkdf2_cavp() {
             let key_len_bytes = (test.key_len + 7) / 8;
 
             match group.hmac_alg.as_str() {
+                "SHA2-224" => {
+                    test_pbkdf2_sha224(
+                        password,
+                        &salt,
+                        test.iteration_count,
+                        key_len_bytes,
+                        &expected_key,
+                        &mut stats,
+                        test.tc_id,
+                    );
+                }
                 "SHA2-256" => {
                     test_pbkdf2_sha256(
+                        password,
+                        &salt,
+                        test.iteration_count,
+                        key_len_bytes,
+                        &expected_key,
+                        &mut stats,
+                        test.tc_id,
+                    );
+                }
+                "SHA2-384" => {
+                    test_pbkdf2_sha384(
                         password,
                         &salt,
                         test.iteration_count,
@@ -129,6 +143,29 @@ fn test_pbkdf2_cavp() {
 }
 
 #[cfg(feature = "enable-kdf-tests")]
+fn test_pbkdf2_sha224(
+    password: &[u8],
+    salt: &[u8],
+    iterations: u32,
+    key_len: usize,
+    expected: &[u8],
+    stats: &mut TestStats,
+    tc_id: u32,
+) {
+    let mut derived_key = vec![0u8; key_len];
+    pbkdf2_hmac_sha224(password, salt, iterations, &mut derived_key);
+
+    if derived_key == expected {
+        stats.passed += 1;
+    } else {
+        eprintln!("Test case {} FAILED: Derived key mismatch (SHA-224)", tc_id);
+        eprintln!("  Expected: {:02x?}", expected);
+        eprintln!("  Got:      {:02x?}", derived_key);
+        stats.failed += 1;
+    }
+}
+
+#[cfg(feature = "enable-kdf-tests")]
 fn test_pbkdf2_sha256(
     password: &[u8],
     salt: &[u8],
@@ -144,13 +181,32 @@ fn test_pbkdf2_sha256(
     if derived_key == expected {
         stats.passed += 1;
     } else {
-        eprintln!("Test case {} FAILED: Derived key mismatch", tc_id);
-        eprintln!("  Password: {}", String::from_utf8_lossy(password));
-        eprintln!("  Salt length: {}", salt.len());
-        eprintln!("  Iterations: {}", iterations);
-        eprintln!("  Key length: {}", key_len);
-        eprintln!("  Expected length: {}", expected.len());
-        eprintln!("  Got length: {}", derived_key.len());
+        eprintln!("Test case {} FAILED: Derived key mismatch (SHA-256)", tc_id);
+        eprintln!("  Expected: {:02x?}", expected);
+        eprintln!("  Got:      {:02x?}", derived_key);
+        stats.failed += 1;
+    }
+}
+
+#[cfg(feature = "enable-kdf-tests")]
+fn test_pbkdf2_sha384(
+    password: &[u8],
+    salt: &[u8],
+    iterations: u32,
+    key_len: usize,
+    expected: &[u8],
+    stats: &mut TestStats,
+    tc_id: u32,
+) {
+    let mut derived_key = vec![0u8; key_len];
+    pbkdf2_hmac_sha384(password, salt, iterations, &mut derived_key);
+
+    if derived_key == expected {
+        stats.passed += 1;
+    } else {
+        eprintln!("Test case {} FAILED: Derived key mismatch (SHA-384)", tc_id);
+        eprintln!("  Expected: {:02x?}", expected);
+        eprintln!("  Got:      {:02x?}", derived_key);
         stats.failed += 1;
     }
 }
@@ -171,11 +227,9 @@ fn test_pbkdf2_sha512(
     if derived_key == expected {
         stats.passed += 1;
     } else {
-        eprintln!("Test case {} FAILED: Derived key mismatch", tc_id);
-        eprintln!("  Password: {}", String::from_utf8_lossy(password));
-        eprintln!("  Salt length: {}", salt.len());
-        eprintln!("  Iterations: {}", iterations);
-        eprintln!("  Key length: {}", key_len);
+        eprintln!("Test case {} FAILED: Derived key mismatch (SHA-512)", tc_id);
+        eprintln!("  Expected: {:02x?}", expected);
+        eprintln!("  Got:      {:02x?}", derived_key);
         stats.failed += 1;
     }
 }

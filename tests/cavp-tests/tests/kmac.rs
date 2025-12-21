@@ -45,6 +45,9 @@ struct Test {
     customization: Option<String>,
     #[serde(rename = "customizationHex", default)]
     customization_hex: Option<String>,
+    /// MAC value for MVT (verification) tests
+    #[serde(default)]
+    mac: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -162,29 +165,44 @@ fn run_kmac128_tests() {
 
             let mac_len_bytes = (test.mac_len / 8) as usize;
 
-            // Skip validation tests (those with testPassed instead of mac)
-            let expected_mac_str = match &expected_test.mac {
-                Some(m) => m,
-                None => {
-                    stats.skipped += 1;
-                    continue;
-                }
-            };
-
             // Compute KMAC-128
-            let mac = kmac128(key_data, msg_data, &customization, mac_len_bytes);
+            let computed_mac = kmac128(key_data, msg_data, &customization, mac_len_bytes);
 
-            // Compare with expected
-            let expected_mac = decode_hex(expected_mac_str);
-
-            if mac == expected_mac {
-                stats.passed += 1;
+            // Handle AFT (Algorithm Functional Test) - expected has mac field
+            // Handle MVT (MAC Verification Test) - expected has testPassed field, prompt has mac
+            if let Some(ref expected_mac_str) = expected_test.mac {
+                // AFT: Compare computed MAC with expected MAC
+                let expected_mac = decode_hex(expected_mac_str);
+                if computed_mac == expected_mac {
+                    stats.passed += 1;
+                } else {
+                    println!(
+                        "FAIL: AFT Test {} mismatch (group {})",
+                        test.tc_id, test_group.tg_id
+                    );
+                    stats.failed += 1;
+                }
+            } else if let Some(test_passed) = expected_test.test_passed {
+                // MVT: Compare computed MAC with provided MAC, check against testPassed
+                let provided_mac = match &test.mac {
+                    Some(m) => decode_hex(m),
+                    None => {
+                        stats.skipped += 1;
+                        continue;
+                    }
+                };
+                let macs_match = computed_mac == provided_mac;
+                if macs_match == test_passed {
+                    stats.passed += 1;
+                } else {
+                    println!(
+                        "FAIL: MVT Test {} - expected testPassed={}, got macs_match={} (group {})",
+                        test.tc_id, test_passed, macs_match, test_group.tg_id
+                    );
+                    stats.failed += 1;
+                }
             } else {
-                println!(
-                    "FAIL: Test {} mismatch (group {})",
-                    test.tc_id, test_group.tg_id
-                );
-                stats.failed += 1;
+                stats.skipped += 1;
             }
         }
     }
@@ -193,6 +211,9 @@ fn run_kmac128_tests() {
         "KMAC-128 Results: {} passed, {} failed, {} skipped",
         stats.passed, stats.failed, stats.skipped
     );
+    if stats.skipped > 0 {
+        println!("  Note: {} tests skipped (non-byte-aligned bit lengths - API only supports byte-aligned data)", stats.skipped);
+    }
     assert_eq!(stats.failed, 0, "{} tests failed for KMAC-128", stats.failed);
 }
 
@@ -288,29 +309,44 @@ fn run_kmac256_tests() {
 
             let mac_len_bytes = (test.mac_len / 8) as usize;
 
-            // Skip validation tests (those with testPassed instead of mac)
-            let expected_mac_str = match &expected_test.mac {
-                Some(m) => m,
-                None => {
-                    stats.skipped += 1;
-                    continue;
-                }
-            };
-
             // Compute KMAC-256
-            let mac = kmac256(key_data, msg_data, &customization, mac_len_bytes);
+            let computed_mac = kmac256(key_data, msg_data, &customization, mac_len_bytes);
 
-            // Compare with expected
-            let expected_mac = decode_hex(expected_mac_str);
-
-            if mac == expected_mac {
-                stats.passed += 1;
+            // Handle AFT (Algorithm Functional Test) - expected has mac field
+            // Handle MVT (MAC Verification Test) - expected has testPassed field, prompt has mac
+            if let Some(ref expected_mac_str) = expected_test.mac {
+                // AFT: Compare computed MAC with expected MAC
+                let expected_mac = decode_hex(expected_mac_str);
+                if computed_mac == expected_mac {
+                    stats.passed += 1;
+                } else {
+                    println!(
+                        "FAIL: AFT Test {} mismatch (group {})",
+                        test.tc_id, test_group.tg_id
+                    );
+                    stats.failed += 1;
+                }
+            } else if let Some(test_passed) = expected_test.test_passed {
+                // MVT: Compare computed MAC with provided MAC, check against testPassed
+                let provided_mac = match &test.mac {
+                    Some(m) => decode_hex(m),
+                    None => {
+                        stats.skipped += 1;
+                        continue;
+                    }
+                };
+                let macs_match = computed_mac == provided_mac;
+                if macs_match == test_passed {
+                    stats.passed += 1;
+                } else {
+                    println!(
+                        "FAIL: MVT Test {} - expected testPassed={}, got macs_match={} (group {})",
+                        test.tc_id, test_passed, macs_match, test_group.tg_id
+                    );
+                    stats.failed += 1;
+                }
             } else {
-                println!(
-                    "FAIL: Test {} mismatch (group {})",
-                    test.tc_id, test_group.tg_id
-                );
-                stats.failed += 1;
+                stats.skipped += 1;
             }
         }
     }
@@ -319,6 +355,9 @@ fn run_kmac256_tests() {
         "KMAC-256 Results: {} passed, {} failed, {} skipped",
         stats.passed, stats.failed, stats.skipped
     );
+    if stats.skipped > 0 {
+        println!("  Note: {} tests skipped (non-byte-aligned bit lengths - API only supports byte-aligned data)", stats.skipped);
+    }
     assert_eq!(stats.failed, 0, "{} tests failed for KMAC-256", stats.failed);
 }
 

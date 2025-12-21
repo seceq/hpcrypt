@@ -6,7 +6,7 @@ use cavp_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 
 #[cfg(feature = "enable-hash-tests")]
-use hpcrypt_hash::{Sha3_224, Sha3_256, Sha3_384, Sha3_512, Shake128, Shake256};
+use hpcrypt_hash::{HashFunction, Sha3_224, Sha3_256, Sha3_384, Sha3_512, Shake128, Shake256, XofFunction};
 
 // ============================================================================
 // Test Data Structures
