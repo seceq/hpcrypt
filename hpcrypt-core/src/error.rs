@@ -80,9 +80,21 @@ pub enum AeadError {
     /// - **ChaCha20-Poly1305**: 32 bytes
     /// - **XChaCha20-Poly1305**: 32 bytes
     InvalidKeyLength {
-        /// Expected key length in bytes
-        expected: usize,
+        /// Expected key lengths in bytes
+        expected: &'static [usize],
         /// Actual key length provided
+        actual: usize,
+    },
+
+    /// Tag size incorrect for this algorithm
+    ///
+    /// # Expected Sizes
+    /// - **AES-GCM**: 4, 8, 12, 13, 14, 15, or 16 bytes (per NIST SP 800-38D)
+    /// - **ChaCha20-Poly1305**: 16 bytes only
+    InvalidTagLength {
+        /// Expected tag lengths in bytes
+        expected: &'static [usize],
+        /// Actual tag length provided
         actual: usize,
     },
 
@@ -142,7 +154,14 @@ impl fmt::Display for AeadError {
             Self::InvalidKeyLength { expected, actual } => {
                 write!(
                     f,
-                    "Invalid key length: expected {} bytes, got {} bytes",
+                    "Invalid key length: expected {:?} bytes, got {} bytes",
+                    expected, actual
+                )
+            }
+            Self::InvalidTagLength { expected, actual } => {
+                write!(
+                    f,
+                    "Invalid tag length: expected {:?} bytes, got {} bytes",
                     expected, actual
                 )
             }
