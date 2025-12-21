@@ -30,9 +30,7 @@ pub mod polyval;
 
 // Re-exports
 pub use cmac::{aes_cmac_128, aes_cmac_256, AesCmac128, AesCmac256};
-#[cfg(feature = "alloc")]
-pub use ghash::ghash_fast;
-pub use ghash::GHashFast;
+pub use ghash::{Ghash, GhashKey};
 pub use gmac::{gmac128, gmac192, gmac256, Gmac128, Gmac192, Gmac256, GmacError};
 #[cfg(feature = "alloc")]
 pub use gmac::gmac_variable;
