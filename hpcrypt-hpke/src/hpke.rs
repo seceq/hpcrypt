@@ -1002,4 +1002,284 @@ mod tests {
             assert_eq!(pt, msg.as_bytes());
         }
     }
+
+    #[test]
+    fn test_hpke_x25519_chacha_multiple_messages() {
+        let mut rng = thread_rng();
+        let hpke = HpkeX25519::with_chacha();
+
+        let (sk_r, pk_r) = HpkeX25519::generate_keypair(&mut rng).unwrap();
+        let info = b"session";
+
+        // Setup contexts
+        let (enc, mut sender_ctx) = hpke.setup_base_sender(&pk_r, info, &mut rng).unwrap();
+        let mut recipient_ctx = hpke.setup_base_recipient(&enc, &sk_r, info).unwrap();
+
+        // Send multiple messages - this should test sequence number handling
+        for i in 0..5 {
+            let msg = format!("Message {}", i);
+            let ct = sender_ctx.seal(&[], msg.as_bytes()).unwrap();
+            let pt = recipient_ctx.open(&[], &ct).unwrap();
+            assert_eq!(pt, msg.as_bytes());
+        }
+    }
+
+    #[test]
+    fn test_chacha_standalone_encryption_0() {
+        // Test encryption 0 in isolation
+        use hpcrypt_aead::chacha20poly1305::ChaCha20Poly1305;
+
+        fn decode_hex(s: &str) -> Vec<u8> {
+            (0..s.len())
+                .step_by(2)
+                .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
+                .collect()
+        }
+
+        let key = decode_hex("ad2744de8e17f4ebba575b3f5f5a8fa1f69c2a07f6e7500bc60ca6e3e3ec1c91");
+        let nonce = decode_hex("5c4d98150661b848853b547f");
+        let aad = decode_hex("436f756e742d30");
+        let expected_ct = decode_hex("1c5250d8034ec2b784ba2cfd69dbdb8af406cfe3ff938e131f0def8c8b60b4db21993c62ce81883d2dd1b51a28");
+        let expected_pt = decode_hex("4265617574792069732074727574682c20747275746820626561757479");
+
+        let mut key_arr = [0u8; 32];
+        let mut nonce_arr = [0u8; 12];
+        key_arr.copy_from_slice(&key);
+        nonce_arr.copy_from_slice(&nonce);
+
+        // First, try encrypting and see what we get
+        let our_ct = ChaCha20Poly1305::encrypt(&key_arr, &nonce_arr, &expected_pt, &aad);
+        println!("Enc 0 - Our CT:       {:02x?}", &our_ct);
+        println!("Enc 0 - Expected CT:  {:02x?}", &expected_ct);
+        println!("Enc 0 - CTs match: {}", our_ct == expected_ct);
+
+        // Now try decrypting the RFC vector
+        match ChaCha20Poly1305::decrypt(&key_arr, &nonce_arr, &expected_ct, &aad) {
+            Some(pt) => {
+                println!("Standalone decrypt 0 SUCCESS");
+                assert_eq!(pt, expected_pt);
+            }
+            None => {
+                panic!("Standalone decrypt 0 FAILED");
+            }
+        }
+    }
+
+    #[test]
+    fn test_chacha_standalone_encryption_1() {
+        // Test encryption 1 in isolation
+        use hpcrypt_aead::chacha20poly1305::ChaCha20Poly1305;
+
+        fn decode_hex(s: &str) -> Vec<u8> {
+            (0..s.len())
+                .step_by(2)
+                .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
+                .collect()
+        }
+
+        let key = decode_hex("ad2744de8e17f4ebba575b3f5f5a8fa1f69c2a07f6e7500bc60ca6e3e3ec1c91");
+        let nonce = decode_hex("5c4d98150661b848853b547e");
+        let aad = decode_hex("436f756e742d31");
+        let expected_ct = decode_hex("6b53c051e4199c518de79594e1c4ab18b96f081549d45ce015be002090bb119e85285337cc95ba5f59992dc98c");
+        let expected_pt = decode_hex("4265617574792069732074727574682c20747275746820626561757479");
+
+        let mut key_arr = [0u8; 32];
+        let mut nonce_arr = [0u8; 12];
+        key_arr.copy_from_slice(&key);
+        nonce_arr.copy_from_slice(&nonce);
+
+        // First, try encrypting and see what we get
+        let our_ct = ChaCha20Poly1305::encrypt(&key_arr, &nonce_arr, &expected_pt, &aad);
+        println!("Enc 1 - Our CT:       {:02x?}", &our_ct);
+        println!("Enc 1 - Expected CT:  {:02x?}", &expected_ct);
+        println!("Enc 1 - CTs match: {}", our_ct == expected_ct);
+    }
+
+    #[test]
+    fn test_chacha_encrypt_then_decrypt() {
+        // Test if we can encrypt and then decrypt successfully
+        use hpcrypt_aead::chacha20poly1305::ChaCha20Poly1305;
+
+        fn decode_hex(s: &str) -> Vec<u8> {
+            (0..s.len())
+                .step_by(2)
+                .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
+                .collect()
+        }
+
+        let key = decode_hex("ad2744de8e17f4ebba575b3f5f5a8fa1f69c2a07f6e7500bc60ca6e3e3ec1c91");
+        let nonce = decode_hex("5c4d98150661b848853b547d");
+        let aad = decode_hex("436f756e742d32");
+        let pt = decode_hex("4265617574792069732074727574682c20747275746820626561757479");
+
+        let mut key_arr = [0u8; 32];
+        let mut nonce_arr = [0u8; 12];
+        key_arr.copy_from_slice(&key);
+        nonce_arr.copy_from_slice(&nonce);
+
+        // Encrypt the plaintext
+        let ct = ChaCha20Poly1305::encrypt(&key_arr, &nonce_arr, &pt, &aad);
+        println!("Encrypted ciphertext ({} bytes): {:02x?}", ct.len(), &ct);
+
+        // Compare with RFC test vector
+        let expected_ct = decode_hex("71146bd6795ccc9c49ce25dda112a48f202ad220559502cef1f34271e0cb4b02b4f10ecac6f48c32f878fae86b");
+        println!("Expected ciphertext ({} bytes): {:02x?}", expected_ct.len(), &expected_ct);
+        println!("Ciphertexts match: {}", ct == expected_ct);
+
+        // Now try to decrypt it
+        match ChaCha20Poly1305::decrypt(&key_arr, &nonce_arr, &ct, &aad) {
+            Some(decrypted_pt) => {
+                println!("Roundtrip decryption SUCCESS");
+                assert_eq!(decrypted_pt, pt);
+            }
+            None => {
+                panic!("Failed to decrypt our own ciphertext!");
+            }
+        }
+    }
+
+    #[test]
+    fn test_chacha_standalone_encryption_2() {
+        // Test ONLY encryption 2 in isolation
+        use hpcrypt_aead::chacha20poly1305::ChaCha20Poly1305;
+
+        fn decode_hex(s: &str) -> Vec<u8> {
+            (0..s.len())
+                .step_by(2)
+                .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
+                .collect()
+        }
+
+        let key = decode_hex("ad2744de8e17f4ebba575b3f5f5a8fa1f69c2a07f6e7500bc60ca6e3e3ec1c91");
+        let nonce = decode_hex("5c4d98150661b848853b547d");
+        let aad = decode_hex("436f756e742d32");
+        let ct = decode_hex("71146bd6795ccc9c49ce25dda112a48f202ad220559502cef1f34271e0cb4b02b4f10ecac6f48c32f878fae86b");
+        let expected_pt = decode_hex("4265617574792069732074727574682c20747275746820626561757479");
+
+        println!("Test inputs:");
+        println!("  key: {:02x?}", &key[..8]);
+        println!("  nonce: {:02x?}", &nonce);
+        println!("  aad_len: {}, ct_len: {}", aad.len(), ct.len());
+
+        // Split ct into ciphertext and tag
+        let ct_only = &ct[..ct.len()-16];
+        let tag = &ct[ct.len()-16..];
+        println!("  ciphertext_len: {}, tag: {:02x?}", ct_only.len(), tag);
+
+        let mut key_arr = [0u8; 32];
+        let mut nonce_arr = [0u8; 12];
+        key_arr.copy_from_slice(&key);
+        nonce_arr.copy_from_slice(&nonce);
+
+        match ChaCha20Poly1305::decrypt(&key_arr, &nonce_arr, &ct, &aad) {
+            Some(pt) => {
+                println!("Standalone decrypt SUCCESS");
+                assert_eq!(pt, expected_pt);
+            }
+            None => {
+                println!("Standalone decrypt FAILED");
+
+                // Now let's test encryption 0 which DOES work
+                println!("\nComparing with encryption 0 which works:");
+                let nonce0 = decode_hex("5c4d98150661b848853b547f");
+                let aad0 = decode_hex("436f756e742d30");
+                let ct0 = decode_hex("1c5250d8034ec2b784ba2cfd69dbdb8af406cfe3ff938e131f0def8c8b60b4db21993c62ce81883d2dd1b51a28");
+
+                let ct0_only = &ct0[..ct0.len()-16];
+                let tag0 = &ct0[ct0.len()-16..];
+                println!("  Enc 0: nonce={:02x?}, aad_len={}, ct_len={}, tag={:02x?}",
+                    &nonce0, aad0.len(), ct0_only.len(), tag0);
+                println!("  Enc 2: nonce={:02x?}, aad_len={}, ct_len={}, tag={:02x?}",
+                    &nonce, aad.len(), ct_only.len(), tag);
+
+                // Generate Poly1305 key for both to compare
+                use hpcrypt_cipher::chacha20::ChaCha20;
+                let mut poly_key0 = [0u8; 32];
+                let mut poly_key2 = [0u8; 32];
+
+                let mut nonce0_arr = [0u8; 12];
+                nonce0_arr.copy_from_slice(&nonce0);
+                let mut chacha0 = ChaCha20::new(&key_arr, &nonce0_arr, 0);
+                chacha0.encrypt(&mut poly_key0);
+
+                let mut chacha2 = ChaCha20::new(&key_arr, &nonce_arr, 0);
+                chacha2.encrypt(&mut poly_key2);
+
+                println!("\nPoly1305 keys:");
+                println!("  Enc 0 poly_key: {:02x?}", &poly_key0[..16]);
+                println!("  Enc 2 poly_key: {:02x?}", &poly_key2[..16]);
+
+                // Manually compute MAC for Enc 2 to diagnose
+                use hpcrypt_mac::Poly1305;
+                let mut mac = Poly1305::new(&poly_key2);
+
+                // Add AAD with padding
+                mac.update(&aad);
+                if aad.len() % 16 != 0 {
+                    let padding = [0u8; 16];
+                    mac.update(&padding[..(16 - (aad.len() % 16))]);
+                }
+
+                // Add ciphertext with padding
+                mac.update(ct_only);
+                if ct_only.len() % 16 != 0 {
+                    let padding = [0u8; 16];
+                    mac.update(&padding[..(16 - (ct_only.len() % 16))]);
+                }
+
+                // Add lengths
+                let mut lengths = [0u8; 16];
+                let aad_len_bytes = (aad.len() as u64).to_le_bytes();
+                let ct_len_bytes = (ct_only.len() as u64).to_le_bytes();
+                lengths[0..8].copy_from_slice(&aad_len_bytes);
+                lengths[8..16].copy_from_slice(&ct_len_bytes);
+                mac.update(&lengths);
+
+                let computed_tag = mac.finalize();
+                println!("\nManual MAC computation:");
+                println!("  Expected tag: {:02x?}", tag);
+                println!("  Computed tag: {:02x?}", &computed_tag);
+                println!("  Tags match: {}", computed_tag.as_ref() == tag);
+
+                panic!("Standalone decrypt FAILED - ChaCha20Poly1305 has a bug");
+            }
+        }
+    }
+
+    #[test]
+    fn test_rfc9180_vector_chacha() {
+        // RFC 9180 Test Vector: X25519 + Base + HKDF-SHA256 + ChaCha20-Poly1305
+        fn decode_hex(s: &str) -> Vec<u8> {
+            (0..s.len())
+                .step_by(2)
+                .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
+                .collect()
+        }
+
+        let sk_rm = decode_hex("8057991eef8f1f1af18f4a9491d16a1ce333f695d4db8e38da75975c4478e0fb");
+        let enc = decode_hex("1afa08d3dec047a643885163f1180476fa7ddb54c6a8029ea33f95796bf2ac4a");
+        let info = decode_hex("4f6465206f6e2061204772656369616e2055726e");
+
+        let hpke = HpkeX25519::with_chacha();
+        let mut recipient_ctx = hpke.setup_base_recipient(&enc, &sk_rm, &info).unwrap();
+
+        // Test encryptions 0, 1, 2, 3
+        let test_cases = vec![
+            ("436f756e742d30", "1c5250d8034ec2b784ba2cfd69dbdb8af406cfe3ff938e131f0def8c8b60b4db21993c62ce81883d2dd1b51a28"),
+            ("436f756e742d31", "6b53c051e4199c518de79594e1c4ab18b96f081549d45ce015be002090bb119e85285337cc95ba5f59992dc98c"),
+            ("436f756e742d32", "71146bd6795ccc9c49ce25dda112a48f202ad220559502cef1f34271e0cb4b02b4f10ecac6f48c32f878fae86b"),
+            ("436f756e742d33", "5b23a1bb4a46eb6534d7929b88055d6a73fe36fa2209b7c851391a8b73aba3f8034e2cc588317ad35804fa4f0c"),
+        ];
+
+        let expected_pt = decode_hex("4265617574792069732074727574682c20747275746820626561757479");
+
+        for (i, (aad_hex, ct_hex)) in test_cases.iter().enumerate() {
+            let aad = decode_hex(aad_hex);
+            let ct = decode_hex(ct_hex);
+
+            let pt = recipient_ctx.open(&aad, &ct)
+                .expect(&format!("Encryption {} should decrypt successfully", i));
+            assert_eq!(pt, expected_pt, "Encryption {} plaintext mismatch", i);
+        }
+    }
 }
