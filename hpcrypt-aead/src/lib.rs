@@ -51,7 +51,7 @@ pub use aes_eax::{Aes128Eax, Aes192Eax, Aes256Eax};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use aes_gcm::{Aes128Gcm, Aes192Gcm, Aes256Gcm, NONCE_SIZE, TAG_SIZE, gcm_encrypt_variable, gcm_decrypt_variable};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use aes_gcm_siv::Aes128GcmSiv;
+pub use aes_gcm_siv::{Aes128GcmSiv, Aes256GcmSiv};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use aes_ocb::{Aes128Ocb, Aes256Ocb};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
@@ -71,5 +71,5 @@ pub use ascon::{Ascon128, Ascon128Nist, Ascon128a};
 // Re-export from hpcrypt-mac for convenience
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use hpcrypt_mac::{
-    ghash, gmac128, gmac192, gmac256, GHashFast, Gmac128, Gmac192, Gmac256, Poly1305, Polyval,
+    gmac128, gmac192, gmac256, Ghash, GhashKey, Gmac128, Gmac192, Gmac256, Poly1305, Polyval,
 };
