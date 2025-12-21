@@ -157,6 +157,11 @@ path = "tests/ecdsa_p521.rs"
 required-features = ["enable-signature-tests"]
 
 [[test]]
+name = "ed448"
+path = "tests/ed448.rs"
+required-features = ["enable-signature-tests"]
+
+[[test]]
 name = "tls13_kdf"
 path = "tests/tls13_kdf.rs"
 required-features = ["enable-kdf-tests"]

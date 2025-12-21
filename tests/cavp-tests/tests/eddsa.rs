@@ -1,13 +1,17 @@
 //! NIST CAVP/ACVP Test Vectors for EdDSA
 //!
-//! Tests EdDSA (Ed25519) signature verification against NIST test vectors.
+//! Tests EdDSA (Ed25519 and Ed448) signature verification against NIST test vectors.
 //!
 //! Test vectors from: tests/cavp-vectors/gen-val/json-files/EDDSA-SigVer-1.0/
+//!
+//! Note: PreHash variants (Ed25519ph, Ed448ph) are currently skipped as they require
+//! implementation of the prehash flag in the signing/verification functions.
 
 #![cfg(feature = "hpcrypt-curves")]
 
 use cavp_tests::{decode_hex, load_test_file, TestStats};
-use hpcrypt_curves::ed25519::{PublicKey, Signature};
+use hpcrypt_curves::ed25519;
+use hpcrypt_curves::ed448;
 use hpcrypt_curves::Ed25519;
 use serde::Deserialize;
 
@@ -70,8 +74,14 @@ fn test_ed25519_sigver() {
     };
 
     for test_group in &prompt.test_groups {
-        // Only test Ed25519, skip Ed448 and preHash variants for now
-        if test_group.curve != "ED-25519" || test_group.pre_hash {
+        // Skip preHash variants (Ed25519ph, Ed448ph) - not yet implemented
+        if test_group.pre_hash {
+            stats.skipped += test_group.tests.len();
+            continue;
+        }
+
+        // Only test Ed25519 and Ed448 (non-preHash)
+        if test_group.curve != "ED-25519" && test_group.curve != "ED-448" {
             stats.skipped += test_group.tests.len();
             continue;
         }
@@ -104,43 +114,82 @@ fn test_ed25519_sigver() {
             let pub_key_bytes = decode_hex(&test.q);
             let sig_bytes = decode_hex(&test.signature);
 
-            // Convert to fixed-size arrays
-            let public_key: PublicKey = match pub_key_bytes.as_slice().try_into() {
-                Ok(pk) => pk,
-                Err(_) => {
-                    // Invalid public key length - should fail verification
-                    if !expected_test.test_passed {
-                        stats.passed += 1;
-                    } else {
-                        println!(
-                            "FAIL: Test {} - Invalid public key length but expected to pass",
-                            test.tc_id
-                        );
-                        stats.failed += 1;
+            // Verify signature based on curve type
+            let verified = if test_group.curve == "ED-25519" {
+                // Ed25519: 32-byte public key, 64-byte signature
+                let public_key: ed25519::PublicKey = match pub_key_bytes.as_slice().try_into() {
+                    Ok(pk) => pk,
+                    Err(_) => {
+                        // Invalid public key length - should fail verification
+                        if !expected_test.test_passed {
+                            stats.passed += 1;
+                        } else {
+                            println!(
+                                "FAIL: Test {} - Invalid Ed25519 public key length but expected to pass",
+                                test.tc_id
+                            );
+                            stats.failed += 1;
+                        }
+                        continue;
                     }
-                    continue;
-                }
-            };
+                };
 
-            let signature: Signature = match sig_bytes.as_slice().try_into() {
-                Ok(sig) => sig,
-                Err(_) => {
-                    // Invalid signature length - should fail verification
-                    if !expected_test.test_passed {
-                        stats.passed += 1;
-                    } else {
-                        println!(
-                            "FAIL: Test {} - Invalid signature length but expected to pass",
-                            test.tc_id
-                        );
-                        stats.failed += 1;
+                let signature: ed25519::Signature = match sig_bytes.as_slice().try_into() {
+                    Ok(sig) => sig,
+                    Err(_) => {
+                        // Invalid signature length - should fail verification
+                        if !expected_test.test_passed {
+                            stats.passed += 1;
+                        } else {
+                            println!(
+                                "FAIL: Test {} - Invalid Ed25519 signature length but expected to pass",
+                                test.tc_id
+                            );
+                            stats.failed += 1;
+                        }
+                        continue;
                     }
-                    continue;
-                }
-            };
+                };
 
-            // Verify signature
-            let verified = Ed25519::verify(&public_key, &message, &signature);
+                Ed25519::verify(&public_key, &message, &signature)
+            } else {
+                // Ed448: 57-byte public key, 114-byte signature
+                let public_key: ed448::PublicKey = match pub_key_bytes.as_slice().try_into() {
+                    Ok(pk) => pk,
+                    Err(_) => {
+                        // Invalid public key length - should fail verification
+                        if !expected_test.test_passed {
+                            stats.passed += 1;
+                        } else {
+                            println!(
+                                "FAIL: Test {} - Invalid Ed448 public key length but expected to pass",
+                                test.tc_id
+                            );
+                            stats.failed += 1;
+                        }
+                        continue;
+                    }
+                };
+
+                let signature: ed448::Signature = match sig_bytes.as_slice().try_into() {
+                    Ok(sig) => sig,
+                    Err(_) => {
+                        // Invalid signature length - should fail verification
+                        if !expected_test.test_passed {
+                            stats.passed += 1;
+                        } else {
+                            println!(
+                                "FAIL: Test {} - Invalid Ed448 signature length but expected to pass",
+                                test.tc_id
+                            );
+                            stats.failed += 1;
+                        }
+                        continue;
+                    }
+                };
+
+                ed448::verify(&public_key, &message, &signature)
+            };
 
             if verified == expected_test.test_passed {
                 stats.passed += 1;
@@ -155,13 +204,13 @@ fn test_ed25519_sigver() {
     }
 
     println!(
-        "Ed25519 Results: {} passed, {} failed, {} skipped",
+        "EdDSA Results: {} passed, {} failed, {} skipped",
         stats.passed, stats.failed, stats.skipped
     );
     assert_eq!(stats.failed, 0, "{} tests failed", stats.failed);
 }
 
 #[test]
-fn test_ed25519_signature_verification() {
+fn test_eddsa_signature_verification() {
     test_ed25519_sigver();
 }
