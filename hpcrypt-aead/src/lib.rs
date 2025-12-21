@@ -49,7 +49,7 @@ pub use aes_ccm::{Aes128Ccm, Aes256Ccm, CcmError};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use aes_eax::{Aes128Eax, Aes192Eax, Aes256Eax};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
-pub use aes_gcm::{Aes128Gcm, Aes192Gcm, Aes256Gcm, NONCE_SIZE, TAG_SIZE};
+pub use aes_gcm::{Aes128Gcm, Aes192Gcm, Aes256Gcm, NONCE_SIZE, TAG_SIZE, gcm_encrypt_variable, gcm_decrypt_variable};
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
 pub use aes_gcm_siv::Aes128GcmSiv;
 #[cfg(not(all(feature = "ascon-only", not(feature = "std"))))]
