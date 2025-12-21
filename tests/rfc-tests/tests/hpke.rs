@@ -52,49 +52,90 @@ fn test_hpke_rfc9180() {
     let mut stats = TestStats::new();
 
     for (idx, test) in test_vectors.iter().enumerate() {
-        // Filter for supported configurations (X25519, Base mode, AES-128-GCM)
-        if test.kem_id != 32 {
-            // Skip non-X25519 tests
-            stats.skipped += 1;
-            continue;
-        }
+        // Check if this configuration is supported
+        let kem_supported = matches!(test.kem_id, 32 | 16); // X25519=32, P-256=16
+        let mode_supported = test.mode <= 3; // 0=Base, 1=PSK, 2=Auth, 3=AuthPSK
+        let kdf_supported = matches!(test.kdf_id, 1 | 2 | 3); // HKDF-SHA256/384/512
+        let aead_supported = matches!(test.aead_id, 1 | 2 | 3); // AES-128/256-GCM, ChaCha20
 
-        if test.mode != 0 {
-            // Skip non-Base mode tests for now (PSK, Auth, AuthPSK)
-            stats.skipped += 1;
-            continue;
-        }
-
-        if test.aead_id != 1 {
-            // Skip non-AES-128-GCM tests for now
-            stats.skipped += 1;
-            continue;
-        }
-
-        if test.kdf_id != 1 {
-            // Skip non-HKDF-SHA256 tests for now
+        if !kem_supported || !mode_supported || !kdf_supported || !aead_supported {
             stats.skipped += 1;
             continue;
         }
 
         println!("\n--- Test {} ---", idx + 1);
-        println!("  Mode: {} (Base)", test.mode);
-        println!("  KEM: {} (X25519)", test.kem_id);
-        println!("  KDF: {} (HKDF-SHA256)", test.kdf_id);
-        println!("  AEAD: {} (AES-128-GCM)", test.aead_id);
+        let mode_name = match test.mode {
+            0 => "Base",
+            1 => "PSK",
+            2 => "Auth",
+            3 => "AuthPSK",
+            _ => "Unknown",
+        };
+        let kem_name = match test.kem_id {
+            16 => "P-256",
+            32 => "X25519",
+            _ => "Unknown",
+        };
+        let kdf_name = match test.kdf_id {
+            1 => "HKDF-SHA256",
+            2 => "HKDF-SHA384",
+            3 => "HKDF-SHA512",
+            _ => "Unknown",
+        };
+        let aead_name = match test.aead_id {
+            1 => "AES-128-GCM",
+            2 => "AES-256-GCM",
+            3 => "ChaCha20-Poly1305",
+            _ => "Unknown",
+        };
+
+        println!("  Mode: {} ({})", test.mode, mode_name);
+        println!("  KEM: {} ({})", test.kem_id, kem_name);
+        println!("  KDF: {} ({})", test.kdf_id, kdf_name);
+        println!("  AEAD: {} ({})", test.aead_id, aead_name);
         println!("  Encryptions: {}", test.encryptions.len());
+
+        // Currently only Base mode with X25519 is tested
+        // TODO: Add support for all modes and KEMs
+        if test.mode != 0 {
+            println!("  SKIP: Only Base mode implemented in tests");
+            stats.skipped += 1;
+            continue;
+        }
+
+        if test.kem_id != 32 {
+            println!("  SKIP: Only X25519 KEM implemented in tests");
+            stats.skipped += 1;
+            continue;
+        }
+
+        if test.kdf_id != 1 {
+            println!("  SKIP: Only HKDF-SHA256 configured in tests");
+            stats.skipped += 1;
+            continue;
+        }
 
         // Decode keys and setup values
         let sk_r = decode_hex(&test.sk_rm);
         let enc = decode_hex(&test.enc);
         let info = decode_hex(&test.info);
 
-        // Setup recipient context
-        let hpke = hpcrypt_hpke::HpkeX25519::new();
+        // Setup recipient context with appropriate AEAD
+        let hpke = match test.aead_id {
+            1 => hpcrypt_hpke::HpkeX25519::new(),           // AES-128-GCM
+            2 => hpcrypt_hpke::HpkeX25519::with_aes256(),   // AES-256-GCM
+            3 => hpcrypt_hpke::HpkeX25519::with_chacha(),   // ChaCha20-Poly1305
+            _ => {
+                println!("  SKIP: Unsupported AEAD ID {}", test.aead_id);
+                stats.skipped += 1;
+                continue;
+            }
+        };
+
         let mut recipient_ctx = match hpke.setup_base_recipient(&enc, &sk_r, &info) {
             Ok(ctx) => ctx,
             Err(e) => {
-                println!("  Failed to setup recipient: {:?}", e);
+                println!("  FAIL: Failed to setup recipient: {:?}", e);
                 stats.failed += 1;
                 continue;
             }
@@ -121,7 +162,15 @@ fn test_hpke_rfc9180() {
                     test_failed += 1;
                 }
                 Err(e) => {
-                    println!("    Encryption {}: Decryption failed: {:?}", enc_idx, e);
+                    // Only show first few failures for ChaCha20 to avoid spam
+                    if test.aead_id == 3 && enc_idx < 5 {
+                        println!("    Encryption {}: Decryption failed: {:?}", enc_idx, e);
+                        println!("      Nonce: {}", &encryption.nonce);
+                        println!("      AAD: {}", &encryption.aad);
+                        println!("      CT length: {}", encryption.ct.len());
+                    } else if test.aead_id != 3 {
+                        println!("    Encryption {}: Decryption failed: {:?}", enc_idx, e);
+                    }
                     test_failed += 1;
                 }
             }
