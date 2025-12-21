@@ -96,8 +96,9 @@
 
 #![forbid(unsafe_code)]
 
-#[cfg(test)]
+#[cfg(feature = "alloc")]
 extern crate alloc;
+
 #[cfg(test)]
 use alloc::vec::Vec;
 
@@ -584,6 +585,158 @@ pub fn gmac256(
     data: &[u8],
 ) -> [u8; TAG_SIZE] {
     Gmac256::mac(key, nonce, data)
+}
+
+// ============================================================================
+// Variable IV/Tag Length API
+// ============================================================================
+
+/// GMAC with variable IV length and custom tag size
+///
+/// This is the flexible API that supports any IV length per NIST SP 800-38D.
+/// For 96-bit IVs, use the standard `gmac128`/`gmac192`/`gmac256` functions.
+///
+/// # Arguments
+/// * `key` - AES key (16, 24, or 32 bytes)
+/// * `iv` - Initialization vector (any length, 96 bits recommended)
+/// * `data` - Data to authenticate
+/// * `tag_len` - Desired tag length in bytes (4, 8, 12, 13, 14, 15, or 16)
+///
+/// # Returns
+/// Authentication tag of the requested length, or error if parameters are invalid
+#[cfg(feature = "alloc")]
+pub fn gmac_variable(
+    key: &[u8],
+    iv: &[u8],
+    data: &[u8],
+    tag_len: usize,
+) -> Result<alloc::vec::Vec<u8>, GmacError> {
+    use alloc::vec::Vec;
+
+    let cipher = match key.len() {
+        AES128_KEY_SIZE => Aes::new_128(key.try_into().unwrap()),
+        AES192_KEY_SIZE => Aes::new_192(key.try_into().unwrap()),
+        AES256_KEY_SIZE => Aes::new_256(key.try_into().unwrap()),
+        _ => return Err(GmacError::InvalidKeyLength {
+            expected: &[16, 24, 32],
+            actual: key.len(),
+        }),
+    };
+
+    // Validate tag length per NIST SP 800-38D
+    if !matches!(tag_len, 4 | 8 | 12 | 13 | 14 | 15 | 16) {
+        return Err(GmacError::InvalidTagLength {
+            expected: &[4, 8, 12, 13, 14, 15, 16],
+            actual: tag_len,
+        });
+    }
+
+    let full_tag = gmac_variable_internal(&cipher, iv, data);
+    Ok(full_tag[..tag_len].to_vec())
+}
+
+/// Compute J0 (initial counter) for variable-length IV
+///
+/// Per NIST SP 800-38D:
+/// - If len(IV) = 96: J0 = IV || 0^31 || 1
+/// - Otherwise: J0 = GHASH(H, {}, IV || 0^s || len(IV))
+fn compute_gmac_j0(h: &[u8; BLOCK_SIZE], iv: &[u8]) -> [u8; BLOCK_SIZE] {
+    if iv.len() == NONCE_SIZE {
+        // 96-bit IV: J0 = IV || 0^31 || 1
+        let mut j0 = [0u8; BLOCK_SIZE];
+        j0[..NONCE_SIZE].copy_from_slice(iv);
+        j0[BLOCK_SIZE - 1] = 1;
+        j0
+    } else {
+        // Variable-length IV: J0 = GHASH(H, {}, IV || 0^s || len(IV))
+        let mut ghash = GHashFast::new_default(h);
+
+        // Process IV in 16-byte blocks
+        for chunk in iv.chunks(BLOCK_SIZE) {
+            let mut block = [0u8; BLOCK_SIZE];
+            block[..chunk.len()].copy_from_slice(chunk);
+            ghash.update(&block);
+        }
+
+        // Final block: 64 bits of zeros || 64-bit len(IV) in bits
+        let iv_bits = (iv.len() as u64) * 8;
+        let mut len_block = [0u8; BLOCK_SIZE];
+        len_block[8..].copy_from_slice(&iv_bits.to_be_bytes());
+        ghash.update(&len_block);
+
+        ghash.finalize()
+    }
+}
+
+/// Internal GMAC computation with variable IV length
+fn gmac_variable_internal(cipher: &Aes, iv: &[u8], data: &[u8]) -> [u8; TAG_SIZE] {
+    // Derive hash key H = AES(K, 0^128)
+    let h = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
+
+    // Create GHASH instance
+    let mut ghash = GHashFast::new_default(&h);
+
+    // Process data (treated as AAD in GCM terminology)
+    for chunk in data.chunks(BLOCK_SIZE) {
+        let mut block = [0u8; BLOCK_SIZE];
+        block[..chunk.len()].copy_from_slice(chunk);
+        ghash.update(&block);
+    }
+
+    // Add length block: len(A) || len(C)
+    // For GMAC, ciphertext length is 0, so: len(data) || 0
+    let data_bits = (data.len() as u64) * 8;
+    let mut len_block = [0u8; BLOCK_SIZE];
+    len_block[..8].copy_from_slice(&data_bits.to_be_bytes());
+    ghash.update(&len_block);
+
+    let ghash_result = ghash.finalize();
+
+    // Compute J0 based on IV length
+    let j0 = compute_gmac_j0(&h, iv);
+
+    // Encrypt J0 with AES
+    let encrypted_j0 = cipher.encrypt_block(&j0);
+
+    // XOR GHASH result with encrypted J0 to produce final tag
+    let mut tag = [0u8; TAG_SIZE];
+    for i in 0..TAG_SIZE {
+        tag[i] = ghash_result[i] ^ encrypted_j0[i];
+    }
+
+    tag
+}
+
+/// Error type for GMAC operations with variable parameters
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GmacError {
+    /// Invalid key length
+    InvalidKeyLength {
+        /// Expected key lengths
+        expected: &'static [usize],
+        /// Actual key length provided
+        actual: usize,
+    },
+    /// Invalid tag length
+    InvalidTagLength {
+        /// Expected tag lengths
+        expected: &'static [usize],
+        /// Actual tag length provided
+        actual: usize,
+    },
+}
+
+impl core::fmt::Display for GmacError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::InvalidKeyLength { expected, actual } => {
+                write!(f, "Invalid key length: expected {:?} bytes, got {} bytes", expected, actual)
+            }
+            Self::InvalidTagLength { expected, actual } => {
+                write!(f, "Invalid tag length: expected {:?} bytes, got {} bytes", expected, actual)
+            }
+        }
+    }
 }
 
 #[cfg(test)]
