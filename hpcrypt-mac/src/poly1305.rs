@@ -287,10 +287,11 @@ impl Poly1305 {
         let overflow2 = res2 >> 2;
         res2 &= 3;  // Keep only lower 2 bits
 
-        let overflow2_times_5 = overflow2.wrapping_mul(5);
-        let (new_res0_2, c2) = res0.overflowing_add(overflow2_times_5);
+        // overflow2 * 5 can be up to 65 bits, so we need to handle the overflow
+        let (overflow2_times_5_lo, overflow2_times_5_hi) = mul128(overflow2, 5);
+        let (new_res0_2, c2) = res0.overflowing_add(overflow2_times_5_lo);
         res0 = new_res0_2;
-        res1 = res1.wrapping_add(c2 as u64);
+        res1 = res1.wrapping_add(overflow2_times_5_hi).wrapping_add(c2 as u64);
 
         // Final result
         self.h[0] = res0;
