@@ -5,12 +5,26 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-use hpcrypt_mac::{HmacSha256, HmacSha512, Mac};
+use hpcrypt_mac::{HmacSha224, HmacSha256, HmacSha384, HmacSha512, Mac};
+
+/// PBKDF2 with HMAC-SHA224
+pub fn pbkdf2_hmac_sha224(password: &[u8], salt: &[u8], iterations: u32, output: &mut [u8]) {
+    pbkdf2_inner::<28>(password, salt, iterations, output, |key, data| {
+        HmacSha224::compute(key, data)
+    });
+}
 
 /// PBKDF2 with HMAC-SHA256
 pub fn pbkdf2_hmac_sha256(password: &[u8], salt: &[u8], iterations: u32, output: &mut [u8]) {
     pbkdf2_inner::<32>(password, salt, iterations, output, |key, data| {
         HmacSha256::compute(key, data)
+    });
+}
+
+/// PBKDF2 with HMAC-SHA384
+pub fn pbkdf2_hmac_sha384(password: &[u8], salt: &[u8], iterations: u32, output: &mut [u8]) {
+    pbkdf2_inner::<48>(password, salt, iterations, output, |key, data| {
+        HmacSha384::compute(key, data)
     });
 }
 

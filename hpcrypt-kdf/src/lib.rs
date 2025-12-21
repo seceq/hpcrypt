@@ -24,7 +24,7 @@ pub use hkdf::{
     hkdf_blake2b, hkdf_sha256, hkdf_sha384, hkdf_sha512, HkdfBlake2b, HkdfSha256, HkdfSha384,
     HkdfSha512,
 };
-pub use pbkdf2::{pbkdf2_hmac_sha256, pbkdf2_hmac_sha512};
+pub use pbkdf2::{pbkdf2_hmac_sha224, pbkdf2_hmac_sha256, pbkdf2_hmac_sha384, pbkdf2_hmac_sha512};
 #[cfg(feature = "quic-header-protection")]
 pub use quic_header::{
     HeaderProtection, HeaderProtectionAes128, HeaderProtectionAes256, HeaderProtectionChaCha20,
