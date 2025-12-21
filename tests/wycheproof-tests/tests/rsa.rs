@@ -6,7 +6,7 @@
 //! - RSA-OAEP encryption
 
 #[cfg(feature = "enable-rsa-tests")]
-use hpcrypt_hash::sha256::Sha256 as HpcryptSha256;
+use hpcrypt_hash::{HashFunction, sha256::Sha256 as HpcryptSha256};
 #[cfg(feature = "enable-rsa-tests")]
 use hpcrypt_rsa::{pkcs1v15::verify_pkcs1v15, pss::verify_pss, pss::Sha256, RsaPublicKey};
 #[cfg(feature = "enable-rsa-tests")]
