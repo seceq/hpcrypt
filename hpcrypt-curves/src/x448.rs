@@ -142,37 +142,33 @@ fn montgomery_ladder(scalar: &[u8; 56], u: &FieldElement) -> [u8; 56] {
         // swap = k_t
         swap = k_t;
 
-        // Lazy reduction optimization: use add_unreduced/sub_unreduced in ladder
-        // to avoid expensive reductions on every operation.
-        // Only multiplications and final result need full reduction.
-
         // Montgomery ladder step (RFC 7748, Section 5)
         // A = x_2 + z_2
-        let a = x_2.add_unreduced(&z_2);
+        let a = x_2 + z_2;
         // AA = A^2
         let aa = a.square();
         // B = x_2 - z_2
-        let b = x_2.sub_unreduced(&z_2);
+        let b = x_2 - z_2;
         // BB = B^2
         let bb = b.square();
         // E = AA - BB
-        let e = aa.sub_unreduced(&bb);
+        let e = aa - bb;
         // C = x_3 + z_3
-        let c = x_3.add_unreduced(&z_3);
+        let c = x_3 + z_3;
         // D = x_3 - z_3
-        let d = x_3.sub_unreduced(&z_3);
+        let d = x_3 - z_3;
         // DA = D * A
         let da = d * a;
         // CB = C * B
         let cb = c * b;
         // x_3 = (DA + CB)^2
-        x_3 = da.add_unreduced(&cb).square();
+        x_3 = (da + cb).square();
         // z_3 = x_1 * (DA - CB)^2
-        z_3 = x_1 * da.sub_unreduced(&cb).square();
+        z_3 = x_1 * (da - cb).square();
         // x_2 = AA * BB
         x_2 = aa * bb;
         // z_2 = E * (AA + a24 * E)
-        z_2 = e * aa.add_unreduced(&(a24 * e));
+        z_2 = e * (aa + (a24 * e));
     }
 
     // OPTIMIZATION: Eliminate final swap
@@ -206,6 +202,98 @@ mod tests {
 
         // Public key should not be all zeros
         assert!(!is_zero(&public_key));
+    }
+
+    #[test]
+    fn test_ladder_single_iteration() {
+        // Test a single Montgomery ladder iteration with known inputs
+        // This tests the core field arithmetic in the ladder context
+
+        // Initial values for first iteration (after cswap when k_t=1)
+        let u = 2u64.pow(24); // 2^192 = 2^(168+24) in limb 3
+        let x_1 = FieldElement::from_limbs([0, 0, 0, u, 0, 0, 0, 0]); // 2^192
+        let x_2 = x_1; // After cswap
+        let z_2 = FieldElement::one();
+        let x_3 = FieldElement::one();
+        let z_3 = FieldElement::zero();
+        let a24 = FieldElement::from_limbs([39081, 0, 0, 0, 0, 0, 0, 0]);
+
+        // One ladder step
+        let a = x_2.add(&z_2);
+        let aa = a.square();
+        let b = x_2.sub(&z_2);
+        let bb = b.square();
+        let e = aa.sub(&bb);
+        let c = x_3.add(&z_3);
+        let d = x_3.sub(&z_3);
+        let da = d * a;
+        let cb = c * b;
+        let _new_x_3 = da.add(&cb).square();
+        let _new_z_3 = x_1 * da.sub(&cb).square();
+        let new_x_2 = aa * bb;
+        let new_z_2 = e * aa.add(&(a24 * e));
+
+        // Just check that we got something non-zero
+        assert!(!bool::from(new_x_2.is_zero()), "x_2 should not be zero after one iteration");
+        assert!(!bool::from(new_z_2.is_zero()), "z_2 should not be zero after one iteration");
+
+        // Detailed check: verify A = x_2 + z_2 = 2^192 + 1
+        let expected_a = FieldElement::from_limbs([1, 0, 0, 1 << 24, 0, 0, 0, 0]);
+        assert_eq!(
+            a.strong_reduce(),
+            expected_a.strong_reduce(),
+            "A = x_2 + z_2 should equal 2^192 + 1"
+        );
+
+        // Check AA = A^2 = (2^192 + 1)^2 = 2^384 + 2*2^192 + 1 = 2^384 + 2^193 + 1
+        // From Python: AA = 39402006196394479212279040100143613805079739270465446667960847607716495133024882190260681587717120351695556059332609
+        // 2^384 = limb[6] bit 48
+        // 2^193 = limb[3] bit 25
+        // Result: limb[0]=1, limb[3]=2^25, limb[6]=2^48
+        let expected_aa = FieldElement::from_limbs([1, 0, 0, 1 << 25, 0, 0, 1 << 48, 0]);
+        assert_eq!(
+            aa.strong_reduce(),
+            expected_aa.strong_reduce(),
+            "AA = A^2 should equal 2^384 + 2^193 + 1"
+        );
+
+        // Check BB first
+        // B = 2^192 - 1 (mod p)
+        // BB = B^2 = (2^192 - 1)^2 = 2^384 - 2*2^192 + 1 = 2^384 - 2^193 + 1
+        // 2^384 = limb[6] bit 48
+        // -2^193 = we need to borrow, so this is p - 2^193 in the representation
+        // Actually, let me compute this more carefully:
+        // 2^384 - 2^193 + 1 mod p should be computed properly
+
+        // First verify B
+        // B = 2^192 - 1 should work out to limb[3] having 2^24-1 and lower limbs having all 1s
+        // Actually: 2^192 - 1 = 2^192 - 1, but we compute x_2 - z_2 = 2^192 - 1
+        // This means limbs 0-2 are all 0xffffffffffffff, and limb 3 = 2^24 - 1 = 0xffffff
+
+        // Let's check what we actually get for BB
+        let bb_reduced = bb.strong_reduce();
+        // From Python: BB should be 2^384 - 2^193 + 1
+        // Let's verify via Python result...
+
+        // E = AA - BB = (2^384 + 2^193 + 1) - (2^384 - 2^193 + 1) = 2*2^193 = 2^194
+        // 2^194 = limb[3] bit 26
+        let expected_e = FieldElement::from_limbs([0, 0, 0, 1 << 26, 0, 0, 0, 0]);
+
+        // Debug: print BB to understand the issue
+        // BB has an error if E has an error and AA is correct
+        let expected_bb = aa.sub(&expected_e);
+        assert_eq!(
+            bb_reduced,
+            expected_bb.strong_reduce(),
+            "BB = (2^192 - 1)^2 should equal 2^384 - 2^193 + 1.\nGot BB: {:?}\nAA: {:?}\nExpected BB (from AA-E): {:?}",
+            bb_reduced.limbs, aa.strong_reduce().limbs, expected_bb.strong_reduce().limbs
+        );
+
+        assert_eq!(
+            e.strong_reduce(),
+            expected_e.strong_reduce(),
+            "E = AA - BB should equal 2^194"
+        );
     }
 
     #[test]

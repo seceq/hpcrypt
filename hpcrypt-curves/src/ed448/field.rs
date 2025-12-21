@@ -72,7 +72,7 @@ impl FieldElement {
         // Iterate reduction until no more carries
         // This handles cases where reduction creates new carries
         for _ in 0..5 {
-            // Increased from 3 to 5 iterations
+            // Use 5 iterations (sufficient for normal carry propagation)
             // Propagate carries through all limbs
             let mut carry = 0u64;
             for i in 0..8 {
@@ -223,14 +223,65 @@ impl FieldElement {
 
     /// Field subtraction
     pub fn sub(&self, other: &Self) -> Self {
-        // Compute self - other + p to avoid underflow
-        let mut limbs = [0u64; 8];
+        // Compute self - other + p using i128 to avoid overflow/underflow issues
+        // Then propagate borrows correctly
+
+        let mut limbs = [0i128; 8];
+
+        // Compute self + p - other using signed arithmetic
         for i in 0..8 {
-            limbs[i] = self.limbs[i]
-                .wrapping_add(ED448_P[i])
-                .wrapping_sub(other.limbs[i]);
+            limbs[i] = (self.limbs[i] as i128) + (ED448_P[i] as i128) - (other.limbs[i] as i128);
         }
-        Self { limbs }.weak_reduce()
+
+        // Propagate borrows/carries using signed arithmetic
+        for i in 0..7 {
+            // If limb is negative, borrow from next limb
+            while limbs[i] < 0 {
+                limbs[i] += 1i128 << Self::LIMB_BITS;
+                limbs[i + 1] -= 1;
+            }
+            // If limb is too large, carry to next limb
+            while limbs[i] >= (1i128 << Self::LIMB_BITS) {
+                limbs[i] -= 1i128 << Self::LIMB_BITS;
+                limbs[i + 1] += 1;
+            }
+        }
+
+        // Handle final limb
+        // Convert to u64 array
+        let mut result = [0u64; 8];
+        for i in 0..8 {
+            result[i] = (limbs[i] as u64) & Self::LIMB_MASK;
+        }
+
+        // Handle final carry/borrow using Goldilocks reduction
+        let final_carry = limbs[7] >> Self::LIMB_BITS;
+        if final_carry != 0 {
+            // This could be positive (carry) or negative (borrow that propagated)
+            // For Goldilocks: 2^448 ≡ 2^224 + 1 (mod p)
+            let c = final_carry as i128;
+            let sum0 = (result[0] as i128) + c;
+            result[0] = (sum0 as u64) & Self::LIMB_MASK;
+            let mut carry = sum0 >> Self::LIMB_BITS;
+
+            for i in 1..4 {
+                let sum = (result[i] as i128) + carry;
+                result[i] = (sum as u64) & Self::LIMB_MASK;
+                carry = sum >> Self::LIMB_BITS;
+            }
+
+            let sum4 = (result[4] as i128) + c + carry;
+            result[4] = (sum4 as u64) & Self::LIMB_MASK;
+            carry = sum4 >> Self::LIMB_BITS;
+
+            for i in 5..8 {
+                let sum = (result[i] as i128) + carry;
+                result[i] = (sum as u64) & Self::LIMB_MASK;
+                carry = sum >> Self::LIMB_BITS;
+            }
+        }
+
+        Self { limbs: result }.weak_reduce()
     }
 
     /// Field subtraction with minimal reduction (lazy reduction for Montgomery ladder)
@@ -272,13 +323,64 @@ impl FieldElement {
     /// Field multiplication
     ///
     /// Uses schoolbook multiplication followed by Goldilocks reduction.
-    /// TODO: Implement Karatsuba multiplication for better performance.
     #[inline]
     pub fn mul(&self, other: &Self) -> Self {
-        // Use Karatsuba multiplication for better performance
-        // Karatsuba reduces complexity from O(n²) to O(n^1.585)
-        // For 8 limbs: schoolbook needs 64 muls, Karatsuba needs ~27 muls
-        self.mul_karatsuba(other)
+        // Use schoolbook multiplication for correctness
+        // TODO: Debug Karatsuba and switch back for performance
+        self.mul_schoolbook(other)
+    }
+
+    /// Schoolbook multiplication for Ed448 field elements
+    ///
+    /// Simple O(n²) multiplication with Goldilocks reduction.
+    #[inline]
+    fn mul_schoolbook(&self, other: &Self) -> Self {
+        let a = self.weak_reduce();
+        let b = other.weak_reduce();
+
+        // Compute 16-limb product using schoolbook multiplication
+        let mut product = [0u128; 16];
+        for i in 0..8 {
+            for j in 0..8 {
+                let prod = (a.limbs[i] as u128) * (b.limbs[j] as u128);
+                product[i + j] = product[i + j].wrapping_add(prod);
+            }
+        }
+
+        // Propagate carries in the product array
+        let mut carry = 0u128;
+        for i in 0..16 {
+            let sum = product[i].wrapping_add(carry);
+            product[i] = sum & ((1u128 << Self::LIMB_BITS) - 1);
+            carry = sum >> Self::LIMB_BITS;
+        }
+
+        // Apply Goldilocks reduction: 2^448 ≡ 2^224 + 1 (mod p)
+        let mut limbs = [0u64; 8];
+
+        // Add low part
+        for i in 0..8 {
+            limbs[i] = product[i] as u64;
+        }
+
+        // Add high part with Goldilocks reduction
+        for i in 0..8 {
+            let high_val = product[i + 8];
+
+            // Add to position i
+            limbs[i] = limbs[i].wrapping_add(high_val as u64);
+
+            // Add to position i+4 (with wraparound for Goldilocks)
+            let pos = i + 4;
+            if pos < 8 {
+                limbs[pos] = limbs[pos].wrapping_add(high_val as u64);
+            } else {
+                limbs[pos - 8] = limbs[pos - 8].wrapping_add(high_val as u64);
+                limbs[pos - 4] = limbs[pos - 4].wrapping_add(high_val as u64);
+            }
+        }
+
+        Self { limbs }.weak_reduce()
     }
 
     /// Karatsuba multiplication for Ed448 field elements
@@ -302,20 +404,24 @@ impl FieldElement {
     /// Expected 20-30% speedup over schoolbook multiplication
     #[inline]
     fn mul_karatsuba(&self, other: &Self) -> Self {
+        // Ensure inputs are weakly reduced before multiplication
+        let a = self.weak_reduce();
+        let b = other.weak_reduce();
+
         // Split into low and high 4-limb chunks
-        let a_lo = [self.limbs[0], self.limbs[1], self.limbs[2], self.limbs[3]];
-        let a_hi = [self.limbs[4], self.limbs[5], self.limbs[6], self.limbs[7]];
+        let a_lo = [a.limbs[0], a.limbs[1], a.limbs[2], a.limbs[3]];
+        let a_hi = [a.limbs[4], a.limbs[5], a.limbs[6], a.limbs[7]];
         let b_lo = [
-            other.limbs[0],
-            other.limbs[1],
-            other.limbs[2],
-            other.limbs[3],
+            b.limbs[0],
+            b.limbs[1],
+            b.limbs[2],
+            b.limbs[3],
         ];
         let b_hi = [
-            other.limbs[4],
-            other.limbs[5],
-            other.limbs[6],
-            other.limbs[7],
+            b.limbs[4],
+            b.limbs[5],
+            b.limbs[6],
+            b.limbs[7],
         ];
 
         // Compute z0 = a_lo * b_lo (8 limbs)
@@ -356,7 +462,6 @@ impl FieldElement {
             product[i + 8] = product[i + 8].wrapping_add(z2[i] as u128);
         }
 
-        // Now perform the same Goldilocks reduction as before
         // Propagate carries in the product array
         let mut carry = 0u128;
         for i in 0..16 {
@@ -500,7 +605,9 @@ impl FieldElement {
     /// Reduces the number of multiplications by ~40% compared to general multiplication.
     #[inline]
     pub fn square(&self) -> Self {
-        self.square_optimized()
+        // Use schoolbook squaring for correctness
+        // TODO: Debug optimized squaring and switch back for performance
+        self.mul_schoolbook(self)
     }
 
     /// Optimized squaring using Karatsuba-like structure with symmetry exploitation
@@ -512,9 +619,12 @@ impl FieldElement {
     /// This reduces multiplications from 64 to ~36 (saving 44%).
     #[inline]
     fn square_optimized(&self) -> Self {
+        // Ensure input is weakly reduced before squaring
+        let a = self.weak_reduce();
+
         // Split into low and high 4-limb chunks
-        let a_lo = [self.limbs[0], self.limbs[1], self.limbs[2], self.limbs[3]];
-        let a_hi = [self.limbs[4], self.limbs[5], self.limbs[6], self.limbs[7]];
+        let a_lo = [a.limbs[0], a.limbs[1], a.limbs[2], a.limbs[3]];
+        let a_hi = [a.limbs[4], a.limbs[5], a.limbs[6], a.limbs[7]];
 
         // Compute z0 = a_lo² (uses ~10 muls instead of 16)
         let z0 = Self::square_4x4(&a_lo);
@@ -892,7 +1002,7 @@ impl FieldElement {
             }
         }
 
-        Self { limbs }.weak_reduce()
+        Self { limbs }.weak_reduce().weak_reduce()
     }
 
     /// Convert to 57 bytes (little-endian)
@@ -2571,5 +2681,224 @@ mod tests {
                 i
             );
         }
+    }
+
+    #[test]
+    fn test_from_bytes_2_192() {
+        // Test that from_bytes correctly loads 2^192
+        // In the test vector, byte[24] = 0x01 (all others 0)
+        // This represents 2^192
+        let mut bytes = [0u8; 57];
+        bytes[24] = 0x01;
+
+        let fe = FieldElement::from_bytes(&bytes);
+
+        // 2^192 should be in limb 3
+        // Each limb covers 7 bytes = 56 bits
+        // byte[24] is in limb 24/7 = 3 (bytes 21-27 are limb 3)
+        // Within limb 3, byte 24 is at offset 24-21 = 3, so shift is 3*8 = 24
+        let expected = FieldElement::from_limbs([0, 0, 0, 1 << 24, 0, 0, 0, 0]);
+
+        #[cfg(feature = "std")]
+        {
+            std::println!("from_bytes(2^192):");
+            std::println!("  Input bytes: {:?}", &bytes[20..30]);
+            std::println!("  Loaded limbs: {:?}", fe.limbs);
+            std::println!("  Expected limbs: {:?}", expected.limbs);
+        }
+
+        assert_eq!(
+            fe.strong_reduce(),
+            expected.strong_reduce(),
+            "from_bytes should correctly load 2^192"
+        );
+    }
+
+    #[test]
+    fn test_sub_specific_case() {
+        // Test case from X448 ladder where subtraction fails
+        // AA = 2^384 + 2^193 + 1
+        // BB = 2^384 - 2^193 + 1
+        // E = AA - BB = 2^194
+
+        let aa = FieldElement::from_limbs([1, 0, 0, 1 << 25, 0, 0, 1 << 48, 0]);
+
+        // BB = AA - 2^194 = 2^384 + 2^193 + 1 - 2^194 = 2^384 - 2^193 + 1
+        // (since 2^194 - 2^193 = 2^193)
+        let e_expected = FieldElement::from_limbs([0, 0, 0, 1 << 26, 0, 0, 0, 0]);
+        let bb = aa - e_expected;
+
+        // Now compute E = AA - BB
+        let e = aa - bb;
+
+        #[cfg(feature = "std")]
+        {
+            std::println!("AA limbs: {:?}", aa.limbs);
+            std::println!("BB limbs: {:?}", bb.limbs);
+            std::println!("BB reduced: {:?}", bb.strong_reduce().limbs);
+            std::println!("E computed: {:?}", e.limbs);
+            std::println!("E reduced:  {:?}", e.strong_reduce().limbs);
+            std::println!("E expected: {:?}", e_expected.limbs);
+        }
+
+        assert_eq!(
+            e.strong_reduce(),
+            e_expected.strong_reduce(),
+            "AA - BB should equal 2^194"
+        );
+    }
+
+    #[test]
+    fn test_to_bytes_roundtrip() {
+        // Test to_bytes -> from_bytes roundtrip for various values
+        let test_values = [
+            FieldElement::from_limbs([1, 0, 0, 0, 0, 0, 0, 0]),  // 1
+            FieldElement::from_limbs([0, 0, 0, 1 << 24, 0, 0, 0, 0]),  // 2^192
+            FieldElement::from_limbs([0, 0, 0, 0, 1 << 32, 0, 0, 0]),  // 2^256
+            FieldElement::from_limbs([0, 0, 0, 0, 0, 0, 0, 1 << 48]),  // 2^440
+        ];
+
+        for (i, fe) in test_values.iter().enumerate() {
+            let bytes = fe.to_bytes();
+            let roundtrip = FieldElement::from_bytes(&bytes);
+
+            #[cfg(feature = "std")]
+            {
+                std::println!("Roundtrip test {}:", i);
+                std::println!("  Original limbs: {:?}", fe.limbs);
+                std::println!("  Bytes: {:02x?}", &bytes[..]);
+                std::println!("  Roundtrip limbs: {:?}", roundtrip.limbs);
+            }
+
+            assert_eq!(
+                fe.strong_reduce(),
+                roundtrip.strong_reduce(),
+                "to_bytes -> from_bytes roundtrip failed for test {}", i
+            );
+        }
+    }
+
+    #[test]
+    fn test_invert_correctness() {
+        // Test invert() for various values
+        let test_values = [
+            FieldElement::from_limbs([1, 0, 0, 0, 0, 0, 0, 0]),  // 1
+            FieldElement::from_limbs([2, 0, 0, 0, 0, 0, 0, 0]),  // 2
+            FieldElement::from_limbs([0, 0, 0, 1 << 24, 0, 0, 0, 0]),  // 2^192
+            FieldElement::from_limbs([0, 0, 0, 0, 1 << 32, 0, 0, 0]),  // 2^256
+        ];
+
+        for (i, fe) in test_values.iter().enumerate() {
+            let inv = fe.invert();
+            let product = *fe * inv;
+
+            #[cfg(feature = "std")]
+            {
+                std::println!("Invert test {}:", i);
+                std::println!("  Original: {:?}", fe.limbs);
+                std::println!("  Inverse: {:?}", inv.limbs);
+                std::println!("  Product: {:?}", product.limbs);
+                std::println!("  Product reduced: {:?}", product.strong_reduce().limbs);
+            }
+
+            assert!(
+                bool::from(product.strong_reduce().ct_eq(&FieldElement::one())),
+                "x * x^(-1) should equal 1 for test {}", i
+            );
+        }
+    }
+
+    #[test]
+    fn test_square_2_192() {
+        // Test squaring of 2^192 (value that fails in Wycheproof test 46)
+        // 2^192 is in limb 3 (each limb is 56 bits)
+        // limb 3 represents bits 168-223, so 2^192 = 2^(168+24) = limb[3] bit 24
+
+        // Create 2^192
+        let two_192 = FieldElement::from_limbs([0, 0, 0, 1 << 24, 0, 0, 0, 0]);
+
+        #[cfg(feature = "std")]
+        std::println!("2^192 limbs: {:?}", two_192.limbs);
+
+        // Square it: (2^192)^2 = 2^384
+        // 2^384 < p = 2^448 - 2^224 - 1, so no reduction needed
+        // 2^384 = 2^(56*6 + 48) = limb[6] bit 48
+        let squared = two_192.square();
+
+        #[cfg(feature = "std")]
+        std::println!("2^384 limbs: {:?}", squared.limbs);
+
+        let expected = FieldElement::from_limbs([0, 0, 0, 0, 0, 0, 1 << 48, 0]);
+
+        #[cfg(feature = "std")]
+        std::println!("Expected limbs: {:?}", expected.limbs);
+
+        assert_eq!(
+            squared.strong_reduce(),
+            expected.strong_reduce(),
+            "(2^192)^2 should equal 2^384"
+        );
+    }
+
+    #[test]
+    fn test_square_2_256() {
+        // Test squaring of 2^256 (value that passes in Wycheproof test 48)
+        // 2^256 is in limb 4 (bits 224-279)
+        // 2^256 = 2^(224+32) = limb[4] bit 32
+        let two_256 = FieldElement::from_limbs([0, 0, 0, 0, 1 << 32, 0, 0, 0]);
+
+        // Square it: (2^256)^2 = 2^512 = 2^448 * 2^64
+        // 2^448 ≡ 2^224 + 1 (mod p)
+        // So 2^512 ≡ (2^224 + 1) * 2^64 = 2^288 + 2^64 (mod p)
+        // 2^64 = limb[1] bit 8
+        // 2^288 = limb[5] bit 8
+        let squared = two_256.square();
+
+        let expected = FieldElement::from_limbs([0, 1 << 8, 0, 0, 0, 1 << 8, 0, 0]);
+
+        assert_eq!(
+            squared.strong_reduce(),
+            expected.strong_reduce(),
+            "(2^256)^2 should equal 2^288 + 2^64"
+        );
+    }
+
+    #[test]
+    fn test_square_2_440() {
+        // Test squaring of 2^440 (value that fails in Wycheproof test 50)
+        // 2^440 is in limb 7 (bits 392-447)
+        // 2^440 = 2^(392+48) = limb[7] bit 48
+        let two_440 = FieldElement::from_limbs([0, 0, 0, 0, 0, 0, 0, 1 << 48]);
+
+        #[cfg(feature = "std")]
+        std::println!("2^440 limbs: {:?}", two_440.limbs);
+
+        // Square it: (2^440)^2 = 2^880
+        // 2^880 = 2^(448 + 432) = 2^448 * 2^432
+        // 2^448 ≡ 2^224 + 1 (mod p)
+        // So 2^880 ≡ (2^224 + 1) * 2^432 = 2^656 + 2^432 (mod p)
+        // Now 2^656 = 2^(448 + 208) = 2^448 * 2^208 ≡ (2^224 + 1) * 2^208 = 2^432 + 2^208
+        // So 2^880 ≡ (2^432 + 2^208) + 2^432 = 2*2^432 + 2^208 (mod p)
+        // 2^208 = limb[3] bit 40
+        // 2^432 = limb[7] bit 40
+        // 2*2^432 = limb[7] bit 41
+        let squared = two_440.square();
+
+        #[cfg(feature = "std")]
+        std::println!("2^880 mod p limbs: {:?}", squared.limbs);
+
+        // Expected: 2*2^432 + 2^208 = 2^433 + 2^208
+        // 2^433 = 2^(392 + 41) = limb[7] bit 41
+        // 2^208 = 2^(168 + 40) = limb[3] bit 40
+        let expected = FieldElement::from_limbs([0, 0, 0, 1 << 40, 0, 0, 0, 2 << 40]);
+
+        #[cfg(feature = "std")]
+        std::println!("Expected limbs: {:?}", expected.limbs);
+
+        assert_eq!(
+            squared.strong_reduce(),
+            expected.strong_reduce(),
+            "(2^440)^2 should equal 2^433 + 2^208 = 2*2^432 + 2^208"
+        );
     }
 }
