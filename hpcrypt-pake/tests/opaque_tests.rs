@@ -13,9 +13,10 @@ fn test_opaque_full_registration_flow() {
     let (client_state, reg_request) =
         OpaqueClient::create_registration_request(password, &config).unwrap();
 
-    // Server processes registration
+    // Server processes registration (using storage-backed server)
+    let server = OpaqueServerWithStorage::new(InMemoryStorage::new_with_test_keys());
     let (_server_state, reg_response) =
-        OpaqueServer::create_registration_response(&reg_request, server_id, &config).unwrap();
+        server.create_registration_response(&reg_request, server_id, &config).unwrap();
 
     // Client finalizes registration
     let reg_record = OpaqueClient::finalize_registration_request(
@@ -40,11 +41,14 @@ fn test_opaque_full_authentication_flow() {
     let client_id = b"user@domain.com";
     let server_id = b"auth.domain.com";
 
+    // Server setup with storage
+    let server = OpaqueServerWithStorage::new(InMemoryStorage::new_with_test_keys());
+
     // Registration phase
     let (client_state, reg_request) =
         OpaqueClient::create_registration_request(password, &config).unwrap();
     let (_server_state, reg_response) =
-        OpaqueServer::create_registration_response(&reg_request, server_id, &config).unwrap();
+        server.create_registration_response(&reg_request, server_id, &config).unwrap();
     let reg_record = OpaqueClient::finalize_registration_request(
         password,
         &client_state,
@@ -58,9 +62,9 @@ fn test_opaque_full_authentication_flow() {
     // Authentication phase - Client initiates
     let (client_auth, ke1) = OpaqueClient::generate_ke1(password, &config).unwrap();
 
-    // Server responds
+    // Server responds (using the same storage-backed server)
     let (server_auth, ke2) =
-        OpaqueServer::generate_ke2(&ke1, &reg_record, server_id, &config).unwrap();
+        server.generate_ke2(&ke1, &reg_record, server_id, &config).unwrap();
 
     // Client finalizes
     let (ke3, client_session_key) =
@@ -81,11 +85,14 @@ fn test_opaque_wrong_password_fails() {
     let client_id = b"user@test.com";
     let server_id = b"server.test.com";
 
+    // Server setup with storage
+    let server = OpaqueServerWithStorage::new(InMemoryStorage::new_with_test_keys());
+
     // Registration with correct password
     let (client_state, reg_request) =
         OpaqueClient::create_registration_request(correct_password, &config).unwrap();
     let (_server_state, reg_response) =
-        OpaqueServer::create_registration_response(&reg_request, server_id, &config).unwrap();
+        server.create_registration_response(&reg_request, server_id, &config).unwrap();
     let reg_record = OpaqueClient::finalize_registration_request(
         correct_password,
         &client_state,
@@ -99,7 +106,7 @@ fn test_opaque_wrong_password_fails() {
     // Authentication with wrong password
     let (client_auth, ke1) = OpaqueClient::generate_ke1(wrong_password, &config).unwrap();
     let (_server_auth, ke2) =
-        OpaqueServer::generate_ke2(&ke1, &reg_record, server_id, &config).unwrap();
+        server.generate_ke2(&ke1, &reg_record, server_id, &config).unwrap();
     let result = OpaqueClient::generate_ke3(&client_auth, &ke2, client_id, server_id, &config);
 
     // Should fail with wrong password
@@ -112,11 +119,14 @@ fn test_opaque_different_users_different_records() {
     let password = b"same-password";
     let server_id = b"server.com";
 
+    // Server setup with storage
+    let server = OpaqueServerWithStorage::new(InMemoryStorage::new_with_test_keys());
+
     // User 1 registration
     let (client_state1, reg_request1) =
         OpaqueClient::create_registration_request(password, &config).unwrap();
     let (_server_state1, reg_response1) =
-        OpaqueServer::create_registration_response(&reg_request1, server_id, &config).unwrap();
+        server.create_registration_response(&reg_request1, server_id, &config).unwrap();
     let reg_record1 = OpaqueClient::finalize_registration_request(
         password,
         &client_state1,
@@ -131,7 +141,7 @@ fn test_opaque_different_users_different_records() {
     let (client_state2, reg_request2) =
         OpaqueClient::create_registration_request(password, &config).unwrap();
     let (_server_state2, reg_response2) =
-        OpaqueServer::create_registration_response(&reg_request2, server_id, &config).unwrap();
+        server.create_registration_response(&reg_request2, server_id, &config).unwrap();
     let reg_record2 = OpaqueClient::finalize_registration_request(
         password,
         &client_state2,
