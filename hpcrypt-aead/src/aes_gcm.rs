@@ -15,7 +15,7 @@ use hpcrypt_core::traits::AeadError;
 use subtle::ConstantTimeEq;
 
 use hpcrypt_cipher::{Aes, AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, BLOCK_SIZE};
-use hpcrypt_mac::ghash::GHashFast;
+use hpcrypt_mac::ghash::Ghash;
 
 /// AES-GCM default tag size (128 bits)
 pub const TAG_SIZE: usize = 16;
@@ -343,7 +343,7 @@ fn compute_j0(h: &[u8; BLOCK_SIZE], iv: &[u8]) -> [u8; BLOCK_SIZE] {
         j0
     } else {
         // Variable-length IV: J0 = GHASH(H, {}, IV || 0^s || len(IV))
-        let mut ghash = GHashFast::new_default(h);
+        let mut ghash = Ghash::new(h);
 
         // Process IV in 16-byte blocks
         for chunk in iv.chunks(BLOCK_SIZE) {
@@ -499,7 +499,7 @@ fn gcm_decrypt_with_iv(
 
 /// Compute GHASH(H, A, C) as specified in GCM
 fn compute_ghash(h: &[u8; BLOCK_SIZE], aad: &[u8], ciphertext: &[u8]) -> [u8; BLOCK_SIZE] {
-    let mut ghash = GHashFast::new_default(h);
+    let mut ghash = Ghash::new(h);
 
     // Process AAD
     for chunk in aad.chunks(BLOCK_SIZE) {

@@ -104,7 +104,7 @@ use alloc::vec::Vec;
 
 use subtle::ConstantTimeEq;
 
-use crate::ghash::GHashFast;
+use crate::ghash::Ghash;
 use hpcrypt_cipher::{Aes, AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, BLOCK_SIZE};
 
 /// GMAC tag size (128 bits)
@@ -119,7 +119,7 @@ pub const NONCE_SIZE: usize = 12;
 /// authentication component.
 #[derive(Debug)]
 pub struct Gmac128 {
-    ghash: GHashFast,
+    ghash: Ghash,
     j0: [u8; BLOCK_SIZE],
     data_len: usize,
     buffer: [u8; BLOCK_SIZE],
@@ -263,7 +263,7 @@ impl Gmac128 {
         let h = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
 
         // Create GHASH instance
-        let ghash = GHashFast::new_default(&h);
+        let ghash = Ghash::new(&h);
 
         // Derive J0 = AES(K, nonce || 0x00000001)
         let mut counter_block = [0u8; BLOCK_SIZE];
@@ -284,7 +284,7 @@ impl Gmac128 {
 /// GMAC-192 - Message Authentication Code using AES-192
 #[derive(Debug)]
 pub struct Gmac192 {
-    ghash: GHashFast,
+    ghash: Ghash,
     j0: [u8; BLOCK_SIZE],
     data_len: usize,
     buffer: [u8; BLOCK_SIZE],
@@ -382,7 +382,7 @@ impl Gmac192 {
 
     fn new_internal(cipher: &Aes, nonce: &[u8; NONCE_SIZE]) -> Self {
         let h = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
-        let ghash = GHashFast::new_default(&h);
+        let ghash = Ghash::new(&h);
 
         let mut counter_block = [0u8; BLOCK_SIZE];
         counter_block[..NONCE_SIZE].copy_from_slice(nonce);
@@ -402,7 +402,7 @@ impl Gmac192 {
 /// GMAC-256 - Message Authentication Code using AES-256
 #[derive(Debug)]
 pub struct Gmac256 {
-    ghash: GHashFast,
+    ghash: Ghash,
     j0: [u8; BLOCK_SIZE],
     data_len: usize,
     buffer: [u8; BLOCK_SIZE],
@@ -500,7 +500,7 @@ impl Gmac256 {
 
     fn new_internal(cipher: &Aes, nonce: &[u8; NONCE_SIZE]) -> Self {
         let h = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
-        let ghash = GHashFast::new_default(&h);
+        let ghash = Ghash::new(&h);
 
         let mut counter_block = [0u8; BLOCK_SIZE];
         counter_block[..NONCE_SIZE].copy_from_slice(nonce);
@@ -526,7 +526,7 @@ fn gmac_internal(cipher: &Aes, nonce: &[u8; NONCE_SIZE], data: &[u8]) -> [u8; TA
     let h = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
 
     // Create GHASH instance
-    let mut ghash = GHashFast::new_default(&h);
+    let mut ghash = Ghash::new(&h);
 
     // Process data (treated as AAD in GCM terminology)
     for chunk in data.chunks(BLOCK_SIZE) {
@@ -649,7 +649,7 @@ fn compute_gmac_j0(h: &[u8; BLOCK_SIZE], iv: &[u8]) -> [u8; BLOCK_SIZE] {
         j0
     } else {
         // Variable-length IV: J0 = GHASH(H, {}, IV || 0^s || len(IV))
-        let mut ghash = GHashFast::new_default(h);
+        let mut ghash = Ghash::new(h);
 
         // Process IV in 16-byte blocks
         for chunk in iv.chunks(BLOCK_SIZE) {
@@ -674,7 +674,7 @@ fn gmac_variable_internal(cipher: &Aes, iv: &[u8], data: &[u8]) -> [u8; TAG_SIZE
     let h = cipher.encrypt_block(&[0u8; BLOCK_SIZE]);
 
     // Create GHASH instance
-    let mut ghash = GHashFast::new_default(&h);
+    let mut ghash = Ghash::new(&h);
 
     // Process data (treated as AAD in GCM terminology)
     for chunk in data.chunks(BLOCK_SIZE) {
