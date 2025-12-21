@@ -172,6 +172,11 @@ path = "tests/x25519.rs"
 required-features = ["enable-signature-tests"]
 
 [[test]]
+name = "x448"
+path = "tests/x448.rs"
+required-features = ["enable-signature-tests"]
+
+[[test]]
 name = "tls13_kdf"
 path = "tests/tls13_kdf.rs"
 required-features = ["enable-kdf-tests"]
