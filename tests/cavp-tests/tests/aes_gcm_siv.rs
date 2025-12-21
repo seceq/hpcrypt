@@ -7,7 +7,7 @@
 #![cfg(feature = "enable-aead-tests")]
 
 use cavp_tests::{decode_hex, load_test_file, TestStats};
-use hpcrypt_aead::aes_gcm_siv::Aes128GcmSiv;
+use hpcrypt_aead::aes_gcm_siv::{Aes128GcmSiv, Aes256GcmSiv};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -68,8 +68,8 @@ struct ExpectedTest {
     plaintext: Option<String>,
 }
 
-fn test_aes_128_gcm_siv() {
-    println!("\nTesting AES-128-GCM-SIV");
+fn test_aes_gcm_siv_internal(key_size: u32) {
+    println!("\nTesting AES-{}-GCM-SIV", key_size);
 
     let prompt: PromptFile = load_test_file("ACVP-AES-GCM-SIV-1.0", "prompt.json");
     let expected: ExpectedFile = load_test_file("ACVP-AES-GCM-SIV-1.0", "expectedResults.json");
@@ -81,8 +81,8 @@ fn test_aes_128_gcm_siv() {
     };
 
     for test_group in &prompt.test_groups {
-        // Only test 128-bit keys (skip 256-bit as it's not implemented)
-        if test_group.key_len != 128 {
+        // Only test the specified key length
+        if test_group.key_len != key_size {
             stats.skipped += test_group.tests.len();
             continue;
         }
@@ -117,14 +117,6 @@ fn test_aes_128_gcm_siv() {
             let expected_test = expected_test.unwrap();
 
             let key_bytes = decode_hex(&test.key);
-            let key: [u8; 16] = match key_bytes.as_slice().try_into() {
-                Ok(k) => k,
-                Err(_) => {
-                    println!("FAIL: Test {} - Invalid key length", test.tc_id);
-                    stats.failed += 1;
-                    continue;
-                }
-            };
 
             let nonce_bytes = decode_hex(&test.iv);
             let nonce: [u8; 12] = match nonce_bytes.as_slice().try_into() {
@@ -153,7 +145,13 @@ fn test_aes_128_gcm_siv() {
                     };
                     let expected_ct = decode_hex(expected_ct_hex);
 
-                    let ciphertext_and_tag = Aes128GcmSiv::encrypt(&key, &nonce, &plaintext, &aad);
+                    let ciphertext_and_tag = if key_size == 128 {
+                        let key: [u8; 16] = key_bytes.as_slice().try_into().unwrap();
+                        Aes128GcmSiv::encrypt(&key, &nonce, &plaintext, &aad)
+                    } else {
+                        let key: [u8; 32] = key_bytes.as_slice().try_into().unwrap();
+                        Aes256GcmSiv::encrypt(&key, &nonce, &plaintext, &aad)
+                    };
 
                     if ciphertext_and_tag == expected_ct {
                         stats.passed += 1;
@@ -166,22 +164,33 @@ fn test_aes_128_gcm_siv() {
                     }
                 }
             } else if test_group.direction == "decrypt" {
-                if let (Some(ct_hex), Some(expected_pt_hex)) =
-                    (&test.ciphertext, &expected_test.plaintext)
-                {
+                if let Some(ct_hex) = &test.ciphertext {
                     let ciphertext_and_tag = if ct_hex.is_empty() {
                         vec![]
                     } else {
                         decode_hex(ct_hex)
                     };
-                    let expected_pt = if expected_pt_hex.is_empty() {
-                        vec![]
+
+                    let result = if key_size == 128 {
+                        let key: [u8; 16] = key_bytes.as_slice().try_into().unwrap();
+                        Aes128GcmSiv::decrypt(&key, &nonce, &ciphertext_and_tag, &aad)
                     } else {
-                        decode_hex(expected_pt_hex)
+                        let key: [u8; 32] = key_bytes.as_slice().try_into().unwrap();
+                        Aes256GcmSiv::decrypt(&key, &nonce, &ciphertext_and_tag, &aad)
                     };
 
-                    match Aes128GcmSiv::decrypt(&key, &nonce, &ciphertext_and_tag, &aad) {
-                        Some(plaintext) => {
+                    match (&expected_test.plaintext, result) {
+                        // Expected auth failure, got auth failure
+                        (None, None) => {
+                            stats.passed += 1;
+                        }
+                        // Expected plaintext, got plaintext
+                        (Some(expected_pt_hex), Some(plaintext)) => {
+                            let expected_pt = if expected_pt_hex.is_empty() {
+                                vec![]
+                            } else {
+                                decode_hex(expected_pt_hex)
+                            };
                             if plaintext == expected_pt {
                                 stats.passed += 1;
                             } else {
@@ -192,9 +201,14 @@ fn test_aes_128_gcm_siv() {
                                 stats.failed += 1;
                             }
                         }
-                        None => {
-                            // Decryption failed - should only happen for invalid tags
-                            println!("FAIL: Test {} decryption failed", test.tc_id);
+                        // Expected plaintext but got auth failure
+                        (Some(_), None) => {
+                            println!("FAIL: Test {} decryption failed (expected success)", test.tc_id);
+                            stats.failed += 1;
+                        }
+                        // Expected auth failure but got plaintext
+                        (None, Some(_)) => {
+                            println!("FAIL: Test {} decryption succeeded (expected auth failure)", test.tc_id);
                             stats.failed += 1;
                         }
                     }
@@ -204,19 +218,15 @@ fn test_aes_128_gcm_siv() {
     }
 
     println!(
-        "AES-128-GCM-SIV Results: {} passed, {} failed, {} skipped",
-        stats.passed, stats.failed, stats.skipped
+        "AES-{}-GCM-SIV Results: {} passed, {} failed, {} skipped",
+        key_size, stats.passed, stats.failed, stats.skipped
     );
 
-    // AES-GCM-SIV has known issues - warn instead of failing
-    if stats.failed > 0 {
-        println!("\n   ⚠ WARNING: {} AES-GCM-SIV failures detected", stats.failed);
-        println!("   This is a known implementation issue");
-        println!("   Tests are passing with warnings to allow CI to continue");
-    }
+    assert_eq!(stats.failed, 0, "Some AES-GCM-SIV tests failed");
 }
 
 #[test]
 fn test_aes_gcm_siv() {
-    test_aes_128_gcm_siv();
+    test_aes_gcm_siv_internal(128);
+    test_aes_gcm_siv_internal(256);
 }
