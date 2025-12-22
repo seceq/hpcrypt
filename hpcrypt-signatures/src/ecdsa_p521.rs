@@ -91,9 +91,9 @@ impl Signature {
         der[pos] = 0x30;
         pos += 1;
 
-        // Length placeholder (we'll fill this in later)
+        // Leave space for length (may need 1 or 2 bytes)
         let len_pos = pos;
-        pos += 1;
+        pos += 2; // Reserve 2 bytes for potential long-form length
 
         // Encode r
         encode_integer(&mut der, &mut pos, &self.r);
@@ -101,17 +101,35 @@ impl Signature {
         // Encode s
         encode_integer(&mut der, &mut pos, &self.s);
 
-        // Fill in total length
-        let total_len = pos - len_pos - 1;
-        der[len_pos] = total_len as u8;
+        // Calculate total content length
+        let content_len = pos - len_pos - 2;
+
+        // Fill in total length using appropriate encoding
+        if content_len < 128 {
+            // Short form: shift everything back by 1 byte
+            der.copy_within(len_pos + 2..pos, len_pos + 1);
+            der[len_pos] = content_len as u8;
+            pos -= 1;
+        } else {
+            // Long form: 0x81 followed by length byte
+            der[len_pos] = 0x81;
+            der[len_pos + 1] = content_len as u8;
+        }
 
         (der, pos)
     }
 
-    /// Parse signature from DER encoding
+    /// Parse signature from strict DER encoding
     ///
     /// Returns None if the DER encoding is invalid or the integers
     /// are out of range for P-521 (> 66 bytes each).
+    ///
+    /// This parser enforces strict DER rules:
+    /// - No indefinite length encoding
+    /// - No unnecessary long-form length encoding
+    /// - No leading zero padding in lengths
+    /// - No trailing garbage after the signature
+    /// - Integers must use minimal encoding
     pub fn from_der(der: &[u8]) -> Option<Self> {
         if der.len() < 8 {
             return None;
@@ -125,62 +143,147 @@ impl Signature {
         }
         pos += 1;
 
-        // Read total length
-        let total_len = der[pos] as usize;
-        pos += 1;
+        // Read total length with strict DER validation
+        let (total_len, len_bytes_used) = Self::read_der_length(der, pos)?;
+        pos += len_bytes_used;
 
-        if der.len() < pos + total_len {
+        // Verify exact length - no trailing garbage allowed
+        if der.len() != pos + total_len {
             return None;
         }
 
-        // Helper to decode an integer
-        let decode_integer = |buf: &[u8], pos: &mut usize| -> Option<[u8; 66]> {
-            if *pos + 2 > buf.len() {
-                return None;
-            }
-
-            // Check INTEGER tag
-            if buf[*pos] != 0x02 {
-                return None;
-            }
-            *pos += 1;
-
-            // Read length
-            let len = buf[*pos] as usize;
-            *pos += 1;
-
-            if len == 0 || len > 67 || *pos + len > buf.len() {
-                return None;
-            }
-
-            // Read integer bytes
-            let mut value = [0u8; 66];
-            let mut src_start = 0;
-
-            // Skip padding 0x00 byte if present
-            if len > 66 && buf[*pos] == 0x00 {
-                src_start = 1;
-            }
-
-            let actual_len = len - src_start;
-            if actual_len > 66 {
-                return None;
-            }
-
-            let dst_start = 66 - actual_len;
-            value[dst_start..].copy_from_slice(&buf[*pos + src_start..*pos + len]);
-            *pos += len;
-
-            Some(value)
-        };
+        let seq_end = pos + total_len;
 
         // Decode r
-        let r = decode_integer(der, &mut pos)?;
+        let r = Self::decode_der_integer(der, &mut pos)?;
 
         // Decode s
-        let s = decode_integer(der, &mut pos)?;
+        let s = Self::decode_der_integer(der, &mut pos)?;
+
+        // Verify we consumed exactly the sequence content
+        if pos != seq_end {
+            return None;
+        }
 
         Some(Signature { r, s })
+    }
+
+    /// Read a DER length field with strict validation
+    /// Returns (length_value, bytes_consumed) or None if invalid
+    fn read_der_length(der: &[u8], pos: usize) -> Option<(usize, usize)> {
+        if pos >= der.len() {
+            return None;
+        }
+
+        let first = der[pos];
+
+        if first == 0x80 {
+            // Indefinite length - not allowed in DER
+            return None;
+        }
+
+        if first & 0x80 == 0 {
+            // Short form: single byte length
+            return Some((first as usize, 1));
+        }
+
+        // Long form
+        let num_len_bytes = (first & 0x7f) as usize;
+
+        if num_len_bytes == 0 {
+            // Reserved - not allowed
+            return None;
+        }
+
+        if num_len_bytes > 2 {
+            // Too large for signatures
+            return None;
+        }
+
+        if pos + 1 + num_len_bytes > der.len() {
+            return None;
+        }
+
+        // Check for leading zeros in length (not minimal encoding)
+        if der[pos + 1] == 0 {
+            return None;
+        }
+
+        let mut length = 0usize;
+        for i in 0..num_len_bytes {
+            length = (length << 8) | (der[pos + 1 + i] as usize);
+        }
+
+        // Verify long form was necessary (length >= 128)
+        if length < 128 {
+            return None;
+        }
+
+        // Verify minimal encoding: for 1-byte long form, length must be >= 128
+        // For 2-byte long form, length must be >= 256
+        if num_len_bytes == 2 && length < 256 {
+            return None;
+        }
+
+        Some((length, 1 + num_len_bytes))
+    }
+
+    /// Decode a DER INTEGER with strict validation
+    fn decode_der_integer(der: &[u8], pos: &mut usize) -> Option<[u8; 66]> {
+        if *pos + 2 > der.len() {
+            return None;
+        }
+
+        // Check INTEGER tag
+        if der[*pos] != 0x02 {
+            return None;
+        }
+        *pos += 1;
+
+        // Read length with strict DER validation
+        let (len, len_bytes) = Self::read_der_length(der, *pos)?;
+        *pos += len_bytes;
+
+        if len == 0 || *pos + len > der.len() {
+            return None;
+        }
+
+        // Integer-specific validations:
+        // 1. Check for unnecessary leading zeros (not minimal encoding)
+        //    A leading 0x00 is only allowed if the next byte has high bit set
+        if len > 1 && der[*pos] == 0x00 {
+            if der[*pos + 1] & 0x80 == 0 {
+                // Leading zero not needed - not minimal encoding
+                return None;
+            }
+        }
+
+        // 2. Check for negative numbers (high bit set without padding)
+        //    ECDSA r and s are unsigned, so this would be invalid
+        if der[*pos] & 0x80 != 0 {
+            return None;
+        }
+
+        // Handle the padding byte for conversion
+        let mut src_start = 0;
+        let mut actual_len = len;
+
+        if len > 0 && der[*pos] == 0x00 {
+            src_start = 1;
+            actual_len = len - 1;
+        }
+
+        if actual_len > 66 {
+            return None;
+        }
+
+        // Read integer bytes
+        let mut value = [0u8; 66];
+        let dst_start = 66 - actual_len;
+        value[dst_start..].copy_from_slice(&der[*pos + src_start..*pos + len]);
+        *pos += len;
+
+        Some(value)
     }
 
     /// Convert signature to bytes (r || s concatenation)
@@ -516,16 +619,55 @@ impl VerifyingKey {
     ///
     /// This is a low-level function. For normal use, prefer `verify()`.
     fn verify_prehashed(&self, hash: &[u8; 64], signature: &Signature) -> bool {
-        // Parse r and s from signature
-        let r = Scalar::from_bytes(&signature.r);
-        if bool::from(r.is_zero()) {
+        // Step 1: Verify r and s are in [1, n-1]
+        // We must check the raw bytes BEFORE calling from_bytes(), because from_bytes()
+        // reduces values modulo n, which would make invalid signatures (with r or s >= n)
+        // appear valid.
+
+        // P-521 order n in big-endian bytes (66 bytes)
+        // n = 0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409
+        const P521_ORDER_BE: [u8; 66] = [
+            0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFA, 0x51, 0x86, 0x87, 0x83, 0xBF, 0x2F, 0x96, 0x6B,
+            0x7F, 0xCC, 0x01, 0x48, 0xF7, 0x09, 0xA5, 0xD0, 0x3B, 0xB5, 0xC9, 0xB8, 0x89, 0x9C,
+            0x47, 0xAE, 0xBB, 0x6F, 0xB7, 0x1E, 0x91, 0x38, 0x64, 0x09,
+        ];
+
+        // Check if a 66-byte value is in range [1, n-1]
+        fn is_valid_scalar(bytes: &[u8; 66]) -> bool {
+            // Check for zero
+            let mut is_zero = true;
+            for &b in bytes {
+                if b != 0 {
+                    is_zero = false;
+                    break;
+                }
+            }
+            if is_zero {
+                return false;
+            }
+
+            // Check if >= n by comparing in big-endian order
+            for i in 0..66 {
+                match bytes[i].cmp(&P521_ORDER_BE[i]) {
+                    core::cmp::Ordering::Less => return true,   // Less than n, valid
+                    core::cmp::Ordering::Greater => return false, // Greater than n, invalid
+                    core::cmp::Ordering::Equal => continue,      // Equal, check next byte
+                }
+            }
+            // If we get here, value == n, which is invalid
+            false
+        }
+
+        // Validate r and s are in [1, n-1]
+        if !is_valid_scalar(&signature.r) || !is_valid_scalar(&signature.s) {
             return false;
         }
 
+        // Parse r and s from signature (now safe because we verified they're in range)
+        let r = Scalar::from_bytes(&signature.r);
         let s = Scalar::from_bytes(&signature.s);
-        if bool::from(s.is_zero()) {
-            return false;
-        }
 
         // Convert hash to scalar (reduction handled automatically)
         // For P-521 (521 bits) with SHA-512 (512 bits):
@@ -568,9 +710,11 @@ impl VerifyingKey {
             None => return false,
         };
 
-        // Convert r_x to scalar
+        // Convert x-coordinate to scalar and reduce modulo n
+        // The x-coordinate is a field element in [0, p-1], but we need it mod n
+        // Since p > n for P-521, we must explicitly reduce
         let r_x_bytes = affine_r.x.to_bytes();
-        let r_x_scalar = Scalar::from_bytes(&r_x_bytes);
+        let r_x_scalar = Scalar::from_bytes(&r_x_bytes).reduce();
 
         // Check if r_x mod n == r
         bool::from(r_x_scalar.ct_eq(&r))
