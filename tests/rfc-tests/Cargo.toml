@@ -44,6 +44,9 @@ enable-hash-tests = ["hpcrypt-hash"]
 enable-ecies-tests = ["hpcrypt-ecies"]
 enable-shamir-tests = ["hpcrypt-threshold"]
 enable-pqc-tests = ["hpcrypt-slhdsa", "hpcrypt-mldsa", "hpcrypt-mlkem", "hpcrypt-rng"]
+# SIMD optimizations (forwarded to dependent crates)
+avx2 = ["hpcrypt-mac?/avx2", "hpcrypt-mldsa?/avx2", "hpcrypt-mlkem?/avx2"]
+neon = ["hpcrypt-mac?/neon", "hpcrypt-mldsa?/neon", "hpcrypt-mlkem?/neon"]
 
 # Enable all RFC implementation tests
 enable-all-tests = [

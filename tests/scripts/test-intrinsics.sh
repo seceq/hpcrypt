@@ -218,6 +218,7 @@ run_mac_tests() {
     local runner="cargo"
     local target=""
     local rustflags=""
+    local features=""
     local failed=0
 
     case "$config" in
@@ -235,10 +236,12 @@ run_mac_tests() {
             fi
             # Use target-cpu=native to enable all CPU features for cfg detection
             rustflags="-C target-cpu=native"
+            features="avx2"
             ;;
         neon)
             runner="cross"
             target="aarch64-unknown-linux-gnu"
+            features="neon"
             if ! check_cross; then
                 return 0
             fi
@@ -254,12 +257,24 @@ run_mac_tests() {
 
     local cmd=""
     if [[ "$runner" == "cross" ]]; then
-        cmd="cross test --package hpcrypt-mac --target $target -- --nocapture ghash polyval"
+        if [[ -n "$features" ]]; then
+            cmd="cross test --package hpcrypt-mac --target $target --features \"$features\" -- --nocapture ghash polyval"
+        else
+            cmd="cross test --package hpcrypt-mac --target $target -- --nocapture ghash polyval"
+        fi
     else
         if [[ -n "$rustflags" ]]; then
-            cmd="RUSTFLAGS=\"$rustflags\" cargo test --package hpcrypt-mac -- --nocapture ghash polyval"
+            if [[ -n "$features" ]]; then
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package hpcrypt-mac --features \"$features\" -- --nocapture ghash polyval"
+            else
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package hpcrypt-mac -- --nocapture ghash polyval"
+            fi
         else
-            cmd="cargo test --package hpcrypt-mac -- --nocapture ghash polyval"
+            if [[ -n "$features" ]]; then
+                cmd="cargo test --package hpcrypt-mac --features \"$features\" -- --nocapture ghash polyval"
+            else
+                cmd="cargo test --package hpcrypt-mac -- --nocapture ghash polyval"
+            fi
         fi
     fi
 
@@ -277,12 +292,24 @@ run_mac_tests() {
     print_header "Running RFC test vectors for GHASH/POLYVAL with $config implementation"
 
     if [[ "$runner" == "cross" ]]; then
-        cmd="cross test --package rfc-tests --target $target --features enable-mac-tests --test ghash --test polyval -- --nocapture"
+        if [[ -n "$features" ]]; then
+            cmd="cross test --package rfc-tests --target $target --features \"enable-mac-tests,$features\" --test ghash --test polyval -- --nocapture"
+        else
+            cmd="cross test --package rfc-tests --target $target --features enable-mac-tests --test ghash --test polyval -- --nocapture"
+        fi
     else
         if [[ -n "$rustflags" ]]; then
-            cmd="RUSTFLAGS=\"$rustflags\" cargo test --package rfc-tests --features enable-mac-tests --test ghash --test polyval -- --nocapture"
+            if [[ -n "$features" ]]; then
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package rfc-tests --features \"enable-mac-tests,$features\" --test ghash --test polyval -- --nocapture"
+            else
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package rfc-tests --features enable-mac-tests --test ghash --test polyval -- --nocapture"
+            fi
         else
-            cmd="cargo test --package rfc-tests --features enable-mac-tests --test ghash --test polyval -- --nocapture"
+            if [[ -n "$features" ]]; then
+                cmd="cargo test --package rfc-tests --features \"enable-mac-tests,$features\" --test ghash --test polyval -- --nocapture"
+            else
+                cmd="cargo test --package rfc-tests --features enable-mac-tests --test ghash --test polyval -- --nocapture"
+            fi
         fi
     fi
 
