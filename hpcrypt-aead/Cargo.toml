@@ -21,10 +21,7 @@ zeroize = { workspace = true }
 hex-literal = { workspace = true }
 aes = "0.8"
 criterion = { workspace = true }
-wycheproof = "0.6"
-serde_json = "1.0"
 hex = "0.4"
-serde = { version = "1.0", features = ["derive"] }
 
 [features]
 default = ["std", "alloc"]
