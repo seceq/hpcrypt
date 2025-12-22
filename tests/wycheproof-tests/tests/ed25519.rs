@@ -143,20 +143,3 @@ fn test_ed25519_wycheproof() {
 
     assert_eq!(stats.failed, 0, "Ed25519 tests failed");
 }
-
-#[cfg(test)]
-mod ed25519_notes {
-    /// Documents Ed25519 security considerations
-    #[test]
-    fn test_ed25519_security_notes() {
-        println!("\nEd25519 Security Considerations:");
-        println!("  - RFC 8032 standard");
-        println!("  - Deterministic signatures (no nonce needed)");
-        println!("  - 128-bit security level");
-        println!("  - Small keys: 32-byte public key, 32-byte private key");
-        println!("  - Small signatures: 64 bytes");
-        println!("  - Fast verification (batching possible)");
-        println!("  - No known vulnerabilities when properly implemented");
-        println!("  - Must validate points are on curve");
-    }
-}

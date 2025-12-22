@@ -213,20 +213,3 @@ fn test_hkdf_file(filename: &str, algorithm_name: &str, _hash_bits: usize) {
     stats.print_summary();
     assert_eq!(stats.failed, 0, "{} tests failed", algorithm_name);
 }
-
-#[cfg(test)]
-mod hkdf_notes {
-    /// Documents HKDF security considerations
-    #[test]
-    fn test_hkdf_security_notes() {
-        println!("\nHKDF Security Considerations:");
-        println!("  - RFC 5869 standard");
-        println!("  - Two-step process: Extract then Expand");
-        println!("  - Extract: PRK = HMAC-Hash(salt, IKM)");
-        println!("  - Expand: OKM = HMAC-Hash(PRK, info || counter)");
-        println!("  - Maximum output length: 255 * HashLen");
-        println!("  - Salt should be random (but can be zeros)");
-        println!("  - Info provides context separation");
-        println!("  - Used in TLS 1.3, Noise Protocol, Signal");
-    }
-}

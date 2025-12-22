@@ -341,18 +341,3 @@ fn test_aes_cbc_pkcs5_wycheproof() {
     stats.print_summary();
     assert_eq!(stats.failed, 0, "AES-CBC-PKCS5 tests failed");
 }
-
-#[cfg(test)]
-mod cipher_notes {
-    /// Documents AES-CBC-PKCS5 security considerations
-    #[test]
-    fn test_aes_cbc_security_notes() {
-        println!("\nAES-CBC-PKCS5 Security Considerations:");
-        println!("  - CBC mode is not authenticated - vulnerable to padding oracle attacks");
-        println!("  - PKCS#5 padding must be validated in constant time");
-        println!("  - IV must be unpredictable (random) for each message");
-        println!("  - Prefer authenticated encryption (AEAD) over CBC");
-        println!("  - Padding oracle attacks: CVE-2014-3566 (POODLE), CVE-2016-2107");
-        println!("  - Always verify padding before processing decrypted data");
-    }
-}

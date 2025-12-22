@@ -297,21 +297,3 @@ fn test_ff1_file(filename: &str, algorithm_name: &str, _radix: usize) {
     stats.print_summary();
     assert_eq!(stats.failed, 0, "{} tests failed", algorithm_name);
 }
-
-#[cfg(test)]
-mod fpe_notes {
-    /// Documents FF1 security considerations
-    #[test]
-    fn test_ff1_security_notes() {
-        println!("\nAES-FF1 Security Considerations:");
-        println!("  - NIST SP 800-38G Rev. 1 standard");
-        println!("  - Format-preserving: ciphertext has same format as plaintext");
-        println!("  - Feistel structure with AES-based PRF");
-        println!("  - Minimum input length: radix^msglen >= 1,000,000");
-        println!("  - Radix range: 2 to 65,536");
-        println!("  - Tweak provides domain separation");
-        println!("  - Use cases: credit cards, SSNs, database encryption");
-        println!("  - NOT an authenticated encryption mode");
-        println!("  - Vulnerable to format-leaking attacks");
-    }
-}

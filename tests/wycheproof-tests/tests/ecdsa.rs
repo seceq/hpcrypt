@@ -7,7 +7,15 @@
 //! - ECDSA secp256k1 with SHA-256 (Bitcoin/Ethereum)
 
 #[cfg(feature = "enable-signature-tests")]
-use hpcrypt_signatures::ecdsa_p256::{Signature, VerifyingKey};
+use hpcrypt_signatures::ecdsa_p256::{Signature as P256Signature, VerifyingKey as P256VerifyingKey};
+#[cfg(feature = "enable-signature-tests")]
+use hpcrypt_signatures::ecdsa_p384::{Signature as P384Signature, VerifyingKey as P384VerifyingKey};
+#[cfg(feature = "enable-signature-tests")]
+use hpcrypt_signatures::ecdsa_p521::{Signature as P521Signature, VerifyingKey as P521VerifyingKey};
+#[cfg(feature = "enable-signature-tests")]
+use hpcrypt_signatures::ecdsa_secp256k1::{Signature as Secp256k1Signature, VerifyingKey as Secp256k1VerifyingKey};
+#[cfg(feature = "enable-signature-tests")]
+use hpcrypt_curves::secp256k1::{FieldElement, point::AffinePoint, Point};
 use serde::Deserialize;
 use wycheproof_tests::{decode_hex, TestResult, TestStats};
 
@@ -140,112 +148,38 @@ fn test_ecdsa_file(filename: &str, curve_name: &str, hash_name: &str) {
             let message = decode_hex(&test.msg);
             let signature = decode_hex(&test.sig);
 
-            // Actual ECDSA implementation tests (P-256 with SHA-256 only)
             #[cfg(feature = "enable-signature-tests")]
             {
-                // Only test P-256 with SHA-256 - other curves/hashes not yet implemented
-                if curve_name == "P-256" && hash_name == "SHA-256" {
-                    // Pad coordinates to 32 bytes if needed
-                    let mut wx_padded = vec![0u8; 32 - wx.len().min(32)];
-                    wx_padded.extend_from_slice(&wx[wx.len().saturating_sub(32)..]);
-                    let mut wy_padded = vec![0u8; 32 - wy.len().min(32)];
-                    wy_padded.extend_from_slice(&wy[wy.len().saturating_sub(32)..]);
-
-                    // Parse public key
-                    let verifying_key = match VerifyingKey::from_affine_coords(&wx_padded, &wy_padded)
-                    {
-                        Ok(vk) => vk,
-                        Err(_) => {
-                            match test.result {
-                                TestResult::Invalid => {
-                                    stats.passed += 1;
-                                    continue;
-                                }
-                                _ => {
-                                    println!(
-                                        "  ✗ Test {}: Failed to parse public key",
-                                        test.tc_id
-                                    );
-                                    stats.failed += 1;
-                                    critical_failures.push((test.tc_id, test.comment.clone()));
-                                    continue;
-                                }
-                            }
-                        }
-                    };
-
-                    // Parse signature - wrap in catch_unwind to handle DER parser bugs
-                    let sig_result = std::panic::catch_unwind(|| {
-                        Signature::from_der(&signature)
-                    });
-
-                    let sig = match sig_result {
-                        Ok(Ok(s)) => s,
-                        Ok(Err(_)) | Err(_) => {
-                            // Parsing error or panic - treat as rejection
-                            match test.result {
-                                TestResult::Valid => {
-                                    // Some valid tests have BER encodings we don't support
-                                    if test.flags.contains(&"BER".to_string()) {
-                                        stats.skipped += 1;
-                                    } else {
-                                        println!(
-                                            "  ✗ Test {}: Failed to parse valid signature: {}",
-                                            test.tc_id, test.comment
-                                        );
-                                        stats.failed += 1;
-                                        critical_failures.push((test.tc_id, test.comment.clone()));
-                                    }
-                                }
-                                TestResult::Invalid => {
-                                    // Expected - invalid signature encoding
-                                    stats.passed += 1;
-                                }
-                                TestResult::Acceptable => {
-                                    stats.skipped += 1;
-                                }
-                            }
-                            continue;
-                        }
-                    };
-
-                    // Verify signature
-                    let is_valid = verifying_key.verify(&message, &sig);
-
-                    match test.result {
-                        TestResult::Valid => {
-                            if !is_valid {
-                                println!(
-                                    "  ✗ Test {}: Valid signature rejected: {}",
-                                    test.tc_id, test.comment
-                                );
-                                critical_failures.push((test.tc_id, test.comment.clone()));
-                                stats.failed += 1;
-                            } else {
-                                stats.passed += 1;
-                            }
-                        }
-                        TestResult::Invalid => {
-                            if is_valid {
-                                println!(
-                                    "  ✗ Test {}: Invalid signature accepted: {}",
-                                    test.tc_id, test.comment
-                                );
-                                critical_failures.push((test.tc_id, test.comment.clone()));
-                                stats.failed += 1;
-                            } else {
-                                stats.passed += 1;
-                            }
-                        }
-                        TestResult::Acceptable => {
-                            stats.skipped += 1;
-                        }
+                let result = match curve_name {
+                    "P-256" if hash_name == "SHA-256" => {
+                        run_p256_test(&wx, &wy, &message, &signature, test)
                     }
-                } else {
-                    // Other curves not implemented yet - use placeholder
-                    match test.result {
-                        TestResult::Valid | TestResult::Invalid => stats.passed += 1,
-                        TestResult::Acceptable => stats.skipped += 1,
+                    "P-384" if hash_name == "SHA-384" => {
+                        run_p384_test(&wx, &wy, &message, &signature, test)
+                    }
+                    "P-521" if hash_name == "SHA-512" => {
+                        run_p521_test(&wx, &wy, &message, &signature, test)
+                    }
+                    "secp256k1" if hash_name == "SHA-256" => {
+                        run_secp256k1_test(&wx, &wy, &message, &signature, test)
+                    }
+                    _ => {
+                        // Other hash combinations not implemented - skip
+                        match test.result {
+                            TestResult::Valid | TestResult::Invalid => stats.passed += 1,
+                            TestResult::Acceptable => stats.skipped += 1,
+                        }
+                        continue;
+                    }
+                };
+
+                match result {
+                    TestOutcome::Passed => stats.passed += 1,
+                    TestOutcome::Skipped => stats.skipped += 1,
+                    TestOutcome::Failed(msg) => {
+                        println!("  ✗ Test {}: {}: {}", test.tc_id, msg, test.comment);
+                        critical_failures.push((test.tc_id, test.comment.clone()));
+                        stats.failed += 1;
                     }
                 }
             }
@@ -273,16 +207,12 @@ fn test_ecdsa_file(filename: &str, curve_name: &str, hash_name: &str) {
     stats.print_summary();
 
     if !critical_failures.is_empty() {
-        println!("\n⚠️  Critical failures detected (known implementation issues):");
+        println!("\n⚠️  Critical failures detected:");
         for (tc_id, comment) in &critical_failures {
             println!("  - Test {}: {}", tc_id, comment);
         }
-        // Note: The ECDSA implementation has known issues with:
-        // 1. DER parser accepting malformed signatures with trailing data
-        // 2. Not validating r, s < curve order
-        // These need to be fixed in hpcrypt-signatures
         println!(
-            "\nWARNING: {} tests failed due to known ECDSA implementation issues",
+            "\nWARNING: {} tests failed",
             stats.failed
         );
         println!("Pass rate: {:.1}% ({}/{})",
@@ -290,34 +220,213 @@ fn test_ecdsa_file(filename: &str, curve_name: &str, hash_name: &str) {
             stats.passed,
             stats.passed + stats.failed
         );
-    } else {
-        assert_eq!(
-            stats.failed, 0,
-            "ECDSA {} with {} tests failed",
-            curve_name, hash_name
-        );
     }
+
+    assert_eq!(
+        stats.failed, 0,
+        "ECDSA {} with {} tests failed",
+        curve_name, hash_name
+    );
 }
 
-#[cfg(test)]
-mod edge_cases {
-    /// Test that we properly handle edge case signatures
-    #[test]
-    fn test_critical_invalid_signatures_documented() {
-        // This test documents the critical invalid signatures we must reject
-        let critical_cases = vec![
-            "r = 0",        // CVE-2022-21449
-            "s = 0",        // CVE-2022-21449
-            "r = n",        // r must be < n (curve order)
-            "s = n",        // s must be < n
-            "r = -1",       // Negative values
-            "s = -1",
-            "point at infinity",
-        ];
+#[cfg(feature = "enable-signature-tests")]
+enum TestOutcome {
+    Passed,
+    Skipped,
+    Failed(String),
+}
 
-        println!("\nCritical ECDSA signature cases that MUST be rejected:");
-        for case in critical_cases {
-            println!("  - {}", case);
+#[cfg(feature = "enable-signature-tests")]
+fn run_p256_test(wx: &[u8], wy: &[u8], message: &[u8], signature: &[u8], test: &EcdsaTest) -> TestOutcome {
+    // Pad coordinates to 32 bytes if needed
+    let mut wx_padded = vec![0u8; 32 - wx.len().min(32)];
+    wx_padded.extend_from_slice(&wx[wx.len().saturating_sub(32)..]);
+    let mut wy_padded = vec![0u8; 32 - wy.len().min(32)];
+    wy_padded.extend_from_slice(&wy[wy.len().saturating_sub(32)..]);
+
+    // Parse public key
+    let verifying_key = match P256VerifyingKey::from_affine_coords(&wx_padded, &wy_padded) {
+        Ok(vk) => vk,
+        Err(_) => {
+            return match test.result {
+                TestResult::Invalid => TestOutcome::Passed,
+                _ => TestOutcome::Failed("Failed to parse public key".to_string()),
+            };
         }
+    };
+
+    // Parse signature
+    let sig = match P256Signature::from_der(signature) {
+        Ok(s) => s,
+        Err(_) => {
+            return match test.result {
+                TestResult::Invalid => TestOutcome::Passed,
+                TestResult::Acceptable => TestOutcome::Skipped,
+                TestResult::Valid => TestOutcome::Failed("Failed to parse valid signature".to_string()),
+            };
+        }
+    };
+
+    let is_valid = verifying_key.verify(message, &sig);
+    check_result(is_valid, &test.result)
+}
+
+#[cfg(feature = "enable-signature-tests")]
+fn run_p384_test(wx: &[u8], wy: &[u8], message: &[u8], signature: &[u8], test: &EcdsaTest) -> TestOutcome {
+    // Pad coordinates to 48 bytes if needed
+    let mut wx_padded = vec![0u8; 48 - wx.len().min(48)];
+    wx_padded.extend_from_slice(&wx[wx.len().saturating_sub(48)..]);
+    let mut wy_padded = vec![0u8; 48 - wy.len().min(48)];
+    wy_padded.extend_from_slice(&wy[wy.len().saturating_sub(48)..]);
+
+    // Parse public key
+    let verifying_key = match P384VerifyingKey::from_affine_coords(&wx_padded, &wy_padded) {
+        Ok(vk) => vk,
+        Err(_) => {
+            return match test.result {
+                TestResult::Invalid => TestOutcome::Passed,
+                _ => TestOutcome::Failed("Failed to parse public key".to_string()),
+            };
+        }
+    };
+
+    // Parse signature
+    let sig = match P384Signature::from_der(signature) {
+        Ok(s) => s,
+        Err(_) => {
+            return match test.result {
+                TestResult::Invalid => TestOutcome::Passed,
+                TestResult::Acceptable => TestOutcome::Skipped,
+                TestResult::Valid => TestOutcome::Failed("Failed to parse valid signature".to_string()),
+            };
+        }
+    };
+
+    let is_valid = verifying_key.verify(message, &sig);
+    check_result(is_valid, &test.result)
+}
+
+#[cfg(feature = "enable-signature-tests")]
+fn run_p521_test(wx: &[u8], wy: &[u8], message: &[u8], signature: &[u8], test: &EcdsaTest) -> TestOutcome {
+    // Pad coordinates to 66 bytes if needed
+    let mut wx_padded = vec![0u8; 66 - wx.len().min(66)];
+    wx_padded.extend_from_slice(&wx[wx.len().saturating_sub(66)..]);
+    let mut wy_padded = vec![0u8; 66 - wy.len().min(66)];
+    wy_padded.extend_from_slice(&wy[wy.len().saturating_sub(66)..]);
+
+    // Parse public key
+    let verifying_key = match P521VerifyingKey::from_affine_coords(&wx_padded, &wy_padded) {
+        Ok(vk) => vk,
+        Err(_) => {
+            return match test.result {
+                TestResult::Invalid => TestOutcome::Passed,
+                _ => TestOutcome::Failed("Failed to parse public key".to_string()),
+            };
+        }
+    };
+
+    // Parse signature
+    let sig = match P521Signature::from_der(signature) {
+        Some(s) => s,
+        None => {
+            return match test.result {
+                TestResult::Invalid => TestOutcome::Passed,
+                TestResult::Acceptable => TestOutcome::Skipped,
+                TestResult::Valid => TestOutcome::Failed("Failed to parse valid signature".to_string()),
+            };
+        }
+    };
+
+    let is_valid = verifying_key.verify(message, &sig);
+    check_result(is_valid, &test.result)
+}
+
+#[cfg(feature = "enable-signature-tests")]
+fn run_secp256k1_test(wx: &[u8], wy: &[u8], message: &[u8], signature: &[u8], test: &EcdsaTest) -> TestOutcome {
+    // Pad/truncate coordinates to 32 bytes
+    // Wycheproof test vectors may have leading zeros that make the coordinates > 32 bytes
+    let mut x_bytes = [0u8; 32];
+    let mut y_bytes = [0u8; 32];
+
+    // Strip leading zeros and check length
+    let wx_stripped: &[u8] = if wx.len() > 32 {
+        let offset = wx.len() - 32;
+        // Check that we're only stripping zeros
+        if wx[..offset].iter().any(|&b| b != 0) {
+            return match test.result {
+                TestResult::Invalid => TestOutcome::Passed,
+                _ => TestOutcome::Failed("Invalid X coordinate (too large)".to_string()),
+            };
+        }
+        &wx[offset..]
+    } else {
+        wx
+    };
+
+    let wy_stripped: &[u8] = if wy.len() > 32 {
+        let offset = wy.len() - 32;
+        // Check that we're only stripping zeros
+        if wy[..offset].iter().any(|&b| b != 0) {
+            return match test.result {
+                TestResult::Invalid => TestOutcome::Passed,
+                _ => TestOutcome::Failed("Invalid Y coordinate (too large)".to_string()),
+            };
+        }
+        &wy[offset..]
+    } else {
+        wy
+    };
+
+    x_bytes[32 - wx_stripped.len()..].copy_from_slice(wx_stripped);
+    y_bytes[32 - wy_stripped.len()..].copy_from_slice(wy_stripped);
+
+    let x = FieldElement::from_bytes(&x_bytes);
+    let y = FieldElement::from_bytes(&y_bytes);
+    let affine = AffinePoint { x, y };
+    let point = Point::from_affine(&affine);
+
+    if !bool::from(point.is_on_curve()) {
+        return match test.result {
+            TestResult::Invalid => TestOutcome::Passed,
+            _ => TestOutcome::Failed("Point not on curve".to_string()),
+        };
+    }
+
+    let verifying_key = Secp256k1VerifyingKey::from_point(point);
+
+    // Parse signature
+    let sig = match Secp256k1Signature::from_der(signature) {
+        Ok(s) => s,
+        Err(_) => {
+            return match test.result {
+                TestResult::Invalid => TestOutcome::Passed,
+                TestResult::Acceptable => TestOutcome::Skipped,
+                TestResult::Valid => TestOutcome::Failed("Failed to parse valid signature".to_string()),
+            };
+        }
+    };
+
+    let is_valid = verifying_key.verify(message, &sig);
+    check_result(is_valid, &test.result)
+}
+
+#[cfg(feature = "enable-signature-tests")]
+fn check_result(is_valid: bool, expected: &TestResult) -> TestOutcome {
+    match expected {
+        TestResult::Valid => {
+            if is_valid {
+                TestOutcome::Passed
+            } else {
+                TestOutcome::Failed("Valid signature rejected".to_string())
+            }
+        }
+        TestResult::Invalid => {
+            if is_valid {
+                TestOutcome::Failed("Invalid signature accepted".to_string())
+            } else {
+                TestOutcome::Passed
+            }
+        }
+        TestResult::Acceptable => TestOutcome::Skipped,
     }
 }

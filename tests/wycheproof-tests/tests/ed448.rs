@@ -134,22 +134,3 @@ fn test_ed448_wycheproof() {
 
     assert_eq!(stats.failed, 0, "Ed448 tests failed");
 }
-
-#[cfg(test)]
-mod ed448_notes {
-    /// Documents Ed448 security considerations
-    #[test]
-    fn test_ed448_security_notes() {
-        println!("\nEd448 Security Considerations:");
-        println!("  - RFC 8032 standard");
-        println!("  - Deterministic signatures (no nonce needed)");
-        println!("  - 224-bit security level (higher than Ed25519)");
-        println!("  - Larger keys: 57-byte public key, 57-byte private key");
-        println!("  - Larger signatures: 114 bytes");
-        println!("  - Slower than Ed25519 but higher security margin");
-        println!("  - Context support (optional context string)");
-        println!("  - Must validate points are on curve");
-        println!("  - Resistant to timing attacks when properly implemented");
-    }
-
-}

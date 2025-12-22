@@ -172,17 +172,3 @@ fn test_x448_wycheproof() {
     stats.print_summary();
     assert_eq!(stats.failed, 0, "X448 tests failed");
 }
-
-#[cfg(test)]
-mod security_notes {
-    /// Documents critical X448 security considerations
-    #[test]
-    fn test_critical_x448_cases_documented() {
-        println!("\nCritical X448 security considerations:");
-        println!("  - Low-order points must be handled (contributory behavior)");
-        println!("  - All-zero output is valid (happens with low-order inputs)");
-        println!("  - Private keys should be clamped (clear/set specific bits)");
-        println!("  - No explicit validation - relies on cofactor clearing");
-        println!("  - RFC 7748 specifies the clamping procedure");
-    }
-}

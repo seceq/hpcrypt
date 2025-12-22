@@ -201,18 +201,3 @@ fn test_hmac_file(filename: &str, algorithm_name: &str, _hash_bits: usize) {
     stats.print_summary();
     assert_eq!(stats.failed, 0, "{} tests failed", algorithm_name);
 }
-
-#[cfg(test)]
-mod hmac_notes {
-    /// Documents HMAC security considerations
-    #[test]
-    fn test_hmac_security_notes() {
-        println!("\nHMAC Security Considerations:");
-        println!("  - RFC 2104 / FIPS 198-1 standard");
-        println!("  - HMAC(K, m) = H((K XOR opad) || H((K XOR ipad) || m))");
-        println!("  - Secure against length extension attacks");
-        println!("  - Key size: At least hash output length recommended");
-        println!("  - Tag truncation: Minimum 80 bits for security");
-        println!("  - Timing attacks: Use constant-time comparison");
-    }
-}

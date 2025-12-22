@@ -174,18 +174,3 @@ fn test_aes_cmac_wycheproof() {
     stats.print_summary();
     assert_eq!(stats.failed, 0, "AES-CMAC tests failed");
 }
-
-#[cfg(test)]
-mod cmac_notes {
-    /// Documents CMAC security considerations
-    #[test]
-    fn test_cmac_security_notes() {
-        println!("\nCMAC Security Considerations:");
-        println!("  - NIST SP 800-38B standard");
-        println!("  - Subkey generation using AES");
-        println!("  - Constant-time implementation critical");
-        println!("  - Tag truncation must be done carefully");
-        println!("  - Minimum recommended tag size: 64 bits (8 bytes)");
-        println!("  - Full tag size: 128 bits (16 bytes)");
-    }
-}

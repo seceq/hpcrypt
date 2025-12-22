@@ -532,24 +532,3 @@ fn run_ecdh_p521_test(
         TestResult::Acceptable => true,
     }
 }
-
-#[cfg(test)]
-mod ecdh_notes {
-    /// Documents ECDH security considerations
-    #[test]
-    fn test_ecdh_security_notes() {
-        println!("\nECDH Security Considerations:");
-        println!("  - Public key validation is critical");
-        println!("  - Must check point is on curve");
-        println!("  - Must check point is not at infinity");
-        println!("  - Must check point has correct order");
-        println!("  - Invalid curve attacks possible without validation");
-        println!("  - Small subgroup attacks on curves with cofactor > 1");
-        println!("\nWycheproof ECDH tests validate:");
-        println!("  - Invalid curve attack detection");
-        println!("  - Invalid point rejection");
-        println!("  - Edge case handling (special coordinates)");
-        println!("  - Compressed/uncompressed point support");
-        println!("  - Modified curve parameter detection");
-    }
-}
