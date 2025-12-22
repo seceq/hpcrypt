@@ -30,7 +30,7 @@ impl Scalar {
     /// The input is reduced modulo n if necessary.
     pub fn from_limbs(limbs: [u64; 9]) -> Self {
         let mut result = Self { limbs };
-        result.reduce();
+        result.reduce_mut();
         result
     }
 
@@ -297,7 +297,7 @@ impl Scalar {
             Self::reduce_wide(&wide)
         } else {
             let mut res = Self { limbs: result };
-            res.reduce();
+            res.reduce_mut();
             res
         }
     }
@@ -722,8 +722,8 @@ impl Scalar {
         true
     }
 
-    /// Reduce this scalar modulo n if it's >= n
-    fn reduce(&mut self) {
+    /// Reduce this scalar modulo n if it's >= n (internal mutable version)
+    fn reduce_mut(&mut self) {
         // Keep subtracting n until result < n
         // At most 2 iterations needed for add()
         while Self::gte_n(&self.limbs) {
@@ -736,6 +736,17 @@ impl Scalar {
                 borrow = (b1 as u64) + (b2 as u64);
             }
         }
+    }
+
+    /// Reduce a scalar modulo the curve order n
+    ///
+    /// Returns the reduced scalar. This is needed when converting field elements
+    /// (which are in [0, p-1]) to scalars (which must be in [0, n-1]).
+    /// Since p > n for P-521, explicit reduction is required.
+    pub fn reduce(&self) -> Self {
+        let mut result = *self;
+        result.reduce_mut();
+        result
     }
 }
 

@@ -34,7 +34,7 @@ impl Scalar {
     /// The input is reduced modulo n if necessary.
     pub fn from_limbs(limbs: [u64; 4]) -> Self {
         let mut result = Self { limbs };
-        result.reduce();
+        result.reduce_mut();
         result
     }
 
@@ -133,7 +133,7 @@ impl Scalar {
             Self::reduce_wide(&wide)
         } else {
             let mut res = Self { limbs: result };
-            res.reduce();
+            res.reduce_mut();
             res
         }
     }
@@ -524,8 +524,8 @@ impl Scalar {
         true
     }
 
-    /// Reduce this scalar modulo n if it's >= n
-    fn reduce(&mut self) {
+    /// Reduce this scalar modulo n if it's >= n (internal mutable version)
+    fn reduce_mut(&mut self) {
         // Keep subtracting n until result < n
         // For add(), the result is at most 2n-2, so we need at most 2 iterations
         // For mul() we use reduce_wide() instead
@@ -539,6 +539,17 @@ impl Scalar {
                 borrow = (b1 as u64) + (b2 as u64);
             }
         }
+    }
+
+    /// Reduce a scalar modulo the curve order n
+    ///
+    /// Returns the reduced scalar. This is needed when converting field elements
+    /// (which are in [0, p-1]) to scalars (which must be in [0, n-1]).
+    /// Since p > n for P-256, explicit reduction is required.
+    pub fn reduce(&self) -> Self {
+        let mut result = *self;
+        result.reduce_mut();
+        result
     }
 }
 
@@ -1653,7 +1664,6 @@ mod barrett_tests {
     fn test_barrett_at_1203_to_1204() {
         // This test uses exact values from Python for iteration 1203->1204
         // Python confirms the algorithm works correctly for this case
-        // ✅ THIS TEST PASSES - Barrett reduction itself is CORRECT!
 
         // Input: (7^1203)^2 unreduced
         let input_limbs = [
