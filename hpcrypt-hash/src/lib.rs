@@ -1,11 +1,15 @@
 #![no_std]
-#![forbid(unsafe_code)]
+#![cfg_attr(not(any(feature = "avx2", feature = "neon")), forbid(unsafe_code))]
 
 #[cfg(feature = "std")]
 extern crate std;
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
+
+// Hardware-accelerated intrinsics
+#[cfg(any(feature = "avx2", feature = "neon"))]
+pub mod intrinsics;
 
 pub mod ascon;
 pub mod traits;
@@ -20,7 +24,7 @@ pub mod sha384;
 pub mod sha512;
 pub mod sha512_224;
 pub mod sha512_256;
-pub mod shake_batched;
+pub mod shake_x4;
 pub mod xof_reader;
 
 // Re-export commonly used types
@@ -38,7 +42,7 @@ pub use sha384::{sha384, Sha384};
 pub use sha512::{sha512, Sha512};
 pub use sha512_224::{sha512_224, Sha512_224};
 pub use sha512_256::{sha512_256, Sha512_256};
-pub use shake_batched::{Shake128x4, Shake256x4};
+pub use shake_x4::{Shake128x4, Shake256x4};
 
 // Re-export traits
 pub use traits::{HashFunction, XofFunction};

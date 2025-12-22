@@ -1,7 +1,7 @@
 //! Benchmark comparing sequential SHAKE vs 4-way batched SHAKE
 
 use std::time::Instant;
-use hpcrypt_hash::{Shake256, shake_batched::Shake256x4};
+use hpcrypt_hash::{Shake256, shake_x4::Shake256x4};
 
 fn main() {
     let iterations = 10000;

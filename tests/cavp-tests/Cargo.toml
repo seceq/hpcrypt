@@ -39,9 +39,9 @@ enable-hash-tests = ["hpcrypt-hash"]
 enable-slhdsa-tests = ["hpcrypt-slhdsa"]
 enable-drbg-tests = ["hpcrypt-rng", "hpcrypt-hash", "hpcrypt-core", "hpcrypt-cipher"]
 
-# SIMD intrinsics feature passthrough for PQC crates
-avx2 = ["hpcrypt-mlkem/avx2", "hpcrypt-mldsa/avx2"]
-neon = ["hpcrypt-mlkem/neon", "hpcrypt-mldsa/neon"]
+# SIMD intrinsics feature passthrough for PQC crates and hash
+avx2 = ["hpcrypt-mlkem/avx2", "hpcrypt-mldsa/avx2", "hpcrypt-hash?/avx2"]
+neon = ["hpcrypt-mlkem/neon", "hpcrypt-mldsa/neon", "hpcrypt-hash?/neon"]
 
 # Enable all actual implementation tests
 enable-all-tests = [
@@ -109,6 +109,11 @@ required-features = ["enable-hash-tests"]
 [[test]]
 name = "sha3"
 path = "tests/sha3.rs"
+required-features = ["enable-hash-tests"]
+
+[[test]]
+name = "shake_x4"
+path = "tests/shake_x4.rs"
 required-features = ["enable-hash-tests"]
 
 # Key Derivation Function Tests

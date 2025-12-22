@@ -825,9 +825,40 @@ impl TurboShake256 {
 /// Keccak-p[1600, 12] permutation - 12-round variant for TurboSHAKE
 /// This is approximately 2x faster than the full 24-round Keccak-f\[1600]
 /// Used by TurboSHAKE128 and TurboSHAKE256 (RFC 9861)
+/// With runtime SIMD dispatch for AVX2 (x86_64) and NEON (aarch64)
+///
+/// Note: SIMD dispatch is only enabled when lane-complement is NOT enabled,
+/// since SIMD uses standard state representation while lane-complement uses
+/// a different internal state format.
 #[inline(always)]
 #[cfg(not(feature = "lane-complement"))]
 fn keccak_p_12(state: &mut [u64; 25]) {
+    // Try AVX2 on x86_64/x86 (skip on AMD where single-state AVX2 is slower)
+    #[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), feature = "std", feature = "avx2"))]
+    {
+        if crate::intrinsics::has_avx2() && !crate::intrinsics::is_amd_cpu() {
+            unsafe { crate::intrinsics::keccak_p12_avx2(state) };
+            return;
+        }
+    }
+
+    // Try NEON on AArch64
+    #[cfg(all(target_arch = "aarch64", feature = "std", feature = "neon"))]
+    {
+        if crate::intrinsics::has_neon() {
+            unsafe { crate::intrinsics::keccak_p12_neon(state) };
+            return;
+        }
+    }
+
+    // Fallback to scalar implementation
+    keccak_p_12_scalar(state);
+}
+
+/// Scalar Keccak-p[1600, 12] permutation - standard version
+#[inline(always)]
+#[cfg(not(feature = "lane-complement"))]
+fn keccak_p_12_scalar(state: &mut [u64; 25]) {
     // TurboSHAKE uses rounds 12-23 (the last 12 rounds)
     for round in 12..24 {
         // Theta step (unrolled via macro)
@@ -847,7 +878,7 @@ fn keccak_p_12(state: &mut [u64; 25]) {
     }
 }
 
-/// Keccak-p[1600, 12] permutation with lane complementing (12-round variant)
+/// Keccak-p[1600, 12] permutation - lane complementing version
 #[inline(always)]
 #[cfg(feature = "lane-complement")]
 fn keccak_p_12(state: &mut [u64; 25]) {
@@ -933,9 +964,40 @@ fn keccak_p_12(state: &mut [u64; 25]) {
 
 /// Keccak-f\[1600] permutation
 /// Phase 2 optimizations: Theta/Chi/Rho-Pi step unrolling
+/// With runtime SIMD dispatch for AVX2 (x86_64) and NEON (aarch64)
+///
+/// Note: SIMD dispatch is only enabled when lane-complement is NOT enabled,
+/// since SIMD uses standard state representation while lane-complement uses
+/// a different internal state format.
 #[inline(always)]
 #[cfg(not(feature = "lane-complement"))]
-fn keccak_f(state: &mut [u64; 25]) {
+pub(crate) fn keccak_f(state: &mut [u64; 25]) {
+    // Try AVX2 on x86_64/x86 (skip on AMD where single-state AVX2 is slower)
+    #[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), feature = "std", feature = "avx2"))]
+    {
+        if crate::intrinsics::has_avx2() && !crate::intrinsics::is_amd_cpu() {
+            unsafe { crate::intrinsics::keccak_f1600_avx2(state) };
+            return;
+        }
+    }
+
+    // Try NEON on AArch64
+    #[cfg(all(target_arch = "aarch64", feature = "std", feature = "neon"))]
+    {
+        if crate::intrinsics::has_neon() {
+            unsafe { crate::intrinsics::keccak_f1600_neon(state) };
+            return;
+        }
+    }
+
+    // Fallback to scalar implementation
+    keccak_f_scalar(state);
+}
+
+/// Scalar Keccak-f\[1600] permutation - standard version
+#[inline(always)]
+#[cfg(not(feature = "lane-complement"))]
+fn keccak_f_scalar(state: &mut [u64; 25]) {
     for round in 0..24 {
         let mut c = [0u64; 5];
         let mut d = [0u64; 5];
@@ -950,7 +1012,7 @@ fn keccak_f(state: &mut [u64; 25]) {
     }
 }
 
-/// Keccak-f\[1600] permutation with lane complementing optimization
+/// Keccak-f\[1600] permutation - lane complementing version
 ///
 /// This variant stores lanes 1, 2, 8, 12, 17, and 20 in complemented form to reduce
 /// NOT operations in the chi step from 25 per round to 8 per round.
@@ -963,7 +1025,7 @@ fn keccak_f(state: &mut [u64; 25]) {
 /// Based on XKCP's generic64lc implementation.
 #[inline(always)]
 #[cfg(feature = "lane-complement")]
-fn keccak_f(state: &mut [u64; 25]) {
+pub(crate) fn keccak_f(state: &mut [u64; 25]) {
     // Lane complementing implementation based on XKCP's "bebigokimisa" pattern
     // Lanes stored complemented: 1, 2, 8, 12, 17, 20
 

@@ -5,6 +5,7 @@
 # Usage:
 #   ./tests/scripts/test-intrinsics.sh pqc [portable|avx2|neon|all]   # Test PQC intrinsics
 #   ./tests/scripts/test-intrinsics.sh mac [portable|avx2|neon|all]   # Test MAC intrinsics
+#   ./tests/scripts/test-intrinsics.sh hash [portable|avx2|neon|all]  # Test hash intrinsics
 #   ./tests/scripts/test-intrinsics.sh all [portable|avx2|neon|all]   # Test all intrinsics
 #
 # PQC Test suites:
@@ -14,6 +15,10 @@
 # MAC Test suites:
 #   - GHASH (GCM authentication)
 #   - POLYVAL (AES-GCM-SIV authentication)
+#
+# Hash Test suites:
+#   - 1-way: CAVP SHA3/SHAKE + hpcrypt-hash sha3 unit tests + RFC TurboSHAKE
+#   - 4-way: CAVP SHAKE x4 + hpcrypt-hash x4 unit tests
 #
 
 set -e
@@ -326,6 +331,282 @@ run_mac_tests() {
     return $failed
 }
 
+# Run hash (Keccak) intrinsics tests for a specific configuration
+# Tests both 1-way (single state) and 4-way (parallel) implementations
+run_hash_tests() {
+    local config="$1"
+    local runner="cargo"
+    local target=""
+    local rustflags=""
+    local features=""
+    local failed=0
+
+    case "$config" in
+        portable)
+            # No special flags, use default portable implementation
+            ;;
+        avx2)
+            if [[ "$(uname -m)" != "x86_64" ]]; then
+                print_warning "Skipping AVX2 tests: not on x86_64 architecture"
+                return 0
+            fi
+            if ! check_avx2_support; then
+                print_warning "Skipping AVX2 tests: CPU does not support AVX2"
+                return 0
+            fi
+            rustflags="-C target-cpu=native"
+            features="avx2"
+            ;;
+        neon)
+            runner="cross"
+            target="aarch64-unknown-linux-gnu"
+            features="neon"
+            if ! check_cross; then
+                return 0
+            fi
+            ;;
+        *)
+            print_error "Unknown configuration: $config"
+            return 1
+            ;;
+    esac
+
+    # =========================================================================
+    # Test 1a: 1-way Keccak intrinsics via CAVP SHA3/SHAKE tests
+    # Tests keccak_f1600 (24-round) through Sha3_*, Shake* high-level APIs
+    # Validates against official NIST FIPS 202 test vectors
+    # =========================================================================
+    print_header "Running CAVP SHA3/SHAKE tests (1-way keccak_f1600) with $config implementation"
+
+    local cmd=""
+    if [[ "$runner" == "cross" ]]; then
+        if [[ -n "$features" ]]; then
+            cmd="cross test --package cavp-tests --target $target --features \"enable-hash-tests,$features\" --test sha3 -- --nocapture"
+        else
+            cmd="cross test --package cavp-tests --target $target --features enable-hash-tests --test sha3 -- --nocapture"
+        fi
+    else
+        if [[ -n "$rustflags" ]]; then
+            if [[ -n "$features" ]]; then
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package cavp-tests --features \"enable-hash-tests,$features\" --test sha3 -- --nocapture"
+            else
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package cavp-tests --features enable-hash-tests --test sha3 -- --nocapture"
+            fi
+        else
+            if [[ -n "$features" ]]; then
+                cmd="cargo test --package cavp-tests --features \"enable-hash-tests,$features\" --test sha3 -- --nocapture"
+            else
+                cmd="cargo test --package cavp-tests --features enable-hash-tests --test sha3 -- --nocapture"
+            fi
+        fi
+    fi
+
+    echo "Command: $cmd"
+    echo ""
+
+    if eval "$cmd"; then
+        print_success "PASSED: CAVP SHA3/SHAKE (1-way) with $config"
+    else
+        print_error "FAILED: CAVP SHA3/SHAKE (1-way) with $config"
+        failed=1
+    fi
+
+    # =========================================================================
+    # Test 1b: 1-way Keccak intrinsics via hpcrypt-hash sha3 unit tests
+    # Tests keccak_f1600 through Sha3_*, Shake* APIs
+    # Validates intrinsics output matches reference implementation
+    # =========================================================================
+    print_header "Running hpcrypt-hash SHA3 unit tests (1-way) with $config implementation"
+
+    if [[ "$runner" == "cross" ]]; then
+        if [[ -n "$features" ]]; then
+            cmd="cross test --package hpcrypt-hash --target $target --features \"std,$features\" --lib sha3 -- --nocapture"
+        else
+            cmd="cross test --package hpcrypt-hash --target $target --features std --lib sha3 -- --nocapture"
+        fi
+    else
+        if [[ -n "$rustflags" ]]; then
+            if [[ -n "$features" ]]; then
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package hpcrypt-hash --features \"std,$features\" --lib sha3 -- --nocapture"
+            else
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package hpcrypt-hash --features std --lib sha3 -- --nocapture"
+            fi
+        else
+            if [[ -n "$features" ]]; then
+                cmd="cargo test --package hpcrypt-hash --features \"std,$features\" --lib sha3 -- --nocapture"
+            else
+                cmd="cargo test --package hpcrypt-hash --features std --lib sha3 -- --nocapture"
+            fi
+        fi
+    fi
+
+    echo "Command: $cmd"
+    echo ""
+
+    if eval "$cmd"; then
+        print_success "PASSED: hpcrypt-hash SHA3 unit tests with $config"
+    else
+        print_error "FAILED: hpcrypt-hash SHA3 unit tests with $config"
+        failed=1
+    fi
+
+    # =========================================================================
+    # Test 2a: 4-way Keccak intrinsics via CAVP SHAKE x4 tests
+    # Tests keccak_f1600_x4 through Shake128x4/Shake256x4 APIs
+    # Validates against official NIST FIPS 202 test vectors
+    # =========================================================================
+    print_header "Running CAVP SHAKE x4 tests (4-way keccak_f1600_x4) with $config implementation"
+
+    if [[ "$runner" == "cross" ]]; then
+        if [[ -n "$features" ]]; then
+            cmd="cross test --package cavp-tests --target $target --features \"enable-hash-tests,$features\" --test shake_x4 -- --nocapture"
+        else
+            cmd="cross test --package cavp-tests --target $target --features enable-hash-tests --test shake_x4 -- --nocapture"
+        fi
+    else
+        if [[ -n "$rustflags" ]]; then
+            if [[ -n "$features" ]]; then
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package cavp-tests --features \"enable-hash-tests,$features\" --test shake_x4 -- --nocapture"
+            else
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package cavp-tests --features enable-hash-tests --test shake_x4 -- --nocapture"
+            fi
+        else
+            if [[ -n "$features" ]]; then
+                cmd="cargo test --package cavp-tests --features \"enable-hash-tests,$features\" --test shake_x4 -- --nocapture"
+            else
+                cmd="cargo test --package cavp-tests --features enable-hash-tests --test shake_x4 -- --nocapture"
+            fi
+        fi
+    fi
+
+    echo "Command: $cmd"
+    echo ""
+
+    if eval "$cmd"; then
+        print_success "PASSED: CAVP SHAKE x4 (4-way) with $config"
+    else
+        print_error "FAILED: CAVP SHAKE x4 (4-way) with $config"
+        failed=1
+    fi
+
+    # =========================================================================
+    # Test 2b: 4-way Keccak intrinsics via hpcrypt-hash shake_x4 unit tests
+    # Validates 4-way output matches sequential 1-way output
+    # =========================================================================
+    print_header "Running hpcrypt-hash SHAKE x4 unit tests (4-way vs 1-way) with $config implementation"
+
+    if [[ "$runner" == "cross" ]]; then
+        if [[ -n "$features" ]]; then
+            cmd="cross test --package hpcrypt-hash --target $target --features \"std,$features\" --lib shake_x4 -- --nocapture"
+        else
+            cmd="cross test --package hpcrypt-hash --target $target --features std --lib shake_x4 -- --nocapture"
+        fi
+    else
+        if [[ -n "$rustflags" ]]; then
+            if [[ -n "$features" ]]; then
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package hpcrypt-hash --features \"std,$features\" --lib shake_x4 -- --nocapture"
+            else
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package hpcrypt-hash --features std --lib shake_x4 -- --nocapture"
+            fi
+        else
+            if [[ -n "$features" ]]; then
+                cmd="cargo test --package hpcrypt-hash --features \"std,$features\" --lib shake_x4 -- --nocapture"
+            else
+                cmd="cargo test --package hpcrypt-hash --features std --lib shake_x4 -- --nocapture"
+            fi
+        fi
+    fi
+
+    echo "Command: $cmd"
+    echo ""
+
+    if eval "$cmd"; then
+        print_success "PASSED: hpcrypt-hash SHAKE x4 unit tests with $config"
+    else
+        print_error "FAILED: hpcrypt-hash SHAKE x4 unit tests with $config"
+        failed=1
+    fi
+
+    # =========================================================================
+    # Test 3: Keccak intrinsics unit tests (1-way + 4-way vs reference impl)
+    # Direct tests of keccak_f1600_avx2/neon and keccak_f1600_x4 against
+    # a pure Rust reference implementation
+    # =========================================================================
+    print_header "Running Keccak intrinsics unit tests (1-way + 4-way) with $config implementation"
+
+    if [[ "$runner" == "cross" ]]; then
+        if [[ -n "$features" ]]; then
+            cmd="cross test --package hpcrypt-hash --target $target --features \"std,$features\" --lib intrinsics -- --nocapture"
+        else
+            cmd="cross test --package hpcrypt-hash --target $target --features std --lib intrinsics -- --nocapture"
+        fi
+    else
+        if [[ -n "$rustflags" ]]; then
+            if [[ -n "$features" ]]; then
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package hpcrypt-hash --features \"std,$features\" --lib intrinsics -- --nocapture"
+            else
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package hpcrypt-hash --features std --lib intrinsics -- --nocapture"
+            fi
+        else
+            if [[ -n "$features" ]]; then
+                cmd="cargo test --package hpcrypt-hash --features \"std,$features\" --lib intrinsics -- --nocapture"
+            else
+                cmd="cargo test --package hpcrypt-hash --features std --lib intrinsics -- --nocapture"
+            fi
+        fi
+    fi
+
+    echo "Command: $cmd"
+    echo ""
+
+    if eval "$cmd"; then
+        print_success "PASSED: Keccak intrinsics unit tests with $config"
+    else
+        print_error "FAILED: Keccak intrinsics unit tests with $config"
+        failed=1
+    fi
+
+    # =========================================================================
+    # Test 4: TurboSHAKE tests (1-way keccak_p12 - 12-round variant)
+    # Tests keccak_p12 through TurboShake128/TurboShake256 high-level APIs
+    # =========================================================================
+    print_header "Running RFC TurboSHAKE tests (1-way keccak_p12) with $config implementation"
+
+    if [[ "$runner" == "cross" ]]; then
+        if [[ -n "$features" ]]; then
+            cmd="cross test --package rfc-tests --target $target --features \"enable-hash-tests,$features\" --test turboshake -- --nocapture"
+        else
+            cmd="cross test --package rfc-tests --target $target --features enable-hash-tests --test turboshake -- --nocapture"
+        fi
+    else
+        if [[ -n "$rustflags" ]]; then
+            if [[ -n "$features" ]]; then
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package rfc-tests --features \"enable-hash-tests,$features\" --test turboshake -- --nocapture"
+            else
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package rfc-tests --features enable-hash-tests --test turboshake -- --nocapture"
+            fi
+        else
+            if [[ -n "$features" ]]; then
+                cmd="cargo test --package rfc-tests --features \"enable-hash-tests,$features\" --test turboshake -- --nocapture"
+            else
+                cmd="cargo test --package rfc-tests --features enable-hash-tests --test turboshake -- --nocapture"
+            fi
+        fi
+    fi
+
+    echo "Command: $cmd"
+    echo ""
+
+    if eval "$cmd"; then
+        print_success "PASSED: RFC TurboSHAKE (keccak_p12) with $config"
+    else
+        print_error "FAILED: RFC TurboSHAKE (keccak_p12) with $config"
+        failed=1
+    fi
+
+    return $failed
+}
+
 # Run tests for a specific suite type and configuration
 run_suite() {
     local suite="$1"
@@ -343,11 +624,19 @@ run_suite() {
                 failed=1
             fi
             ;;
+        hash)
+            if ! run_hash_tests "$config"; then
+                failed=1
+            fi
+            ;;
         all)
             if ! run_pqc_suites "$config"; then
                 failed=1
             fi
             if ! run_mac_tests "$config"; then
+                failed=1
+            fi
+            if ! run_hash_tests "$config"; then
                 failed=1
             fi
             ;;
@@ -394,6 +683,7 @@ print_usage() {
     echo "Suites:"
     echo "  pqc   - Test PQC intrinsics (ML-KEM, ML-DSA)"
     echo "  mac   - Test MAC intrinsics (GHASH, POLYVAL)"
+    echo "  hash  - Test hash intrinsics (Keccak/SHA-3 1-way and 4-way)"
     echo "  all   - Test all intrinsics"
     echo ""
     echo "Configurations:"
@@ -406,6 +696,7 @@ print_usage() {
     echo "  $0 pqc              # Run PQC tests with all configs"
     echo "  $0 pqc avx2         # Run PQC tests with AVX2 only"
     echo "  $0 mac neon         # Run MAC tests with NEON only"
+    echo "  $0 hash avx2        # Run hash tests with AVX2 only"
     echo "  $0 all              # Run all tests with all configs"
     echo ""
     echo "Test suites:"
@@ -415,6 +706,9 @@ print_usage() {
     echo "  MAC:"
     echo "    - GHASH (GCM authentication)"
     echo "    - POLYVAL (AES-GCM-SIV authentication)"
+    echo "  Hash:"
+    echo "    - 1-way: CAVP SHA3/SHAKE + hpcrypt-hash sha3 unit tests + RFC TurboSHAKE"
+    echo "    - 4-way: CAVP SHAKE x4 + hpcrypt-hash x4 unit tests"
 }
 
 # Main
@@ -431,7 +725,7 @@ main() {
 
     # Validate suite
     case "$suite" in
-        pqc|mac|all)
+        pqc|mac|hash|all)
             ;;
         *)
             print_error "Unknown suite: $suite"

@@ -30,3 +30,7 @@ default = ["std", "alloc"]
 std = ["hpcrypt-core/std"]
 alloc = ["hpcrypt-core/alloc"]
 lane-complement = []
+# AVX2 SIMD optimizations for SHA-3/Keccak (x86/x86_64)
+avx2 = []
+# ARM NEON SIMD optimizations for SHA-3/Keccak (aarch64)
+neon = []

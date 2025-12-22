@@ -6,23 +6,13 @@
 //! # Example
 //!
 //! ```
-//! use hpcrypt_hash::shake_batched::{Shake128x4, Shake256x4};
+//! use hpcrypt_hash::shake_x4::{Shake128x4, Shake256x4};
 //!
 //! let inputs: [&[u8]; 4] = [b"input0", b"input1", b"input2", b"input3"];
 //! let outputs: [[u8; 64]; 4] = Shake128x4::hash_x4(&inputs);
 //! ```
 
 use crate::sha3::STATE_SIZE;
-
-/// Keccak-f[1600] round constants.
-const ROUND_CONSTANTS: [u64; 24] = [
-    0x0000000000000001, 0x0000000000008082, 0x800000000000808A, 0x8000000080008000,
-    0x000000000000808B, 0x0000000080000001, 0x8000000080008081, 0x8000000000008009,
-    0x000000000000008A, 0x0000000000000088, 0x0000000080008009, 0x000000008000000A,
-    0x000000008000808B, 0x800000000000008B, 0x8000000000008089, 0x8000000000008003,
-    0x8000000000008002, 0x8000000000000080, 0x000000000000800A, 0x800000008000000A,
-    0x8000000080008081, 0x8000000000008080, 0x0000000080000001, 0x8000000080008008,
-];
 
 /// SHAKE-128 rate in bytes (1344 bits).
 pub const SHAKE128_RATE: usize = 168;
@@ -76,7 +66,7 @@ impl KeccakState4 {
     #[inline]
     pub fn permute_single(&mut self, idx: usize) {
         debug_assert!(idx < 4);
-        keccak_f_single(&mut self.states[idx]);
+        crate::sha3::keccak_f(&mut self.states[idx]);
     }
 
     /// XORs a block of data into one state.
@@ -110,159 +100,32 @@ impl KeccakState4 {
     }
 }
 
-/// Keccak-f[1600] permutation for a single state.
-#[inline]
-fn keccak_f_single(state: &mut [u64; 25]) {
-    let mut c = [0u64; 5];
-    let mut d = [0u64; 5];
-    let mut b = [0u64; 25];
-
-    for round in 0..24 {
-        // Theta
-        c[0] = state[0] ^ state[5] ^ state[10] ^ state[15] ^ state[20];
-        c[1] = state[1] ^ state[6] ^ state[11] ^ state[16] ^ state[21];
-        c[2] = state[2] ^ state[7] ^ state[12] ^ state[17] ^ state[22];
-        c[3] = state[3] ^ state[8] ^ state[13] ^ state[18] ^ state[23];
-        c[4] = state[4] ^ state[9] ^ state[14] ^ state[19] ^ state[24];
-
-        d[0] = c[4] ^ c[1].rotate_left(1);
-        d[1] = c[0] ^ c[2].rotate_left(1);
-        d[2] = c[1] ^ c[3].rotate_left(1);
-        d[3] = c[2] ^ c[4].rotate_left(1);
-        d[4] = c[3] ^ c[0].rotate_left(1);
-
-        for i in 0..25 {
-            state[i] ^= d[i % 5];
-        }
-
-        // Rho and Pi
-        b[0] = state[0];
-        b[10] = state[1].rotate_left(1);
-        b[7] = state[10].rotate_left(3);
-        b[11] = state[7].rotate_left(6);
-        b[17] = state[11].rotate_left(10);
-        b[18] = state[17].rotate_left(15);
-        b[3] = state[18].rotate_left(21);
-        b[5] = state[3].rotate_left(28);
-        b[16] = state[5].rotate_left(36);
-        b[8] = state[16].rotate_left(45);
-        b[21] = state[8].rotate_left(55);
-        b[24] = state[21].rotate_left(2);
-        b[4] = state[24].rotate_left(14);
-        b[15] = state[4].rotate_left(27);
-        b[23] = state[15].rotate_left(41);
-        b[19] = state[23].rotate_left(56);
-        b[13] = state[19].rotate_left(8);
-        b[12] = state[13].rotate_left(25);
-        b[2] = state[12].rotate_left(43);
-        b[20] = state[2].rotate_left(62);
-        b[14] = state[20].rotate_left(18);
-        b[22] = state[14].rotate_left(39);
-        b[9] = state[22].rotate_left(61);
-        b[6] = state[9].rotate_left(20);
-        b[1] = state[6].rotate_left(44);
-
-        // Chi
-        for y in 0..5 {
-            let base = y * 5;
-            let t0 = b[base];
-            let t1 = b[base + 1];
-            let t2 = b[base + 2];
-            let t3 = b[base + 3];
-            let t4 = b[base + 4];
-            state[base] = t0 ^ ((!t1) & t2);
-            state[base + 1] = t1 ^ ((!t2) & t3);
-            state[base + 2] = t2 ^ ((!t3) & t4);
-            state[base + 3] = t3 ^ ((!t4) & t0);
-            state[base + 4] = t4 ^ ((!t0) & t1);
-        }
-
-        // Iota
-        state[0] ^= ROUND_CONSTANTS[round];
-    }
-}
-
 /// Keccak-f[1600] permutation for 4 states in parallel.
+/// Uses SIMD x4 when available (AVX2 on x86_64, NEON on aarch64),
+/// otherwise falls back to sequential single-state permutations.
 #[inline]
 fn keccak_f_x4(states: &mut [[u64; 25]; 4]) {
-    let mut c = [[0u64; 5]; 4];
-    let mut d = [[0u64; 5]; 4];
-    let mut b = [[0u64; 25]; 4];
-
-    for round in 0..24 {
-        // Theta
-        for s in 0..4 {
-            c[s][0] = states[s][0] ^ states[s][5] ^ states[s][10] ^ states[s][15] ^ states[s][20];
-            c[s][1] = states[s][1] ^ states[s][6] ^ states[s][11] ^ states[s][16] ^ states[s][21];
-            c[s][2] = states[s][2] ^ states[s][7] ^ states[s][12] ^ states[s][17] ^ states[s][22];
-            c[s][3] = states[s][3] ^ states[s][8] ^ states[s][13] ^ states[s][18] ^ states[s][23];
-            c[s][4] = states[s][4] ^ states[s][9] ^ states[s][14] ^ states[s][19] ^ states[s][24];
+    // Try AVX2 x4 on x86_64/x86
+    #[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), feature = "std", feature = "avx2"))]
+    {
+        if crate::intrinsics::has_avx2() {
+            unsafe { crate::intrinsics::keccak_f1600_x4_states(states) };
+            return;
         }
+    }
 
-        for s in 0..4 {
-            d[s][0] = c[s][4] ^ c[s][1].rotate_left(1);
-            d[s][1] = c[s][0] ^ c[s][2].rotate_left(1);
-            d[s][2] = c[s][1] ^ c[s][3].rotate_left(1);
-            d[s][3] = c[s][2] ^ c[s][4].rotate_left(1);
-            d[s][4] = c[s][3] ^ c[s][0].rotate_left(1);
+    // Try NEON x4 on AArch64
+    #[cfg(all(target_arch = "aarch64", feature = "std", feature = "neon"))]
+    {
+        if crate::intrinsics::has_neon() {
+            unsafe { crate::intrinsics::keccak_f1600_x4_states_neon(states) };
+            return;
         }
+    }
 
-        for s in 0..4 {
-            for i in 0..25 {
-                states[s][i] ^= d[s][i % 5];
-            }
-        }
-
-        // Rho and Pi
-        for s in 0..4 {
-            b[s][0] = states[s][0];
-            b[s][10] = states[s][1].rotate_left(1);
-            b[s][7] = states[s][10].rotate_left(3);
-            b[s][11] = states[s][7].rotate_left(6);
-            b[s][17] = states[s][11].rotate_left(10);
-            b[s][18] = states[s][17].rotate_left(15);
-            b[s][3] = states[s][18].rotate_left(21);
-            b[s][5] = states[s][3].rotate_left(28);
-            b[s][16] = states[s][5].rotate_left(36);
-            b[s][8] = states[s][16].rotate_left(45);
-            b[s][21] = states[s][8].rotate_left(55);
-            b[s][24] = states[s][21].rotate_left(2);
-            b[s][4] = states[s][24].rotate_left(14);
-            b[s][15] = states[s][4].rotate_left(27);
-            b[s][23] = states[s][15].rotate_left(41);
-            b[s][19] = states[s][23].rotate_left(56);
-            b[s][13] = states[s][19].rotate_left(8);
-            b[s][12] = states[s][13].rotate_left(25);
-            b[s][2] = states[s][12].rotate_left(43);
-            b[s][20] = states[s][2].rotate_left(62);
-            b[s][14] = states[s][20].rotate_left(18);
-            b[s][22] = states[s][14].rotate_left(39);
-            b[s][9] = states[s][22].rotate_left(61);
-            b[s][6] = states[s][9].rotate_left(20);
-            b[s][1] = states[s][6].rotate_left(44);
-        }
-
-        // Chi
-        for s in 0..4 {
-            for y in 0..5 {
-                let base = y * 5;
-                let t0 = b[s][base];
-                let t1 = b[s][base + 1];
-                let t2 = b[s][base + 2];
-                let t3 = b[s][base + 3];
-                let t4 = b[s][base + 4];
-                states[s][base] = t0 ^ ((!t1) & t2);
-                states[s][base + 1] = t1 ^ ((!t2) & t3);
-                states[s][base + 2] = t2 ^ ((!t3) & t4);
-                states[s][base + 3] = t3 ^ ((!t4) & t0);
-                states[s][base + 4] = t4 ^ ((!t0) & t1);
-            }
-        }
-
-        // Iota
-        for s in 0..4 {
-            states[s][0] ^= ROUND_CONSTANTS[round];
-        }
+    // Fallback: process each state sequentially using sha3::keccak_f
+    for state in states.iter_mut() {
+        crate::sha3::keccak_f(state);
     }
 }
 
