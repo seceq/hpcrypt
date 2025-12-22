@@ -411,6 +411,98 @@ impl Ord for U256 {
     }
 }
 
+/// 512-bit unsigned integer for GLV intermediate calculations
+///
+/// Represented as 8 x 64-bit limbs in little-endian order.
+/// Used for the full product of two 256-bit numbers.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct U512 {
+    pub(crate) limbs: [u64; 8],
+}
+
+impl U512 {
+    /// Zero constant
+    pub const ZERO: Self = Self { limbs: [0; 8] };
+
+    /// Create from two U256 values (low and high halves)
+    #[inline]
+    pub const fn from_u256_pair(low: U256, high: U256) -> Self {
+        Self {
+            limbs: [
+                low.limbs[0],
+                low.limbs[1],
+                low.limbs[2],
+                low.limbs[3],
+                high.limbs[0],
+                high.limbs[1],
+                high.limbs[2],
+                high.limbs[3],
+            ],
+        }
+    }
+
+    /// Right shift by n bits, returning lower 256 bits
+    ///
+    /// This is optimized for the case where we shift by 384 bits (6 limbs)
+    /// and only need the resulting lower 256 bits.
+    pub fn shr_to_u256(&self, bits: u32) -> U256 {
+        if bits >= 512 {
+            return U256::ZERO;
+        }
+
+        let limb_shift = (bits / 64) as usize;
+        let bit_shift = bits % 64;
+
+        let mut result = [0u64; 4];
+
+        if bit_shift == 0 {
+            // Simple limb shift
+            for i in 0..4 {
+                if limb_shift + i < 8 {
+                    result[i] = self.limbs[limb_shift + i];
+                }
+            }
+        } else {
+            // Shift with bit offset
+            for i in 0..4 {
+                if limb_shift + i < 8 {
+                    result[i] = self.limbs[limb_shift + i] >> bit_shift;
+                }
+                if limb_shift + i + 1 < 8 {
+                    result[i] |= self.limbs[limb_shift + i + 1] << (64 - bit_shift);
+                }
+            }
+        }
+
+        U256 { limbs: result }
+    }
+
+    /// Add a U512 value, returns (result, overflow)
+    pub fn add(&self, rhs: &U512) -> (U512, bool) {
+        let mut result = [0u64; 8];
+        let mut carry = 0u64;
+
+        for i in 0..8 {
+            let (sum, c1) = self.limbs[i].overflowing_add(rhs.limbs[i]);
+            let (sum, c2) = sum.overflowing_add(carry);
+            result[i] = sum;
+            carry = (c1 as u64) + (c2 as u64);
+        }
+
+        (Self { limbs: result }, carry != 0)
+    }
+
+    /// Get bit at position (for rounding)
+    pub fn bit(&self, pos: u32) -> bool {
+        if pos >= 512 {
+            return false;
+        }
+        let limb_idx = (pos / 64) as usize;
+        let bit_idx = pos % 64;
+        (self.limbs[limb_idx] >> bit_idx) & 1 == 1
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

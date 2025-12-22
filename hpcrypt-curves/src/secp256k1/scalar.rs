@@ -387,7 +387,7 @@ impl Scalar {
         }
     }
 
-    /// Reduce this scalar modulo n if it's >= n
+    /// Reduce this scalar modulo n if it's >= n (internal mutable version)
     fn reduce_in_place(&mut self) {
         // Compare with n
         let mut gte = true;
@@ -412,6 +412,17 @@ impl Scalar {
                 borrow = (b1 as u64) + (b2 as u64);
             }
         }
+    }
+
+    /// Reduce a scalar modulo the curve order n
+    ///
+    /// Returns the reduced scalar. This is needed when converting field elements
+    /// (which are in [0, p-1]) to scalars (which must be in [0, n-1]).
+    /// Since p > n for secp256k1, explicit reduction is required.
+    pub fn reduce(&self) -> Self {
+        let mut result = *self;
+        result.reduce_in_place();
+        result
     }
 }
 
