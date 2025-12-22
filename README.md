@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="hpcrypt.svg" alt="HPCrypt Logo" width="200">
+  <img src="hpcrypt.svg" alt="HPCrypt Logo" width="400" style="background-color: white;">
 </p>
 
 # HPCrypt
