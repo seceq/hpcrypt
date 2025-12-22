@@ -323,7 +323,37 @@ impl Ghash {
 }
 
 /// Computes GHASH over the given data in one call.
+///
+/// Automatically uses hardware acceleration when available:
+/// - AVX2 + PCLMULQDQ on x86/x86_64
+/// - NEON + PMULL on AArch64
+#[allow(unsafe_code)]
 pub fn ghash(h: &[u8; 16], data: &[u8]) -> [u8; 16] {
+    // Try AVX2 + PCLMULQDQ on x86/x86_64
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    {
+        if hpcrypt_core::cpufeatures::has_avx2_pclmulqdq() {
+            // SAFETY: We verified AVX2 + PCLMULQDQ are available
+            return unsafe { crate::intrinsics::avx2::ghash_avx2(h, data) };
+        }
+    }
+
+    // Try NEON + AES/PMULL on AArch64
+    #[cfg(target_arch = "aarch64")]
+    {
+        if hpcrypt_core::cpufeatures::has_neon_aes() {
+            // SAFETY: We verified NEON + AES/PMULL are available
+            return unsafe { crate::intrinsics::neon::ghash_neon(h, data) };
+        }
+    }
+
+    // Portable fallback
+    ghash_portable(h, data)
+}
+
+/// Portable GHASH implementation (always available).
+#[inline]
+fn ghash_portable(h: &[u8; 16], data: &[u8]) -> [u8; 16] {
     let mut hasher = Ghash::new(h);
     hasher.update_blocks(data);
     hasher.finalize()

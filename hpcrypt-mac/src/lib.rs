@@ -1,5 +1,5 @@
 #![no_std]
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
 #![warn(missing_docs, rust_2018_idioms)]
 
 //! Message Authentication Codes (MAC)
@@ -12,12 +12,19 @@
 //! - Poly1305 (Polynomial MAC)
 //! - GHASH (Universal hash for GCM)
 //! - POLYVAL (Universal hash for AES-GCM-SIV)
+//!
+//! Hardware acceleration is automatically used when available:
+//! - AVX2 + PCLMULQDQ on x86/x86_64 for GHASH/POLYVAL
+//! - NEON + PMULL on AArch64 for GHASH/POLYVAL
 
 #[cfg(feature = "std")]
 extern crate std;
 
 // Traits
 pub mod traits;
+
+// SIMD intrinsics (architecture-specific)
+pub(crate) mod intrinsics;
 
 // MAC implementations
 pub mod cmac;

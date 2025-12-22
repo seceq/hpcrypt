@@ -21,6 +21,7 @@ extern crate std;
 extern crate alloc;
 
 pub mod ascon;
+pub mod cpufeatures;
 pub mod ct;
 pub mod ct_utils;
 pub mod error;
