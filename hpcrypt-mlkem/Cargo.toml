@@ -14,6 +14,7 @@ keywords = ["cryptography", "post-quantum", "ml-kem", "kyber", "kem"]
 categories = ["cryptography", "no-std"]
 
 [dependencies]
+hpcrypt-core = { workspace = true, default-features = false }
 hpcrypt-hash = { path = "../hpcrypt-hash", default-features = false }
 hpcrypt-rng = { workspace = true, default-features = false, features = ["os-rng"] }
 serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
@@ -35,7 +36,7 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(disabled_outdated_example)
 
 [features]
 default = []
-std = ["hpcrypt-hash/std"]
+std = ["hpcrypt-core/std", "hpcrypt-hash/std"]
 timing-tests = ["std"]
 serde = ["dep:serde"]
 zeroize = ["dep:zeroize"]

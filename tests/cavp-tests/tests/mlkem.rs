@@ -9,19 +9,19 @@
 use cavp_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 
-#[cfg(feature = "enable-pqc-tests")]
+
 use hpcrypt_mlkem::{MlKem512, MlKem768, MlKem1024, Params};
 
-#[cfg(feature = "enable-pqc-tests")]
+
 use hpcrypt_mlkem::test_api::KemCore;
 
-#[cfg(feature = "enable-pqc-tests")]
+
 use hpcrypt_mlkem::encaps::kpke_encrypt;
 
-#[cfg(feature = "enable-pqc-tests")]
+
 use hpcrypt_mlkem::decaps::ml_kem_decaps;
 
-#[cfg(feature = "enable-pqc-tests")]
+
 use hpcrypt_mlkem::symmetric::{g, h, j, kdf};
 
 // ============================================================================
@@ -136,7 +136,7 @@ struct EncapDecapExpectedCase {
 // ============================================================================
 
 #[test]
-#[cfg(feature = "enable-pqc-tests")]
+
 fn test_mlkem_keygen_cavp() {
     let prompt: KeyGenPrompt = load_test_file("ML-KEM-keyGen-FIPS203", "prompt.json");
     let expected: KeyGenExpected = load_test_file("ML-KEM-keyGen-FIPS203", "expectedResults.json");
@@ -182,7 +182,7 @@ fn test_mlkem_keygen_cavp() {
     }
 }
 
-#[cfg(feature = "enable-pqc-tests")]
+
 fn test_keygen<K: KemCore>(
     z: &[u8],
     d: &[u8],
@@ -229,7 +229,7 @@ fn test_keygen<K: KemCore>(
 // ============================================================================
 
 #[test]
-#[cfg(feature = "enable-pqc-tests")]
+
 fn test_mlkem_encap_decap_cavp() {
     let prompt: EncapDecapPrompt = load_test_file("ML-KEM-encapDecap-FIPS203", "prompt.json");
     let expected: EncapDecapExpected =
@@ -284,7 +284,7 @@ fn test_mlkem_encap_decap_cavp() {
 
 /// Test encapsulation against ACVP vectors
 /// ACVP 'k' is the intermediate K̄ = G(m || H(ek))[0:32], not KDF(K̄ || H(c))
-#[cfg(feature = "enable-pqc-tests")]
+
 fn test_encap<P: Params>(
     test: &EncapDecapTestCase,
     expected: &EncapDecapExpectedCase,
@@ -322,7 +322,7 @@ fn test_encap<P: Params>(
 /// Test decapsulation against ACVP vectors
 /// ACVP 'k' is K̄ (intermediate value), our decaps returns KDF(K̄ || H(c))
 /// To verify: our_result == KDF(expected_k_bar || H(c))
-#[cfg(feature = "enable-pqc-tests")]
+
 fn test_decap<P: Params>(
     test: &EncapDecapTestCase,
     expected: &EncapDecapExpectedCase,
@@ -350,18 +350,3 @@ fn test_decap<P: Params>(
     }
 }
 
-// ============================================================================
-// Stub tests for non-PQC builds
-// ============================================================================
-
-#[test]
-#[cfg(not(feature = "enable-pqc-tests"))]
-fn test_mlkem_keygen_cavp() {
-    println!("ML-KEM tests skipped: enable-pqc-tests feature not enabled");
-}
-
-#[test]
-#[cfg(not(feature = "enable-pqc-tests"))]
-fn test_mlkem_encap_decap_cavp() {
-    println!("ML-KEM tests skipped: enable-pqc-tests feature not enabled");
-}

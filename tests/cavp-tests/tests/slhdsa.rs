@@ -2,17 +2,23 @@
 //!
 //! Tests SLH-DSA key generation, signature generation, and signature verification
 //! using official NIST test vectors.
+//!
+//! Note: All SLH-DSA CAVP tests are slow due to the computational complexity
+//! of SLH-DSA operations. These tests require the `enable-slhdsa-tests` feature.
+//!
+//! To run SLH-DSA CAVP tests:
+//!   cargo test --test slhdsa --features "enable-slhdsa-tests"
 
 use cavp_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 
-#[cfg(feature = "enable-pqc-tests")]
+#[cfg(feature = "enable-slhdsa-tests")]
 use hpcrypt_slhdsa::{Sha2_128s, Sha2_128f, Sha2_192s, Sha2_192f, Sha2_256s, Sha2_256f, Shake128s, Shake128f, Shake192s, Shake192f, Shake256s, Shake256f};
 
-#[cfg(feature = "enable-pqc-tests")]
+#[cfg(feature = "enable-slhdsa-tests")]
 use hpcrypt_slhdsa::{SecretKey, PublicKey, sign_internal, sign_ctx, sign_prehash, verify_internal, verify_ctx, verify_prehash};
 
-#[cfg(feature = "enable-pqc-tests")]
+#[cfg(feature = "enable-slhdsa-tests")]
 use hpcrypt_slhdsa::test_api::SignatureScheme;
 
 // ============================================================================
@@ -185,7 +191,7 @@ struct SigVerExpectedCase {
 // ============================================================================
 
 #[test]
-#[cfg(feature = "enable-pqc-tests")]
+#[cfg(feature = "enable-slhdsa-tests")]
 fn test_slhdsa_keygen_cavp() {
     let prompt: KeyGenPrompt = load_test_file("SLH-DSA-keyGen-FIPS205", "prompt.json");
     let expected: KeyGenExpected = load_test_file("SLH-DSA-keyGen-FIPS205", "expectedResults.json");
@@ -234,7 +240,7 @@ fn test_slhdsa_keygen_cavp() {
     }
 }
 
-#[cfg(feature = "enable-pqc-tests")]
+#[cfg(feature = "enable-slhdsa-tests")]
 fn test_keygen<S: SignatureScheme>(
     seed: &[u8],
     expected_pk: &[u8],
@@ -259,7 +265,7 @@ fn test_keygen<S: SignatureScheme>(
 }
 
 #[test]
-#[cfg(feature = "enable-pqc-tests")]
+#[cfg(feature = "enable-slhdsa-tests")]
 fn test_slhdsa_siggen_cavp() {
     let prompt: SigGenPrompt = load_test_file("SLH-DSA-sigGen-FIPS205", "prompt.json");
     let expected: SigGenExpected = load_test_file("SLH-DSA-sigGen-FIPS205", "expectedResults.json");
@@ -307,7 +313,7 @@ fn test_slhdsa_siggen_cavp() {
     }
 }
 
-#[cfg(feature = "enable-pqc-tests")]
+#[cfg(feature = "enable-slhdsa-tests")]
 fn test_siggen<P: hpcrypt_slhdsa::ParameterSet>(
     sk_bytes: &[u8],
     message: &[u8],
@@ -393,7 +399,7 @@ fn test_siggen<P: hpcrypt_slhdsa::ParameterSet>(
 }
 
 #[test]
-#[cfg(feature = "enable-pqc-tests")]
+#[cfg(feature = "enable-slhdsa-tests")]
 fn test_slhdsa_sigver_cavp() {
     let prompt: SigVerPrompt = load_test_file("SLH-DSA-sigVer-FIPS205", "prompt.json");
     let expected: SigVerExpected = load_test_file("SLH-DSA-sigVer-FIPS205", "expectedResults.json");
@@ -440,7 +446,7 @@ fn test_slhdsa_sigver_cavp() {
     }
 }
 
-#[cfg(feature = "enable-pqc-tests")]
+#[cfg(feature = "enable-slhdsa-tests")]
 fn test_sigver<P: hpcrypt_slhdsa::ParameterSet>(
     pk_bytes: &[u8],
     message: &[u8],
@@ -512,21 +518,3 @@ fn test_sigver<P: hpcrypt_slhdsa::ParameterSet>(
     }
 }
 
-// Stub tests
-#[test]
-#[cfg(not(feature = "enable-pqc-tests"))]
-fn test_slhdsa_keygen_cavp() {
-    println!("SLH-DSA tests skipped: enable-pqc-tests feature not enabled");
-}
-
-#[test]
-#[cfg(not(feature = "enable-pqc-tests"))]
-fn test_slhdsa_siggen_cavp() {
-    println!("SLH-DSA tests skipped: enable-pqc-tests feature not enabled");
-}
-
-#[test]
-#[cfg(not(feature = "enable-pqc-tests"))]
-fn test_slhdsa_sigver_cavp() {
-    println!("SLH-DSA tests skipped: enable-pqc-tests feature not enabled");
-}

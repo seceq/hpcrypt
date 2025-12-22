@@ -6,10 +6,10 @@
 use cavp_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 
-#[cfg(feature = "enable-pqc-tests")]
+
 use hpcrypt_mldsa::{MlDsa44, MlDsa65, MlDsa87};
 
-#[cfg(feature = "enable-pqc-tests")]
+
 use hpcrypt_mldsa::test_api::SignatureScheme;
 
 // ============================================================================
@@ -189,7 +189,7 @@ struct SigVerExpectedCase {
 // ============================================================================
 
 #[test]
-#[cfg(feature = "enable-pqc-tests")]
+
 fn test_mldsa_keygen_cavp() {
     let prompt: KeyGenPrompt = load_test_file("ML-DSA-keyGen-FIPS204", "prompt.json");
     let expected: KeyGenExpected = load_test_file("ML-DSA-keyGen-FIPS204", "expectedResults.json");
@@ -234,7 +234,7 @@ fn test_mldsa_keygen_cavp() {
     }
 }
 
-#[cfg(feature = "enable-pqc-tests")]
+
 fn test_keygen<S: SignatureScheme>(
     seed: &[u8],
     expected_pk: &[u8],
@@ -271,7 +271,7 @@ fn test_keygen<S: SignatureScheme>(
 // ============================================================================
 
 #[test]
-#[cfg(feature = "enable-pqc-tests")]
+
 fn test_mldsa_siggen_cavp() {
     let prompt: SigGenPrompt = load_test_file("ML-DSA-sigGen-FIPS204", "prompt.json");
     let expected: SigGenExpected = load_test_file("ML-DSA-sigGen-FIPS204", "expectedResults.json");
@@ -331,7 +331,7 @@ fn test_mldsa_siggen_cavp() {
     }
 }
 
-#[cfg(feature = "enable-pqc-tests")]
+
 fn test_siggen<S: SignatureScheme>(
     sk: &[u8],
     message: Option<&[u8]>,
@@ -444,7 +444,7 @@ fn test_siggen<S: SignatureScheme>(
 // ============================================================================
 
 #[test]
-#[cfg(feature = "enable-pqc-tests")]
+
 fn test_mldsa_sigver_cavp() {
     let prompt: SigVerPrompt = load_test_file("ML-DSA-sigVer-FIPS204", "prompt.json");
     let expected: SigVerExpected = load_test_file("ML-DSA-sigVer-FIPS204", "expectedResults.json");
@@ -503,7 +503,7 @@ fn test_mldsa_sigver_cavp() {
     }
 }
 
-#[cfg(feature = "enable-pqc-tests")]
+
 fn test_sigver<S: SignatureScheme>(
     pk: &[u8],
     message: Option<&[u8]>,
@@ -546,24 +546,3 @@ fn test_sigver<S: SignatureScheme>(
     }
 }
 
-// ============================================================================
-// Stub tests for non-PQC builds
-// ============================================================================
-
-#[test]
-#[cfg(not(feature = "enable-pqc-tests"))]
-fn test_mldsa_keygen_cavp() {
-    println!("ML-DSA tests skipped: enable-pqc-tests feature not enabled");
-}
-
-#[test]
-#[cfg(not(feature = "enable-pqc-tests"))]
-fn test_mldsa_siggen_cavp() {
-    println!("ML-DSA tests skipped: enable-pqc-tests feature not enabled");
-}
-
-#[test]
-#[cfg(not(feature = "enable-pqc-tests"))]
-fn test_mldsa_sigver_cavp() {
-    println!("ML-DSA tests skipped: enable-pqc-tests feature not enabled");
-}

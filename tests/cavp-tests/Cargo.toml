@@ -22,8 +22,8 @@ hpcrypt-kdf = { workspace = true, features = ["std"], optional = true }
 hpcrypt-curves = { workspace = true, features = ["std"], optional = true }
 hpcrypt-hash = { workspace = true, features = ["std"], optional = true }
 hpcrypt-core = { workspace = true, optional = true }
-hpcrypt-mlkem = { workspace = true, features = ["std", "cavp"], optional = true }
-hpcrypt-mldsa = { workspace = true, features = ["std", "cavp"], optional = true }
+hpcrypt-mlkem = { workspace = true, features = ["std", "cavp"] }
+hpcrypt-mldsa = { workspace = true, features = ["std", "cavp"] }
 hpcrypt-slhdsa = { workspace = true, features = ["std", "cavp"], optional = true }
 hpcrypt-rng = { workspace = true, features = ["std", "hash-drbg", "ctr-drbg", "hmac-drbg"], optional = true }
 
@@ -36,7 +36,7 @@ enable-mac-tests = ["hpcrypt-mac"]
 enable-cipher-tests = ["hpcrypt-cipher"]
 enable-kdf-tests = ["hpcrypt-kdf"]
 enable-hash-tests = ["hpcrypt-hash"]
-enable-pqc-tests = ["hpcrypt-mlkem", "hpcrypt-mldsa", "hpcrypt-slhdsa"]
+enable-slhdsa-tests = ["hpcrypt-slhdsa"]
 enable-drbg-tests = ["hpcrypt-rng", "hpcrypt-hash", "hpcrypt-core", "hpcrypt-cipher"]
 
 # SIMD intrinsics feature passthrough for PQC crates
@@ -52,7 +52,7 @@ enable-all-tests = [
     "enable-cipher-tests",
     "enable-kdf-tests",
     "enable-hash-tests",
-    "enable-pqc-tests",
+    "enable-slhdsa-tests",
     "enable-drbg-tests",
 ]
 
@@ -63,17 +63,16 @@ path = "src/lib.rs"
 [[test]]
 name = "mlkem"
 path = "tests/mlkem.rs"
-required-features = ["enable-pqc-tests"]
 
 [[test]]
 name = "mldsa"
 path = "tests/mldsa.rs"
-required-features = ["enable-pqc-tests"]
 
+# SLH-DSA tests are slow - opt-in via enable-slhdsa-tests feature
 [[test]]
 name = "slhdsa"
 path = "tests/slhdsa.rs"
-required-features = ["enable-pqc-tests"]
+required-features = ["enable-slhdsa-tests"]
 
 # Traditional Cryptography Tests
 [[test]]
