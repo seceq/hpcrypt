@@ -53,7 +53,7 @@ const MODULUS_LIMBS: [u64; 5] = [
     0xFFFFFFFFFFFFF, // bits [52, 104):  4503599627370495
     0xFFFFFFFFFFFFF, // bits [104, 156): 4503599627370495
     0xFFFFFFFFFFFFF, // bits [156, 208): 4503599627370495
-    0xFFFFFFFFFFFFF, // bits [208, 256): 281474976710655 (only 48 bits used)
+    0xFFFFFFFFFFFF,  // bits [208, 256): 281474976710655 (only 48 bits used)
 ];
 
 /// Reduction constant: 0x1000003D1
@@ -124,11 +124,20 @@ impl FieldElement52 {
             let limb_idx = bit_offset / 52;
             let limb_offset = bit_offset % 52;
 
-            bits[limb_idx] |= byte_val << limb_offset;
+            // Calculate how many bits fit in the current limb
+            let remaining_bits = (LIMB_BITS as usize) - limb_offset;
 
-            // Handle bits that span two limbs
-            if limb_offset > 44 && limb_idx < 4 {
-                bits[limb_idx + 1] |= byte_val >> (52 - limb_offset);
+            if remaining_bits >= 8 {
+                // Entire byte fits in current limb
+                bits[limb_idx] |= byte_val << limb_offset;
+            } else {
+                // Byte spans two limbs - split it properly
+                // Only put the bits that fit into the lower limb
+                bits[limb_idx] |= (byte_val & ((1 << remaining_bits) - 1)) << limb_offset;
+                // Put the remaining bits into the next limb
+                if limb_idx < 4 {
+                    bits[limb_idx + 1] |= byte_val >> remaining_bits;
+                }
             }
         }
 
@@ -239,14 +248,17 @@ impl FieldElement52 {
     /// Subtract p if self >= p (constant time)
     fn reduce_once(&mut self) {
         // Compute self - p
-        let mut borrow = 0i128;
+        // We use unsigned arithmetic with explicit borrow tracking
+        let mut borrow: u64 = 0;
         let mut diff = [0u64; 5];
 
         for i in 0..5 {
-            let d = (self.limbs[i] as i128) - (MODULUS_LIMBS[i] as i128) - borrow;
-            diff[i] = d as u64;
-            // If d is negative, we have a borrow
-            borrow = if d < 0 { 1 } else { 0 };
+            // d = self.limbs[i] - MODULUS_LIMBS[i] - borrow
+            // Using wrapping arithmetic, then detect borrow
+            let (d1, b1) = self.limbs[i].overflowing_sub(MODULUS_LIMBS[i]);
+            let (d2, b2) = d1.overflowing_sub(borrow);
+            diff[i] = d2 & LIMB_MASK; // Mask to 52 bits
+            borrow = (b1 | b2) as u64;
         }
 
         // If borrow = 0, we had self >= p, so use diff
@@ -384,7 +396,7 @@ impl FieldElement52 {
         let mut z0 = [0u128; 6];
         for i in 0..3 {
             for j in 0..3 {
-                z0[i + j] += (a[i] as u128) * (b[j] as u128);
+                z0[i + j] = z0[i + j].wrapping_add((a[i] as u128) * (b[j] as u128));
             }
         }
 
@@ -392,7 +404,7 @@ impl FieldElement52 {
         let mut z2 = [0u128; 4];
         for i in 0..2 {
             for j in 0..2 {
-                z2[i + j] += (a[3 + i] as u128) * (b[3 + j] as u128);
+                z2[i + j] = z2[i + j].wrapping_add((a[3 + i] as u128) * (b[3 + j] as u128));
             }
         }
 
@@ -411,7 +423,7 @@ impl FieldElement52 {
         let mut z1_tmp = [0u128; 6];
         for i in 0..3 {
             for j in 0..3 {
-                z1_tmp[i + j] += (a_sum[i] as u128) * (b_sum[j] as u128);
+                z1_tmp[i + j] = z1_tmp[i + j].wrapping_add((a_sum[i] as u128) * (b_sum[j] as u128));
             }
         }
 
@@ -429,7 +441,7 @@ impl FieldElement52 {
 
         // Add z0
         for i in 0..6 {
-            result[i] += z0[i];
+            result[i] = result[i].wrapping_add(z0[i]);
         }
 
         // Add z1 * B^3 (shift by 3 limbs)
@@ -439,7 +451,7 @@ impl FieldElement52 {
 
         // Add z2 * B^6 (shift by 6 limbs)
         for i in 0..4 {
-            result[i + 6] += z2[i];
+            result[i + 6] = result[i + 6].wrapping_add(z2[i]);
         }
 
         result
@@ -452,7 +464,7 @@ impl FieldElement52 {
 
         for i in 0..5 {
             for j in 0..5 {
-                wide[i + j] += (a[i] as u128) * (b[j] as u128);
+                wide[i + j] = wide[i + j].wrapping_add((a[i] as u128) * (b[j] as u128));
             }
         }
 
@@ -477,23 +489,25 @@ impl FieldElement52 {
 
         #[cfg(debug_assertions)]
         {
-            // Debug mode: Use safe loop-based implementation
+            // Debug mode: Use safe loop-based implementation with wrapping arithmetic
             let a = self.normalized();
 
             let mut wide = [0u128; 10];
 
             // Compute off-diagonal products (i < j) and double them
+            // Use wrapping operations to avoid overflow panics in debug mode
             for i in 0..5 {
                 for j in (i + 1)..5 {
                     let product = (a.limbs[i] as u128) * (a.limbs[j] as u128);
-                    wide[i + j] += product << 1; // Double the cross-term
+                    // Double the cross-term using wrapping to avoid overflow
+                    wide[i + j] = wide[i + j].wrapping_add(product.wrapping_shl(1));
                 }
             }
 
             // Add diagonal products (i == j)
             for i in 0..5 {
                 let product = (a.limbs[i] as u128) * (a.limbs[i] as u128);
-                wide[2 * i] += product;
+                wide[2 * i] = wide[2 * i].wrapping_add(product);
             }
 
             Self::reduce_wide(&wide)
@@ -599,65 +613,127 @@ impl FieldElement52 {
     ///
     /// Uses the secp256k1 reduction property: 2^256 ≡ R (mod p)
     /// where R = 0x1000003D1
+    ///
+    /// Strategy:
+    /// 1. The product is in limbs wide[0..10], each potentially > 52 bits
+    /// 2. First normalize wide by propagating carries so each limb is 52 bits
+    /// 3. For each limb k >= 5, reduce it: limb k represents 2^(52k)
+    ///    Since 2^256 ≡ R (mod p), we have:
+    ///    2^(52k) = 2^(52(k-5)+260) = 2^(52(k-5)) * 2^260 = 2^(52(k-5)) * 16 * 2^256
+    ///            ≡ 2^(52(k-5)) * 16 * R (mod p)
+    ///    So limb k contributes: value * 16 * R to limb (k-5)
     fn reduce_wide(wide: &[u128; 10]) -> Self {
-        // The key insight: 2^256 ≡ R (mod p)
-        // So for limbs beyond bit 256, we multiply by R and add to lower bits
-        //
-        // In 52-bit limbs: limb 5 represents 2^(52*5) = 2^260
-        // We have: 2^260 = 2^4 * 2^256 ≡ 16*R (mod p)
-
         let r = REDUCTION_CONSTANT as u128;
+        let r16 = 16u128 * r; // = 0x10000003D10 (41 bits)
+
+        // First, normalize wide by propagating carries
+        // After this, each w[i] is exactly 52 bits
+        let mut w = [0u128; 11]; // Extra slot for possible carry out of w[9]
+        for i in 0..10 {
+            w[i] = wide[i];
+        }
+        for i in 0..10 {
+            let carry = w[i] >> LIMB_BITS;
+            w[i] &= LIMB_MASK as u128;
+            w[i + 1] += carry;
+        }
+
+        // Now each w[i] for i in 0..10 is at most 52 bits
+        // w[10] holds any overflow from w[9]
 
         // Start with lower 5 limbs
-        let mut result = [0u128; 5];
+        let mut t = [0u128; 6]; // Extra slot for overflow
         for i in 0..5 {
-            result[i] = wide[i];
+            t[i] = w[i];
         }
 
-        // Reduce limb 5: represents 2^260 ≡ 16*R (mod p)
-        // wide[5] * 2^260 ≡ wide[5] * 16 * R (mod p)
-        // Use wrapping_mul to allow overflow in debug mode (mathematically correct via modular arithmetic)
-        let red5 = wide[5].wrapping_mul(16).wrapping_mul(r);
-        result[0] += red5;
+        // Reduce limbs 5-9: each contributes value * 16 * R to lower limbs
+        // w[5] through w[9] are each 52 bits, r16 is 41 bits
+        // So w[i] * r16 is at most 93 bits, fits in u128
+        for i in 5..10 {
+            t[i - 5] += w[i] * r16;
+        }
 
-        // Reduce limb 6: represents 2^312 ≡ 2^56 * 2^256 ≡ 2^56 * R (mod p)
-        // In 52-bit terms: 2^312 = 2^(52*6) = 2^52 * 2^260 ≡ 2^52 * 16*R (mod p)
-        let red6 = wide[6].wrapping_mul(16).wrapping_mul(r);
-        result[1] += red6;
+        // Also reduce w[10] if non-zero
+        // w[10] represents 2^520 = 2^264 * 2^256 ≡ 2^264 * R (mod p)
+        // 2^264 = 2^(5*52 + 4) = 16 * 2^260, so 2^520 ≡ 16^2 * R^2
+        // But simpler: 2^520 ≡ 2^264 * R (mod p)
+        // And 2^264 = 2^8 * 2^256 ≡ 256 * R (mod p)
+        // So 2^520 ≡ 256 * R * R (mod p)
+        // R^2 is complex, so let's reduce w[10] via t[5]
+        if w[10] != 0 {
+            // 2^520 = 2^52 * 2^468 = 2^52 * (value at limb 9)
+            // So w[10] * 2^520 ≡ w[10] * 2^52 * 16 * R * R (mod p)
+            // This is getting complex. Simpler: just add w[10] to the overflow handling
+            t[5] += w[10] * r16; // Treat it like limb 10 reducing to limb 5
+        }
 
-        // Reduce limb 7: represents 2^364 ≡ 2^108 * 2^256 ≡ 2^108 * R (mod p)
-        let red7 = wide[7].wrapping_mul(16).wrapping_mul(r);
-        result[2] += red7;
-
-        // Reduce limb 8: represents 2^416 ≡ 2^160 * 2^256 ≡ 2^160 * R (mod p)
-        let red8 = wide[8].wrapping_mul(16).wrapping_mul(r);
-        result[3] += red8;
-
-        // Reduce limb 9: represents 2^468 ≡ 2^212 * 2^256 ≡ 2^212 * R (mod p)
-        let red9 = wide[9].wrapping_mul(16).wrapping_mul(r);
-        result[4] += red9;
-
-        // Propagate carries
-        let mut limbs = [0u64; 5];
-        let mut carry = 0u128;
-
+        // Propagate carries in t
         for i in 0..5 {
-            let sum = carry + result[i];
-            limbs[i] = (sum & (LIMB_MASK as u128)) as u64;
-            carry = sum >> LIMB_BITS;
+            let carry = t[i] >> LIMB_BITS;
+            t[i] &= LIMB_MASK as u128;
+            t[i + 1] += carry;
         }
 
-        // Final carry reduction
-        if carry != 0 {
-            let reduction = carry * (REDUCTION_CONSTANT as u128) * 16;
-            limbs[0] = limbs[0].wrapping_add((reduction & (LIMB_MASK as u128)) as u64);
-            limbs[1] = limbs[1].wrapping_add((reduction >> LIMB_BITS) as u64);
+        // Handle overflow in t[5] (bits >= 260)
+        // This needs reduction: t[5] * 2^260 ≡ t[5] * 16 * R (mod p)
+        while t[5] != 0 {
+            let overflow = t[5];
+            t[5] = 0;
+            t[0] += overflow * r16;
+
+            // Propagate carries
+            for i in 0..5 {
+                let carry = t[i] >> LIMB_BITS;
+                t[i] &= LIMB_MASK as u128;
+                t[i + 1] += carry;
+            }
         }
 
-        let mut result = Self { limbs };
-        result.normalize();
-        result.reduce_once();
-        result
+        // CRITICAL: Limb 4 can only hold 48 bits (256 - 4*52 = 48)
+        // Any excess in bits 48+ of limb 4 represents 2^256 and must be reduced
+        // 2^256 ≡ R (mod p), so we add excess * R to limb 0
+        const LIMB4_BITS: u32 = 48;
+        const LIMB4_MASK: u128 = (1u128 << LIMB4_BITS) - 1;
+
+        // May need multiple rounds if limb 4 overflow produces carry
+        loop {
+            let excess = t[4] >> LIMB4_BITS;
+            if excess == 0 {
+                break;
+            }
+            t[4] &= LIMB4_MASK;
+            t[0] += excess * r;
+
+            // Propagate any carries from the addition
+            for i in 0..4 {
+                let carry = t[i] >> LIMB_BITS;
+                if carry == 0 {
+                    break;
+                }
+                t[i] &= LIMB_MASK as u128;
+                t[i + 1] += carry;
+            }
+        }
+
+        // Final masking to ensure limbs 0-3 are 52 bits and limb 4 is 48 bits
+        for i in 0..4 {
+            t[i] &= LIMB_MASK as u128;
+        }
+        t[4] &= LIMB4_MASK;
+
+        // Convert to u64 limbs
+        let limbs = [
+            t[0] as u64,
+            t[1] as u64,
+            t[2] as u64,
+            t[3] as u64,
+            t[4] as u64,
+        ];
+
+        let mut fe = Self { limbs };
+        fe.reduce_once();
+        fe
     }
 
     /// Compute multiplicative inverse using Fermat's Little Theorem
@@ -860,9 +936,141 @@ mod tests {
     }
 
     #[test]
+    fn test_pow_simple() {
+        // Test 2^10 = 1024
+        let two = FieldElement52::from_u64(2);
+        let exp: [u64; 4] = [10, 0, 0, 0];
+        let result = two.pow_vartime(&exp);
+        let expected = FieldElement52::from_u64(1024);
+        assert_eq!(result, expected, "2^10 should equal 1024");
+
+        // Test 7^4 = 2401
+        let seven = FieldElement52::from_u64(7);
+        let exp4: [u64; 4] = [4, 0, 0, 0];
+        let result4 = seven.pow_vartime(&exp4);
+        let expected4 = FieldElement52::from_u64(2401);
+        assert_eq!(result4, expected4, "7^4 should equal 2401");
+    }
+
+    #[test]
+    fn test_mul_vs_python() {
+        // Test multiplication against Python-computed values
+        // Using 7^32 and 7^64 mod p
+        let s32_limbs: [u64; 5] = [3434154625678081, 245232206595, 0, 0, 0];
+        let s64_limbs: [u64; 5] =
+            [1152050901251585, 4072651521909145, 4016935957576568, 13353503, 0];
+
+        let s32 = FieldElement52 { limbs: s32_limbs };
+        let s64 = FieldElement52 { limbs: s64_limbs };
+
+        // Expected from Python
+        let expected_limbs: [u64; 5] =
+            [1130161490370835, 605437045229180, 1638181289832288, 4249743623124818, 29346153521648];
+
+        let result = s32.mul(&s64);
+        assert_eq!(
+            result.limbs, expected_limbs,
+            "Multiplication should match Python"
+        );
+    }
+
+    #[test]
+    fn test_mul_associativity_large() {
+        // Test associativity with larger values that require reduction
+        let seven = FieldElement52::from_u64(7);
+
+        // Compute powers of 7
+        let s16 = seven.square().square().square().square(); // 7^16
+        let s32 = s16.square(); // 7^32
+        let s64 = s32.square(); // 7^64
+
+        // Test: (s16 * s32) * s64 = s16 * (s32 * s64)
+        let p1 = s16.mul(&s32);
+        let p2 = s32.mul(&s64);
+
+        let left = p1.mul(&s64);
+        let right = s16.mul(&p2);
+
+        assert_eq!(
+            left, right,
+            "Multiplication should be associative for 7^16, 7^32, 7^64"
+        );
+    }
+
+    #[test]
+    fn test_pow_large_exponent() {
+        // Test pow_vartime with larger exponents
+        let seven = FieldElement52::from_u64(7);
+
+        // Compute powers step by step using squaring
+        let s2 = seven.square();
+        let s4 = s2.square();
+        let s8 = s4.square();
+        let s16 = s8.square();
+        let s32 = s16.square();
+        let s64 = s32.square();
+        let s128 = s64.square();
+
+        // Check 7^15 via step-by-step vs pow_vartime
+        let s15_step = s8.mul(&s4).mul(&s2).mul(&seven);
+        let exp_15: [u64; 4] = [15, 0, 0, 0];
+        let s15_pow = seven.pow_vartime(&exp_15);
+        assert_eq!(s15_step, s15_pow, "7^15 should match");
+
+        // Check 7^255 via step-by-step vs pow_vartime
+        let s255_step = s128
+            .mul(&s64)
+            .mul(&s32)
+            .mul(&s16)
+            .mul(&s8)
+            .mul(&s4)
+            .mul(&s2)
+            .mul(&seven);
+        let exp_255: [u64; 4] = [255, 0, 0, 0];
+        let s255_pow = seven.pow_vartime(&exp_255);
+        assert_eq!(s255_step, s255_pow, "7^255 should match");
+    }
+
+    #[test]
+    fn test_pow_second_limb() {
+        // Test with exponent in second limb
+        // exp = 2^64 means 7^(2^64) - this requires only squaring 64 times
+        let seven = FieldElement52::from_u64(7);
+
+        // Compute 7^(2^64) step by step
+        let mut expected = seven;
+        for _ in 0..64 {
+            expected = expected.square();
+        }
+
+        // Now use pow_vartime with exp = [0, 1, 0, 0] which is 2^64
+        let exp: [u64; 4] = [0, 1, 0, 0];
+        let result = seven.pow_vartime(&exp);
+
+        assert_eq!(result, expected, "7^(2^64) via pow_vartime should match 64 squares");
+    }
+
+    #[test]
     fn test_invert() {
+        // Expected 7^(-1) mod p in 52-bit limbs (computed from known 64-bit result)
+        let expected_inv = FieldElement52::from_limbs([
+            3860224570630477,
+            1930114126015926,
+            3216856876693211,
+            3860228252031853,
+            241264265751990,
+        ]);
+
         let a = FieldElement52::from_u64(7);
         let a_inv = a.invert().unwrap();
+
+        // First check if the inverse value matches the expected
+        assert_eq!(
+            a_inv.limbs, expected_inv.limbs,
+            "7^(-1) should match expected value"
+        );
+
+        // Then verify 7 * 7^(-1) = 1
         let product = a.mul(&a_inv);
         assert_eq!(product, FieldElement52::ONE);
     }
