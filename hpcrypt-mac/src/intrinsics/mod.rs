@@ -10,13 +10,13 @@
 #![allow(unsafe_code)]
 
 // x86/x86_64 AVX2 + PCLMULQDQ implementation
-// Always compile on x86/x86_64 targets for runtime dispatch
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+// Requires the "avx2" feature and x86/x86_64 target
+#[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
 pub mod avx2;
 
 // ARM64 NEON + PMULL implementation
-// Always compile on aarch64 for runtime dispatch
-#[cfg(target_arch = "aarch64")]
+// Requires the "neon" feature and aarch64 target
+#[cfg(all(feature = "neon", target_arch = "aarch64"))]
 pub mod neon;
 
 /// Runtime dispatch helpers

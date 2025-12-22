@@ -68,8 +68,8 @@ unsafe fn compute_d(h: uint64x2_t) -> uint64x2_t {
 
     // T = H0 × P1 (polynomial multiply)
     let h0 = vgetq_lane_u64(h, 0);
-    let t: poly128_t = vmull_p64(h0 as poly64_t, P1 as poly64_t);
-    let t_vec = vreinterpretq_u64_p128(t);
+    let t: u128 = vmull_p64(h0, P1);
+    let t_vec: uint64x2_t = core::mem::transmute(t);
 
     // D = swap(H) ⊕ T
     veorq_u64(h_swap, t_vec)
@@ -86,18 +86,18 @@ unsafe fn karatsuba_mul(a: uint64x2_t, b: uint64x2_t) -> (uint64x2_t, uint64x2_t
     let b1 = vgetq_lane_u64(b, 1);
 
     // lo = a0 × b0
-    let lo: poly128_t = vmull_p64(a0 as poly64_t, b0 as poly64_t);
-    let lo = vreinterpretq_u64_p128(lo);
+    let lo_128: u128 = vmull_p64(a0, b0);
+    let lo: uint64x2_t = core::mem::transmute(lo_128);
 
     // hi = a1 × b1
-    let hi: poly128_t = vmull_p64(a1 as poly64_t, b1 as poly64_t);
-    let hi = vreinterpretq_u64_p128(hi);
+    let hi_128: u128 = vmull_p64(a1, b1);
+    let hi: uint64x2_t = core::mem::transmute(hi_128);
 
     // mid = (a0 ⊕ a1) × (b0 ⊕ b1) ⊕ lo ⊕ hi
     let a_xor = a0 ^ a1;
     let b_xor = b0 ^ b1;
-    let mid_raw: poly128_t = vmull_p64(a_xor as poly64_t, b_xor as poly64_t);
-    let mid_raw = vreinterpretq_u64_p128(mid_raw);
+    let mid_raw_128: u128 = vmull_p64(a_xor, b_xor);
+    let mid_raw: uint64x2_t = core::mem::transmute(mid_raw_128);
     let mid = veorq_u64(veorq_u64(mid_raw, lo), hi);
 
     (lo, hi, mid)
@@ -152,14 +152,18 @@ unsafe fn rf_mul_unreduced(m: uint64x2_t, h: uint64x2_t, d: uint64x2_t) -> (uint
     let d1 = vgetq_lane_u64(d, 1);
 
     // R = M0×D1 ⊕ M1×H1
-    let r0: poly128_t = vmull_p64(m0 as poly64_t, d1 as poly64_t);
-    let r1: poly128_t = vmull_p64(m1 as poly64_t, h1 as poly64_t);
-    let r = veorq_u64(vreinterpretq_u64_p128(r0), vreinterpretq_u64_p128(r1));
+    let r0: u128 = vmull_p64(m0, d1);
+    let r1: u128 = vmull_p64(m1, h1);
+    let r0_vec: uint64x2_t = core::mem::transmute(r0);
+    let r1_vec: uint64x2_t = core::mem::transmute(r1);
+    let r = veorq_u64(r0_vec, r1_vec);
 
     // F = M0×D0 ⊕ M1×H0
-    let f0: poly128_t = vmull_p64(m0 as poly64_t, d0 as poly64_t);
-    let f1: poly128_t = vmull_p64(m1 as poly64_t, h0 as poly64_t);
-    let f = veorq_u64(vreinterpretq_u64_p128(f0), vreinterpretq_u64_p128(f1));
+    let f0: u128 = vmull_p64(m0, d0);
+    let f1: u128 = vmull_p64(m1, h0);
+    let f0_vec: uint64x2_t = core::mem::transmute(f0);
+    let f1_vec: uint64x2_t = core::mem::transmute(f1);
+    let f = veorq_u64(f0_vec, f1_vec);
 
     (r, f)
 }
@@ -179,8 +183,8 @@ unsafe fn reduce_rf(r: uint64x2_t, f: uint64x2_t) -> uint64x2_t {
     let f0_shifted = vcombine_u64(vcreate_u64(0), vcreate_u64(f0));
 
     // P1×F0
-    let p1_f0: poly128_t = vmull_p64(f0 as poly64_t, P1 as poly64_t);
-    let p1_f0_vec = vreinterpretq_u64_p128(p1_f0);
+    let p1_f0: u128 = vmull_p64(f0, P1);
+    let p1_f0_vec: uint64x2_t = core::mem::transmute(p1_f0);
 
     // Result = R ⊕ F1 ⊕ (x^64×F0) ⊕ (P1×F0)
     let result = veorq_u64(r, f1_vec);

@@ -72,27 +72,30 @@ unsafe fn byte_swap(x: uint8x16_t) -> uint8x16_t {
 
 /// Multiply by x (left shift in polynomial representation)
 /// Handles the modular reduction for GHASH polynomial
+///
+/// This implements: v = (v << 1) ^ (reduction if MSB was set)
+/// The reduction polynomial is 0x87 (x^7 + x^2 + x + 1) applied to the low byte.
 #[target_feature(enable = "neon")]
 #[inline]
 unsafe fn mulx(h: uint64x2_t) -> uint64x2_t {
-    // h << 1, but if high bit was set, XOR with reduction polynomial
-    // GHASH: x^128 + x^7 + x^2 + x + 1
-    // Reduction: if MSB set, XOR with 0x87
+    // h << 1 as a 128-bit value, with modular reduction if MSB was set
+    // GHASH reduction polynomial: x^128 + x^7 + x^2 + x + 1
+    // If MSB (bit 127) was set, XOR with 0x87 in the low byte
 
-    // Get the MSB of the high qword
+    // Get the MSB of the high qword (bit 127 of the 128-bit value)
     let h_hi = vgetq_lane_u64(h, 1);
+    let h_lo = vgetq_lane_u64(h, 0);
     let msb_set = (h_hi >> 63) as i64;
 
-    // Left shift by 1
-    let h_lo = vgetq_lane_u64(h, 0);
-    let h_hi = vgetq_lane_u64(h, 1);
-
-    let new_lo = (h_lo << 1) | (h_hi >> 63);
-    let new_hi = h_hi << 1;
+    // Left shift the full 128-bit value by 1
+    // new_lo = h_lo << 1 (bit 0 becomes 0)
+    // new_hi = (h_hi << 1) | (h_lo >> 63) (carry from low to high)
+    let new_lo = h_lo << 1;
+    let new_hi = (h_hi << 1) | (h_lo >> 63);
 
     let shifted = vcombine_u64(vcreate_u64(new_lo), vcreate_u64(new_hi));
 
-    // If MSB was set, XOR with polynomial (0x87 in lowest byte)
+    // If MSB was set, XOR with reduction polynomial 0x87 in low byte
     let mask = (msb_set as u64).wrapping_neg(); // All 1s if MSB was set, 0 otherwise
     let reduction = mask & 0x87;
 
@@ -111,8 +114,8 @@ unsafe fn compute_d(h: uint64x2_t) -> uint64x2_t {
 
     // T = H0 × P1 (polynomial multiply)
     let h0 = vgetq_lane_u64(h, 0);
-    let t: poly128_t = vmull_p64(h0 as poly64_t, P1 as poly64_t);
-    let t_vec = vreinterpretq_u64_p128(t);
+    let t: u128 = vmull_p64(h0, P1);
+    let t_vec: uint64x2_t = core::mem::transmute(t);
 
     // D = swap(H) ⊕ T
     veorq_u64(h_swap, t_vec)
@@ -133,14 +136,18 @@ unsafe fn rf_mul_unreduced(m: uint64x2_t, h: uint64x2_t, d: uint64x2_t) -> (uint
     let d1 = vgetq_lane_u64(d, 1);
 
     // R = M0×D1 ⊕ M1×H1
-    let r0: poly128_t = vmull_p64(m0 as poly64_t, d1 as poly64_t);
-    let r1: poly128_t = vmull_p64(m1 as poly64_t, h1 as poly64_t);
-    let r = veorq_u64(vreinterpretq_u64_p128(r0), vreinterpretq_u64_p128(r1));
+    let r0: u128 = vmull_p64(m0, d1);
+    let r1: u128 = vmull_p64(m1, h1);
+    let r0_vec: uint64x2_t = core::mem::transmute(r0);
+    let r1_vec: uint64x2_t = core::mem::transmute(r1);
+    let r = veorq_u64(r0_vec, r1_vec);
 
     // F = M0×D0 ⊕ M1×H0
-    let f0: poly128_t = vmull_p64(m0 as poly64_t, d0 as poly64_t);
-    let f1: poly128_t = vmull_p64(m1 as poly64_t, h0 as poly64_t);
-    let f = veorq_u64(vreinterpretq_u64_p128(f0), vreinterpretq_u64_p128(f1));
+    let f0: u128 = vmull_p64(m0, d0);
+    let f1: u128 = vmull_p64(m1, h0);
+    let f0_vec: uint64x2_t = core::mem::transmute(f0);
+    let f1_vec: uint64x2_t = core::mem::transmute(f1);
+    let f = veorq_u64(f0_vec, f1_vec);
 
     (r, f)
 }
@@ -160,8 +167,8 @@ unsafe fn reduce_rf(r: uint64x2_t, f: uint64x2_t) -> uint64x2_t {
     let f0_shifted = vcombine_u64(vcreate_u64(0), vcreate_u64(f0));
 
     // P1×F0
-    let p1_f0: poly128_t = vmull_p64(f0 as poly64_t, P1 as poly64_t);
-    let p1_f0_vec = vreinterpretq_u64_p128(p1_f0);
+    let p1_f0: u128 = vmull_p64(f0, P1);
+    let p1_f0_vec: uint64x2_t = core::mem::transmute(p1_f0);
 
     // Result = R ⊕ F1 ⊕ (x^64×F0) ⊕ (P1×F0)
     let result = veorq_u64(r, f1_vec);

@@ -25,3 +25,6 @@ hex = { workspace = true }
 default = ["std", "alloc"]
 std = ["hpcrypt-core/std", "hpcrypt-cipher/std", "hpcrypt-hash/std", "alloc"]
 alloc = ["hpcrypt-core/alloc", "hpcrypt-cipher/alloc", "hpcrypt-hash/alloc"]
+# SIMD optimizations
+avx2 = []
+neon = []
