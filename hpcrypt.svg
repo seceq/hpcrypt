@@ -6,20 +6,20 @@
     </linearGradient>
   </defs>
   
-  <rect width="400" height="400" fill="#FAFAFA"/>
+  <rect width="400" height="400" fill="#FFFFFF"/>
   
   <!-- Rounded square container -->
   <rect x="80" y="45" width="240" height="220" rx="45" fill="url(#seceqGrad)"/>
   
   <!-- Speed lines left - 3 staggered -->
-  <g fill="#FAFAFA" opacity="0.8">
+  <g fill="#FFFFFF" opacity="0.8">
     <rect x="95" y="125" width="35" height="8" rx="4"/>
     <rect x="105" y="151" width="35" height="8" rx="4"/>
     <rect x="95" y="177" width="35" height="8" rx="4"/>
   </g>
   
   <!-- Hash symbol -->
-  <g stroke="#FAFAFA" stroke-width="14" stroke-linecap="round">
+  <g stroke="#FFFFFF" stroke-width="14" stroke-linecap="round">
     <line x1="182" y1="105" x2="178" y2="205"/>
     <line x1="222" y1="105" x2="218" y2="205"/>
     <line x1="155" y1="135" x2="245" y2="135"/>
@@ -27,7 +27,7 @@
   </g>
   
   <!-- Speed lines right - 3 staggered -->
-  <g fill="#FAFAFA" opacity="0.8">
+  <g fill="#FFFFFF" opacity="0.8">
     <rect x="270" y="125" width="35" height="8" rx="4"/>
     <rect x="260" y="151" width="35" height="8" rx="4"/>
     <rect x="270" y="177" width="35" height="8" rx="4"/>
