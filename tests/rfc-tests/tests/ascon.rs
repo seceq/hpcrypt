@@ -33,7 +33,7 @@ struct AsconTestVector {
 
 #[test]
 fn test_ascon_aead_kat() {
-    let test_vectors: Vec<AsconTestVector> = load_test_file("ascon-aead.json");
+    let test_vectors: Vec<AsconTestVector> = load_test_file("nist-lwc-ascon-aead.json");
 
     println!("\n=== Ascon AEAD KAT Tests ===");
     println!("Total test cases: {}", test_vectors.len());

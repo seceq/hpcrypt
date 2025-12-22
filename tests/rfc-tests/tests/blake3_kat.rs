@@ -33,7 +33,7 @@ struct Blake3TestCase {
 }
 
 fn load_blake3_kat() -> Blake3KatFile {
-    let path = test_vectors_path().join("blake3-kat-comprehensive.json");
+    let path = test_vectors_path().join("blake3-kat.json");
     let data = std::fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("Failed to read BLAKE3 KAT file at {}: {}", path.display(), e));
     serde_json::from_str(&data)

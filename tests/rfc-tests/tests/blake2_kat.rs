@@ -30,7 +30,7 @@ struct Blake2KatTestVector {
 #[test]
 fn test_blake2_comprehensive_kat() {
     let test_vectors: Vec<Blake2KatTestVector> =
-        load_test_file("blake2-kat-comprehensive.json");
+        load_test_file("blake2-kat.json");
 
     println!("\n╔══════════════════════════════════════════════════════════════╗");
     println!("║  BLAKE2 COMPREHENSIVE TEST SUITE - Official KAT Vectors    ║");
@@ -159,7 +159,7 @@ fn test_blake2_comprehensive_kat() {
 #[test]
 fn test_blake2b_kat_coverage() {
     let test_vectors: Vec<Blake2KatTestVector> =
-        load_test_file("blake2-kat-comprehensive.json");
+        load_test_file("blake2-kat.json");
 
     let blake2b_vectors: Vec<_> = test_vectors
         .iter()
@@ -199,7 +199,7 @@ fn test_blake2b_kat_coverage() {
 #[test]
 fn test_blake2s_kat_coverage() {
     let test_vectors: Vec<Blake2KatTestVector> =
-        load_test_file("blake2-kat-comprehensive.json");
+        load_test_file("blake2-kat.json");
 
     let blake2s_vectors: Vec<_> = test_vectors
         .iter()
@@ -240,7 +240,7 @@ fn test_blake2s_kat_coverage() {
 #[test]
 fn test_blake2_coverage_completeness() {
     let test_vectors: Vec<Blake2KatTestVector> =
-        load_test_file("blake2-kat-comprehensive.json");
+        load_test_file("blake2-kat.json");
 
     println!("\n=== BLAKE2 Comprehensive Coverage Report ===");
     println!("Total test vectors: {}", test_vectors.len());

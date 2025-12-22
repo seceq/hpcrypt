@@ -22,7 +22,7 @@ struct Tls13TestVector {
 
 #[test]
 fn test_tls13_kdf_rfc8448() {
-    let test_vectors: Vec<Tls13TestVector> = load_test_file("tls13-kdf.json");
+    let test_vectors: Vec<Tls13TestVector> = load_test_file("rfc8448-tls13-kdf.json");
 
     println!("\n=== TLS 1.3 KDF Tests (RFC 8448) ===");
     println!("Total test cases: {}", test_vectors.len());

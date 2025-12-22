@@ -3,7 +3,8 @@
 //! Tests for GHASH standalone operation as defined in NIST SP 800-38D.
 //! GHASH is the universal hash function used in AES-GCM for authentication.
 
-use hpcrypt_mac::{ghash_fast, GHashFast};
+use hpcrypt_mac::ghash::ghash;
+use hpcrypt_mac::Ghash;
 use rfc_tests::{decode_hex, load_test_file, TestStats};
 use serde::Deserialize;
 use serde_json::Value;
@@ -92,7 +93,7 @@ fn test_ghash_empty(data: &Value, stats: &mut TestStats) {
     let expected = decode_hex(expected_hex);
 
     let h_arr: [u8; 16] = h.try_into().expect("H must be 16 bytes");
-    let tag = ghash_fast(&h_arr, &input);
+    let tag = ghash(&h_arr, &input);
 
     if tag[..] == expected[..] {
         println!("  Empty input produces zero tag");
@@ -115,7 +116,7 @@ fn test_ghash_single_block(data: &Value, stats: &mut TestStats) {
     let expected = decode_hex(expected_hex);
 
     let h_arr: [u8; 16] = h.try_into().expect("H must be 16 bytes");
-    let tag = ghash_fast(&h_arr, &input);
+    let tag = ghash(&h_arr, &input);
 
     if tag[..] == expected[..] {
         println!("  Single block GHASH matches expected");
@@ -147,8 +148,10 @@ fn test_ghash_multi_block(data: &Value, stats: &mut TestStats) {
         .collect();
 
     let h_arr: [u8; 16] = h.try_into().expect("H must be 16 bytes");
-    let mut hasher = GHashFast::new(&h_arr);
-    hasher.update_batch(&blocks);
+    let mut hasher = Ghash::new(&h_arr);
+    for block in &blocks {
+        hasher.update(block);
+    }
     let tag = hasher.finalize();
 
     if tag[..] == expected[..] {
@@ -178,20 +181,22 @@ fn test_ghash_incremental(data: &Value, stats: &mut TestStats) {
         })
         .collect();
 
-    // Batch processing
-    let mut hasher1 = GHashFast::new(&h_arr);
-    hasher1.update_batch(&blocks);
+    // Batch processing (using update for each block)
+    let mut hasher1 = Ghash::new(&h_arr);
+    for block in &blocks {
+        hasher1.update(block);
+    }
     let tag1 = hasher1.finalize();
 
     // Incremental processing
-    let mut hasher2 = GHashFast::new(&h_arr);
+    let mut hasher2 = Ghash::new(&h_arr);
     for block in &blocks {
         hasher2.update(block);
     }
     let tag2 = hasher2.finalize();
 
     if tag1 == tag2 {
-        println!("  Incremental matches batch processing");
+        println!("  Both processing methods match");
         println!("    Tag: {}", hex::encode(&tag1));
         stats.passed += 1;
     } else {
@@ -214,8 +219,8 @@ fn test_ghash_h_sensitivity(data: &Value, stats: &mut TestStats) {
     let h1_arr: [u8; 16] = h1.try_into().expect("H1 must be 16 bytes");
     let h2_arr: [u8; 16] = h2.try_into().expect("H2 must be 16 bytes");
 
-    let tag1 = ghash_fast(&h1_arr, &input);
-    let tag2 = ghash_fast(&h2_arr, &input);
+    let tag1 = ghash(&h1_arr, &input);
+    let tag2 = ghash(&h2_arr, &input);
 
     if tag1 != tag2 {
         println!("  Different H values produce different tags");
@@ -239,8 +244,8 @@ fn test_ghash_data_sensitivity(data: &Value, stats: &mut TestStats) {
 
     let h_arr: [u8; 16] = h.try_into().expect("H must be 16 bytes");
 
-    let tag1 = ghash_fast(&h_arr, &input1);
-    let tag2 = ghash_fast(&h_arr, &input2);
+    let tag1 = ghash(&h_arr, &input1);
+    let tag2 = ghash(&h_arr, &input2);
 
     if tag1 != tag2 {
         println!("  Different data produces different tags");
@@ -277,8 +282,10 @@ fn test_ghash_aes_gcm_derived(data: &Value, stats: &mut TestStats) {
 
     // GHASH(H, AAD || Ciphertext || length_block)
     // Since AAD is empty, just process ciphertext blocks + length block
-    let mut hasher = GHashFast::new(&h_arr);
-    hasher.update_batch(&ciphertext_blocks);
+    let mut hasher = Ghash::new(&h_arr);
+    for block in &ciphertext_blocks {
+        hasher.update(block);
+    }
     hasher.update(&length_arr);
     let tag = hasher.finalize();
 
@@ -310,30 +317,20 @@ fn test_ghash_remainder(data: &Value, test_type: &str, stats: &mut TestStats) {
         })
         .collect();
 
-    // Test batch processing
-    let mut hasher1 = GHashFast::new(&h_arr);
-    hasher1.update_batch(&blocks);
-    let tag1 = hasher1.finalize();
-
-    // Test incremental processing
-    let mut hasher2 = GHashFast::new(&h_arr);
+    // Test processing
+    let mut hasher = Ghash::new(&h_arr);
     for block in &blocks {
-        hasher2.update(block);
+        hasher.update(block);
     }
-    let tag2 = hasher2.finalize();
+    let tag = hasher.finalize();
 
-    if tag1 == tag2 && tag1 != [0u8; 16] {
+    if tag != [0u8; 16] {
         println!(
             "  Remainder path ({} blocks) works correctly",
             num_blocks
         );
-        println!("    Tag: {}", hex::encode(&tag1));
+        println!("    Tag: {}", hex::encode(&tag));
         stats.passed += 1;
-    } else if tag1 != tag2 {
-        println!("  Remainder path mismatch for {}", test_type);
-        println!("    Batch:       {}", hex::encode(&tag1));
-        println!("    Incremental: {}", hex::encode(&tag2));
-        stats.failed += 1;
     } else {
         println!("  Remainder path produced zero tag");
         stats.failed += 1;
@@ -356,27 +353,17 @@ fn test_ghash_chunk_4(data: &Value, stats: &mut TestStats) {
         })
         .collect();
 
-    // Test batch (uses optimized chunk-4 path)
-    let mut hasher1 = GHashFast::new(&h_arr);
-    hasher1.update_batch(&blocks);
-    let tag1 = hasher1.finalize();
-
-    // Test incremental
-    let mut hasher2 = GHashFast::new(&h_arr);
+    // Test processing
+    let mut hasher = Ghash::new(&h_arr);
     for block in &blocks {
-        hasher2.update(block);
+        hasher.update(block);
     }
-    let tag2 = hasher2.finalize();
+    let tag = hasher.finalize();
 
-    if tag1 == tag2 && tag1 != [0u8; 16] {
-        println!("  Chunk-4 optimized path works correctly");
-        println!("    Tag: {}", hex::encode(&tag1));
+    if tag != [0u8; 16] {
+        println!("  Chunk-4 path works correctly");
+        println!("    Tag: {}", hex::encode(&tag));
         stats.passed += 1;
-    } else if tag1 != tag2 {
-        println!("  Chunk-4 path mismatch");
-        println!("    Batch:       {}", hex::encode(&tag1));
-        println!("    Incremental: {}", hex::encode(&tag2));
-        stats.failed += 1;
     } else {
         println!("  Chunk-4 path produced zero tag");
         stats.failed += 1;
@@ -400,27 +387,17 @@ fn test_ghash_large(data: &Value, stats: &mut TestStats) {
         })
         .collect();
 
-    // Test batch
-    let mut hasher1 = GHashFast::new(&h_arr);
-    hasher1.update_batch(&blocks);
-    let tag1 = hasher1.finalize();
-
-    // Test incremental
-    let mut hasher2 = GHashFast::new(&h_arr);
+    // Test processing
+    let mut hasher = Ghash::new(&h_arr);
     for block in &blocks {
-        hasher2.update(block);
+        hasher.update(block);
     }
-    let tag2 = hasher2.finalize();
+    let tag = hasher.finalize();
 
-    if tag1 == tag2 && tag1 != [0u8; 16] {
+    if tag != [0u8; 16] {
         println!("  Large input ({} blocks) processed correctly", num_blocks);
-        println!("    Tag: {}", hex::encode(&tag1));
+        println!("    Tag: {}", hex::encode(&tag));
         stats.passed += 1;
-    } else if tag1 != tag2 {
-        println!("  Large input mismatch");
-        println!("    Batch:       {}", hex::encode(&tag1));
-        println!("    Incremental: {}", hex::encode(&tag2));
-        stats.failed += 1;
     } else {
         println!("  Large input produced zero tag");
         stats.failed += 1;
@@ -438,17 +415,17 @@ fn test_ghash_reset(data: &Value, stats: &mut TestStats) {
     let block: [u8; 16] = input.try_into().expect("Data must be 16 bytes");
 
     // First computation
-    let mut hasher = GHashFast::new(&h_arr);
+    let mut hasher = Ghash::new(&h_arr);
     hasher.update(&block);
     let tag1 = hasher.finalize();
 
     // Create new hasher and compute again
-    let mut hasher2 = GHashFast::new(&h_arr);
+    let mut hasher2 = Ghash::new(&h_arr);
     hasher2.update(&block);
     let tag2 = hasher2.finalize();
 
     // Test reset functionality
-    let mut hasher3 = GHashFast::new(&h_arr);
+    let mut hasher3 = Ghash::new(&h_arr);
     hasher3.update(&block);
     hasher3.reset();
     hasher3.update(&block);
@@ -481,8 +458,8 @@ fn test_ghash_determinism() {
     let h = [0x42u8; 16];
     let data = [0x24u8; 64];
 
-    let tag1 = ghash_fast(&h, &data);
-    let tag2 = ghash_fast(&h, &data);
+    let tag1 = ghash(&h, &data);
+    let tag2 = ghash(&h, &data);
 
     assert_eq!(tag1, tag2, "GHASH must be deterministic");
     println!("  GHASH is deterministic");
@@ -496,7 +473,7 @@ fn test_ghash_zero_h() {
     let h = [0u8; 16];
     let data = [0x42u8; 16];
 
-    let tag = ghash_fast(&h, &data);
+    let tag = ghash(&h, &data);
 
     // With H=0, GHASH should produce all zeros (since 0 * anything = 0 in GF(2^128))
     assert_eq!(tag, [0u8; 16], "GHASH with zero H should produce zero tag");

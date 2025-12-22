@@ -23,7 +23,7 @@ struct HkdfTestVector {
 
 #[test]
 fn test_hkdf_sha_rfc5869() {
-    let test_vectors: Vec<HkdfTestVector> = load_test_file("hkdf-sha.json");
+    let test_vectors: Vec<HkdfTestVector> = load_test_file("rfc5869-hkdf-sha.json");
 
     println!("\n=== HKDF-SHA Tests (RFC 5869) ===");
     println!("Total test cases: {}", test_vectors.len());

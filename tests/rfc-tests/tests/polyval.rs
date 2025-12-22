@@ -441,7 +441,7 @@ fn test_polyval_large(data: &Value, stats: &mut TestStats) {
 }
 
 fn test_polyval_vs_ghash(data: &Value, stats: &mut TestStats) {
-    use hpcrypt_mac::ghash_fast;
+    use hpcrypt_mac::ghash::ghash;
 
     let h_hex = data["h"].as_str().unwrap();
     let data_hex = data["data"].as_str().unwrap();
@@ -452,7 +452,7 @@ fn test_polyval_vs_ghash(data: &Value, stats: &mut TestStats) {
     let h_arr: [u8; 16] = h.try_into().expect("H must be 16 bytes");
 
     let polyval_tag = polyval(&h_arr, &input);
-    let ghash_tag = ghash_fast(&h_arr, &input);
+    let ghash_tag = ghash(&h_arr, &input);
 
     if polyval_tag != ghash_tag {
         println!("  POLYVAL differs from GHASH (different polynomials)");
