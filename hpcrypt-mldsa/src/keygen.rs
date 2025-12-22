@@ -675,7 +675,7 @@ pub fn keygen_from_seed<P: DsaParams>(xi: &[u8; 32]) -> (PublicKey<P>, SecretKey
     // Use AVX2 4-way parallel sampling if available
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        if std::is_x86_feature_detected!("avx2") {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             // Sample s1 in batches of 4
             let mut i = 0;
             while i + 4 <= P::L {
@@ -772,7 +772,7 @@ pub fn keygen_from_seed<P: DsaParams>(xi: &[u8; 32]) -> (PublicKey<P>, SecretKey
         // AVX2 accelerated Power2Round
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
-            if std::is_x86_feature_detected!("avx2") {
+            if hpcrypt_core::cpufeatures::has_avx2() {
                 unsafe {
                     crate::intrinsics::avx2::rounding::power2round_fast(
                         &poly.coeffs,

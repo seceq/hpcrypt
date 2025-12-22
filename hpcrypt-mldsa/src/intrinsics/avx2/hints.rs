@@ -546,7 +546,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_make_hint() {
-        if !std::is_x86_feature_detected!("avx2") {
+        if !hpcrypt_core::cpufeatures::has_avx2() {
             return;
         }
 
@@ -568,7 +568,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_use_hint_no_hint() {
-        if !std::is_x86_feature_detected!("avx2") {
+        if !hpcrypt_core::cpufeatures::has_avx2() {
             return;
         }
 
@@ -592,7 +592,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_count_hints() {
-        if !std::is_x86_feature_detected!("avx2") {
+        if !hpcrypt_core::cpufeatures::has_avx2() {
             return;
         }
 
@@ -610,7 +610,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_verify_hint_format() {
-        if !std::is_x86_feature_detected!("avx2") {
+        if !hpcrypt_core::cpufeatures::has_avx2() {
             return;
         }
 

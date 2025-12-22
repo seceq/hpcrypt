@@ -54,7 +54,7 @@ impl Poly {
         // AVX2 using intrinsics module
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
-            if std::is_x86_feature_detected!("avx2") {
+            if hpcrypt_core::cpufeatures::has_avx2() {
                 let mut result = Poly::new();
                 unsafe {
                     crate::intrinsics::avx2::poly::poly_add_fast(&self.coeffs, &other.coeffs, &mut result.coeffs);
@@ -81,7 +81,7 @@ impl Poly {
         // AVX2 using intrinsics module
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
-            if std::is_x86_feature_detected!("avx2") {
+            if hpcrypt_core::cpufeatures::has_avx2() {
                 let mut result = Poly::new();
                 unsafe {
                     crate::intrinsics::avx2::poly::poly_sub_fast(&self.coeffs, &other.coeffs, &mut result.coeffs);
@@ -150,7 +150,7 @@ impl Poly {
     pub fn add_lazy(&self, other: &Poly) -> Poly {
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
-            if std::is_x86_feature_detected!("avx2") {
+            if hpcrypt_core::cpufeatures::has_avx2() {
                 return unsafe { Self::add_lazy_avx2(self, other) };
             }
         }
@@ -191,7 +191,7 @@ impl Poly {
     pub fn sub_lazy(&self, other: &Poly) -> Poly {
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
-            if std::is_x86_feature_detected!("avx2") {
+            if hpcrypt_core::cpufeatures::has_avx2() {
                 return unsafe { Self::sub_lazy_avx2(self, other) };
             }
         }
@@ -280,7 +280,7 @@ impl Poly {
         // AVX2 using intrinsics module
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
-            if std::is_x86_feature_detected!("avx2") {
+            if hpcrypt_core::cpufeatures::has_avx2() {
                 let mut result = Poly::new();
                 unsafe {
                     crate::intrinsics::avx2::poly::poly_negate(&self.coeffs, &mut result.coeffs);
@@ -314,7 +314,7 @@ impl Poly {
         // AVX2 using the struct's embedded method
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
-            if std::is_x86_feature_detected!("avx2") {
+            if hpcrypt_core::cpufeatures::has_avx2() {
                 return unsafe { self.infinity_norm_avx2() };
             }
         }
@@ -367,7 +367,7 @@ impl Poly {
         // AVX2 using intrinsics module
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
-            if std::is_x86_feature_detected!("avx2") {
+            if hpcrypt_core::cpufeatures::has_avx2() {
                 return unsafe { self.infinity_norm_avx2_threshold(threshold) };
             }
         }

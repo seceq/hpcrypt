@@ -60,7 +60,7 @@ unsafe fn butterfly_ct(
     zeta: int32x4_t,
     zeta_shoup: int32x4_t,
 ) -> (int32x4_t, int32x4_t) {
-    // t = a1 * zeta (Montgomery multiplication with Shoup optimization)
+    // t = a1 * zeta (Shoup's optimized Montgomery multiplication)
     let t = fqmul_shoup_neon(a1, zeta, zeta_shoup);
 
     // new_a0 = a0 + t, new_a1 = a0 - t
@@ -91,7 +91,7 @@ unsafe fn butterfly_gs(
     // diff = a0 - a1
     let diff = vsubq_s32(a0, a1);
 
-    // new_a1 = diff * zeta (Montgomery multiplication)
+    // new_a1 = diff * zeta (Shoup's optimized Montgomery multiplication)
     let new_a1 = fqmul_shoup_neon(diff, zeta, zeta_shoup);
 
     (new_a0, new_a1)
@@ -284,7 +284,7 @@ pub unsafe fn ntt(coeffs: &mut [i32; N]) {
         let a6 = vcombine_s32(lo, lo);  // [c0, c1, c0, c1]
         let b6 = vcombine_s32(hi, hi);  // [c2, c3, c2, c3]
 
-        // t6 = b6 * zeta6 (Montgomery)
+        // t6 = b6 * zeta6 (Shoup's optimized Montgomery multiplication)
         let t6 = fqmul_shoup_neon(b6, zeta6, zeta6_shoup);
 
         // After level 6: new_lo = [c0+t, c1+t], new_hi = [c0-t, c1-t]
@@ -315,7 +315,7 @@ pub unsafe fn ntt(coeffs: &mut [i32; N]) {
         let evens = trn.0;  // [c0', c0', c0'', c0'']
         let odds = trn.1;   // [c1', c1', c1'', c1'']
 
-        // t7 = odds * zeta7 (Montgomery)
+        // t7 = odds * zeta7 (Shoup's optimized Montgomery multiplication)
         let t7 = fqmul_shoup_neon(odds, zeta7_vec, zeta7_shoup_vec);
 
         // Final output

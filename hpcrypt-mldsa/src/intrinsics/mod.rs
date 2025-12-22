@@ -17,52 +17,8 @@ pub mod avx2;
 pub mod neon;
 
 /// Runtime dispatch helpers
+///
+/// Re-exports from `hpcrypt-core::cpufeatures` for runtime CPU feature detection.
 pub mod dispatch {
-    /// Check if AVX2 is available at runtime
-    #[cfg(target_arch = "x86_64")]
-    #[inline]
-    pub fn has_avx2() -> bool {
-        #[cfg(feature = "avx2")]
-        {
-            #[cfg(feature = "std")]
-            {
-                std::arch::is_x86_feature_detected!("avx2")
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                // In no_std mode, assume AVX2 if feature enabled
-                true
-            }
-        }
-        #[cfg(not(feature = "avx2"))]
-        {
-            false
-        }
-    }
-
-    #[cfg(not(target_arch = "x86_64"))]
-    #[inline]
-    pub fn has_avx2() -> bool {
-        false
-    }
-
-    /// Check if NEON is available at runtime
-    #[cfg(target_arch = "aarch64")]
-    #[inline]
-    pub fn has_neon() -> bool {
-        #[cfg(feature = "neon")]
-        {
-            true // NEON is always available on AArch64
-        }
-        #[cfg(not(feature = "neon"))]
-        {
-            false
-        }
-    }
-
-    #[cfg(not(target_arch = "aarch64"))]
-    #[inline]
-    pub fn has_neon() -> bool {
-        false
-    }
+    pub use hpcrypt_core::cpufeatures::{has_avx2, has_neon};
 }

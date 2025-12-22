@@ -98,7 +98,7 @@ pub fn verify<P: DsaParams>(
             // SIMD-accelerated accumulation when available
             #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
             {
-                if std::is_x86_feature_detected!("avx2") {
+                if hpcrypt_core::cpufeatures::has_avx2() {
                     unsafe {
                         crate::intrinsics::avx2::poly::poly_add_acc_lazy(
                             &mut acc_ntt.coeffs,
@@ -127,7 +127,7 @@ pub fn verify<P: DsaParams>(
         // w' = A·z - c·(t1·2^d) in NTT domain - SIMD accelerated
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
-            if std::is_x86_feature_detected!("avx2") {
+            if hpcrypt_core::cpufeatures::has_avx2() {
                 unsafe {
                     crate::intrinsics::avx2::poly::poly_sub_acc_lazy(
                         &mut acc_ntt.coeffs,
@@ -151,7 +151,7 @@ pub fn verify<P: DsaParams>(
         // Reduce before inverse NTT - SIMD accelerated
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
-            if std::is_x86_feature_detected!("avx2") {
+            if hpcrypt_core::cpufeatures::has_avx2() {
                 unsafe {
                     crate::intrinsics::avx2::poly::poly_reduce32(&mut acc_ntt.coeffs);
                 }

@@ -570,9 +570,9 @@ pub fn expand_mask_poly(rho_prime: &[u8; 64], kappa: u16, _index: u8, gamma1: i3
 /// * `gamma1` - Bound on coefficient magnitude (2^17 or 2^19)
 #[inline]
 pub fn expand_mask_poly_optimized(rho_prime: &[u8; 64], kappa: u16, gamma1: i32) -> Poly {
-    // OPTIMIZATION: For ML-DSA, no rejection sampling is needed in ExpandMask!
-    // - gamma1 = 2^17 uses 18 bits → max val = 2^18 - 1 < 2*gamma1 = 2^18 ✓
-    // - gamma1 = 2^19 uses 20 bits → max val = 2^20 - 1 < 2*gamma1 = 2^20 ✓
+    // For ML-DSA, no rejection sampling is needed in ExpandMask:
+    // - gamma1 = 2^17 uses 18 bits, max val = 2^18 - 1 < 2*gamma1 = 2^18
+    // - gamma1 = 2^19 uses 20 bits, max val = 2^20 - 1 < 2*gamma1 = 2^20
     // All masked values are valid, so we can use direct unpacking without rejection.
 
     // Construct input: rho_prime || kappa (little-endian)
@@ -595,7 +595,7 @@ pub fn expand_mask_poly_optimized(rho_prime: &[u8; 64], kappa: u16, gamma1: i32)
         // AVX2 accelerated unpacking
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
-            if std::is_x86_feature_detected!("avx2") {
+            if hpcrypt_core::cpufeatures::has_avx2() {
                 unsafe {
                     crate::intrinsics::avx2::sampling::expand_mask_17_fast(&mut poly.coeffs, &buf);
                 }
@@ -645,7 +645,7 @@ pub fn expand_mask_poly_optimized(rho_prime: &[u8; 64], kappa: u16, gamma1: i32)
         // AVX2 accelerated unpacking
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
-            if std::is_x86_feature_detected!("avx2") {
+            if hpcrypt_core::cpufeatures::has_avx2() {
                 unsafe {
                     crate::intrinsics::avx2::sampling::expand_mask_19_fast(&mut poly.coeffs, &buf);
                 }
@@ -852,7 +852,7 @@ pub fn expand_matrix_a<P: DsaParams>(rho: &[u8; 32]) -> Vec<Vec<Poly>> {
     // AVX2 path: process 4 matrix elements at a time
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        if std::is_x86_feature_detected!("avx2") {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             return expand_matrix_a_avx2::<P>(rho);
         }
     }

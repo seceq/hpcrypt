@@ -239,7 +239,7 @@ pub fn power2round_poly(poly: &Poly, d: usize) -> (Poly, Poly) {
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
         // D=13 is the standard for all ML-DSA parameter sets
-        if d == 13 && std::is_x86_feature_detected!("avx2") {
+        if d == 13 && hpcrypt_core::cpufeatures::has_avx2() {
             let mut r1 = Poly::new();
             let mut r0 = Poly::new();
             unsafe {
@@ -275,7 +275,7 @@ pub fn decompose_poly(poly: &Poly, alpha: i32) -> (Poly, Poly) {
     // AVX2 using intrinsics module
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        if std::is_x86_feature_detected!("avx2") {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             let mut r1 = Poly::new();
             let mut r0 = Poly::new();
             unsafe {
@@ -322,7 +322,7 @@ pub fn high_bits_poly(poly: &Poly, alpha: i32) -> Poly {
     // AVX2 using intrinsics module
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        if std::is_x86_feature_detected!("avx2") {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             let mut result = Poly::new();
             unsafe {
                 crate::intrinsics::avx2::rounding::highbits_fast(&poly.coeffs, &mut result.coeffs, alpha);
@@ -378,7 +378,7 @@ pub fn low_bits_poly(poly: &Poly, alpha: i32) -> Poly {
     // AVX2 using intrinsics module
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        if std::is_x86_feature_detected!("avx2") {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             let mut result = Poly::new();
             unsafe {
                 crate::intrinsics::avx2::rounding::lowbits_fast(&poly.coeffs, &mut result.coeffs, alpha);

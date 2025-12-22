@@ -298,7 +298,7 @@ fn sign_internal_with_mu<P: DsaParams>(
         // Use AVX2 4-way parallel sampling if available
         #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
         {
-            if std::is_x86_feature_detected!("avx2") {
+            if hpcrypt_core::cpufeatures::has_avx2() {
                 let mut i = 0;
                 while i + 4 <= P::L {
                     let kappas = [
@@ -368,7 +368,7 @@ fn sign_internal_with_mu<P: DsaParams>(
                 // Add in NTT domain (lazy) - use SIMD when available
                 #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
                 {
-                    if std::is_x86_feature_detected!("avx2") {
+                    if hpcrypt_core::cpufeatures::has_avx2() {
                         unsafe {
                             crate::intrinsics::avx2::poly::poly_add_acc_lazy(
                                 &mut acc_ntt.coeffs,
@@ -811,7 +811,7 @@ fn encode_w1<P: DsaParams>(w1: &[Poly]) -> Vec<u8> {
     // AVX2 accelerated packing
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        if std::is_x86_feature_detected!("avx2") {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             if P::W1_BITS == 4 {
                 // 4-bit packing: 128 bytes per poly (ML-DSA-65/87)
                 for (i, poly) in w1.iter().enumerate() {

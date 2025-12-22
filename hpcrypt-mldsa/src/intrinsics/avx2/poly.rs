@@ -1420,7 +1420,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_poly_add() {
-        if !std::is_x86_feature_detected!("avx2") {
+        if !hpcrypt_core::cpufeatures::has_avx2() {
             return;
         }
 
@@ -1440,7 +1440,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_poly_sub() {
-        if !std::is_x86_feature_detected!("avx2") {
+        if !hpcrypt_core::cpufeatures::has_avx2() {
             return;
         }
 
@@ -1460,7 +1460,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_infinity_norm_avx2_threshold() {
-        if !std::is_x86_feature_detected!("avx2") {
+        if !hpcrypt_core::cpufeatures::has_avx2() {
             return;
         }
 
@@ -1478,7 +1478,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_poly_chknorm() {
-        if !std::is_x86_feature_detected!("avx2") {
+        if !hpcrypt_core::cpufeatures::has_avx2() {
             return;
         }
 

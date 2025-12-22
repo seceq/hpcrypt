@@ -212,7 +212,7 @@ pub fn make_hint_poly_optimized<P: DsaParams>(z: &Poly, r: &Poly) -> Poly {
     // AVX2 accelerated hint computation
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        if std::is_x86_feature_detected!("avx2") {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             unsafe {
                 crate::intrinsics::avx2::hints::make_hint_fast(
                     &z.coeffs,
@@ -286,7 +286,7 @@ pub fn use_hint_poly_optimized<P: DsaParams>(h: &Poly, r: &Poly) -> Poly {
     // AVX2 accelerated hint application
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        if std::is_x86_feature_detected!("avx2") {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             unsafe {
                 crate::intrinsics::avx2::hints::use_hint_fast(
                     &h.coeffs,
@@ -326,7 +326,7 @@ pub fn poly_hint_count(h: &Poly) -> usize {
     // AVX2 using intrinsics module
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        if std::is_x86_feature_detected!("avx2") {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             return unsafe { crate::intrinsics::avx2::hints::count_hints(&h.coeffs) };
         }
     }

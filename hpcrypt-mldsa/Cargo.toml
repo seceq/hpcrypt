@@ -15,6 +15,7 @@ categories = ["cryptography", "no-std"]
 
 [dependencies]
 # Use hpcrypt crates for hash and RNG
+hpcrypt-core = { workspace = true, default-features = false }
 hpcrypt-hash = { path = "../hpcrypt-hash", default-features = false, features = ["std"] }
 hpcrypt-rng = { path = "../hpcrypt-rng", default-features = false, features = ["os-rng"] }
 getrandom = { version = "0.2", default-features = false }
@@ -34,7 +35,7 @@ path = "src/lib.rs"
 
 [features]
 default = []
-std = ["hpcrypt-hash/std", "getrandom/std"]
+std = ["hpcrypt-core/std", "hpcrypt-hash/std", "getrandom/std"]
 serde = ["dep:serde"]
 zeroize = ["dep:zeroize"]
 timing-tests = []

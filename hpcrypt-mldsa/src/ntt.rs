@@ -119,7 +119,7 @@ pub fn ntt(poly: &Poly) -> Poly {
     // AVX2 dispatch using intrinsics module
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        if std::is_x86_feature_detected!("avx2") {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             let mut result = poly.clone();
             unsafe {
                 crate::intrinsics::avx2::ntt::ntt(&mut result.coeffs);
@@ -287,7 +287,7 @@ pub fn inv_ntt(poly: &Poly) -> Poly {
     // AVX2 dispatch using intrinsics module
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        if std::is_x86_feature_detected!("avx2") {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             let mut result = poly.clone();
             unsafe {
                 crate::intrinsics::avx2::ntt::invntt(&mut result.coeffs);
@@ -863,7 +863,7 @@ pub fn ntt_multiply(a: &Poly, b: &Poly) -> Poly {
     // AVX2 dispatch for x86_64 (requires std for runtime detection)
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
-        if std::is_x86_feature_detected!("avx2") {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             let mut result = Poly::new();
             unsafe {
                 crate::intrinsics::avx2::ntt::ntt_multiply(&a.coeffs, &b.coeffs, &mut result.coeffs);
@@ -931,7 +931,7 @@ pub fn ntt_multiply_cached(a: &Poly, a_cache: &crate::poly::PolyMulcache, b: &Po
     #[cfg(all(feature = "avx2", feature = "std", target_arch = "x86_64"))]
     {
         // AVX2 runtime detection
-        if std::is_x86_feature_detected!("avx2") {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             return unsafe { ntt_multiply_cached_avx2(a, a_cache, b) };
         }
     }

@@ -143,7 +143,9 @@ pub unsafe fn fqmul_shoup_neon(
     b: int32x4_t,
     b_shoup: int32x4_t,
 ) -> int32x4_t {
-    let q = vdupq_n_s32(Q);
+    let q_vec = vdupq_n_s32(Q);
+    let q_lo = vget_low_s32(q_vec);
+    let q_hi = vget_high_s32(q_vec);
 
     // Split vectors for widening operations
     let a_lo = vget_low_s32(a);
@@ -164,14 +166,11 @@ pub unsafe fn fqmul_shoup_neon(
     let t_lo = vmovn_s64(t_lo_64);
     let t_hi = vmovn_s64(t_hi_64);
 
-    // tq = t * Q (64-bit) - use unsigned to avoid sign extension issues
-    let t_lo_u = vreinterpret_u32_s32(t_lo);
-    let t_hi_u = vreinterpret_u32_s32(t_hi);
-    let q_lo_u = vreinterpret_u32_s32(vget_low_s32(q));
-    let q_hi_u = vreinterpret_u32_s32(vget_high_s32(q));
-
-    let tq_lo = vreinterpretq_s64_u64(vmull_u32(t_lo_u, q_lo_u));
-    let tq_hi = vreinterpretq_s64_u64(vmull_u32(t_hi_u, q_hi_u));
+    // tq = t * Q (64-bit) using SIGNED multiplication
+    // t is the low 32 bits of (a * b_shoup), interpreted as signed.
+    // This matches standard Montgomery where m*Q uses signed arithmetic.
+    let tq_lo = vmull_s32(t_lo, q_lo);
+    let tq_hi = vmull_s32(t_hi, q_hi);
 
     // diff = prod - tq (64-bit)
     let diff_lo = vsubq_s64(prod_lo, tq_lo);
@@ -409,6 +408,55 @@ mod tests {
 
             for &v in &arr {
                 assert!(v >= 0 && v < Q, "Value {} not in [0, Q)", v);
+            }
+        }
+    }
+
+    /// Compute Shoup constant: (b * QINV) mod 2^32
+    fn compute_shoup(b: i32) -> i32 {
+        let b64 = b as i64;
+        let qinv64 = QINV as u32 as i64;
+        ((b64 * qinv64) & 0xFFFFFFFF) as i32
+    }
+
+    #[test]
+    #[cfg(target_arch = "aarch64")]
+    fn test_fqmul_vs_shoup_equivalence() {
+        use super::super::consts::ZETAS;
+
+        unsafe {
+            // Test with various input values including edge cases
+            let test_a_values: &[i32] = &[
+                1, -1, 100, -100, 1000000, -1000000,
+                Q - 1, -(Q - 1), Q / 2, -Q / 2,
+                123456, -654321, 2345678, -3456789,
+            ];
+
+            // Test with actual NTT zetas (these are the problematic cases)
+            for &zeta in &ZETAS[1..128] {
+                let zeta_shoup = compute_shoup(zeta);
+
+                for &a_val in test_a_values {
+                    let a = vdupq_n_s32(a_val);
+                    let b = vdupq_n_s32(zeta);
+                    let b_shoup = vdupq_n_s32(zeta_shoup);
+
+                    let result_std = fqmul_neon(a, b);
+                    let result_shoup = fqmul_shoup_neon(a, b, b_shoup);
+
+                    let mut arr_std = [0i32; 4];
+                    let mut arr_shoup = [0i32; 4];
+                    vst1q_s32(arr_std.as_mut_ptr(), result_std);
+                    vst1q_s32(arr_shoup.as_mut_ptr(), result_shoup);
+
+                    for i in 0..4 {
+                        assert_eq!(
+                            arr_std[i], arr_shoup[i],
+                            "Mismatch: a={}, zeta={}, zeta_shoup={}: fqmul={}, shoup={}",
+                            a_val, zeta, zeta_shoup, arr_std[i], arr_shoup[i]
+                        );
+                    }
+                }
             }
         }
     }

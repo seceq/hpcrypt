@@ -2710,7 +2710,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_ntt_invntt_roundtrip() {
-        if !std::is_x86_feature_detected!("avx2") {
+        if !hpcrypt_core::cpufeatures::has_avx2() {
             return;
         }
 
@@ -2753,7 +2753,7 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_ntt_multiply() {
-        if !std::is_x86_feature_detected!("avx2") {
+        if !hpcrypt_core::cpufeatures::has_avx2() {
             return;
         }
 

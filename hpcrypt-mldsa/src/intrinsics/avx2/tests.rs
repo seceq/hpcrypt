@@ -59,7 +59,7 @@ fn ref_butterfly(a: &mut i32, b: &mut i32, zeta: i32) {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_reduce32_correctness() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -94,7 +94,7 @@ fn test_reduce32_correctness() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_caddq_correctness() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -129,7 +129,7 @@ fn test_caddq_correctness() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_barrett_reduce_correctness() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -171,7 +171,7 @@ fn test_barrett_reduce_correctness() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_ntt_invntt_roundtrip() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -212,7 +212,7 @@ fn test_ntt_invntt_roundtrip() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_ntt_linearity() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -256,7 +256,7 @@ fn test_ntt_linearity() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_ntt_multiply_correctness() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -300,7 +300,7 @@ fn test_ntt_multiply_correctness() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_poly_add_correctness() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -326,7 +326,7 @@ fn test_poly_add_correctness() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_poly_sub_correctness() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -352,7 +352,7 @@ fn test_poly_sub_correctness() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_infinity_norm_avx2_threshold() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -372,7 +372,7 @@ fn test_infinity_norm_avx2_threshold() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_poly_chknorm() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -397,7 +397,7 @@ fn test_poly_chknorm() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_power2round_correctness() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -426,7 +426,7 @@ fn test_power2round_correctness() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_decompose_correctness() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -461,7 +461,7 @@ fn test_decompose_correctness() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_highbits_lowbits_consistency() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -503,7 +503,7 @@ fn test_highbits_lowbits_consistency() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_make_hint_use_hint_consistency() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -543,7 +543,7 @@ fn test_make_hint_use_hint_consistency() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_count_hints() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -563,7 +563,7 @@ fn test_count_hints() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_verify_hint_format() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -587,7 +587,7 @@ fn test_verify_hint_format() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_pack_unpack_t0() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -620,7 +620,7 @@ fn test_pack_unpack_t0() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_pack_unpack_z_19() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -650,7 +650,7 @@ fn test_pack_unpack_z_19() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_pack_unpack_eta4() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -683,7 +683,7 @@ fn test_pack_unpack_eta4() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_rej_uniform_bounds() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -712,7 +712,7 @@ fn test_rej_uniform_bounds() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_rej_eta_bounds() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -740,7 +740,7 @@ fn test_rej_eta_bounds() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_sample_in_ball_properties() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -786,7 +786,7 @@ fn test_sample_in_ball_properties() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_ntt_multiply_commutative() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -824,7 +824,7 @@ fn test_ntt_multiply_commutative() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_poly_add_sub_inverse() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -858,7 +858,7 @@ fn test_poly_add_sub_inverse() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_zero_polynomial() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -883,7 +883,7 @@ fn test_zero_polynomial() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_constant_polynomial() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -923,7 +923,7 @@ fn test_constant_polynomial() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_boundary_values() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -967,7 +967,7 @@ fn test_boundary_values() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_full_signature_arithmetic() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -1095,7 +1095,7 @@ fn from_montgomery_scalar(a: i32) -> i32 {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_fqmul_vs_scalar_montgomery() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
@@ -1139,7 +1139,7 @@ fn test_fqmul_vs_scalar_montgomery() {
 #[test]
 #[cfg(target_arch = "x86_64")]
 fn test_avx2_ntt_vs_scalar_ntt() {
-    if !std::is_x86_feature_detected!("avx2") {
+    if !hpcrypt_core::cpufeatures::has_avx2() {
         return;
     }
 
