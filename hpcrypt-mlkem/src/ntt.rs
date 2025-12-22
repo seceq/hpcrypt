@@ -190,7 +190,7 @@ pub fn ntt_inplace(poly: &mut Poly) {
     #[cfg(all(target_arch = "x86_64", not(target_feature = "avx2")))]
     {
         // Runtime dispatch: check CPU features at runtime
-        if crate::cpufeatures::has_avx2() {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             unsafe {
                 crate::intrinsics::avx2::ntt_inplace(&mut poly.coeffs);
             }
@@ -276,7 +276,7 @@ pub fn intt_inplace(poly: &mut Poly) {
     #[cfg(all(target_arch = "x86_64", not(target_feature = "avx2")))]
     {
         // Runtime dispatch: check CPU features at runtime
-        if crate::cpufeatures::has_avx2() {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             unsafe {
                 crate::intrinsics::avx2::intt_inplace(&mut poly.coeffs);
             }
@@ -390,7 +390,7 @@ pub fn intt_after_basemul_inplace(poly: &mut Poly) {
     #[cfg(all(target_arch = "x86_64", not(target_feature = "avx2")))]
     {
         // Runtime dispatch: check CPU features at runtime
-        if crate::cpufeatures::has_avx2() {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             unsafe {
                 crate::intrinsics::avx2::intt_after_basemul_inplace(&mut poly.coeffs);
             }
@@ -604,7 +604,7 @@ pub fn polyvec_basemul_acc_cached(
     #[cfg(all(target_arch = "x86_64", not(target_feature = "avx2")))]
     {
         // Runtime dispatch: check CPU features at runtime
-        if crate::cpufeatures::has_avx2() {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             unsafe {
                 return crate::intrinsics::avx2::polyvec_basemul_acc_cached_poly(a, b, b_caches);
             }

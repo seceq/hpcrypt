@@ -68,7 +68,6 @@ pub mod compress;
 pub mod serialize;
 pub mod ct_verify;
 pub mod utils;
-pub mod cpufeatures;
 
 // SIMD intrinsics
 pub mod intrinsics;

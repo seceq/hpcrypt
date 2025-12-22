@@ -123,7 +123,7 @@ fn sample_poly_cbd2(bytes: &[u8]) -> Poly {
     #[cfg(all(target_arch = "x86_64", not(target_feature = "avx2")))]
     {
         // Runtime dispatch: check CPU features at runtime
-        if crate::cpufeatures::has_avx2() {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             let bytes_arr: &[u8; 128] = bytes.try_into().unwrap();
             unsafe {
                 crate::intrinsics::avx2::cbd2(bytes_arr, &mut coeffs);
@@ -192,7 +192,7 @@ fn sample_poly_cbd3(bytes: &[u8]) -> Poly {
     #[cfg(all(target_arch = "x86_64", not(target_feature = "avx2")))]
     {
         // Runtime dispatch: check CPU features at runtime
-        if crate::cpufeatures::has_avx2() {
+        if hpcrypt_core::cpufeatures::has_avx2() {
             let bytes_arr: &[u8; 192] = bytes.try_into().unwrap();
             unsafe {
                 crate::intrinsics::avx2::cbd3(bytes_arr, &mut coeffs);

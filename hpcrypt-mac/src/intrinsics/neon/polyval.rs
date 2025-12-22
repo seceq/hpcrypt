@@ -75,68 +75,6 @@ unsafe fn compute_d(h: uint64x2_t) -> uint64x2_t {
     veorq_u64(h_swap, t_vec)
 }
 
-/// Karatsuba multiplication for key setup: a × b in GF(2^128)
-/// Returns (lo, hi, mid) for reduction
-#[target_feature(enable = "neon", enable = "aes")]
-#[inline]
-unsafe fn karatsuba_mul(a: uint64x2_t, b: uint64x2_t) -> (uint64x2_t, uint64x2_t, uint64x2_t) {
-    let a0 = vgetq_lane_u64(a, 0);
-    let a1 = vgetq_lane_u64(a, 1);
-    let b0 = vgetq_lane_u64(b, 0);
-    let b1 = vgetq_lane_u64(b, 1);
-
-    // lo = a0 × b0
-    let lo_128: u128 = vmull_p64(a0, b0);
-    let lo: uint64x2_t = core::mem::transmute(lo_128);
-
-    // hi = a1 × b1
-    let hi_128: u128 = vmull_p64(a1, b1);
-    let hi: uint64x2_t = core::mem::transmute(hi_128);
-
-    // mid = (a0 ⊕ a1) × (b0 ⊕ b1) ⊕ lo ⊕ hi
-    let a_xor = a0 ^ a1;
-    let b_xor = b0 ^ b1;
-    let mid_raw_128: u128 = vmull_p64(a_xor, b_xor);
-    let mid_raw: uint64x2_t = core::mem::transmute(mid_raw_128);
-    let mid = veorq_u64(veorq_u64(mid_raw, lo), hi);
-
-    (lo, hi, mid)
-}
-
-/// Reduce 256-bit product to 128-bit modulo POLYVAL polynomial
-/// POLYVAL polynomial: x^128 + x^127 + x^126 + x^121 + 1
-#[target_feature(enable = "neon")]
-#[inline]
-unsafe fn reduce_256_to_128(lo: uint64x2_t, hi: uint64x2_t, mid: uint64x2_t) -> uint64x2_t {
-    // Combine middle term into lo and hi
-    let mid_lo = vgetq_lane_u64(mid, 0);
-    let mid_hi = vgetq_lane_u64(mid, 1);
-
-    let lo_lo = vgetq_lane_u64(lo, 0);
-    let lo_hi = vgetq_lane_u64(lo, 1);
-    let hi_lo = vgetq_lane_u64(hi, 0);
-    let hi_hi = vgetq_lane_u64(hi, 1);
-
-    let mut v = [lo_lo, lo_hi ^ mid_lo, hi_lo ^ mid_hi, hi_hi];
-
-    // POLYVAL reduction
-    v[2] ^= v[0] ^ (v[0] >> 1) ^ (v[0] >> 2) ^ (v[0] >> 7);
-    v[1] ^= (v[0] << 63) ^ (v[0] << 62) ^ (v[0] << 57);
-
-    v[3] ^= v[1] ^ (v[1] >> 1) ^ (v[1] >> 2) ^ (v[1] >> 7);
-    v[2] ^= (v[1] << 63) ^ (v[1] << 62) ^ (v[1] << 57);
-
-    vcombine_u64(vcreate_u64(v[2]), vcreate_u64(v[3]))
-}
-
-/// Full GF(2^128) multiplication with reduction (for key setup)
-#[target_feature(enable = "neon", enable = "aes")]
-#[inline]
-unsafe fn gf128_mul_reduce(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-    let (lo, hi, mid) = karatsuba_mul(a, b);
-    reduce_256_to_128(lo, hi, mid)
-}
-
 /// R/F multiplication: compute R and F terms (4 PMULLs)
 ///
 /// R = M0×D1 ⊕ M1×H1
@@ -209,16 +147,16 @@ impl PolyvalNeonKey {
     pub unsafe fn new(h: &[u8; 16]) -> Self {
         // Load H directly (POLYVAL uses little-endian, no byte swap needed)
         let h1 = vreinterpretq_u64_u8(vld1q_u8(h.as_ptr()));
-
-        // Compute H^2, H^3, H^4
-        let h2 = gf128_mul_reduce(h1, h1);
-        let h3 = gf128_mul_reduce(h2, h1);
-        let h4 = gf128_mul_reduce(h2, h2);
-
-        // Compute D values for R/F algorithm
         let d1 = compute_d(h1);
+
+        // Compute powers using R/F multiplication (same as GHASH)
+        let h2 = gf128_mul_rf(h1, h1, d1);
         let d2 = compute_d(h2);
+
+        let h3 = gf128_mul_rf(h2, h1, d1);
         let d3 = compute_d(h3);
+
+        let h4 = gf128_mul_rf(h2, h2, d2);
         let d4 = compute_d(h4);
 
         Self {

@@ -81,52 +81,6 @@ unsafe fn compute_d(h: __m128i) -> __m128i {
     _mm_xor_si128(h_swap, t)
 }
 
-/// Karatsuba multiplication for key setup: a × b in GF(2^128)
-/// Returns (lo, hi, mid) for reduction
-#[target_feature(enable = "pclmulqdq")]
-#[inline]
-unsafe fn karatsuba_mul(a: __m128i, b: __m128i) -> (__m128i, __m128i, __m128i) {
-    let lo = _mm_clmulepi64_si128(a, b, 0x00);
-    let hi = _mm_clmulepi64_si128(a, b, 0x11);
-
-    let a_xor = _mm_xor_si128(a, _mm_srli_si128(a, 8));
-    let b_xor = _mm_xor_si128(b, _mm_srli_si128(b, 8));
-    let mid_raw = _mm_clmulepi64_si128(a_xor, b_xor, 0x00);
-    let mid = _mm_xor_si128(_mm_xor_si128(mid_raw, lo), hi);
-
-    (lo, hi, mid)
-}
-
-/// Reduce 256-bit product to 128-bit modulo POLYVAL polynomial
-/// POLYVAL polynomial: x^128 + x^127 + x^126 + x^121 + 1
-#[target_feature(enable = "sse2")]
-#[inline]
-unsafe fn reduce_256_to_128(lo: __m128i, hi: __m128i, mid: __m128i) -> __m128i {
-    let lo = _mm_xor_si128(lo, _mm_slli_si128(mid, 8));
-    let hi = _mm_xor_si128(hi, _mm_srli_si128(mid, 8));
-
-    let mut v = [0u64; 4];
-    _mm_storeu_si128(v.as_mut_ptr() as *mut __m128i, lo);
-    _mm_storeu_si128(v[2..].as_mut_ptr() as *mut __m128i, hi);
-
-    // POLYVAL reduction
-    v[2] ^= v[0] ^ (v[0] >> 1) ^ (v[0] >> 2) ^ (v[0] >> 7);
-    v[1] ^= (v[0] << 63) ^ (v[0] << 62) ^ (v[0] << 57);
-
-    v[3] ^= v[1] ^ (v[1] >> 1) ^ (v[1] >> 2) ^ (v[1] >> 7);
-    v[2] ^= (v[1] << 63) ^ (v[1] << 62) ^ (v[1] << 57);
-
-    _mm_set_epi64x(v[3] as i64, v[2] as i64)
-}
-
-/// Full GF(2^128) multiplication with reduction (for key setup)
-#[target_feature(enable = "pclmulqdq")]
-#[inline]
-unsafe fn gf128_mul_reduce(a: __m128i, b: __m128i) -> __m128i {
-    let (lo, hi, mid) = karatsuba_mul(a, b);
-    reduce_256_to_128(lo, hi, mid)
-}
-
 impl PolyvalAvx2Key {
     /// Create a new POLYVAL key with R/F algorithm
     ///
@@ -136,16 +90,16 @@ impl PolyvalAvx2Key {
     pub unsafe fn new(h: &[u8; 16]) -> Self {
         // Load H directly (POLYVAL uses little-endian, no byte swap needed)
         let h1 = _mm_loadu_si128(h.as_ptr() as *const __m128i);
-
-        // Compute H^2, H^3, H^4
-        let h2 = gf128_mul_reduce(h1, h1);
-        let h3 = gf128_mul_reduce(h2, h1);
-        let h4 = gf128_mul_reduce(h2, h2);
-
-        // Compute D values for R/F algorithm
         let d1 = compute_d(h1);
+
+        // Compute powers using R/F multiplication (same as GHASH)
+        let h2 = gf128_mul_rf(h1, h1, d1);
         let d2 = compute_d(h2);
+
+        let h3 = gf128_mul_rf(h2, h1, d1);
         let d3 = compute_d(h3);
+
+        let h4 = gf128_mul_rf(h2, h2, d2);
         let d4 = compute_d(h4);
 
         Self {
