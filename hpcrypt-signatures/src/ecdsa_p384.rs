@@ -107,10 +107,17 @@ impl Signature {
         (der, pos)
     }
 
-    /// Parse signature from DER encoding
+    /// Parse signature from strict DER encoding
     ///
     /// Accepts DER-encoded ECDSA signatures in the format:
     /// 0x30 \[total-len\] 0x02 \[r-len\] \[r\] 0x02 \[s-len\] \[s\]
+    ///
+    /// This parser enforces strict DER rules:
+    /// - No indefinite length encoding
+    /// - No unnecessary long-form length encoding
+    /// - No leading zero padding in lengths
+    /// - No trailing garbage after the signature
+    /// - Integers must use minimal encoding
     pub fn from_der(der: &[u8]) -> Result<Self, CurveError> {
         if der.len() < 8 {
             return Err(CurveError::InvalidSignature);
@@ -124,67 +131,146 @@ impl Signature {
         }
         pos += 1;
 
-        // Read total length
-        let total_len = der[pos] as usize;
-        pos += 1;
+        // Read total length with strict DER validation
+        let (total_len, len_bytes_used) = Self::read_der_length(der, pos)?;
+        pos += len_bytes_used;
 
-        if pos + total_len > der.len() {
+        // Verify exact length - no trailing garbage allowed
+        if der.len() != pos + total_len {
             return Err(CurveError::InvalidSignature);
         }
 
-        // Helper to decode an integer
-        let decode_integer = |data: &[u8], pos: &mut usize| -> Result<[u8; 48], CurveError> {
-            // Check INTEGER tag
-            if data[*pos] != 0x02 {
-                return Err(CurveError::InvalidSignature);
-            }
-            *pos += 1;
-
-            // Read length
-            let len = data[*pos] as usize;
-            *pos += 1;
-
-            if len == 0 || len > 49 {
-                return Err(CurveError::InvalidSignature);
-            }
-
-            // Read value
-            let value_start = *pos;
-            let value_end = *pos + len;
-
-            if value_end > data.len() {
-                return Err(CurveError::InvalidSignature);
-            }
-
-            let value = &data[value_start..value_end];
-            *pos = value_end;
-
-            // Skip padding byte if present
-            let actual_value = if value[0] == 0x00 && value.len() > 1 {
-                &value[1..]
-            } else {
-                value
-            };
-
-            if actual_value.len() > 48 {
-                return Err(CurveError::InvalidSignature);
-            }
-
-            // Pad with leading zeros if needed
-            let mut result = [0u8; 48];
-            let offset = 48 - actual_value.len();
-            result[offset..].copy_from_slice(actual_value);
-
-            Ok(result)
-        };
+        let seq_end = pos + total_len;
 
         // Decode r
-        let r = decode_integer(der, &mut pos)?;
+        let r = Self::decode_der_integer(der, &mut pos)?;
 
         // Decode s
-        let s = decode_integer(der, &mut pos)?;
+        let s = Self::decode_der_integer(der, &mut pos)?;
+
+        // Verify we consumed exactly the sequence content
+        if pos != seq_end {
+            return Err(CurveError::InvalidSignature);
+        }
 
         Ok(Self { r, s })
+    }
+
+    /// Read a DER length field with strict validation
+    /// Returns (length_value, bytes_consumed) or Error if invalid
+    fn read_der_length(der: &[u8], pos: usize) -> Result<(usize, usize), CurveError> {
+        if pos >= der.len() {
+            return Err(CurveError::InvalidSignature);
+        }
+
+        let first = der[pos];
+
+        if first == 0x80 {
+            // Indefinite length - not allowed in DER
+            return Err(CurveError::InvalidSignature);
+        }
+
+        if first & 0x80 == 0 {
+            // Short form: single byte length
+            return Ok((first as usize, 1));
+        }
+
+        // Long form
+        let num_len_bytes = (first & 0x7f) as usize;
+
+        if num_len_bytes == 0 {
+            // Reserved - not allowed
+            return Err(CurveError::InvalidSignature);
+        }
+
+        if num_len_bytes > 2 {
+            // Too large for signatures
+            return Err(CurveError::InvalidSignature);
+        }
+
+        if pos + 1 + num_len_bytes > der.len() {
+            return Err(CurveError::InvalidSignature);
+        }
+
+        // Check for leading zeros in length (not minimal encoding)
+        if der[pos + 1] == 0 {
+            return Err(CurveError::InvalidSignature);
+        }
+
+        let mut length = 0usize;
+        for i in 0..num_len_bytes {
+            length = (length << 8) | (der[pos + 1 + i] as usize);
+        }
+
+        // Verify long form was necessary (length >= 128)
+        if length < 128 {
+            return Err(CurveError::InvalidSignature);
+        }
+
+        // Verify minimal encoding: for 2-byte long form, length must be >= 256
+        if num_len_bytes == 2 && length < 256 {
+            return Err(CurveError::InvalidSignature);
+        }
+
+        Ok((length, 1 + num_len_bytes))
+    }
+
+    /// Decode a DER INTEGER with strict validation
+    fn decode_der_integer(der: &[u8], pos: &mut usize) -> Result<[u8; 48], CurveError> {
+        if *pos + 2 > der.len() {
+            return Err(CurveError::InvalidSignature);
+        }
+
+        // Check INTEGER tag
+        if der[*pos] != 0x02 {
+            return Err(CurveError::InvalidSignature);
+        }
+        *pos += 1;
+
+        // Read length with strict DER validation
+        let (len, len_bytes) = Self::read_der_length(der, *pos)?;
+        *pos += len_bytes;
+
+        if len == 0 || *pos + len > der.len() {
+            return Err(CurveError::InvalidSignature);
+        }
+
+        // Integer-specific validations:
+        // 1. Check for unnecessary leading zeros (not minimal encoding)
+        //    A leading 0x00 is only allowed if the next byte has high bit set
+        if len > 1 && der[*pos] == 0x00 {
+            if der[*pos + 1] & 0x80 == 0 {
+                // Leading zero not needed - not minimal encoding
+                return Err(CurveError::InvalidSignature);
+            }
+        }
+
+        // 2. Check for negative numbers (high bit set without padding)
+        //    ECDSA r and s are unsigned, so this would be invalid
+        if der[*pos] & 0x80 != 0 {
+            return Err(CurveError::InvalidSignature);
+        }
+
+        // Handle the padding byte for conversion
+        let mut src_start = 0;
+        let mut actual_len = len;
+
+        if len > 0 && der[*pos] == 0x00 {
+            src_start = 1;
+            actual_len = len - 1;
+        }
+
+        if actual_len > 48 {
+            return Err(CurveError::InvalidSignature);
+        }
+
+        // Read integer bytes
+        let mut value = [0u8; 48];
+        let dst_start = 48 - actual_len;
+        value[dst_start..].copy_from_slice(&der[*pos + src_start..*pos + len]);
+        *pos += len;
+
+        Ok(value)
     }
 
     /// Convert to concatenated r||s format (96 bytes)
@@ -507,14 +593,54 @@ impl VerifyingKey {
     ///
     /// `true` if the signature is valid, `false` otherwise.
     pub fn verify(&self, message: &[u8], signature: &Signature) -> bool {
-        // Step 1: Convert r and s to scalars and verify they're in [1, n-1]
-        let r = Scalar::from_bytes(&signature.r);
-        let s = Scalar::from_bytes(&signature.s);
+        // Step 1: Verify r and s are in [1, n-1]
+        // We must check the raw bytes BEFORE calling from_bytes(), because from_bytes()
+        // reduces values modulo n, which would make invalid signatures (with r or s >= n)
+        // appear valid.
 
-        // Check r and s are not zero
-        if bool::from(r.is_zero()) || bool::from(s.is_zero()) {
+        // P-384 order n in big-endian bytes
+        // n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973
+        const P384_ORDER_BE: [u8; 48] = [
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC7, 0x63, 0x4D, 0x81,
+            0xF4, 0x37, 0x2D, 0xDF, 0x58, 0x1A, 0x0D, 0xB2, 0x48, 0xB0, 0xA7, 0x7A, 0xEC, 0xEC,
+            0x19, 0x6A, 0xCC, 0xC5, 0x29, 0x73,
+        ];
+
+        // Check if a 48-byte value is in range [1, n-1]
+        fn is_valid_scalar(bytes: &[u8; 48]) -> bool {
+            // Check for zero
+            let mut is_zero = true;
+            for &b in bytes {
+                if b != 0 {
+                    is_zero = false;
+                    break;
+                }
+            }
+            if is_zero {
+                return false;
+            }
+
+            // Check if >= n by comparing in big-endian order
+            for i in 0..48 {
+                match bytes[i].cmp(&P384_ORDER_BE[i]) {
+                    core::cmp::Ordering::Less => return true,   // Less than n, valid
+                    core::cmp::Ordering::Greater => return false, // Greater than n, invalid
+                    core::cmp::Ordering::Equal => continue,      // Equal, check next byte
+                }
+            }
+            // If we get here, value == n, which is invalid
+            false
+        }
+
+        // Validate r and s are in [1, n-1]
+        if !is_valid_scalar(&signature.r) || !is_valid_scalar(&signature.s) {
             return false;
         }
+
+        // Now we can safely convert to Scalars
+        let r = Scalar::from_bytes(&signature.r);
+        let s = Scalar::from_bytes(&signature.s);
 
         // Step 2: Hash the message with SHA-384
         let mut hasher = Sha384::new();
@@ -555,9 +681,11 @@ impl VerifyingKey {
             None => return false, // Point at infinity is invalid
         };
 
-        // Convert x-coordinate to scalar (reduce modulo n)
+        // Convert x-coordinate to scalar and reduce modulo n
+        // The x-coordinate is a field element in [0, p-1], but we need it mod n
+        // Since p > n for P-384, we must explicitly reduce
         let r_x_bytes = r_affine.x.to_bytes();
-        let r_x = Scalar::from_bytes(&r_x_bytes);
+        let r_x = Scalar::from_bytes(&r_x_bytes).reduce();
 
         // Compare r with R.x (constant-time comparison)
         bool::from(r.ct_eq(&r_x))
