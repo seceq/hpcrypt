@@ -1223,7 +1223,7 @@ impl Point {
     ///
     /// **Using this function** (~149 µs - **11.6% SLOWER**):
     /// ```ignore
-    /// let result = Point::double_scalar_mul(&u1, &g, &u2, &q);  // ❌ Slower!
+    /// let result = Point::double_scalar_mul(&u1, &g, &u2, &q);  // Slower!
     /// // Problem: Can't use precomputed tables, forces wNAF for both points
     /// ```
     ///
@@ -1232,13 +1232,13 @@ impl Point {
     /// simultaneously using wNAF for both points.
     ///
     /// **When to use this function:**
-    /// - ✅ **Two arbitrary points** (neither is the generator): ~30-40% speedup
-    /// - ✅ **Curves without fast generator tables** (like Ed448)
-    /// - ✅ **Constant-time operations** (see `double_scalar_mul_constant_time`)
+    /// - Two arbitrary points (neither is the generator): ~30-40% speedup
+    /// - Curves without fast generator tables (like Ed448)
+    /// - Constant-time operations (see `double_scalar_mul_constant_time`)
     ///
     /// **When NOT to use:**
-    /// - ❌ **P-256 ECDSA verification** (one point is generator)
-    /// - ❌ **Any operation involving the generator point** (use `scalar_mul_generator` instead)
+    /// - P-256 ECDSA verification (one point is generator)
+    /// - Any operation involving the generator point (use `scalar_mul_generator` instead)
     ///
     /// See: [`docs/P256_SHAMIR_ANALYSIS_COMPLETE.md`](../../docs/P256_SHAMIR_ANALYSIS_COMPLETE.md)
     /// for detailed performance analysis.

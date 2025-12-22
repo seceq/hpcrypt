@@ -50,17 +50,17 @@ pub use scalar::Scalar;
 
 /// P-384 curve module
 ///
-/// # Implementation Status
+/// # Features
 ///
-/// ✅ Field operations (384-bit arithmetic) - Complete
-/// ✅ Point arithmetic (Jacobian coordinates) - Complete
-/// ✅ Scalar arithmetic - Complete
-/// ✅ Precomputed tables for generator multiplication - Complete
-/// ✅ ECDH key exchange - Complete
-/// ✅ ECDSA signature verification - Complete
-/// ✅ Batch verification - Complete
-/// ✅ Multi-scalar multiplication (MSM) - Complete
-/// ✅ Windowed NAF (wNAF) optimization - Complete
+/// - Field operations (384-bit arithmetic)
+/// - Point arithmetic (Jacobian coordinates)
+/// - Scalar arithmetic
+/// - Precomputed tables for generator multiplication
+/// - ECDH key exchange
+/// - ECDSA signature verification
+/// - Batch verification
+/// - Multi-scalar multiplication (MSM)
+/// - Windowed NAF (wNAF) optimization
 ///
 /// # Performance Notes
 ///

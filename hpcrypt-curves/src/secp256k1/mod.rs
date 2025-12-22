@@ -13,12 +13,12 @@
 //!
 //! secp256k1 provides approximately 128 bits of security.
 //!
-//! # Implementation Status
+//! # Features
 //!
-//! - Field operations: ✅ Complete and tested
-//! - Scalar arithmetic: ✅ Complete and tested
-//! - Point operations: ✅ Complete and tested
-//! - ECDSA signatures: ✅ Complete and tested
+//! - Field operations
+//! - Scalar arithmetic
+//! - Point operations
+//! - ECDSA signatures
 //!
 //! # Performance
 //!

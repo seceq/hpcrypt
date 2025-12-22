@@ -957,7 +957,7 @@ impl FieldElement {
         // w0=s8, w1=s9, w2=s10, w3-w7=0
         // limbs[0] = [w1,w0], limbs[1] = [w3,w2], limbs[2] = [w5,w4], limbs[3] = [w7,w6]
         let s3 = [
-            s[8] as u64 | ((s[9] as u64) << 32), // [s9, s8] ✓
+            s[8] as u64 | ((s[9] as u64) << 32), // [s9, s8]
             s[10] as u64,                        // [0, s10] - s10 in low 32 bits
             0,                                   // [0, 0]
             0,                                   // [0, 0]

@@ -75,9 +75,9 @@ use super::field::FieldElement;
 ///
 /// It should ONLY be used in contexts where the number of elements being
 /// inverted is not secret. For example:
-/// - ✅ Batch signature verification (number of signatures is public)
-/// - ✅ Affine coordinate conversion for precomputed tables
-/// - ❌ DO NOT use if the count reveals secret information
+/// - Batch signature verification (number of signatures is public)
+/// - Affine coordinate conversion for precomputed tables
+/// - Do NOT use if the count reveals secret information
 pub fn batch_invert(elems: &mut [FieldElement]) {
     let n = elems.len();
 
