@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="hpcrypt.svg" alt="HPCrypt Logo" width="200">
+</p>
+
 # HPCrypt
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE-MIT)
