@@ -26,7 +26,7 @@ A high-performance cryptography library written in pure Rust, providing state-of
 HPCrypt incorporates cutting-edge optimization techniques from recent cryptographic research:
 
 - **Post-Quantum Cryptography (ML-KEM, ML-DSA)** - "[Deferred Reduction Optimizations for Post-Quantum Lattice Cryptography](https://zenodo.org/records/17772583)" - Tarsha Kurdi (2025)
-- **GHASH/Polyval (GCM Authentication)** - "[Efficient GHASH and POLYVAL Implementation](https://eprint.iacr.org/2025/2171)" - Tarsha Kurdi & Möller (2025)
+- **GCM Authentication** - "[Efficient GHASH and POLYVAL Implementation](https://eprint.iacr.org/2025/2171)" - Tarsha Kurdi & Möller (2025)
 - **AES Implementation** - "[Fixslicing AES-like Ciphers](https://eprint.iacr.org/2020/1123)" - Adomnicai & Peyrin (IACR TCHES 2021)
 - **Elliptic Curve Operations** - "[Fast constant-time gcd computation](https://eprint.iacr.org/2019/266)" - Bernstein & Yang (2019)
 
