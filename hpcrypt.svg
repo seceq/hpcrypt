@@ -11,11 +11,11 @@
   <!-- Rounded square container -->
   <rect x="80" y="45" width="240" height="220" rx="45" fill="url(#seceqGrad)"/>
   
-  <!-- Speed lines left - 3 staggered -->
+  <!-- Speed lines left - 3 staggered (slightly thinner) -->
   <g fill="#FFFFFF" opacity="0.8">
-    <rect x="95" y="125" width="35" height="8" rx="4"/>
-    <rect x="105" y="151" width="35" height="8" rx="4"/>
-    <rect x="95" y="177" width="35" height="8" rx="4"/>
+    <rect x="95" y="126" width="35" height="6" rx="3"/>
+    <rect x="105" y="152" width="35" height="6" rx="3"/>
+    <rect x="95" y="178" width="35" height="6" rx="3"/>
   </g>
   
   <!-- Hash symbol (thinner and smaller) -->
@@ -26,11 +26,11 @@
     <line x1="162" y1="172" x2="238" y2="172"/>
   </g>
   
-  <!-- Speed lines right - 3 staggered -->
+  <!-- Speed lines right - 3 staggered (slightly thinner) -->
   <g fill="#FFFFFF" opacity="0.8">
-    <rect x="270" y="125" width="35" height="8" rx="4"/>
-    <rect x="260" y="151" width="35" height="8" rx="4"/>
-    <rect x="270" y="177" width="35" height="8" rx="4"/>
+    <rect x="270" y="126" width="35" height="6" rx="3"/>
+    <rect x="260" y="152" width="35" height="6" rx="3"/>
+    <rect x="270" y="178" width="35" height="6" rx="3"/>
   </g>
   
   <text x="200" y="320" font-family="'IBM Plex Mono', monospace" font-size="36" font-weight="600" fill="#1C1C1C" text-anchor="middle" letter-spacing="2">HPCrypt</text>
