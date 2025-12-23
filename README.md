@@ -25,28 +25,10 @@ A high-performance cryptography library written in pure Rust, providing state-of
 
 HPCrypt incorporates cutting-edge optimization techniques from recent cryptographic research:
 
-### Post-Quantum Cryptography (ML-KEM, ML-DSA)
-- **Deferred reduction chains** for polynomial arithmetic (3.5-4× speedup in key operations)
-- **Optimized inverse NTT** with 2.25× speedup
-- **Hybrid radix techniques** for ML-DSA signing (16% improvement)
-- Based on "[Deferred Reduction Optimizations for Post-Quantum Lattice Cryptography](https://zenodo.org/records/17772583)" (2025)
-
-### AES Implementation
-- **Fixslicing technique** providing constant-time execution with 52% reduction in linear layer operations
-- **Parallel processing** of 4 blocks simultaneously
-- Cache-timing attack immunity through bitsliced representation
-- Based on "[Fixslicing AES-like Ciphers](https://eprint.iacr.org/2020/1123)" (Adomnicai & Peyrin, IACR TCHES 2021)
-
-### GHASH/Polyval (GCM Authentication)
-- **Optimized polynomial multiplication** using 64-bit decomposition
-- **Bit-reversal elimination** aligned with carry-less multiplication instructions
-- Up to 35% faster than OpenSSL on modern processors
-- Based on "[Efficient GHASH and POLYVAL Implementation](https://eprint.iacr.org/2025/2171)" (2025)
-
-### Elliptic Curve Operations
-- **SafeGCD algorithm** for modular inversion (2-3× faster than Fermat's method)
-- Improves ECDSA signing by 25-30% and verification by 15-17%
-- Based on "[Fast constant-time gcd computation](https://eprint.iacr.org/2019/266)" (Bernstein & Yang, 2019)
+- **Post-Quantum Cryptography (ML-KEM, ML-DSA)** - "[Deferred Reduction Optimizations for Post-Quantum Lattice Cryptography](https://zenodo.org/records/17772583)" - Tarsha Kurdi (2025)
+- **GHASH/Polyval (GCM Authentication)** - "[Efficient GHASH and POLYVAL Implementation](https://eprint.iacr.org/2025/2171)" - Tarsha Kurdi & Möller (2025)
+- **AES Implementation** - "[Fixslicing AES-like Ciphers](https://eprint.iacr.org/2020/1123)" - Adomnicai & Peyrin (IACR TCHES 2021)
+- **Elliptic Curve Operations** - "[Fast constant-time gcd computation](https://eprint.iacr.org/2019/266)" - Bernstein & Yang (2019)
 
 ## Cryptographic Primitives
 
@@ -314,12 +296,6 @@ Dual-licensed under your choice of:
 - NIST FIPS: 180-4 (SHA-2), 186-4 (DSA/ECDSA), 197 (AES), 198-1 (HMAC), 202 (SHA-3), 203 (ML-KEM), 204 (ML-DSA), 205 (SLH-DSA)
 - NIST Special Publications: SP 800-38A (Block Cipher Modes), SP 800-38G (FPE), SP 800-185 (KMAC/cSHAKE)
 - IETF RFCs: 2104 (HMAC), 2898 (PBKDF2), 5869 (HKDF), 7539 (ChaCha20-Poly1305), 8032 (EdDSA), 8017 (RSA), 9106 (Argon2), 9180 (HPKE), 9497 (OPAQUE)
-
-### Research Papers
-- "[Deferred Reduction Optimizations for Post-Quantum Lattice Cryptography](https://zenodo.org/records/17772583)" - Tarsha Kurdi (2025)
-- "[Efficient GHASH and POLYVAL Implementation](https://eprint.iacr.org/2025/2171)" - Tarsha Kurdi & Möller (2025)
-- "[Fixslicing AES-like Ciphers](https://eprint.iacr.org/2020/1123)" - Adomnicai & Peyrin (IACR TCHES 2021)
-- "[Fast constant-time gcd computation](https://eprint.iacr.org/2019/266)" - Bernstein & Yang (2019)
 
 ### Testing
 - [NIST CAVP/ACVP](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program) - Official test vectors
