@@ -124,6 +124,16 @@ required-features = ["enable-kdf-tests"]
 
 # Cipher Tests
 [[test]]
+name = "aes_ecb"
+path = "tests/aes_ecb.rs"
+required-features = ["enable-cipher-tests"]
+
+[[test]]
+name = "aes_ecb_x8"
+path = "tests/aes_ecb_x8.rs"
+required-features = ["enable-cipher-tests"]
+
+[[test]]
 name = "aes_cbc"
 path = "tests/aes_cbc.rs"
 required-features = ["enable-cipher-tests"]

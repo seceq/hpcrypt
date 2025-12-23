@@ -227,6 +227,101 @@ pub fn best_simd_name() -> &'static str {
     }
 }
 
+// =============================================================================
+// AES Hardware Acceleration Detection
+// =============================================================================
+
+/// Check if AES-NI is available at runtime (x86/x86_64)
+///
+/// Returns `true` if:
+/// - Target is x86/x86_64 AND
+/// - AES-NI instructions are available (requires SSE2 as well)
+#[inline]
+pub fn has_aesni() -> bool {
+    #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+    {
+        #[cfg(all(target_feature = "aes", target_feature = "sse2"))]
+        {
+            true
+        }
+        #[cfg(not(all(target_feature = "aes", target_feature = "sse2")))]
+        {
+            #[cfg(feature = "std")]
+            {
+                std::arch::is_x86_feature_detected!("aes")
+                    && std::arch::is_x86_feature_detected!("sse2")
+            }
+            #[cfg(not(feature = "std"))]
+            {
+                false
+            }
+        }
+    }
+
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
+    {
+        false
+    }
+}
+
+/// Check if ARM NEON AES is available (aarch64)
+///
+/// Returns `true` if:
+/// - Target is aarch64 AND
+/// - AES crypto extensions are available (requires NEON as well)
+#[inline]
+pub fn has_aes_neon() -> bool {
+    #[cfg(target_arch = "aarch64")]
+    {
+        #[cfg(target_feature = "aes")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "aes"))]
+        {
+            #[cfg(feature = "std")]
+            {
+                std::arch::is_aarch64_feature_detected!("aes")
+                    && std::arch::is_aarch64_feature_detected!("neon")
+            }
+            #[cfg(not(feature = "std"))]
+            {
+                false
+            }
+        }
+    }
+
+    #[cfg(not(target_arch = "aarch64"))]
+    {
+        false
+    }
+}
+
+/// AES implementation selection
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AesImpl {
+    /// Software fixslice (constant-time fallback)
+    Fixslice,
+    /// AES-NI (x86/x86_64)
+    AesNi,
+    /// ARM NEON with crypto extensions (aarch64)
+    AesNeon,
+}
+
+/// Selects the optimal AES implementation for the current CPU
+#[inline]
+pub fn select_aes_impl() -> AesImpl {
+    #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+    if has_aesni() {
+        return AesImpl::AesNi;
+    }
+    #[cfg(target_arch = "aarch64")]
+    if has_aes_neon() {
+        return AesImpl::AesNeon;
+    }
+    AesImpl::Fixslice
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -260,6 +355,23 @@ mod tests {
             SimdTier::Avx2 => assert!(has_avx2_pclmulqdq()),
             SimdTier::Neon => assert!(has_neon_aes()),
             SimdTier::None => assert!(!has_avx2_pclmulqdq() && !has_neon_aes()),
+        }
+    }
+
+    #[test]
+    fn test_aes_detection_does_not_panic() {
+        let _aesni = has_aesni();
+        let _aes_neon = has_aes_neon();
+        let _impl = select_aes_impl();
+    }
+
+    #[test]
+    fn test_aes_impl_consistency() {
+        let impl_choice = select_aes_impl();
+        match impl_choice {
+            AesImpl::AesNi => assert!(has_aesni()),
+            AesImpl::AesNeon => assert!(has_aes_neon()),
+            AesImpl::Fixslice => {}
         }
     }
 }

@@ -3,10 +3,11 @@
 # Test script for running intrinsics tests with different SIMD configurations
 #
 # Usage:
-#   ./tests/scripts/test-intrinsics.sh pqc [portable|avx2|neon|all]   # Test PQC intrinsics
-#   ./tests/scripts/test-intrinsics.sh mac [portable|avx2|neon|all]   # Test MAC intrinsics
-#   ./tests/scripts/test-intrinsics.sh hash [portable|avx2|neon|all]  # Test hash intrinsics
-#   ./tests/scripts/test-intrinsics.sh all [portable|avx2|neon|all]   # Test all intrinsics
+#   ./tests/scripts/test-intrinsics.sh pqc [portable|avx2|neon|all]    # Test PQC intrinsics
+#   ./tests/scripts/test-intrinsics.sh mac [portable|avx2|neon|all]    # Test MAC intrinsics
+#   ./tests/scripts/test-intrinsics.sh hash [portable|avx2|neon|all]   # Test hash intrinsics
+#   ./tests/scripts/test-intrinsics.sh cipher [portable|avx2|neon|all] # Test cipher intrinsics
+#   ./tests/scripts/test-intrinsics.sh all [portable|avx2|neon|all]    # Test all intrinsics
 #
 # PQC Test suites:
 #   - CAVP tests (NIST official test vectors for ML-KEM, ML-DSA)
@@ -19,6 +20,11 @@
 # Hash Test suites:
 #   - 1-way: CAVP SHA3/SHAKE + hpcrypt-hash sha3 unit tests + RFC TurboSHAKE
 #   - 4-way: CAVP SHAKE x4 + hpcrypt-hash x4 unit tests
+#
+# Cipher Test suites:
+#   - AES-NI: 1-way and 8-way parallel block operations (x86_64)
+#   - NEON: 1-way and 4-way parallel block operations (aarch64)
+#   - CAVP AES-ECB test vectors
 #
 
 set -e
@@ -607,6 +613,156 @@ run_hash_tests() {
     return $failed
 }
 
+# Run cipher (AES) intrinsics tests for a specific configuration
+# Tests both 1-way and parallel (8-way AES-NI, 4-way NEON) implementations
+run_cipher_tests() {
+    local config="$1"
+    local runner="cargo"
+    local target=""
+    local rustflags=""
+    local features=""
+    local failed=0
+
+    case "$config" in
+        portable)
+            # No special flags, use default portable implementation
+            ;;
+        avx2)
+            if [[ "$(uname -m)" != "x86_64" ]]; then
+                print_warning "Skipping AVX2 tests: not on x86_64 architecture"
+                return 0
+            fi
+            if ! check_avx2_support; then
+                print_warning "Skipping AVX2 tests: CPU does not support AVX2"
+                return 0
+            fi
+            rustflags="-C target-cpu=native"
+            features="avx2"
+            ;;
+        neon)
+            runner="cross"
+            target="aarch64-unknown-linux-gnu"
+            features="neon"
+            if ! check_cross; then
+                return 0
+            fi
+            ;;
+        *)
+            print_error "Unknown configuration: $config"
+            return 1
+            ;;
+    esac
+
+    # =========================================================================
+    # Test 1: AES intrinsics unit tests (1-way + parallel vs single-block)
+    # Tests encrypt_block/decrypt_block and parallel variants
+    # Note: hpcrypt-cipher doesn't have neon/avx2 features - it auto-detects
+    # based on target architecture and cfg flags
+    # =========================================================================
+    print_header "Running hpcrypt-cipher AES intrinsics unit tests with $config implementation"
+
+    local cmd=""
+    if [[ "$runner" == "cross" ]]; then
+        # hpcrypt-cipher auto-detects NEON based on target arch, no feature flag needed
+        cmd="cross test --package hpcrypt-cipher --target $target --test neon_x4 -- --nocapture"
+    else
+        if [[ -n "$rustflags" ]]; then
+            # x86_64: test AES-NI 8-way parallel operations
+            cmd="RUSTFLAGS=\"$rustflags\" cargo test --package hpcrypt-cipher --test aesni_x8 -- --nocapture"
+        else
+            cmd="cargo test --package hpcrypt-cipher --test aesni_x8 -- --nocapture"
+        fi
+    fi
+
+    echo "Command: $cmd"
+    echo ""
+
+    if eval "$cmd"; then
+        print_success "PASSED: hpcrypt-cipher AES intrinsics unit tests with $config"
+    else
+        print_error "FAILED: hpcrypt-cipher AES intrinsics unit tests with $config"
+        failed=1
+    fi
+
+    # =========================================================================
+    # Test 2: CAVP AES-ECB tests (1-way single block operations)
+    # Tests against NIST ACVP-AES-ECB-1.0 test vectors
+    # =========================================================================
+    print_header "Running CAVP AES-ECB tests (1-way) with $config implementation"
+
+    if [[ "$runner" == "cross" ]]; then
+        if [[ -n "$features" ]]; then
+            cmd="cross test --package cavp-tests --target $target --features \"enable-cipher-tests,$features\" --test aes_ecb -- --nocapture"
+        else
+            cmd="cross test --package cavp-tests --target $target --features enable-cipher-tests --test aes_ecb -- --nocapture"
+        fi
+    else
+        if [[ -n "$rustflags" ]]; then
+            if [[ -n "$features" ]]; then
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package cavp-tests --features \"enable-cipher-tests,$features\" --test aes_ecb -- --nocapture"
+            else
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package cavp-tests --features enable-cipher-tests --test aes_ecb -- --nocapture"
+            fi
+        else
+            if [[ -n "$features" ]]; then
+                cmd="cargo test --package cavp-tests --features \"enable-cipher-tests,$features\" --test aes_ecb -- --nocapture"
+            else
+                cmd="cargo test --package cavp-tests --features enable-cipher-tests --test aes_ecb -- --nocapture"
+            fi
+        fi
+    fi
+
+    echo "Command: $cmd"
+    echo ""
+
+    if eval "$cmd"; then
+        print_success "PASSED: CAVP AES-ECB (1-way) with $config"
+    else
+        print_error "FAILED: CAVP AES-ECB (1-way) with $config"
+        failed=1
+    fi
+
+    # =========================================================================
+    # Test 3: CAVP AES-ECB x8 tests (8-way parallel block operations)
+    # Tests against NIST ACVP-AES-ECB-1.0 test vectors using parallel API
+    # =========================================================================
+    print_header "Running CAVP AES-ECB x8 tests (8-way parallel) with $config implementation"
+
+    if [[ "$runner" == "cross" ]]; then
+        if [[ -n "$features" ]]; then
+            cmd="cross test --package cavp-tests --target $target --features \"enable-cipher-tests,$features\" --test aes_ecb_x8 -- --nocapture"
+        else
+            cmd="cross test --package cavp-tests --target $target --features enable-cipher-tests --test aes_ecb_x8 -- --nocapture"
+        fi
+    else
+        if [[ -n "$rustflags" ]]; then
+            if [[ -n "$features" ]]; then
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package cavp-tests --features \"enable-cipher-tests,$features\" --test aes_ecb_x8 -- --nocapture"
+            else
+                cmd="RUSTFLAGS=\"$rustflags\" cargo test --package cavp-tests --features enable-cipher-tests --test aes_ecb_x8 -- --nocapture"
+            fi
+        else
+            if [[ -n "$features" ]]; then
+                cmd="cargo test --package cavp-tests --features \"enable-cipher-tests,$features\" --test aes_ecb_x8 -- --nocapture"
+            else
+                cmd="cargo test --package cavp-tests --features enable-cipher-tests --test aes_ecb_x8 -- --nocapture"
+            fi
+        fi
+    fi
+
+    echo "Command: $cmd"
+    echo ""
+
+    if eval "$cmd"; then
+        print_success "PASSED: CAVP AES-ECB x8 (8-way) with $config"
+    else
+        print_error "FAILED: CAVP AES-ECB x8 (8-way) with $config"
+        failed=1
+    fi
+
+    return $failed
+}
+
 # Run tests for a specific suite type and configuration
 run_suite() {
     local suite="$1"
@@ -629,6 +785,11 @@ run_suite() {
                 failed=1
             fi
             ;;
+        cipher)
+            if ! run_cipher_tests "$config"; then
+                failed=1
+            fi
+            ;;
         all)
             if ! run_pqc_suites "$config"; then
                 failed=1
@@ -637,6 +798,9 @@ run_suite() {
                 failed=1
             fi
             if ! run_hash_tests "$config"; then
+                failed=1
+            fi
+            if ! run_cipher_tests "$config"; then
                 failed=1
             fi
             ;;
@@ -681,10 +845,11 @@ print_usage() {
     echo "Usage: $0 <suite> [config]"
     echo ""
     echo "Suites:"
-    echo "  pqc   - Test PQC intrinsics (ML-KEM, ML-DSA)"
-    echo "  mac   - Test MAC intrinsics (GHASH, POLYVAL)"
-    echo "  hash  - Test hash intrinsics (Keccak/SHA-3 1-way and 4-way)"
-    echo "  all   - Test all intrinsics"
+    echo "  pqc    - Test PQC intrinsics (ML-KEM, ML-DSA)"
+    echo "  mac    - Test MAC intrinsics (GHASH, POLYVAL)"
+    echo "  hash   - Test hash intrinsics (Keccak/SHA-3 1-way and 4-way)"
+    echo "  cipher - Test cipher intrinsics (AES 1-way and parallel)"
+    echo "  all    - Test all intrinsics"
     echo ""
     echo "Configurations:"
     echo "  portable  - Test with portable/scalar implementation"
@@ -697,6 +862,7 @@ print_usage() {
     echo "  $0 pqc avx2         # Run PQC tests with AVX2 only"
     echo "  $0 mac neon         # Run MAC tests with NEON only"
     echo "  $0 hash avx2        # Run hash tests with AVX2 only"
+    echo "  $0 cipher avx2      # Run cipher tests with AVX2 only"
     echo "  $0 all              # Run all tests with all configs"
     echo ""
     echo "Test suites:"
@@ -709,6 +875,10 @@ print_usage() {
     echo "  Hash:"
     echo "    - 1-way: CAVP SHA3/SHAKE + hpcrypt-hash sha3 unit tests + RFC TurboSHAKE"
     echo "    - 4-way: CAVP SHAKE x4 + hpcrypt-hash x4 unit tests"
+    echo "  Cipher:"
+    echo "    - hpcrypt-cipher AES intrinsics unit tests (parallel vs single-block)"
+    echo "    - CAVP AES-ECB tests (1-way single block operations)"
+    echo "    - CAVP AES-ECB x8 tests (8-way parallel block operations)"
 }
 
 # Main
@@ -725,7 +895,7 @@ main() {
 
     # Validate suite
     case "$suite" in
-        pqc|mac|hash|all)
+        pqc|mac|hash|cipher|all)
             ;;
         *)
             print_error "Unknown suite: $suite"

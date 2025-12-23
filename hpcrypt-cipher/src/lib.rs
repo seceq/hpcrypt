@@ -161,7 +161,6 @@
 //! NOTE: FF1 (Format-Preserving Encryption) has been moved to the `hpcrypt-fpe` crate.
 
 #![no_std]
-#![forbid(unsafe_code)]
 #![warn(
     missing_docs,
     rust_2018_idioms,
@@ -179,6 +178,9 @@ extern crate alloc;
 pub mod aes;
 pub mod aes_fixslice;
 pub mod chacha20;
+
+// Hardware intrinsics
+pub mod intrinsics;
 
 // Cipher modes
 pub mod aes_modes;
